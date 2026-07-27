@@ -1,0 +1,164 @@
+// Sample/placeholder data for local development so the app is browsable before a
+// TMDB_API_KEY is configured. Real catalog content should come from /admin/import.
+// tmdbId values here are placeholders (900000+) and do not correspond to real TMDB records.
+import bcrypt from "bcryptjs";
+import { PrismaClient } from "../src/generated/prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
+
+const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
+const prisma = new PrismaClient({ adapter });
+
+const GENRES = [
+  { tmdbId: 28, name: "Action" },
+  { tmdbId: 900101, name: "Martial Arts" },
+  { tmdbId: 18, name: "Drama" },
+];
+
+const SAMPLE_MOVIES = [
+  {
+    tmdbId: 900001,
+    title: "Enter the Dragon",
+    overview: "Sample data: an undercover agent enters a martial arts tournament hosted by a crime lord.",
+    releaseDate: "1973-08-19",
+    runtime: 102,
+    director: "Robert Clouse",
+    country: "Hong Kong",
+    tmdbRating: 7.6,
+    tmdbPopularity: 32,
+    genres: ["Action", "Martial Arts"],
+    cast: [{ tmdbId: 900201, name: "Bruce Lee", character: "Lee" }],
+  },
+  {
+    tmdbId: 900002,
+    title: "Ip Man",
+    overview: "Sample data: a biographical account of the Wing Chun grandmaster who later trained Bruce Lee.",
+    releaseDate: "2008-12-12",
+    runtime: 106,
+    director: "Wilson Yip",
+    country: "Hong Kong",
+    tmdbRating: 8.0,
+    tmdbPopularity: 28,
+    genres: ["Action", "Martial Arts", "Drama"],
+    cast: [{ tmdbId: 900202, name: "Donnie Yen", character: "Ip Man" }],
+  },
+  {
+    tmdbId: 900003,
+    title: "Drunken Master",
+    overview: "Sample data: a mischievous student is trained in an unorthodox style of kung fu by a wandering master.",
+    releaseDate: "1978-10-05",
+    runtime: 111,
+    director: "Yuen Woo-ping",
+    country: "Hong Kong",
+    tmdbRating: 7.5,
+    tmdbPopularity: 21,
+    genres: ["Action", "Martial Arts"],
+    cast: [{ tmdbId: 900203, name: "Jackie Chan", character: "Wong Fei-hung" }],
+  },
+  {
+    tmdbId: 900004,
+    title: "Crouching Tiger, Hidden Dragon",
+    overview: "Sample data: two warriors pursue a stolen sword and a notorious fugitive across ancient China.",
+    releaseDate: "2000-07-06",
+    runtime: 120,
+    director: "Ang Lee",
+    country: "Taiwan",
+    tmdbRating: 7.9,
+    tmdbPopularity: 26,
+    genres: ["Action", "Drama", "Martial Arts"],
+    cast: [{ tmdbId: 900204, name: "Michelle Yeoh", character: "Yu Shu Lien" }],
+  },
+];
+
+async function main() {
+  const genreByName = new Map<string, { id: string }>();
+  for (const genre of GENRES) {
+    const created = await prisma.genre.upsert({
+      where: { tmdbId: genre.tmdbId },
+      update: { name: genre.name },
+      create: genre,
+    });
+    genreByName.set(genre.name, created);
+  }
+
+  for (const movie of SAMPLE_MOVIES) {
+    const created = await prisma.movie.upsert({
+      where: { tmdbId: movie.tmdbId },
+      update: {},
+      create: {
+        tmdbId: movie.tmdbId,
+        title: movie.title,
+        overview: movie.overview,
+        releaseDate: new Date(movie.releaseDate),
+        runtime: movie.runtime,
+        director: movie.director,
+        country: movie.country,
+        tmdbRating: movie.tmdbRating,
+        tmdbPopularity: movie.tmdbPopularity,
+        genres: { connect: movie.genres.map((name) => ({ id: genreByName.get(name)!.id })) },
+      },
+    });
+
+    for (const [index, castMember] of movie.cast.entries()) {
+      const person = await prisma.person.upsert({
+        where: { tmdbId: castMember.tmdbId },
+        update: { name: castMember.name },
+        create: { tmdbId: castMember.tmdbId, name: castMember.name },
+      });
+      await prisma.castCredit.upsert({
+        where: { movieId_personId: { movieId: created.id, personId: person.id } },
+        update: { characterName: castMember.character, order: index },
+        create: {
+          movieId: created.id,
+          personId: person.id,
+          characterName: castMember.character,
+          order: index,
+        },
+      });
+    }
+  }
+
+  const admin = await prisma.user.upsert({
+    where: { email: "admin@example.com" },
+    update: {},
+    create: {
+      name: "Admin",
+      email: "admin@example.com",
+      role: "ADMIN",
+      passwordHash: await bcrypt.hash("admin1234", 10),
+    },
+  });
+
+  const member = await prisma.user.upsert({
+    where: { email: "member@example.com" },
+    update: {},
+    create: {
+      name: "Member",
+      email: "member@example.com",
+      role: "USER",
+      passwordHash: await bcrypt.hash("member1234", 10),
+    },
+  });
+
+  const enterTheDragon = await prisma.movie.findUniqueOrThrow({ where: { tmdbId: 900001 } });
+  await prisma.rating.upsert({
+    where: { userId_movieId: { userId: member.id, movieId: enterTheDragon.id } },
+    update: { score: 9 },
+    create: { userId: member.id, movieId: enterTheDragon.id, score: 9 },
+  });
+  await prisma.adminRating.upsert({
+    where: { adminId_movieId: { adminId: admin.id, movieId: enterTheDragon.id } },
+    update: { score: 9, note: "A genre-defining classic." },
+    create: { adminId: admin.id, movieId: enterTheDragon.id, score: 9, note: "A genre-defining classic." },
+  });
+
+  console.log("Seed complete.", { admin: admin.email, member: member.email });
+}
+
+main()
+  .catch((error) => {
+    console.error(error);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });
