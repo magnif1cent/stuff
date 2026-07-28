@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { tmdbImageUrl } from "@/lib/tmdb";
 import { getCommunityRatingSummary, getEditorsRatingSummary } from "@/lib/ratings";
+import { getDiscussionPage } from "@/lib/discussion";
 import { RatingWidget } from "@/components/rating-widget";
 import { AdminRatingWidget } from "@/components/admin-rating-widget";
 import { ListButtons } from "@/components/list-buttons";
@@ -28,7 +29,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
     notFound();
   }
 
-  const [communityRating, editorsRating, myRating, myListEntries, discussionPosts] = await Promise.all([
+  const [communityRating, editorsRating, myRating, myListEntries, discussionPage] = await Promise.all([
     getCommunityRatingSummary(movie.id),
     getEditorsRatingSummary(movie.id),
     session?.user
@@ -39,17 +40,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
     session?.user
       ? prisma.listEntry.findMany({ where: { userId: session.user.id, movieId: movie.id } })
       : [],
-    prisma.discussionPost.findMany({
-      where: { movieId: movie.id, parentId: null },
-      orderBy: { createdAt: "desc" },
-      include: {
-        user: { select: { name: true, image: true } },
-        replies: {
-          orderBy: { createdAt: "asc" },
-          include: { user: { select: { name: true, image: true } } },
-        },
-      },
-    }),
+    getDiscussionPage(movie.id),
   ]);
 
   const myAdminRating = session?.user?.role === "ADMIN"
@@ -64,7 +55,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
   const isFavorite = myListEntries.some((e) => e.listType === "FAVORITE");
   const isOnWatchlist = myListEntries.some((e) => e.listType === "WATCHLIST");
 
-  const serializedPosts = discussionPosts.map((post) => ({
+  const serializedPosts = discussionPage.posts.map((post) => ({
     ...post,
     createdAt: post.createdAt.toISOString(),
     replies: post.replies.map((reply) => ({ ...reply, createdAt: reply.createdAt.toISOString() })),
@@ -197,6 +188,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
         <DiscussionThread
           movieId={movie.id}
           initialPosts={serializedPosts}
+          initialNextCursor={discussionPage.nextCursor}
           signedIn={!!session?.user}
         />
       </div>

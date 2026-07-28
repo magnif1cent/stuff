@@ -1,23 +1,14 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getDiscussionPage, MAX_DISCUSSION_CONTENT_LENGTH } from "@/lib/discussion";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id: movieId } = await params;
+  const cursor = new URL(request.url).searchParams.get("cursor");
 
-  const posts = await prisma.discussionPost.findMany({
-    where: { movieId, parentId: null },
-    orderBy: { createdAt: "desc" },
-    include: {
-      user: { select: { name: true, image: true } },
-      replies: {
-        orderBy: { createdAt: "asc" },
-        include: { user: { select: { name: true, image: true } } },
-      },
-    },
-  });
-
-  return NextResponse.json({ posts });
+  const { posts, nextCursor } = await getDiscussionPage(movieId, cursor);
+  return NextResponse.json({ posts, nextCursor });
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -33,10 +24,24 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "content is required." }, { status: 400 });
   }
 
+  const trimmedContent = content.trim();
+  if (trimmedContent.length > MAX_DISCUSSION_CONTENT_LENGTH) {
+    return NextResponse.json(
+      { error: `content must be ${MAX_DISCUSSION_CONTENT_LENGTH} characters or fewer.` },
+      { status: 400 },
+    );
+  }
+
   if (parentId != null) {
     const parent = await prisma.discussionPost.findUnique({ where: { id: parentId } });
     if (!parent || parent.movieId !== movieId) {
       return NextResponse.json({ error: "Invalid parentId." }, { status: 400 });
+    }
+    if (parent.parentId !== null) {
+      return NextResponse.json(
+        { error: "Replies can only be posted on top-level discussion posts." },
+        { status: 400 },
+      );
     }
   }
 
@@ -44,7 +49,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     data: {
       movieId,
       userId: session.user.id,
-      content: content.trim(),
+      content: trimmedContent,
       parentId: typeof parentId === "string" ? parentId : null,
     },
     include: { user: { select: { name: true, image: true } } },

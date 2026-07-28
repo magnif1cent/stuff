@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+const MAX_CONTENT_LENGTH = 5000;
+
 interface PostUser {
   name: string | null;
   image: string | null;
@@ -32,43 +34,63 @@ function timeAgo(iso: string) {
 export function DiscussionThread({
   movieId,
   initialPosts,
+  initialNextCursor,
   signedIn,
 }: {
   movieId: string;
   initialPosts: Post[];
+  initialNextCursor: string | null;
   signedIn: boolean;
 }) {
   const [posts, setPosts] = useState(initialPosts);
+  const [nextCursor, setNextCursor] = useState(initialNextCursor);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [newContent, setNewContent] = useState("");
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyContent, setReplyContent] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  async function refresh() {
-    const res = await fetch(`/api/movies/${movieId}/discussion`);
+  async function loadMore() {
+    if (!nextCursor) return;
+    setLoadingMore(true);
+    const res = await fetch(`/api/movies/${movieId}/discussion?cursor=${encodeURIComponent(nextCursor)}`);
+    setLoadingMore(false);
     if (res.ok) {
       const body = await res.json();
-      setPosts(body.posts);
+      setPosts((prev) => [...prev, ...body.posts]);
+      setNextCursor(body.nextCursor);
     }
   }
 
   async function submit(content: string, parentId: string | null) {
     if (!content.trim()) return;
     setSubmitting(true);
+    setError(null);
     const res = await fetch(`/api/movies/${movieId}/discussion`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ content, parentId }),
     });
     setSubmitting(false);
-    if (res.ok) {
-      if (parentId) {
-        setReplyContent("");
-        setReplyingTo(null);
-      } else {
-        setNewContent("");
-      }
-      await refresh();
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setError(body.error ?? "Something went wrong.");
+      return;
+    }
+
+    const { post } = await res.json();
+
+    if (parentId) {
+      setPosts((prev) =>
+        prev.map((p) => (p.id === parentId ? { ...p, replies: [...p.replies, post] } : p)),
+      );
+      setReplyContent("");
+      setReplyingTo(null);
+    } else {
+      setPosts((prev) => [{ ...post, replies: [] }, ...prev]);
+      setNewContent("");
     }
   }
 
@@ -83,15 +105,22 @@ export function DiscussionThread({
             onChange={(e) => setNewContent(e.target.value)}
             placeholder="Share your thoughts on this movie…"
             rows={3}
+            maxLength={MAX_CONTENT_LENGTH}
             className="w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
           />
-          <button
-            onClick={() => submit(newContent, null)}
-            disabled={submitting || !newContent.trim()}
-            className="w-fit rounded-md bg-red-700 px-4 py-1.5 text-sm font-medium text-white hover:bg-red-600 disabled:opacity-50"
-          >
-            Post
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => submit(newContent, null)}
+              disabled={submitting || !newContent.trim()}
+              className="w-fit rounded-md bg-red-700 px-4 py-1.5 text-sm font-medium text-white hover:bg-red-600 disabled:opacity-50"
+            >
+              Post
+            </button>
+            <span className="text-xs text-neutral-500">
+              {newContent.length}/{MAX_CONTENT_LENGTH}
+            </span>
+          </div>
+          {error && <p className="text-sm text-red-500">{error}</p>}
         </div>
       ) : (
         <p className="mb-6 text-sm text-neutral-400">
@@ -126,6 +155,7 @@ export function DiscussionThread({
                   value={replyContent}
                   onChange={(e) => setReplyContent(e.target.value)}
                   rows={2}
+                  maxLength={MAX_CONTENT_LENGTH}
                   placeholder="Write a reply…"
                   className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
                 />
@@ -160,6 +190,16 @@ export function DiscussionThread({
           <p className="text-sm text-neutral-500">No posts yet. Be the first to start the discussion.</p>
         )}
       </ul>
+
+      {nextCursor && (
+        <button
+          onClick={loadMore}
+          disabled={loadingMore}
+          className="mt-4 w-full rounded-md border border-neutral-800 py-2 text-sm text-neutral-300 hover:bg-neutral-900 disabled:opacity-50"
+        >
+          {loadingMore ? "Loading…" : "Load more"}
+        </button>
+      )}
     </section>
   );
 }
