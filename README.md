@@ -6,7 +6,7 @@ An IMDB-style website for kung fu and martial arts films, built for martial arts
 
 - Landing page with a weekly-rotating "trending" carousel (top 5 most-active movies over the last 7 days) and a recently-added grid
 - Search by movie title or actor name
-- Movie pages with cast, synopsis, a community rating, a separate admin-only "Editors' Score", and a per-movie discussion thread
+- Movie pages with cast, synopsis, a community rating, a separate admin-only "Editors' Score", and a per-movie discussion thread (with spoiler tags, edit/delete on your own posts, and admin moderation)
 - Member accounts via email/password or Google sign-in
 - Member capabilities: rate movies, maintain a Favorites list and a Watchlist, post/reply in movie discussions
 - Admin-only TMDB import tool to curate the catalog (`/admin/import`)
@@ -83,6 +83,12 @@ npm run dev
 
 Visit `http://localhost:3000`. Sign in as the admin account and use `/admin/import` to search TMDB and pull in real kung fu films (there's no single "kung fu" genre on TMDB, so curation is admin-driven by design — search titles like "Ip Man", "Drunken Master", "Once Upon a Time in China", etc.).
 
+## Discussion & Moderation
+
+- Any signed-in member can post and reply (one level of replies) on a movie's discussion thread. Discussion is paginated (20 posts/page, "Load more") and content is capped at 5,000 characters.
+- Wrap text in `[spoiler]...[/spoiler]` to hide it behind a "click to reveal" toggle — useful for plot twists/endings discussed on the movie's own page. Note this is a client-side reveal (like most forum spoiler tags): the text is present in the page's data, just not shown until clicked, so it isn't a substitute for redacting genuinely secret data.
+- Authors can edit or delete their own posts; admins can delete anyone's post. Deletion is a soft-delete — the row and any replies underneath it are kept (so a thread doesn't fall apart when one comment in it is removed), but the content is blanked and the post renders as `[deleted]`.
+
 ## Weekly Trending Carousel
 
 `/api/cron/weekly-featured` recomputes the top 5 most-active movies (by ratings + discussion activity in the last 7 days) and is protected by the `CRON_SECRET` env var (sent as `Authorization: Bearer <CRON_SECRET>`). `vercel.json` schedules this to run weekly via [Vercel Cron](https://vercel.com/docs/cron-jobs) — Vercel automatically attaches that header when `CRON_SECRET` is set as a project environment variable.
@@ -104,4 +110,4 @@ Visit `http://localhost:3000`. Sign in as the admin account and use `/admin/impo
 
 ## Out of Scope (for now)
 
-Person/actor detail pages, catalog pagination, discussion moderation tools, notifications, and "related movies" recommendations are not yet implemented.
+Person/actor detail pages, catalog-wide pagination, rate limiting, email verification on registration, reply notifications, a user-facing "report post" flow, and "related movies" recommendations are not yet implemented.

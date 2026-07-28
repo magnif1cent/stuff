@@ -58,7 +58,12 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
   const serializedPosts = discussionPage.posts.map((post) => ({
     ...post,
     createdAt: post.createdAt.toISOString(),
-    replies: post.replies.map((reply) => ({ ...reply, createdAt: reply.createdAt.toISOString() })),
+    updatedAt: post.updatedAt.toISOString(),
+    replies: post.replies.map((reply) => ({
+      ...reply,
+      createdAt: reply.createdAt.toISOString(),
+      updatedAt: reply.updatedAt.toISOString(),
+    })),
   }));
 
   return (
@@ -190,6 +195,8 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
           initialPosts={serializedPosts}
           initialNextCursor={discussionPage.nextCursor}
           signedIn={!!session?.user}
+          currentUserId={session?.user?.id ?? null}
+          isAdmin={session?.user?.role === "ADMIN"}
         />
       </div>
     </div>
