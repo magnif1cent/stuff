@@ -2,23 +2,20 @@
 
 import { useState } from "react";
 import { SpoilerText } from "@/components/spoiler-text";
+import type { DiscussionPost, User } from "@/generated/prisma/client";
 
 const MAX_CONTENT_LENGTH = 5000;
 
-interface PostUser {
-  name: string | null;
-  image: string | null;
-}
+type PostUser = Pick<User, "name" | "image">;
 
-interface DiscussionItem {
-  id: string;
-  content: string;
+// createdAt/updatedAt are strings here (not the Prisma Date type) because posts
+// cross the server-to-client boundary as JSON, either via the initial page's
+// serialization or a fetch() response.
+type DiscussionItem = Pick<DiscussionPost, "id" | "content" | "userId" | "isDeleted"> & {
   createdAt: string;
   updatedAt: string;
-  userId: string;
-  isDeleted: boolean;
   user: PostUser;
-}
+};
 
 interface Post extends DiscussionItem {
   replies: DiscussionItem[];
