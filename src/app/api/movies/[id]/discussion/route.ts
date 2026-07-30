@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getDiscussionPage, MAX_DISCUSSION_CONTENT_LENGTH } from "@/lib/discussion";
+import { isEmailVerified } from "@/lib/verification";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id: movieId } = await params;
@@ -15,6 +16,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json({ error: "Sign in to join the discussion." }, { status: 401 });
+  }
+  if (!(await isEmailVerified(session.user.id))) {
+    return NextResponse.json({ error: "Verify your email before posting in discussions." }, { status: 403 });
   }
 
   const { id: movieId } = await params;

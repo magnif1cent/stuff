@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { createVerificationToken, buildVerificationUrl } from "@/lib/verification";
+import { sendVerificationEmail } from "@/lib/email";
 
 export async function POST(request: Request) {
   const { name, email, password } = await request.json();
@@ -25,6 +27,15 @@ export async function POST(request: Request) {
       passwordHash,
     },
   });
+
+  try {
+    const token = await createVerificationToken(email);
+    await sendVerificationEmail(email, buildVerificationUrl(token));
+  } catch (error) {
+    // Don't fail account creation over a flaky email provider — the account
+    // exists either way, and the unverified-email banner offers a resend path.
+    console.error("Failed to send verification email:", error);
+  }
 
   return NextResponse.json({ id: user.id, email: user.email });
 }

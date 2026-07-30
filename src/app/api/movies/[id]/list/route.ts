@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { isEmailVerified } from "@/lib/verification";
 
 const VALID_LIST_TYPES = ["FAVORITE", "WATCHLIST"] as const;
 
@@ -8,6 +9,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json({ error: "Sign in to manage your lists." }, { status: 401 });
+  }
+  if (!(await isEmailVerified(session.user.id))) {
+    return NextResponse.json({ error: "Verify your email before managing lists." }, { status: 403 });
   }
 
   const { id: movieId } = await params;

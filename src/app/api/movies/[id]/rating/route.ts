@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { isEmailVerified } from "@/lib/verification";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json({ error: "Sign in to rate movies." }, { status: 401 });
+  }
+  if (!(await isEmailVerified(session.user.id))) {
+    return NextResponse.json({ error: "Verify your email before rating movies." }, { status: 403 });
   }
 
   const { id: movieId } = await params;

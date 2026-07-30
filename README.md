@@ -7,7 +7,7 @@ An IMDB-style website for kung fu and martial arts films, built for martial arts
 - Landing page with a weekly-rotating "trending" carousel (top 5 most-active movies over the last 7 days) and a recently-added grid
 - Search by movie title or actor name
 - Movie pages with cast, synopsis, a community rating, a separate admin-only "Editors' Score", and a per-movie discussion thread (with spoiler tags, edit/delete on your own posts, and admin moderation)
-- Member accounts via email/password or Google sign-in
+- Member accounts via email/password (with email verification) or Google sign-in
 - Member capabilities: rate movies, maintain a Favorites list and a Watchlist, post/reply in movie discussions
 - Admin-only TMDB import tool to curate the catalog (`/admin/import`)
 
@@ -57,7 +57,7 @@ Pick one:
 cp .env.example .env
 ```
 
-Fill in `DATABASE_URL`, `TMDB_API_KEY`, `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`, and generate an `AUTH_SECRET`:
+Fill in `DATABASE_URL`, `TMDB_API_KEY`, `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`, and generate an `AUTH_SECRET`. `RESEND_API_KEY`/`EMAIL_FROM` are optional — see [Email Verification](#email-verification) below.
 
 ```bash
 npx auth secret
@@ -70,7 +70,7 @@ npx prisma migrate dev
 npx prisma db seed
 ```
 
-The seed script creates a few placeholder movies (clearly not real TMDB imports) so the site is browsable immediately, plus two test accounts:
+The seed script creates a few placeholder movies (clearly not real TMDB imports) so the site is browsable immediately, plus two pre-verified test accounts:
 
 - `admin@example.com` / `admin1234` (role: ADMIN)
 - `member@example.com` / `member1234` (role: USER)
@@ -82,6 +82,16 @@ npm run dev
 ```
 
 Visit `http://localhost:3000`. Sign in as the admin account and use `/admin/import` to search TMDB and pull in real kung fu films (there's no single "kung fu" genre on TMDB, so curation is admin-driven by design — search titles like "Ip Man", "Drunken Master", "Once Upon a Time in China", etc.).
+
+## Email Verification
+
+Registering with email/password creates the account immediately and sends a verification link — you can sign in and browse right away, but rating movies, managing lists, and posting in discussions require a verified email (a banner with a "Resend email" button appears until you verify). Google sign-ins are auto-verified, since Google already confirmed that address.
+
+Without `RESEND_API_KEY` configured, the verification link is logged to the server console instead of emailed (`[email:dev] Verification link for ...`) — grab it from there for local testing. To send real emails:
+
+1. Create a free account at [resend.com](https://resend.com) and get an API key.
+2. Set `RESEND_API_KEY` (and `EMAIL_FROM`, once you've verified a sending domain in Resend — until then their shared `onboarding@resend.dev` sender only delivers to your own Resend account email).
+3. To use a different provider, replace the `fetch` call in `src/lib/email.ts`.
 
 ## Discussion & Moderation
 
@@ -108,10 +118,10 @@ Visit `http://localhost:3000`. Sign in as the admin account and use `/admin/impo
 
 - `src/app` — pages and API routes (App Router)
 - `src/components` — UI components
-- `src/lib` — Prisma client, Auth.js config, TMDB client, rating/weekly-featured helpers
+- `src/lib` — Prisma client, Auth.js config, TMDB client, rating/weekly-featured/verification helpers, email sender
 - `prisma/schema.prisma` — data model
 - `prisma/seed.ts` — sample/dev seed data
 
 ## Out of Scope (for now)
 
-Person/actor detail pages, catalog-wide pagination, rate limiting, email verification on registration, reply notifications, a user-facing "report post" flow, and "related movies" recommendations are not yet implemented.
+Person/actor detail pages, catalog-wide pagination, rate limiting, reply notifications, a user-facing "report post" flow, and "related movies" recommendations are not yet implemented.

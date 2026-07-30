@@ -15,6 +15,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      profile(profile) {
+        return {
+          id: profile.sub,
+          name: profile.name,
+          email: profile.email,
+          image: profile.picture,
+          role: "USER",
+          // Google already verified this address — no reason to make the
+          // user verify it again through our own flow.
+          emailVerified: profile.email_verified ? new Date() : null,
+        };
+      },
     }),
     Credentials({
       name: "Credentials",

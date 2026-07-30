@@ -119,23 +119,27 @@ async function main() {
 
   const admin = await prisma.user.upsert({
     where: { email: "admin@example.com" },
-    update: {},
+    update: { emailVerified: new Date() },
     create: {
       name: "Admin",
       email: "admin@example.com",
       role: "ADMIN",
       passwordHash: await bcrypt.hash("admin1234", 10),
+      // Seed accounts are pre-verified so local testing doesn't require
+      // clicking a real verification link.
+      emailVerified: new Date(),
     },
   });
 
   const member = await prisma.user.upsert({
     where: { email: "member@example.com" },
-    update: {},
+    update: { emailVerified: new Date() },
     create: {
       name: "Member",
       email: "member@example.com",
       role: "USER",
       passwordHash: await bcrypt.hash("member1234", 10),
+      emailVerified: new Date(),
     },
   });
 

@@ -16,6 +16,7 @@ export function RatingWidget({
 }) {
   const [score, setScore] = useState(initialScore);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   if (!signedIn) {
@@ -28,6 +29,7 @@ export function RatingWidget({
 
   async function handleRate(value: number) {
     setSaving(true);
+    setError(null);
     const res = await fetch(`/api/movies/${movieId}/rating`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -37,6 +39,9 @@ export function RatingWidget({
     if (res.ok) {
       setScore(value);
       router.refresh();
+    } else {
+      const body = await res.json().catch(() => ({}));
+      setError(body.error ?? "Something went wrong.");
     }
   }
 
@@ -59,6 +64,7 @@ export function RatingWidget({
           </button>
         ))}
       </div>
+      {error && <p className="mt-1 text-sm text-red-500">{error}</p>}
     </div>
   );
 }
