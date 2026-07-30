@@ -155,6 +155,33 @@ async function main() {
     create: { adminId: admin.id, movieId: enterTheDragon.id, score: 9, note: "A genre-defining classic." },
   });
 
+  const bruceLee = await prisma.person.findUniqueOrThrow({ where: { tmdbId: 900201 } });
+  const existingFightScene = await prisma.fightScene.findFirst({
+    where: { movieId: enterTheDragon.id, submittedById: member.id },
+  });
+  const fightScene =
+    existingFightScene ??
+    (await prisma.fightScene.create({
+      data: {
+        movieId: enterTheDragon.id,
+        submittedById: member.id,
+        // Sample data: not a real YouTube video id.
+        youtubeVideoId: "sampleClip1",
+        isVerified: true,
+        cast: { create: [{ personId: bruceLee.id, order: 0 }] },
+      },
+    }));
+  await prisma.fightSceneRating.upsert({
+    where: { userId_fightSceneId: { userId: member.id, fightSceneId: fightScene.id } },
+    update: { score: 10 },
+    create: { userId: member.id, fightSceneId: fightScene.id, score: 10 },
+  });
+  await prisma.fightSceneAdminRating.upsert({
+    where: { adminId_fightSceneId: { adminId: admin.id, fightSceneId: fightScene.id } },
+    update: { score: 10, note: "The mirror room finale." },
+    create: { adminId: admin.id, fightSceneId: fightScene.id, score: 10, note: "The mirror room finale." },
+  });
+
   console.log("Seed complete.", { admin: admin.email, member: member.email });
 }
 
