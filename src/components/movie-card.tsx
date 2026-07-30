@@ -1,16 +1,12 @@
 import Image from "next/image";
 import Link from "next/link";
 import { tmdbImageUrl } from "@/lib/tmdb";
+import type { Movie } from "@/generated/prisma/client";
 
-export interface MovieCardData {
-  id: string;
-  title: string;
-  releaseDate: Date | null;
-  posterPath: string | null;
-  tmdbRating: number | null;
+export type MovieCardData = Pick<Movie, "id" | "title" | "releaseDate" | "posterPath" | "tmdbRating"> & {
   communityAverage?: number | null;
   communityCount?: number;
-}
+};
 
 export function MovieCard({ movie }: { movie: MovieCardData }) {
   const posterUrl = tmdbImageUrl(movie.posterPath, "w342");

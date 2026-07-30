@@ -4,14 +4,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { tmdbImageUrl } from "@/lib/tmdb";
+import type { Movie } from "@/generated/prisma/client";
 
-export interface FeaturedMovie {
-  id: string;
-  title: string;
-  overview: string | null;
-  backdropPath: string | null;
-  releaseDate: Date | null;
-}
+export type FeaturedMovie = Pick<Movie, "id" | "title" | "overview" | "backdropPath" | "releaseDate">;
 
 const ROTATE_MS = 6000;
 

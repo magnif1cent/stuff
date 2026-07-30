@@ -3,10 +3,11 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getRatingSummaries } from "@/lib/ratings";
 import { MovieCard } from "@/components/movie-card";
+import type { Movie } from "@/generated/prisma/client";
 
 async function MovieRow({ title, movies, ratingSummaries }: {
   title: string;
-  movies: { id: string; title: string; releaseDate: Date | null; posterPath: string | null; tmdbRating: number | null }[];
+  movies: Pick<Movie, "id" | "title" | "releaseDate" | "posterPath" | "tmdbRating">[];
   ratingSummaries: Awaited<ReturnType<typeof getRatingSummaries>>;
 }) {
   return (
