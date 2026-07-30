@@ -39,3 +39,31 @@ export async function getEditorsRatingSummary(movieId: string): Promise<RatingSu
   });
   return { average: result._avg.score, count: result._count._all };
 }
+
+const TOP_RATED_MIN_RATINGS = 2;
+
+export async function getTopRatedMovies(limit = 12) {
+  const grouped = await prisma.rating.groupBy({
+    by: ["movieId"],
+    _avg: { score: true },
+    _count: { _all: true },
+  });
+
+  const ranked = grouped
+    .filter((row) => row._count._all >= TOP_RATED_MIN_RATINGS)
+    .sort((a, b) => (b._avg.score ?? 0) - (a._avg.score ?? 0))
+    .slice(0, limit);
+
+  if (ranked.length === 0) return [];
+
+  const movies = await prisma.movie.findMany({ where: { id: { in: ranked.map((r) => r.movieId) } } });
+  const byId = new Map(movies.map((m) => [m.id, m]));
+
+  return ranked
+    .map((r) => {
+      const movie = byId.get(r.movieId);
+      if (!movie) return null;
+      return { ...movie, communityAverage: r._avg.score, communityCount: r._count._all };
+    })
+    .filter((m): m is NonNullable<typeof m> => m !== null);
+}
