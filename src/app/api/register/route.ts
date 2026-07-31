@@ -14,7 +14,11 @@ export async function POST(request: Request) {
     );
   }
 
-  const existing = await prisma.user.findUnique({ where: { email } });
+  // Normalize so "User@Example.com" and "user@example.com" are treated as
+  // the same account — Postgres's default `=` comparison is case-sensitive.
+  const normalizedEmail = email.trim().toLowerCase();
+
+  const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
   if (existing) {
     return NextResponse.json({ error: "An account with that email already exists." }, { status: 409 });
   }
@@ -23,14 +27,14 @@ export async function POST(request: Request) {
   const user = await prisma.user.create({
     data: {
       name: typeof name === "string" && name.trim() ? name.trim() : null,
-      email,
+      email: normalizedEmail,
       passwordHash,
     },
   });
 
   try {
-    const token = await createVerificationToken(email);
-    await sendVerificationEmail(email, buildVerificationUrl(token));
+    const token = await createVerificationToken(normalizedEmail);
+    await sendVerificationEmail(normalizedEmail, buildVerificationUrl(token));
   } catch (error) {
     // Don't fail account creation over a flaky email provider — the account
     // exists either way, and the unverified-email banner offers a resend path.

@@ -19,7 +19,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return {
           id: profile.sub,
           name: profile.name,
-          email: profile.email,
+          email: profile.email.toLowerCase(),
           image: profile.picture,
           role: "USER",
           // Google already verified this address — no reason to make the
@@ -41,7 +41,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return null;
         }
 
-        const user = await prisma.user.findUnique({ where: { email } });
+        // Same normalization as registration — lookups must match on case.
+        const user = await prisma.user.findUnique({ where: { email: email.trim().toLowerCase() } });
         if (!user?.passwordHash) {
           return null;
         }
