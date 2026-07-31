@@ -7,6 +7,7 @@ An IMDB-style website for kung fu and martial arts films, built for martial arts
 - Landing page with a weekly-rotating "trending" carousel (top 5 most-active movies over the last 7 days) and a recently-added grid
 - Search by movie title or actor name
 - Movie pages with cast, synopsis, a community rating, a separate admin-only "Editors' Score", and a per-movie discussion thread (with spoiler tags, edit/delete on your own posts, and admin moderation)
+- Person pages (`/people/[id]`) — click a cast member from a movie page to see their bio (from TMDB) and filmography within our catalog
 - Member accounts via email/password (with email verification) or Google sign-in
 - Member capabilities: rate movies, maintain a Favorites list and a Watchlist, post/reply in movie discussions
 - Admin-only TMDB import tool to curate the catalog (`/admin/import`)
@@ -124,4 +125,4 @@ Without `RESEND_API_KEY` configured, the verification link is logged to the serv
 
 ## Out of Scope (for now)
 
-Person/actor detail pages, catalog-wide pagination, rate limiting, reply notifications, a user-facing "report post" flow, and "related movies" recommendations are not yet implemented.
+Catalog-wide pagination, rate limiting, reply notifications, a user-facing "report post" flow, and "related movies" recommendations are not yet implemented.

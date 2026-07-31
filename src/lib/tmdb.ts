@@ -72,3 +72,17 @@ export async function getTmdbMovieDetails(tmdbId: number) {
     append_to_response: "credits",
   });
 }
+
+export interface TmdbPersonDetails {
+  id: number;
+  name: string;
+  biography: string;
+  birthday: string | null;
+  deathday: string | null;
+  place_of_birth: string | null;
+  profile_path: string | null;
+}
+
+export async function getTmdbPersonDetails(tmdbId: number) {
+  return tmdbFetch<TmdbPersonDetails>(`/person/${tmdbId}`);
+}

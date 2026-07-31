@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -168,7 +169,11 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
             <h2 className="mb-4 text-xl font-bold text-white">Cast</h2>
             <div className="flex gap-4 overflow-x-auto pb-2">
               {movie.cast.map((credit) => (
-                <div key={credit.id} className="w-28 shrink-0 text-center">
+                <Link
+                  key={credit.id}
+                  href={`/people/${credit.person.id}`}
+                  className="group w-28 shrink-0 text-center"
+                >
                   <div className="relative mb-1 aspect-square overflow-hidden rounded-full bg-neutral-800">
                     {credit.person.profilePath ? (
                       <Image
@@ -176,15 +181,17 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
                         alt={credit.person.name}
                         fill
                         sizes="112px"
-                        className="object-cover"
+                        className="object-cover transition group-hover:scale-105"
                       />
                     ) : null}
                   </div>
-                  <p className="truncate text-xs font-medium text-neutral-100">{credit.person.name}</p>
+                  <p className="truncate text-xs font-medium text-neutral-100 group-hover:text-red-500">
+                    {credit.person.name}
+                  </p>
                   {credit.characterName && (
                     <p className="truncate text-xs text-neutral-500">{credit.characterName}</p>
                   )}
-                </div>
+                </Link>
               ))}
             </div>
           </section>

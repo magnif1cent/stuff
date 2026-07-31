@@ -123,6 +123,7 @@ model CastCredit {
 
   @@unique([movieId, personId])
   @@index([movieId])
+  @@index([personId])
 }
 
 // --- Ratings ---
