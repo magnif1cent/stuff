@@ -158,7 +158,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
         </div>
 
         <div className="flex-1 pt-6 sm:pt-24">
-          <h1 className="text-3xl font-bold text-white">
+          <h1 className="font-serif text-3xl font-bold text-white">
             {movie.title} {year && <span className="text-neutral-400">({year})</span>}
           </h1>
 
@@ -234,7 +234,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
       <div className="mx-auto w-full max-w-6xl px-4 py-8">
         {movie.cast.length > 0 && (
           <section className="mb-8">
-            <h2 className="mb-4 text-xl font-bold text-white">Cast</h2>
+            <h2 className="mb-4 font-serif text-xl font-bold text-white">Cast</h2>
             <div className="flex gap-4 overflow-x-auto pb-2">
               {movie.cast.map((credit) => (
                 <div key={credit.id} className="w-28 shrink-0 text-center">

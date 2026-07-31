@@ -367,7 +367,7 @@ export function FightSceneSection({
     <section className="mt-10">
       {heading && (
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-white">{heading}</h2>
+          <h2 className="font-serif text-xl font-bold text-white">{heading}</h2>
           {allowAdd && signedIn && !adding && castOptions.length > 0 && (
             <button
               onClick={() => setAdding(true)}
@@ -436,7 +436,7 @@ export function FightSceneSection({
                   </div>
 
                   <div className="mt-2 flex items-start justify-between gap-2">
-                    <Link href={permalinkPath} className="font-medium text-neutral-100 hover:text-red-400">
+                    <Link href={permalinkPath} className="font-serif text-lg font-medium text-neutral-100 hover:text-red-400">
                       {scene.title}
                     </Link>
                     <ShareButton path={permalinkPath} title={scene.title} variant="icon" />
