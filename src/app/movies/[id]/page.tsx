@@ -9,6 +9,7 @@ import {
   getFightScenesForMovie,
   getFightSceneRatingSummaries,
   getFightSceneAdminRatingSummaries,
+  getFightSceneTags,
 } from "@/lib/fight-scenes";
 import { RatingWidget } from "@/components/rating-widget";
 import { AdminRatingWidget } from "@/components/admin-rating-widget";
@@ -35,20 +36,22 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
     notFound();
   }
 
-  const [communityRating, editorsRating, myRating, myListEntries, discussionPage, fightScenes] = await Promise.all([
-    getCommunityRatingSummary(movie.id),
-    getEditorsRatingSummary(movie.id),
-    session?.user
-      ? prisma.rating.findUnique({
-          where: { userId_movieId: { userId: session.user.id, movieId: movie.id } },
-        })
-      : null,
-    session?.user
-      ? prisma.listEntry.findMany({ where: { userId: session.user.id, movieId: movie.id } })
-      : [],
-    getDiscussionPage(movie.id),
-    getFightScenesForMovie(movie.id),
-  ]);
+  const [communityRating, editorsRating, myRating, myListEntries, discussionPage, fightScenes, fightSceneTags] =
+    await Promise.all([
+      getCommunityRatingSummary(movie.id),
+      getEditorsRatingSummary(movie.id),
+      session?.user
+        ? prisma.rating.findUnique({
+            where: { userId_movieId: { userId: session.user.id, movieId: movie.id } },
+          })
+        : null,
+      session?.user
+        ? prisma.listEntry.findMany({ where: { userId: session.user.id, movieId: movie.id } })
+        : [],
+      getDiscussionPage(movie.id),
+      getFightScenesForMovie(movie.id),
+      getFightSceneTags(),
+    ]);
 
   const myAdminRating = session?.user?.role === "ADMIN"
     ? await prisma.adminRating.findUnique({
@@ -84,6 +87,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
     const adminSummary = fightSceneAdminRatingSummaries.get(scene.id);
     return {
       id: scene.id,
+      title: scene.title,
       youtubeVideoId: scene.youtubeVideoId,
       youtubeStartSeconds: scene.youtubeStartSeconds,
       isVerified: scene.isVerified,
@@ -92,6 +96,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
       updatedAt: scene.updatedAt.toISOString(),
       submittedBy: scene.submittedBy,
       cast: scene.cast,
+      tags: scene.tags,
       ratingAverage: summary?.average ?? null,
       ratingCount: summary?.count ?? 0,
       adminRatingAverage: adminSummary?.average ?? null,
@@ -245,6 +250,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
           movieId={movie.id}
           initialFightScenes={serializedFightScenes}
           castOptions={castOptions}
+          tagOptions={fightSceneTags}
           signedIn={!!session?.user}
           currentUserId={session?.user?.id ?? null}
           isAdmin={session?.user?.role === "ADMIN"}

@@ -1,13 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { FightSceneCast, Person, User } from "@/generated/prisma/client";
+import type { FightSceneCast, FightSceneTag, Person, User } from "@/generated/prisma/client";
+import { ShareButton } from "@/components/share-button";
 
 const SCORES = Array.from({ length: 10 }, (_, i) => i + 1);
 const MAX_NOTE_LENGTH = 2000;
+const MAX_TITLE_LENGTH = 200;
 
 export type CastOption = Pick<Person, "id" | "name">;
+export type TagOption = Pick<FightSceneTag, "id" | "name">;
 
 type FightSceneSubmitter = Pick<User, "name" | "image">;
 type FightSceneCastPerson = Pick<Person, "id" | "name" | "profilePath">;
@@ -17,6 +21,7 @@ type FightSceneCastItem = Pick<FightSceneCast, "id" | "order"> & { person: Fight
 // same reasoning as DiscussionThread.
 export type FightSceneItem = {
   id: string;
+  title: string;
   youtubeVideoId: string;
   youtubeStartSeconds: number | null;
   isVerified: boolean;
@@ -25,6 +30,7 @@ export type FightSceneItem = {
   updatedAt: string;
   submittedBy: FightSceneSubmitter;
   cast: FightSceneCastItem[];
+  tags: TagOption[];
   ratingAverage: number | null;
   ratingCount: number;
   adminRatingAverage: number | null;
@@ -38,29 +44,33 @@ function embedUrl(videoId: string, startSeconds: number | null) {
   return `https://www.youtube-nocookie.com/embed/${videoId}${query ? `?${query}` : ""}`;
 }
 
-function CastPicker({
+function ChipPicker({
   options,
   selected,
   onToggle,
+  tagStyle,
 }: {
-  options: CastOption[];
+  options: { id: string; name: string }[];
   selected: Set<string>;
   onToggle: (id: string) => void;
+  tagStyle?: boolean;
 }) {
   return (
     <div className="flex max-h-32 flex-wrap gap-2 overflow-y-auto rounded-md border border-neutral-700 bg-neutral-950 p-2">
-      {options.map((person) => (
+      {options.map((option) => (
         <label
-          key={person.id}
-          className="flex cursor-pointer items-center gap-1.5 rounded-full border border-neutral-700 px-2 py-1 text-xs text-neutral-300 has-checked:border-red-600 has-checked:text-white"
+          key={option.id}
+          className={`flex cursor-pointer items-center gap-1.5 rounded-full border border-neutral-700 px-2 py-1 text-xs text-neutral-300 ${
+            tagStyle ? "has-checked:border-red-600 has-checked:bg-red-950/40 has-checked:text-red-300" : "has-checked:border-red-600 has-checked:text-white"
+          }`}
         >
           <input
             type="checkbox"
-            checked={selected.has(person.id)}
-            onChange={() => onToggle(person.id)}
+            checked={selected.has(option.id)}
+            onChange={() => onToggle(option.id)}
             className="sr-only"
           />
-          {person.name}
+          {option.name}
         </label>
       ))}
     </div>
@@ -69,31 +79,70 @@ function CastPicker({
 
 function FightSceneForm({
   castOptions,
+  tagOptions,
+  initialTitle = "",
   initialUrl = "",
   initialPersonIds = [],
+  initialTagIds = [],
   submitLabel,
   submitting,
   onCancel,
   onSubmit,
 }: {
   castOptions: CastOption[];
+  tagOptions: TagOption[];
+  initialTitle?: string;
   initialUrl?: string;
   initialPersonIds?: string[];
+  initialTagIds?: string[];
   submitLabel: string;
   submitting: boolean;
   onCancel?: () => void;
-  onSubmit: (youtubeUrl: string, personIds: string[]) => void;
+  onSubmit: (title: string, youtubeUrl: string, personIds: string[], tagIds: string[]) => void;
 }) {
+  const [title, setTitle] = useState(initialTitle);
   const [url, setUrl] = useState(initialUrl);
-  const [selected, setSelected] = useState<Set<string>>(new Set(initialPersonIds));
+  const [selectedCast, setSelectedCast] = useState<Set<string>>(new Set(initialPersonIds));
+  const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set(initialTagIds));
+  const [suggestingTitle, setSuggestingTitle] = useState(false);
+  const lastSuggestedTitle = useRef("");
 
-  function toggle(id: string) {
-    setSelected((prev) => {
+  function toggleCast(id: string) {
+    setSelectedCast((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
+  }
+
+  function toggleTag(id: string) {
+    setSelectedTags((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async function suggestTitle() {
+    if (!url.trim()) return;
+    // Don't clobber a title the submitter already typed themselves — only
+    // fill in if it's still blank or still equals our last suggestion.
+    if (title.trim() && title !== lastSuggestedTitle.current) return;
+    setSuggestingTitle(true);
+    try {
+      const res = await fetch(`/api/youtube/title?url=${encodeURIComponent(url.trim())}`);
+      if (res.ok) {
+        const body = await res.json();
+        if (typeof body.title === "string" && body.title) {
+          lastSuggestedTitle.current = body.title;
+          setTitle(body.title);
+        }
+      }
+    } finally {
+      setSuggestingTitle(false);
+    }
   }
 
   return (
@@ -102,17 +151,30 @@ function FightSceneForm({
         type="url"
         value={url}
         onChange={(e) => setUrl(e.target.value)}
+        onBlur={suggestTitle}
         placeholder="Paste the YouTube link to this fight scene…"
+        className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
+      />
+      <input
+        type="text"
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        maxLength={MAX_TITLE_LENGTH}
+        placeholder={suggestingTitle ? "Suggesting a title from YouTube…" : 'Title, e.g. "Mirror Room Finale"'}
         className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
       />
       <div>
         <p className="mb-1 text-xs text-neutral-500">Actors in this scene</p>
-        <CastPicker options={castOptions} selected={selected} onToggle={toggle} />
+        <ChipPicker options={castOptions} selected={selectedCast} onToggle={toggleCast} />
+      </div>
+      <div>
+        <p className="mb-1 text-xs text-neutral-500">Category tags (optional)</p>
+        <ChipPicker options={tagOptions} selected={selectedTags} onToggle={toggleTag} tagStyle />
       </div>
       <div className="flex gap-2">
         <button
-          onClick={() => onSubmit(url, [...selected])}
-          disabled={submitting || !url.trim() || selected.size === 0}
+          onClick={() => onSubmit(title, url, [...selectedCast], [...selectedTags])}
+          disabled={submitting || !url.trim() || !title.trim() || selectedCast.size === 0}
           className="w-fit rounded-md bg-red-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-600 disabled:opacity-50"
         >
           {submitting ? "Saving…" : submitLabel}
@@ -169,20 +231,26 @@ export function FightSceneSection({
   movieId,
   initialFightScenes,
   castOptions,
+  tagOptions,
   signedIn,
   currentUserId,
   isAdmin,
   myRatings,
   myAdminRatings,
+  heading = "Fight Scenes",
+  allowAdd = true,
 }: {
   movieId: string;
   initialFightScenes: FightSceneItem[];
   castOptions: CastOption[];
+  tagOptions: TagOption[];
   signedIn: boolean;
   currentUserId: string | null;
   isAdmin: boolean;
   myRatings: Record<string, number>;
   myAdminRatings: Record<string, number>;
+  heading?: string | null;
+  allowAdd?: boolean;
 }) {
   const router = useRouter();
   const [scenes, setScenes] = useState(initialFightScenes);
@@ -194,13 +262,13 @@ export function FightSceneSection({
   const [error, setError] = useState<string | null>(null);
   const [adminNoteDrafts, setAdminNoteDrafts] = useState<Record<string, string>>({});
 
-  async function handleCreate(youtubeUrl: string, personIds: string[]) {
+  async function handleCreate(title: string, youtubeUrl: string, personIds: string[], tagIds: string[]) {
     setSubmitting(true);
     setError(null);
     const res = await fetch(`/api/movies/${movieId}/fight-scenes`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ youtubeUrl, personIds }),
+      body: JSON.stringify({ title, youtubeUrl, personIds, tagIds }),
     });
     setSubmitting(false);
     if (!res.ok) {
@@ -216,13 +284,13 @@ export function FightSceneSection({
     setAdding(false);
   }
 
-  async function handleEdit(id: string, youtubeUrl: string, personIds: string[]) {
+  async function handleEdit(id: string, title: string, youtubeUrl: string, personIds: string[], tagIds: string[]) {
     setSubmitting(true);
     setError(null);
     const res = await fetch(`/api/movies/${movieId}/fight-scenes/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ youtubeUrl, personIds }),
+      body: JSON.stringify({ title, youtubeUrl, personIds, tagIds }),
     });
     setSubmitting(false);
     if (!res.ok) {
@@ -297,17 +365,19 @@ export function FightSceneSection({
 
   return (
     <section className="mt-10">
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-xl font-bold text-white">Fight Scenes</h2>
-        {signedIn && !adding && castOptions.length > 0 && (
-          <button
-            onClick={() => setAdding(true)}
-            className="rounded-md border border-neutral-700 px-3 py-1 text-xs text-neutral-300 hover:bg-neutral-800"
-          >
-            + Add fight scene
-          </button>
-        )}
-      </div>
+      {heading && (
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-xl font-bold text-white">{heading}</h2>
+          {allowAdd && signedIn && !adding && castOptions.length > 0 && (
+            <button
+              onClick={() => setAdding(true)}
+              className="rounded-md border border-neutral-700 px-3 py-1 text-xs text-neutral-300 hover:bg-neutral-800"
+            >
+              + Add fight scene
+            </button>
+          )}
+        </div>
+      )}
 
       {!signedIn && (
         <p className="mb-4 text-sm text-neutral-400">
@@ -324,6 +394,7 @@ export function FightSceneSection({
         <div className="mb-6 rounded-md border border-neutral-800 bg-neutral-900 p-3">
           <FightSceneForm
             castOptions={castOptions}
+            tagOptions={tagOptions}
             submitLabel="Add fight scene"
             submitting={submitting}
             onCancel={() => setAdding(false)}
@@ -336,28 +407,39 @@ export function FightSceneSection({
         {scenes.map((scene) => {
           const canEdit = currentUserId === scene.submittedById;
           const canDelete = canEdit || isAdmin;
+          const permalinkPath = `/movies/${movieId}/fight-scenes/${scene.id}`;
 
           return (
             <li key={scene.id} className="rounded-md border border-neutral-800 bg-neutral-900 p-3">
               {editingId === scene.id ? (
                 <FightSceneForm
                   castOptions={castOptions}
+                  tagOptions={tagOptions}
+                  initialTitle={scene.title}
                   initialPersonIds={scene.cast.map((c) => c.person.id)}
+                  initialTagIds={scene.tags.map((t) => t.id)}
                   submitLabel="Save"
                   submitting={submitting}
                   onCancel={() => setEditingId(null)}
-                  onSubmit={(url, personIds) => handleEdit(scene.id, url, personIds)}
+                  onSubmit={(title, url, personIds, tagIds) => handleEdit(scene.id, title, url, personIds, tagIds)}
                 />
               ) : (
                 <>
                   <div className="aspect-video w-full overflow-hidden rounded-md bg-black">
                     <iframe
                       src={embedUrl(scene.youtubeVideoId, scene.youtubeStartSeconds)}
-                      title="Fight scene"
+                      title={scene.title}
                       className="h-full w-full"
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                       allowFullScreen
                     />
+                  </div>
+
+                  <div className="mt-2 flex items-start justify-between gap-2">
+                    <Link href={permalinkPath} className="font-medium text-neutral-100 hover:text-red-400">
+                      {scene.title}
+                    </Link>
+                    <ShareButton path={permalinkPath} title={scene.title} variant="icon" />
                   </div>
 
                   <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
@@ -367,6 +449,14 @@ export function FightSceneSection({
                         className="rounded-full border border-neutral-700 px-2 py-0.5 text-xs text-neutral-300"
                       >
                         {c.person.name}
+                      </span>
+                    ))}
+                    {scene.tags.map((tag) => (
+                      <span
+                        key={tag.id}
+                        className="rounded-full border border-red-900/60 bg-red-950/30 px-2 py-0.5 text-xs text-red-300"
+                      >
+                        {tag.name}
                       </span>
                     ))}
                     {scene.isVerified && (
