@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { requireAdminSession } from "@/lib/require-admin";
 import { AdminImportSearch } from "@/components/admin-import-search";
+import { AdminBulkImport } from "@/components/admin-bulk-import";
 
 export default async function AdminImportPage() {
   const session = await requireAdminSession();
@@ -16,6 +17,10 @@ export default async function AdminImportPage() {
         <code className="rounded bg-neutral-800 px-1">TMDB_API_KEY</code> to be set.
       </p>
       <AdminImportSearch />
+
+      <div className="my-8 border-t border-neutral-800" />
+
+      <AdminBulkImport />
     </div>
   );
 }
