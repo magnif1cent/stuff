@@ -1,9 +1,14 @@
 import { redirect } from "next/navigation";
+import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getRatingSummaries } from "@/lib/ratings";
 import { MovieCard } from "@/components/movie-card";
 import type { Movie } from "@/generated/prisma/client";
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 async function MovieRow({ title, movies, ratingSummaries }: {
   title: string;

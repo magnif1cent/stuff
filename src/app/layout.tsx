@@ -14,8 +14,16 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const siteUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL
+  ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+  : "http://localhost:3000";
+
 export const metadata: Metadata = {
-  title: "Kung Fu Movie DB",
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: "Kung Fu Movie DB",
+    template: "%s | Kung Fu Movie DB",
+  },
   description: "An IMDB-style database for kung fu and martial arts films.",
 };
 

@@ -1,14 +1,14 @@
+import { cache } from "react";
 import Image from "next/image";
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { tmdbImageUrl, getTmdbPersonDetails } from "@/lib/tmdb";
 import { getRatingSummaries } from "@/lib/ratings";
 import { MovieCard } from "@/components/movie-card";
 
-export default async function PersonDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-
-  const person = await prisma.person.findUnique({
+const getPerson = cache((id: string) =>
+  prisma.person.findUnique({
     where: { id },
     include: {
       castCredits: {
@@ -16,7 +16,46 @@ export default async function PersonDetailPage({ params }: { params: Promise<{ i
         orderBy: { movie: { releaseDate: "desc" } },
       },
     },
-  });
+  }),
+);
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const person = await getPerson(id);
+  if (!person) return {};
+
+  const knownFor = person.castCredits.slice(0, 3).map((credit) => credit.movie.title);
+  const description =
+    knownFor.length > 0
+      ? `${person.name}, known for ${knownFor.join(", ")}, on Kung Fu Movie DB.`
+      : `${person.name} on Kung Fu Movie DB.`;
+  const image = tmdbImageUrl(person.profilePath, "w500");
+
+  return {
+    title: person.name,
+    description,
+    openGraph: {
+      title: person.name,
+      description,
+      images: image ? [image] : undefined,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: person.name,
+      description,
+      images: image ? [image] : undefined,
+    },
+  };
+}
+
+export default async function PersonDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+
+  const person = await getPerson(id);
 
   if (!person) {
     notFound();

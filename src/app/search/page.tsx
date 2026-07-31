@@ -1,6 +1,11 @@
+import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { getRatingSummaries } from "@/lib/ratings";
 import { MovieCard } from "@/components/movie-card";
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: true },
+};
 
 export default async function SearchPage({
   searchParams,
