@@ -155,6 +155,13 @@ async function main() {
     create: { adminId: admin.id, movieId: enterTheDragon.id, score: 9, note: "A genre-defining classic." },
   });
 
+  const FIGHT_SCENE_TAGS = ["One vs. Many", "Weapon Duel", "Mirror Maze"];
+  const tagByName = new Map<string, { id: string }>();
+  for (const name of FIGHT_SCENE_TAGS) {
+    const tag = await prisma.fightSceneTag.upsert({ where: { name }, update: {}, create: { name } });
+    tagByName.set(name, tag);
+  }
+
   const bruceLee = await prisma.person.findUniqueOrThrow({ where: { tmdbId: 900201 } });
   const existingFightScene = await prisma.fightScene.findFirst({
     where: { movieId: enterTheDragon.id, submittedById: member.id },
@@ -165,10 +172,12 @@ async function main() {
       data: {
         movieId: enterTheDragon.id,
         submittedById: member.id,
+        title: "Mirror room finale",
         // Sample data: not a real YouTube video id.
         youtubeVideoId: "sampleClip1",
         isVerified: true,
         cast: { create: [{ personId: bruceLee.id, order: 0 }] },
+        tags: { connect: ["One vs. Many", "Mirror Maze"].map((name) => ({ id: tagByName.get(name)!.id })) },
       },
     }));
   await prisma.fightSceneRating.upsert({

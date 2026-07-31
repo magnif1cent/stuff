@@ -2,8 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isEmailVerified } from "@/lib/verification";
-import { parseYoutubeUrl } from "@/lib/youtube";
-import { MAX_FIGHT_SCENE_CAST } from "@/lib/fight-scenes";
+import { parseAndValidateFightSceneInput } from "@/lib/fight-scenes";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -15,54 +14,27 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
 
   const { id: movieId } = await params;
-  const { youtubeUrl, personIds } = await request.json();
-
-  if (typeof youtubeUrl !== "string" || youtubeUrl.trim().length === 0) {
-    return NextResponse.json({ error: "youtubeUrl is required." }, { status: 400 });
+  const body = await request.json();
+  const result = await parseAndValidateFightSceneInput(movieId, body);
+  if ("error" in result) {
+    return NextResponse.json({ error: result.error }, { status: result.status });
   }
-
-  const parsed = parseYoutubeUrl(youtubeUrl.trim());
-  if (!parsed) {
-    return NextResponse.json({ error: "That doesn't look like a valid YouTube link." }, { status: 400 });
-  }
-
-  if (!Array.isArray(personIds) || personIds.length === 0 || !personIds.every((p) => typeof p === "string")) {
-    return NextResponse.json({ error: "personIds must be a non-empty array of actor ids." }, { status: 400 });
-  }
-
-  const uniquePersonIds = [...new Set(personIds)];
-  if (uniquePersonIds.length > MAX_FIGHT_SCENE_CAST) {
-    return NextResponse.json(
-      { error: `A fight scene can list at most ${MAX_FIGHT_SCENE_CAST} actors.` },
-      { status: 400 },
-    );
-  }
-
-  // Actors must already be part of this movie's cast, so members can't tag
-  // someone who was never in the film.
-  const castCount = await prisma.castCredit.count({
-    where: { movieId, personId: { in: uniquePersonIds } },
-  });
-  if (castCount !== uniquePersonIds.length) {
-    return NextResponse.json(
-      { error: "All actors must be part of this movie's cast." },
-      { status: 400 },
-    );
-  }
+  const { title, videoId, startSeconds, personIds, tagIds } = result;
 
   const fightScene = await prisma.fightScene.create({
     data: {
       movieId,
       submittedById: session.user.id,
-      youtubeVideoId: parsed.videoId,
-      youtubeStartSeconds: parsed.startSeconds,
-      cast: {
-        create: uniquePersonIds.map((personId, order) => ({ personId, order })),
-      },
+      title,
+      youtubeVideoId: videoId,
+      youtubeStartSeconds: startSeconds,
+      cast: { create: personIds.map((personId, order) => ({ personId, order })) },
+      tags: { connect: tagIds.map((id) => ({ id })) },
     },
     include: {
       submittedBy: { select: { name: true, image: true } },
       cast: { orderBy: { order: "asc" }, include: { person: true } },
+      tags: true,
     },
   });
 

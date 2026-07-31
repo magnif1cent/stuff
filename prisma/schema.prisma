@@ -212,6 +212,7 @@ model FightScene {
   id                 String   @id @default(cuid())
   movieId            String
   submittedById      String
+  title              String
   youtubeVideoId     String
   youtubeStartSeconds Int?
   isVerified         Boolean  @default(false)
@@ -222,10 +223,22 @@ model FightScene {
   movie       Movie                   @relation(fields: [movieId], references: [id], onDelete: Cascade)
   submittedBy User                    @relation(fields: [submittedById], references: [id], onDelete: Cascade)
   cast        FightSceneCast[]
+  tags        FightSceneTag[]
   ratings     FightSceneRating[]
   adminRatings FightSceneAdminRating[]
 
   @@index([movieId])
+}
+
+// Admin-curated vocabulary members pick from when tagging a fight scene's
+// category (e.g. "One vs. Many", "Weapon Duel") — plain many-to-many, same
+// shape as Genre <-> Movie above, since there's nothing extra to store per
+// assignment.
+model FightSceneTag {
+  id   String @id @default(cuid())
+  name String @unique
+
+  fightScenes FightScene[]
 }
 
 model FightSceneCast {

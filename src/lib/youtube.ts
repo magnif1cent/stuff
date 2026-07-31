@@ -60,3 +60,25 @@ export function youtubeEmbedUrl(videoId: string, startSeconds?: number | null): 
   const query = params.toString();
   return `https://www.youtube-nocookie.com/embed/${videoId}${query ? `?${query}` : ""}`;
 }
+
+export function youtubeThumbnailUrl(videoId: string): string {
+  return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+}
+
+// YouTube's public oEmbed endpoint needs no API key/quota, unlike the Data
+// API — good enough for "suggest a title the submitter can overwrite."
+// Returns null on any failure (private/deleted video, network error) so
+// callers can fall back to asking the submitter to type their own title.
+export async function fetchYoutubeTitle(videoId: string): Promise<string | null> {
+  const watchUrl = `https://www.youtube.com/watch?v=${videoId}`;
+  const oembedUrl = `https://www.youtube.com/oembed?url=${encodeURIComponent(watchUrl)}&format=json`;
+
+  try {
+    const res = await fetch(oembedUrl);
+    if (!res.ok) return null;
+    const body = await res.json();
+    return typeof body.title === "string" ? body.title : null;
+  } catch {
+    return null;
+  }
+}
