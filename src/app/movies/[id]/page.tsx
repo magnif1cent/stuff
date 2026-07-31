@@ -5,10 +5,16 @@ import { prisma } from "@/lib/prisma";
 import { tmdbImageUrl } from "@/lib/tmdb";
 import { getCommunityRatingSummary, getEditorsRatingSummary } from "@/lib/ratings";
 import { getDiscussionPage } from "@/lib/discussion";
+import {
+  getFightScenesForMovie,
+  getFightSceneRatingSummaries,
+  getFightSceneAdminRatingSummaries,
+} from "@/lib/fight-scenes";
 import { RatingWidget } from "@/components/rating-widget";
 import { AdminRatingWidget } from "@/components/admin-rating-widget";
 import { ListButtons } from "@/components/list-buttons";
 import { DiscussionThread } from "@/components/discussion-thread";
+import { FightSceneSection } from "@/components/fight-scene-section";
 
 export default async function MovieDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -29,7 +35,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
     notFound();
   }
 
-  const [communityRating, editorsRating, myRating, myListEntries, discussionPage] = await Promise.all([
+  const [communityRating, editorsRating, myRating, myListEntries, discussionPage, fightScenes] = await Promise.all([
     getCommunityRatingSummary(movie.id),
     getEditorsRatingSummary(movie.id),
     session?.user
@@ -41,6 +47,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
       ? prisma.listEntry.findMany({ where: { userId: session.user.id, movieId: movie.id } })
       : [],
     getDiscussionPage(movie.id),
+    getFightScenesForMovie(movie.id),
   ]);
 
   const myAdminRating = session?.user?.role === "ADMIN"
@@ -49,11 +56,55 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
       })
     : null;
 
+  const fightSceneIds = fightScenes.map((s) => s.id);
+  const [fightSceneRatingSummaries, fightSceneAdminRatingSummaries, myFightSceneRatings, myFightSceneAdminRatings] =
+    await Promise.all([
+      getFightSceneRatingSummaries(fightSceneIds),
+      getFightSceneAdminRatingSummaries(fightSceneIds),
+      session?.user
+        ? prisma.fightSceneRating.findMany({
+            where: { userId: session.user.id, fightSceneId: { in: fightSceneIds } },
+          })
+        : [],
+      session?.user?.role === "ADMIN"
+        ? prisma.fightSceneAdminRating.findMany({
+            where: { adminId: session.user.id, fightSceneId: { in: fightSceneIds } },
+          })
+        : [],
+    ]);
+
   const backdropUrl = tmdbImageUrl(movie.backdropPath, "original");
   const posterUrl = tmdbImageUrl(movie.posterPath, "w342");
   const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : null;
   const isFavorite = myListEntries.some((e) => e.listType === "FAVORITE");
   const isOnWatchlist = myListEntries.some((e) => e.listType === "WATCHLIST");
+
+  const serializedFightScenes = fightScenes.map((scene) => {
+    const summary = fightSceneRatingSummaries.get(scene.id);
+    const adminSummary = fightSceneAdminRatingSummaries.get(scene.id);
+    return {
+      id: scene.id,
+      youtubeVideoId: scene.youtubeVideoId,
+      youtubeStartSeconds: scene.youtubeStartSeconds,
+      isVerified: scene.isVerified,
+      submittedById: scene.submittedById,
+      createdAt: scene.createdAt.toISOString(),
+      updatedAt: scene.updatedAt.toISOString(),
+      submittedBy: scene.submittedBy,
+      cast: scene.cast,
+      ratingAverage: summary?.average ?? null,
+      ratingCount: summary?.count ?? 0,
+      adminRatingAverage: adminSummary?.average ?? null,
+      adminRatingCount: adminSummary?.count ?? 0,
+    };
+  });
+
+  const myFightSceneRatingMap = Object.fromEntries(myFightSceneRatings.map((r) => [r.fightSceneId, r.score]));
+  const myFightSceneAdminRatingMap = Object.fromEntries(
+    myFightSceneAdminRatings.map((r) => [r.fightSceneId, r.score]),
+  );
+
+  const castOptions = movie.cast.map((credit) => ({ id: credit.person.id, name: credit.person.name }));
 
   const serializedPosts = discussionPage.posts.map((post) => ({
     ...post,
@@ -189,6 +240,17 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
             </div>
           </section>
         )}
+
+        <FightSceneSection
+          movieId={movie.id}
+          initialFightScenes={serializedFightScenes}
+          castOptions={castOptions}
+          signedIn={!!session?.user}
+          currentUserId={session?.user?.id ?? null}
+          isAdmin={session?.user?.role === "ADMIN"}
+          myRatings={myFightSceneRatingMap}
+          myAdminRatings={myFightSceneAdminRatingMap}
+        />
 
         <DiscussionThread
           movieId={movie.id}
