@@ -1,4 +1,5 @@
 import { AdminImportSearch } from "@/components/admin-import-search";
+import { AdminBulkImport } from "@/components/admin-bulk-import";
 
 export default function AdminImportPage() {
   return (
@@ -9,6 +10,11 @@ export default function AdminImportPage() {
         <code className="rounded bg-neutral-800 px-1">TMDB_API_KEY</code> to be set.
       </p>
       <AdminImportSearch />
+
+      <hr className="my-8 border-neutral-800" />
+
+      <h2 className="mb-2 text-xl font-bold text-white">Bulk upload</h2>
+      <AdminBulkImport />
     </div>
   );
 }
