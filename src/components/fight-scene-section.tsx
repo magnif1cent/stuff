@@ -407,7 +407,7 @@ export function FightSceneSection({
         </div>
       )}
 
-      <ul className="flex flex-col gap-6">
+      <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {scenes.map((scene) => {
           const canEdit = currentUserId === scene.submittedById;
           const canDelete = canEdit || isAdmin;
@@ -415,7 +415,7 @@ export function FightSceneSection({
 
           if (editingId === scene.id) {
             return (
-              <li key={scene.id} className="rounded-md border border-neutral-800 bg-neutral-900 p-3">
+              <li key={scene.id} className="rounded-md border border-neutral-800 bg-neutral-900 p-3 sm:col-span-2 lg:col-span-3">
                 <FightSceneForm
                   castOptions={castOptions}
                   tagOptions={tagOptions}
@@ -453,7 +453,7 @@ export function FightSceneSection({
 
               <div className="mt-3 border-t-2 border-dashed pt-3" style={{ borderColor: "#b8ab8c" }}>
                 {/* Smaller inset "photo" rather than a full-width player, to read as a ticket detail. */}
-                <div className="mx-auto aspect-video w-1/2 max-w-[220px] overflow-hidden border-[3px]" style={{ borderColor: TICKET_INK, background: TICKET_INK }}>
+                <div className="mx-auto aspect-video w-2/3 max-w-[180px] overflow-hidden border-[3px]" style={{ borderColor: TICKET_INK, background: TICKET_INK }}>
                   <iframe
                     src={embedUrl(scene.youtubeVideoId, scene.youtubeStartSeconds)}
                     title={scene.title}
