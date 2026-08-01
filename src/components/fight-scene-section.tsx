@@ -219,7 +219,7 @@ function RatingRow({ label, score, onRate, disabled }: { label: string; score: n
               style={{
                 borderColor: TICKET_INK,
                 background: active ? TICKET_INK : "transparent",
-                color: active ? "#e8dcc4" : TICKET_INK,
+                color: active ? "#f2c94c" : TICKET_INK,
               }}
             >
               {value}
@@ -436,7 +436,7 @@ export function FightSceneSection({
           return (
             <li
               key={scene.id}
-              className="relative bg-[#e8dcc4] p-4 font-mono"
+              className="relative bg-[#f2c94c] p-4 font-mono"
               style={{
                 color: TICKET_INK,
                 clipPath:
@@ -451,7 +451,7 @@ export function FightSceneSection({
                 </div>
               </div>
 
-              <div className="mt-3 border-t-2 border-dashed pt-3" style={{ borderColor: "#b8ab8c" }}>
+              <div className="mt-3 border-t-2 border-dashed pt-3" style={{ borderColor: "#c9a227" }}>
                 {/* Smaller inset "photo" rather than a full-width player, to read as a ticket detail. */}
                 <div className="mx-auto aspect-video w-1/2 max-w-[220px] overflow-hidden border-[3px]" style={{ borderColor: TICKET_INK, background: TICKET_INK }}>
                   <iframe
@@ -480,7 +480,7 @@ export function FightSceneSection({
                   </span>
                 ))}
                 {scene.isVerified && (
-                  <span className="px-2 py-0.5 text-[10px] tracking-wide uppercase" style={{ background: TICKET_INK, color: "#e8dcc4" }}>
+                  <span className="px-2 py-0.5 text-[10px] tracking-wide uppercase" style={{ background: TICKET_INK, color: "#f2c94c" }}>
                     ✓ Verified
                   </span>
                 )}
@@ -541,7 +541,7 @@ export function FightSceneSection({
               )}
 
               {isAdmin && (
-                <div className="mt-3 border-t pt-3" style={{ borderColor: "#b8ab8c" }}>
+                <div className="mt-3 border-t pt-3" style={{ borderColor: "#c9a227" }}>
                   <RatingRow
                     label="Editors' rating (admin only)"
                     score={adminRatings[scene.id] ?? null}
