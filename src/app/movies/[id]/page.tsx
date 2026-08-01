@@ -2,7 +2,7 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { tmdbImageUrl } from "@/lib/tmdb";
+import { tmdbImageUrl, resolvePosterUrl } from "@/lib/tmdb";
 import { getCommunityRatingSummary, getEditorsRatingSummary } from "@/lib/ratings";
 import { getDiscussionPage } from "@/lib/discussion";
 import {
@@ -18,6 +18,7 @@ import { ListButtons } from "@/components/list-buttons";
 import { DiscussionThread } from "@/components/discussion-thread";
 import { FightSceneSection } from "@/components/fight-scene-section";
 import { EditorialReview } from "@/components/editorial-review";
+import { PosterOverrideControl } from "@/components/poster-override-control";
 
 export default async function MovieDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -89,7 +90,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
   ]);
 
   const backdropUrl = tmdbImageUrl(movie.backdropPath, "original");
-  const posterUrl = tmdbImageUrl(movie.posterPath, "w342");
+  const posterUrl = resolvePosterUrl(movie, "w342");
   const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : null;
   const isFavorite = myListEntries.some((e) => e.listType === "FAVORITE");
   const isOnWatchlist = myListEntries.some((e) => e.listType === "WATCHLIST");
@@ -155,13 +156,18 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
       </div>
 
       <div className="mx-auto -mt-24 flex w-full max-w-6xl flex-col gap-6 px-4 sm:flex-row">
-        <div className="relative aspect-2/3 w-40 shrink-0 overflow-hidden rounded-md bg-neutral-800 shadow-xl sm:w-56">
-          {posterUrl ? (
-            <Image src={posterUrl} alt={movie.title} fill sizes="224px" className="object-cover" />
-          ) : (
-            <div className="flex h-full items-center justify-center px-2 text-center text-xs text-neutral-500">
-              {movie.title}
-            </div>
+        <div className="w-40 shrink-0 sm:w-56">
+          <div className="relative aspect-2/3 overflow-hidden rounded-md bg-neutral-800 shadow-xl">
+            {posterUrl ? (
+              <Image src={posterUrl} alt={movie.title} fill sizes="224px" className="object-cover" />
+            ) : (
+              <div className="flex h-full items-center justify-center px-2 text-center text-xs text-neutral-500">
+                {movie.title}
+              </div>
+            )}
+          </div>
+          {session?.user?.role === "ADMIN" && (
+            <PosterOverrideControl movieId={movie.id} hasOverride={!!movie.posterOverrideUrl} />
           )}
         </div>
 

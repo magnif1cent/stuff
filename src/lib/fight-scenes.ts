@@ -20,9 +20,11 @@ const fightSceneInclude = {
 };
 
 export async function getFightScenesForMovie(movieId: string) {
+  // Ascending so scenes render Round 1, 2, 3… left to right — matches
+  // getFightSceneRoundNumbers' own ordering below.
   return prisma.fightScene.findMany({
     where: { movieId, isDeleted: false },
-    orderBy: { createdAt: "desc" },
+    orderBy: { createdAt: "asc" },
     include: fightSceneInclude,
   });
 }

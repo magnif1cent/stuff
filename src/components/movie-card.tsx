@@ -1,15 +1,18 @@
 import Image from "next/image";
 import Link from "next/link";
-import { tmdbImageUrl } from "@/lib/tmdb";
+import { resolvePosterUrl } from "@/lib/tmdb";
 import type { Movie } from "@/generated/prisma/client";
 
-export type MovieCardData = Pick<Movie, "id" | "title" | "releaseDate" | "posterPath" | "tmdbRating"> & {
+export type MovieCardData = Pick<
+  Movie,
+  "id" | "title" | "releaseDate" | "posterPath" | "posterOverrideUrl" | "tmdbRating"
+> & {
   communityAverage?: number | null;
   communityCount?: number;
 };
 
 export function MovieCard({ movie }: { movie: MovieCardData }) {
-  const posterUrl = tmdbImageUrl(movie.posterPath, "w342");
+  const posterUrl = resolvePosterUrl(movie, "w342");
   const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : null;
 
   return (

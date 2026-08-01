@@ -31,6 +31,14 @@ export function tmdbImageUrl(path: string | null | undefined, size: "w200" | "w3
   return `${TMDB_IMAGE_BASE_URL}/${size}${path}`;
 }
 
+// An admin-uploaded poster always wins over whatever TMDB happens to have.
+export function resolvePosterUrl(
+  movie: { posterPath: string | null; posterOverrideUrl: string | null },
+  size: "w200" | "w342" | "w500" | "w780" | "original" = "w500",
+) {
+  return movie.posterOverrideUrl || tmdbImageUrl(movie.posterPath, size);
+}
+
 export interface TmdbMovieSearchResult {
   id: number;
   title: string;
