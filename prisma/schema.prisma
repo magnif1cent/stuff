@@ -28,6 +28,7 @@ model User {
   fightScenes         FightScene[]
   fightSceneRatings   FightSceneRating[]
   fightSceneAdminRatings FightSceneAdminRating[]
+  editorialReviews    EditorialReview[]
 }
 
 model Account {
@@ -93,6 +94,7 @@ model Movie {
   discussionPosts DiscussionPost[]
   weeklyFeatured  WeeklyFeatured[]
   fightScenes     FightScene[]
+  editorialReview EditorialReview?
 
   @@index([title])
 }
@@ -161,6 +163,24 @@ model AdminRating {
 
   @@unique([adminId, movieId])
   @@index([movieId])
+}
+
+// --- Editorial review ---
+//
+// One long-form, admin-authored review per movie (not per-admin, unlike
+// AdminRating above) — any admin can write or update it; authorId just
+// tracks who last touched it for attribution. Members can only read it.
+
+model EditorialReview {
+  id        String   @id @default(cuid())
+  movieId   String   @unique
+  authorId  String
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  movie  Movie @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  author User  @relation(fields: [authorId], references: [id], onDelete: Cascade)
 }
 
 // --- Member lists ---

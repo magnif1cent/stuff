@@ -16,6 +16,7 @@ import { AdminRatingWidget } from "@/components/admin-rating-widget";
 import { ListButtons } from "@/components/list-buttons";
 import { DiscussionThread } from "@/components/discussion-thread";
 import { FightSceneSection } from "@/components/fight-scene-section";
+import { EditorialReview } from "@/components/editorial-review";
 
 export default async function MovieDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -36,7 +37,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
     notFound();
   }
 
-  const [communityRating, editorsRating, myRating, myListEntries, discussionPage, fightScenes, fightSceneTags] =
+  const [communityRating, editorsRating, myRating, myListEntries, discussionPage, fightScenes, fightSceneTags, editorialReview] =
     await Promise.all([
       getCommunityRatingSummary(movie.id),
       getEditorsRatingSummary(movie.id),
@@ -51,6 +52,10 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
       getDiscussionPage(movie.id),
       getFightScenesForMovie(movie.id),
       getFightSceneTags(),
+      prisma.editorialReview.findUnique({
+        where: { movieId: movie.id },
+        include: { author: { select: { name: true } } },
+      }),
     ]);
 
   const myAdminRating = session?.user?.role === "ADMIN"
@@ -110,6 +115,14 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
   );
 
   const castOptions = movie.cast.map((credit) => ({ id: credit.person.id, name: credit.person.name }));
+
+  const serializedEditorialReview = editorialReview
+    ? {
+        content: editorialReview.content,
+        updatedAt: editorialReview.updatedAt.toISOString(),
+        author: editorialReview.author,
+      }
+    : null;
 
   const serializedPosts = discussionPage.posts.map((post) => ({
     ...post,
@@ -245,6 +258,12 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
             </div>
           </section>
         )}
+
+        <EditorialReview
+          movieId={movie.id}
+          initialReview={serializedEditorialReview}
+          isAdmin={session?.user?.role === "ADMIN"}
+        />
 
         <FightSceneSection
           movieId={movie.id}
