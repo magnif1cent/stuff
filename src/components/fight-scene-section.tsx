@@ -21,6 +21,11 @@ type FightSceneCastItem = Pick<FightSceneCast, "id" | "order"> & { person: Fight
 // same reasoning as DiscussionThread.
 export type FightSceneItem = {
   id: string;
+  // Movie-scoped position (1st scene added = Round 1), not a stored value —
+  // computed server-side from creation order among surviving scenes, so
+  // deleting one reflows the rest. See handleCreate/handleDelete below for
+  // how this stays correct after client-side mutations.
+  roundNumber: number;
   title: string;
   youtubeVideoId: string;
   youtubeStartSeconds: number | null;
@@ -282,7 +287,16 @@ export function FightSceneSection({
     }
     const { fightScene } = await res.json();
     setScenes((prev) => [
-      { ...fightScene, ratingAverage: null, ratingCount: 0, adminRatingAverage: null, adminRatingCount: 0 },
+      {
+        ...fightScene,
+        // The new scene is always the most recently created, so it's the
+        // highest round number — one past however many currently exist.
+        roundNumber: prev.length + 1,
+        ratingAverage: null,
+        ratingCount: 0,
+        adminRatingAverage: null,
+        adminRatingCount: 0,
+      },
       ...prev,
     ]);
     setAdding(false);
@@ -316,7 +330,12 @@ export function FightSceneSection({
       setError(body.error ?? "Something went wrong.");
       return;
     }
-    setScenes((prev) => prev.filter((s) => s.id !== id));
+    setScenes((prev) => {
+      const deleted = prev.find((s) => s.id === id);
+      return prev
+        .filter((s) => s.id !== id)
+        .map((s) => (deleted && s.roundNumber > deleted.roundNumber ? { ...s, roundNumber: s.roundNumber - 1 } : s));
+    });
   }
 
   async function handleRate(id: string, score: number) {
@@ -444,11 +463,8 @@ export function FightSceneSection({
               }}
             >
               <div className="flex items-center justify-between text-[10px] tracking-wider uppercase" style={{ color: TICKET_MUTED }}>
-                <span>Ticket No. {scene.id.slice(-6)}</span>
-                <div className="flex items-center gap-2">
-                  <span>Admit One</span>
-                  <ShareButton path={permalinkPath} title={scene.title} variant="icon" />
-                </div>
+                <span>Round No. {scene.roundNumber}</span>
+                <ShareButton path={permalinkPath} title={scene.title} variant="icon" />
               </div>
 
               <div className="mt-3 border-t-2 border-dashed pt-3" style={{ borderColor: "#b8ab8c" }}>

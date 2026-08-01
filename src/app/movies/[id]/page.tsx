@@ -10,6 +10,7 @@ import {
   getFightSceneRatingSummaries,
   getFightSceneAdminRatingSummaries,
   getFightSceneTags,
+  getFightSceneRoundNumbers,
 } from "@/lib/fight-scenes";
 import { RatingWidget } from "@/components/rating-widget";
 import { AdminRatingWidget } from "@/components/admin-rating-widget";
@@ -65,21 +66,27 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
     : null;
 
   const fightSceneIds = fightScenes.map((s) => s.id);
-  const [fightSceneRatingSummaries, fightSceneAdminRatingSummaries, myFightSceneRatings, myFightSceneAdminRatings] =
-    await Promise.all([
-      getFightSceneRatingSummaries(fightSceneIds),
-      getFightSceneAdminRatingSummaries(fightSceneIds),
-      session?.user
-        ? prisma.fightSceneRating.findMany({
-            where: { userId: session.user.id, fightSceneId: { in: fightSceneIds } },
-          })
-        : [],
-      session?.user?.role === "ADMIN"
-        ? prisma.fightSceneAdminRating.findMany({
-            where: { adminId: session.user.id, fightSceneId: { in: fightSceneIds } },
-          })
-        : [],
-    ]);
+  const [
+    fightSceneRatingSummaries,
+    fightSceneAdminRatingSummaries,
+    myFightSceneRatings,
+    myFightSceneAdminRatings,
+    fightSceneRoundNumbers,
+  ] = await Promise.all([
+    getFightSceneRatingSummaries(fightSceneIds),
+    getFightSceneAdminRatingSummaries(fightSceneIds),
+    session?.user
+      ? prisma.fightSceneRating.findMany({
+          where: { userId: session.user.id, fightSceneId: { in: fightSceneIds } },
+        })
+      : [],
+    session?.user?.role === "ADMIN"
+      ? prisma.fightSceneAdminRating.findMany({
+          where: { adminId: session.user.id, fightSceneId: { in: fightSceneIds } },
+        })
+      : [],
+    getFightSceneRoundNumbers(movie.id),
+  ]);
 
   const backdropUrl = tmdbImageUrl(movie.backdropPath, "original");
   const posterUrl = tmdbImageUrl(movie.posterPath, "w342");
@@ -92,6 +99,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
     const adminSummary = fightSceneAdminRatingSummaries.get(scene.id);
     return {
       id: scene.id,
+      roundNumber: fightSceneRoundNumbers.get(scene.id) ?? 0,
       title: scene.title,
       youtubeVideoId: scene.youtubeVideoId,
       youtubeStartSeconds: scene.youtubeStartSeconds,

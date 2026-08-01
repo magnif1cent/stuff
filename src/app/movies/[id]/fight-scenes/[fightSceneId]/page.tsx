@@ -9,6 +9,7 @@ import {
   getFightSceneRatingSummaries,
   getFightSceneAdminRatingSummaries,
   getFightSceneTags,
+  getFightSceneRoundNumbers,
 } from "@/lib/fight-scenes";
 import { FightSceneSection } from "@/components/fight-scene-section";
 
@@ -45,28 +46,31 @@ export default async function FightScenePage({ params }: { params: Promise<Param
     notFound();
   }
 
-  const [movieCast, tagOptions, ratingSummaries, adminRatingSummaries, myRating, myAdminRating] = await Promise.all([
-    prisma.castCredit.findMany({ where: { movieId }, include: { person: true } }),
-    getFightSceneTags(),
-    getFightSceneRatingSummaries([scene.id]),
-    getFightSceneAdminRatingSummaries([scene.id]),
-    session?.user
-      ? prisma.fightSceneRating.findUnique({
-          where: { userId_fightSceneId: { userId: session.user.id, fightSceneId: scene.id } },
-        })
-      : null,
-    session?.user?.role === "ADMIN"
-      ? prisma.fightSceneAdminRating.findUnique({
-          where: { adminId_fightSceneId: { adminId: session.user.id, fightSceneId: scene.id } },
-        })
-      : null,
-  ]);
+  const [movieCast, tagOptions, ratingSummaries, adminRatingSummaries, myRating, myAdminRating, roundNumbers] =
+    await Promise.all([
+      prisma.castCredit.findMany({ where: { movieId }, include: { person: true } }),
+      getFightSceneTags(),
+      getFightSceneRatingSummaries([scene.id]),
+      getFightSceneAdminRatingSummaries([scene.id]),
+      session?.user
+        ? prisma.fightSceneRating.findUnique({
+            where: { userId_fightSceneId: { userId: session.user.id, fightSceneId: scene.id } },
+          })
+        : null,
+      session?.user?.role === "ADMIN"
+        ? prisma.fightSceneAdminRating.findUnique({
+            where: { adminId_fightSceneId: { adminId: session.user.id, fightSceneId: scene.id } },
+          })
+        : null,
+      getFightSceneRoundNumbers(movieId),
+    ]);
 
   const summary = ratingSummaries.get(scene.id);
   const adminSummary = adminRatingSummaries.get(scene.id);
 
   const serializedScene = {
     id: scene.id,
+    roundNumber: roundNumbers.get(scene.id) ?? 0,
     title: scene.title,
     youtubeVideoId: scene.youtubeVideoId,
     youtubeStartSeconds: scene.youtubeStartSeconds,
