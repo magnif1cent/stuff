@@ -35,9 +35,6 @@ export function EditorialReview({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Members with no review yet and no way to add one see nothing at all.
-  if (!review && !isAdmin) return null;
-
   async function handleSave() {
     if (!draft.trim()) return;
     setSubmitting(true);
@@ -114,7 +111,7 @@ export function EditorialReview({
           </p>
         </div>
       ) : (
-        <p className="text-sm text-neutral-500">No editorial review yet.</p>
+        <p className="text-sm text-neutral-500">No review yet.</p>
       )}
     </section>
   );
