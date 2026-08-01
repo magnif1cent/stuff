@@ -192,36 +192,40 @@ function FightSceneForm({
   );
 }
 
-function RatingRow({
-  label,
-  color,
-  score,
-  onRate,
-  disabled,
-}: {
-  label: string;
-  color: "yellow" | "amber";
-  score: number | null;
-  onRate: (value: number) => void;
-  disabled: boolean;
-}) {
-  const activeClass = color === "yellow" ? "bg-yellow-500 text-neutral-950" : "bg-amber-500 text-neutral-950";
+// "Fight Ticket" styling: ink-on-cream ticket-stub card, distinct from the
+// rest of the (dark, serif) site on purpose — this is the differentiator
+// feature and reads like a physical tournament ticket rather than a movie
+// poster. TICKET_INK / TICKET_STAMP are shared between here and the card
+// markup below.
+const TICKET_INK = "#1a1712";
+const TICKET_MUTED = "#6b6148";
+const TICKET_STAMP = "#a4291e";
+
+function RatingRow({ label, score, onRate, disabled }: { label: string; score: number | null; onRate: (value: number) => void; disabled: boolean }) {
   return (
-    <div>
-      <p className="mb-1 text-xs text-neutral-500">{label}</p>
+    <div className="mt-3">
+      <p className="mb-1 text-[10px] uppercase tracking-wide" style={{ color: TICKET_MUTED }}>
+        {label}
+      </p>
       <div className="flex flex-wrap gap-1">
-        {SCORES.map((value) => (
-          <button
-            key={value}
-            disabled={disabled}
-            onClick={() => onRate(value)}
-            className={`h-6 w-6 rounded text-xs font-medium transition disabled:opacity-50 ${
-              score !== null && value <= score ? activeClass : "bg-neutral-800 text-neutral-300 hover:bg-neutral-700"
-            }`}
-          >
-            {value}
-          </button>
-        ))}
+        {SCORES.map((value) => {
+          const active = score !== null && value <= score;
+          return (
+            <button
+              key={value}
+              disabled={disabled}
+              onClick={() => onRate(value)}
+              className="h-6 w-6 border text-[10px] font-bold transition disabled:opacity-50"
+              style={{
+                borderColor: TICKET_INK,
+                background: active ? TICKET_INK : "transparent",
+                color: active ? "#e8dcc4" : TICKET_INK,
+              }}
+            >
+              {value}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
@@ -409,9 +413,9 @@ export function FightSceneSection({
           const canDelete = canEdit || isAdmin;
           const permalinkPath = `/movies/${movieId}/fight-scenes/${scene.id}`;
 
-          return (
-            <li key={scene.id} className="rounded-md border border-neutral-800 bg-neutral-900 p-3">
-              {editingId === scene.id ? (
+          if (editingId === scene.id) {
+            return (
+              <li key={scene.id} className="rounded-md border border-neutral-800 bg-neutral-900 p-3">
                 <FightSceneForm
                   castOptions={castOptions}
                   tagOptions={tagOptions}
@@ -423,132 +427,137 @@ export function FightSceneSection({
                   onCancel={() => setEditingId(null)}
                   onSubmit={(title, url, personIds, tagIds) => handleEdit(scene.id, title, url, personIds, tagIds)}
                 />
-              ) : (
-                <>
-                  <div className="aspect-video w-full overflow-hidden rounded-md bg-black">
-                    <iframe
-                      src={embedUrl(scene.youtubeVideoId, scene.youtubeStartSeconds)}
-                      title={scene.title}
-                      className="h-full w-full"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                    />
+              </li>
+            );
+          }
+
+          const avgLabel = scene.ratingAverage ? scene.ratingAverage.toFixed(1) : "—";
+
+          return (
+            <li
+              key={scene.id}
+              className="relative bg-[#e8dcc4] p-4 font-mono"
+              style={{
+                color: TICKET_INK,
+                clipPath:
+                  "polygon(0 10px, 10px 0, calc(100% - 10px) 0, 100% 10px, 100% calc(100% - 10px), calc(100% - 10px) 100%, 10px 100%, 0 calc(100% - 10px))",
+              }}
+            >
+              <div className="flex items-center justify-between text-[10px] tracking-wider uppercase" style={{ color: TICKET_MUTED }}>
+                <span>Ticket No. {scene.id.slice(-6)}</span>
+                <div className="flex items-center gap-2">
+                  <span>Admit One</span>
+                  <ShareButton path={permalinkPath} title={scene.title} variant="icon" />
+                </div>
+              </div>
+
+              <div className="mt-3 border-t-2 border-dashed pt-3" style={{ borderColor: "#b8ab8c" }}>
+                {/* Smaller inset "photo" rather than a full-width player, to read as a ticket detail. */}
+                <div className="mx-auto aspect-video w-1/2 max-w-[220px] overflow-hidden border-[3px]" style={{ borderColor: TICKET_INK, background: TICKET_INK }}>
+                  <iframe
+                    src={embedUrl(scene.youtubeVideoId, scene.youtubeStartSeconds)}
+                    title={scene.title}
+                    className="h-full w-full"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                </div>
+              </div>
+
+              <Link href={permalinkPath} className="mt-3 block text-lg font-bold hover:opacity-70" style={{ fontFamily: "Georgia, serif" }}>
+                {scene.title}
+              </Link>
+              {scene.cast.length > 0 && (
+                <p className="mt-0.5 text-[11px] tracking-wide uppercase" style={{ color: TICKET_MUTED }}>
+                  Featuring {scene.cast.map((c) => c.person.name).join(", ")}
+                </p>
+              )}
+
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {scene.tags.map((tag) => (
+                  <span key={tag.id} className="border px-2 py-0.5 text-[10px] tracking-wide uppercase" style={{ borderColor: TICKET_INK }}>
+                    {tag.name}
+                  </span>
+                ))}
+                {scene.isVerified && (
+                  <span className="px-2 py-0.5 text-[10px] tracking-wide uppercase" style={{ background: TICKET_INK, color: "#e8dcc4" }}>
+                    ✓ Verified
+                  </span>
+                )}
+              </div>
+
+              <div className="mt-4 flex items-end justify-between gap-3">
+                <p className="text-[10px] tracking-wide uppercase" style={{ color: TICKET_MUTED }}>
+                  Submitted by
+                  <br />
+                  {scene.submittedBy.name ?? "Anonymous"}
+                  {canEdit && (
+                    <button onClick={() => setEditingId(scene.id)} className="ml-2 underline hover:opacity-70">
+                      Edit
+                    </button>
+                  )}
+                  {canDelete && (
+                    <button onClick={() => handleDelete(scene.id)} className="ml-2 underline hover:opacity-70">
+                      Delete
+                    </button>
+                  )}
+                  {isAdmin && (
+                    <button onClick={() => handleVerifyToggle(scene.id, !scene.isVerified)} className="ml-2 underline hover:opacity-70">
+                      {scene.isVerified ? "Unverify" : "Verify"}
+                    </button>
+                  )}
+                </p>
+
+                <div className="flex gap-3">
+                  <div className="text-center">
+                    <div
+                      className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border-2 text-base font-bold"
+                      style={{ borderColor: TICKET_STAMP, color: TICKET_STAMP, transform: "rotate(-8deg)" }}
+                    >
+                      {avgLabel}
+                    </div>
+                    <p className="text-[8.5px] tracking-wide uppercase" style={{ color: TICKET_MUTED }}>
+                      Member ({scene.ratingCount})
+                    </p>
                   </div>
-
-                  <div className="mt-2 flex items-start justify-between gap-2">
-                    <Link href={permalinkPath} className="font-serif text-lg font-medium text-neutral-100 hover:text-red-400">
-                      {scene.title}
-                    </Link>
-                    <ShareButton path={permalinkPath} title={scene.title} variant="icon" />
-                  </div>
-
-                  <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
-                    {scene.cast.map((c) => (
-                      <span
-                        key={c.id}
-                        className="rounded-full border border-neutral-700 px-2 py-0.5 text-xs text-neutral-300"
+                  {scene.adminRatingCount > 0 && (
+                    <div className="text-center">
+                      <div
+                        className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border-2 text-base font-bold"
+                        style={{ borderColor: TICKET_STAMP, color: TICKET_STAMP, transform: "rotate(6deg)" }}
                       >
-                        {c.person.name}
-                      </span>
-                    ))}
-                    {scene.tags.map((tag) => (
-                      <span
-                        key={tag.id}
-                        className="rounded-full border border-red-900/60 bg-red-950/30 px-2 py-0.5 text-xs text-red-300"
-                      >
-                        {tag.name}
-                      </span>
-                    ))}
-                    {scene.isVerified && (
-                      <span className="rounded-full bg-red-900/40 px-2 py-0.5 text-xs font-medium text-red-400">
-                        ✓ Verified
-                      </span>
-                    )}
-                  </div>
-
-                  <p className="mt-1 text-xs text-neutral-500">
-                    Submitted by {scene.submittedBy.name ?? "Anonymous"}
-                    {canEdit && (
-                      <button
-                        onClick={() => setEditingId(scene.id)}
-                        className="ml-2 text-neutral-400 hover:text-white"
-                      >
-                        Edit
-                      </button>
-                    )}
-                    {canDelete && (
-                      <button
-                        onClick={() => handleDelete(scene.id)}
-                        className="ml-2 text-neutral-400 hover:text-red-400"
-                      >
-                        Delete
-                      </button>
-                    )}
-                    {isAdmin && (
-                      <button
-                        onClick={() => handleVerifyToggle(scene.id, !scene.isVerified)}
-                        className="ml-2 text-neutral-400 hover:text-white"
-                      >
-                        {scene.isVerified ? "Unverify" : "Verify"}
-                      </button>
-                    )}
-                  </p>
-
-                  <div className="mt-3 flex flex-wrap items-center gap-6">
-                    <div>
-                      <p className="text-xs text-neutral-500">Member Score</p>
-                      <p className="text-lg font-bold text-yellow-500">
-                        {scene.ratingAverage ? scene.ratingAverage.toFixed(1) : "—"}{" "}
-                        <span className="text-xs font-normal text-neutral-500">/ 10 ({scene.ratingCount})</span>
+                        {scene.adminRatingAverage?.toFixed(1)}
+                      </div>
+                      <p className="text-[8.5px] tracking-wide uppercase" style={{ color: TICKET_MUTED }}>
+                        Editors&rsquo;
                       </p>
                     </div>
-                    {scene.adminRatingCount > 0 && (
-                      <div>
-                        <p className="text-xs text-neutral-500">Editors&rsquo; Score</p>
-                        <p className="text-lg font-bold text-amber-500">
-                          {scene.adminRatingAverage?.toFixed(1)}{" "}
-                          <span className="text-xs font-normal text-neutral-500">
-                            / 10 ({scene.adminRatingCount})
-                          </span>
-                        </p>
-                      </div>
-                    )}
-                  </div>
-
-                  {signedIn && (
-                    <div className="mt-3">
-                      <RatingRow
-                        label="Your rating"
-                        color="yellow"
-                        score={ratings[scene.id] ?? null}
-                        onRate={(value) => handleRate(scene.id, value)}
-                        disabled={false}
-                      />
-                    </div>
                   )}
+                </div>
+              </div>
 
-                  {isAdmin && (
-                    <div className="mt-3 rounded-md border border-amber-800/50 bg-amber-950/20 p-2">
-                      <RatingRow
-                        label="Editors' rating (admin only)"
-                        color="amber"
-                        score={adminRatings[scene.id] ?? null}
-                        onRate={(value) => handleAdminRate(scene.id, value)}
-                        disabled={false}
-                      />
-                      <textarea
-                        value={adminNoteDrafts[scene.id] ?? ""}
-                        onChange={(e) =>
-                          setAdminNoteDrafts((prev) => ({ ...prev, [scene.id]: e.target.value }))
-                        }
-                        maxLength={MAX_NOTE_LENGTH}
-                        placeholder="Editor's note (optional)"
-                        rows={2}
-                        className="mt-2 w-full rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-neutral-100 focus:border-amber-600 focus:outline-none"
-                      />
-                    </div>
-                  )}
-                </>
+              {signedIn && (
+                <RatingRow label="Your rating" score={ratings[scene.id] ?? null} onRate={(value) => handleRate(scene.id, value)} disabled={false} />
+              )}
+
+              {isAdmin && (
+                <div className="mt-3 border-t pt-3" style={{ borderColor: "#b8ab8c" }}>
+                  <RatingRow
+                    label="Editors' rating (admin only)"
+                    score={adminRatings[scene.id] ?? null}
+                    onRate={(value) => handleAdminRate(scene.id, value)}
+                    disabled={false}
+                  />
+                  <textarea
+                    value={adminNoteDrafts[scene.id] ?? ""}
+                    onChange={(e) => setAdminNoteDrafts((prev) => ({ ...prev, [scene.id]: e.target.value }))}
+                    maxLength={MAX_NOTE_LENGTH}
+                    placeholder="Editor's note (optional)"
+                    rows={2}
+                    className="mt-2 w-full border bg-transparent px-2 py-1 text-xs focus:outline-none"
+                    style={{ borderColor: TICKET_INK, color: TICKET_INK }}
+                  />
+                </div>
               )}
             </li>
           );
