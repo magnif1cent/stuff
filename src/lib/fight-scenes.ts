@@ -36,6 +36,21 @@ export async function getFightSceneById(movieId: string, fightSceneId: string) {
   return scene;
 }
 
+// "Round No." is a movie-scoped position, not a stored value — the 1st fight
+// scene ever added to a movie is Round 1, the 5th is Round 5, and if one gets
+// deleted the rest shift down automatically since this is recomputed from
+// whichever rows currently survive, ordered by creation time.
+export async function getFightSceneRoundNumbers(movieId: string): Promise<Map<string, number>> {
+  const scenes = await prisma.fightScene.findMany({
+    where: { movieId, isDeleted: false },
+    orderBy: { createdAt: "asc" },
+    select: { id: true },
+  });
+  const map = new Map<string, number>();
+  scenes.forEach((scene, index) => map.set(scene.id, index + 1));
+  return map;
+}
+
 export function getFightSceneTags() {
   return prisma.fightSceneTag.findMany({ orderBy: { name: "asc" } });
 }

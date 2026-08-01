@@ -49,7 +49,7 @@ export function HeroCarousel({ movies }: { movies: FeaturedMovie[] }) {
           Trending this week
         </p>
         <Link href={`/movies/${movie.id}`} className="w-fit">
-          <h2 className="text-2xl font-bold text-white hover:text-red-400 sm:text-4xl">
+          <h2 className="font-serif text-2xl font-bold text-white hover:text-red-400 sm:text-4xl">
             {movie.title} {year && <span className="text-neutral-400">({year})</span>}
           </h2>
         </Link>

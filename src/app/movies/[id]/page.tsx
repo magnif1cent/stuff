@@ -10,6 +10,7 @@ import {
   getFightSceneRatingSummaries,
   getFightSceneAdminRatingSummaries,
   getFightSceneTags,
+  getFightSceneRoundNumbers,
 } from "@/lib/fight-scenes";
 import { RatingWidget } from "@/components/rating-widget";
 import { AdminRatingWidget } from "@/components/admin-rating-widget";
@@ -65,21 +66,27 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
     : null;
 
   const fightSceneIds = fightScenes.map((s) => s.id);
-  const [fightSceneRatingSummaries, fightSceneAdminRatingSummaries, myFightSceneRatings, myFightSceneAdminRatings] =
-    await Promise.all([
-      getFightSceneRatingSummaries(fightSceneIds),
-      getFightSceneAdminRatingSummaries(fightSceneIds),
-      session?.user
-        ? prisma.fightSceneRating.findMany({
-            where: { userId: session.user.id, fightSceneId: { in: fightSceneIds } },
-          })
-        : [],
-      session?.user?.role === "ADMIN"
-        ? prisma.fightSceneAdminRating.findMany({
-            where: { adminId: session.user.id, fightSceneId: { in: fightSceneIds } },
-          })
-        : [],
-    ]);
+  const [
+    fightSceneRatingSummaries,
+    fightSceneAdminRatingSummaries,
+    myFightSceneRatings,
+    myFightSceneAdminRatings,
+    fightSceneRoundNumbers,
+  ] = await Promise.all([
+    getFightSceneRatingSummaries(fightSceneIds),
+    getFightSceneAdminRatingSummaries(fightSceneIds),
+    session?.user
+      ? prisma.fightSceneRating.findMany({
+          where: { userId: session.user.id, fightSceneId: { in: fightSceneIds } },
+        })
+      : [],
+    session?.user?.role === "ADMIN"
+      ? prisma.fightSceneAdminRating.findMany({
+          where: { adminId: session.user.id, fightSceneId: { in: fightSceneIds } },
+        })
+      : [],
+    getFightSceneRoundNumbers(movie.id),
+  ]);
 
   const backdropUrl = tmdbImageUrl(movie.backdropPath, "original");
   const posterUrl = tmdbImageUrl(movie.posterPath, "w342");
@@ -92,6 +99,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
     const adminSummary = fightSceneAdminRatingSummaries.get(scene.id);
     return {
       id: scene.id,
+      roundNumber: fightSceneRoundNumbers.get(scene.id) ?? 0,
       title: scene.title,
       youtubeVideoId: scene.youtubeVideoId,
       youtubeStartSeconds: scene.youtubeStartSeconds,
@@ -158,7 +166,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
         </div>
 
         <div className="flex-1 pt-6 sm:pt-24">
-          <h1 className="text-3xl font-bold text-white">
+          <h1 className="font-serif text-3xl font-bold text-white">
             {movie.title} {year && <span className="text-neutral-400">({year})</span>}
           </h1>
 
@@ -234,7 +242,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
       <div className="mx-auto w-full max-w-6xl px-4 py-8">
         {movie.cast.length > 0 && (
           <section className="mb-8">
-            <h2 className="mb-4 text-xl font-bold text-white">Cast</h2>
+            <h2 className="mb-4 font-serif text-xl font-bold text-white">Cast</h2>
             <div className="flex gap-4 overflow-x-auto pb-2">
               {movie.cast.map((credit) => (
                 <div key={credit.id} className="w-28 shrink-0 text-center">

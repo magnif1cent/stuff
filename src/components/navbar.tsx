@@ -16,7 +16,7 @@ export async function Navbar() {
     <header className="sticky top-0 z-20 border-b border-neutral-800 bg-neutral-950/95 backdrop-blur">
       {needsVerification && <VerifyEmailBanner />}
       <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-4 px-4 py-3">
-        <Link href="/" className="whitespace-nowrap text-lg font-bold tracking-tight text-red-600">
+        <Link href="/" className="whitespace-nowrap font-serif text-lg font-bold tracking-tight text-red-600">
           師父<span className="text-white">Kung Fu DB</span>
         </Link>
         <div className="order-3 w-full sm:order-2 sm:w-auto sm:flex-1">

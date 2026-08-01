@@ -19,7 +19,7 @@ export default async function HomePage() {
       <HeroCarousel movies={featured} />
 
       <section className="mx-auto w-full max-w-6xl px-4 py-8">
-        <h2 className="mb-4 text-xl font-bold text-white">Recently Added</h2>
+        <h2 className="mb-4 font-serif text-xl font-bold text-white">Recently Added</h2>
         {recent.length === 0 ? (
           <p className="text-sm text-neutral-400">
             No movies in the catalog yet. An admin can import films from TMDB on the{" "}
