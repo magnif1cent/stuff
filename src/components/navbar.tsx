@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { isEmailVerified } from "@/lib/verification";
+import { Logo } from "@/components/logo";
 import { SearchBar } from "@/components/search-bar";
 import { SignOutButton } from "@/components/sign-out-button";
 import { VerifyEmailBanner } from "@/components/verify-email-banner";
@@ -16,9 +17,7 @@ export async function Navbar() {
     <header className="sticky top-0 z-20 border-b border-neutral-800 bg-neutral-950/95 backdrop-blur">
       {needsVerification && <VerifyEmailBanner />}
       <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-4 px-4 py-3">
-        <Link href="/" className="whitespace-nowrap font-serif text-lg font-bold tracking-tight text-red-600">
-          師父<span className="text-white">Kung Fu DB</span>
-        </Link>
+        <Logo />
         <div className="order-3 w-full sm:order-2 sm:w-auto sm:flex-1">
           <SearchBar />
         </div>
