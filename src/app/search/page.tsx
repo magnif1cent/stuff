@@ -4,7 +4,7 @@ import { findSimilarMovies } from "@/lib/fuzzy-search";
 import { parseRatingFilter } from "@/lib/rating-filter";
 import { MovieCard } from "@/components/movie-card";
 import { DirectorFilterInput } from "@/components/director-filter-input";
-import { RatingStepperInput } from "@/components/rating-stepper-input";
+import { RatingStarInput } from "@/components/rating-star-input";
 import type { Movie, Prisma } from "@/generated/prisma/client";
 
 interface SearchPageParams {
@@ -216,12 +216,12 @@ export default async function SearchPage({
 
         <div className="flex flex-col gap-1">
           <p className="text-xs text-neutral-400">Movie member rating (min.)</p>
-          <RatingStepperInput name="memberRating" initialValue={params.memberRating ?? ""} />
+          <RatingStarInput name="memberRating" initialValue={params.memberRating ?? ""} />
         </div>
 
         <div className="flex flex-col gap-1">
           <p className="text-xs text-neutral-400">Movie editor rating (min.)</p>
-          <RatingStepperInput name="editorRating" initialValue={params.editorRating ?? ""} />
+          <RatingStarInput name="editorRating" initialValue={params.editorRating ?? ""} />
         </div>
 
         <div className="flex flex-col gap-1">

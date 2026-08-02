@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { getFightSceneRatingSummaries, getFightSceneAdminRatingSummaries } from "@/lib/fight-scenes";
 import { parseRatingFilter } from "@/lib/rating-filter";
 import { FightSceneResultCard } from "@/components/fight-scene-result-card";
-import { RatingStepperInput } from "@/components/rating-stepper-input";
+import { RatingStarInput } from "@/components/rating-star-input";
 import type { Prisma } from "@/generated/prisma/client";
 
 interface FightSceneSearchParams {
@@ -150,12 +150,12 @@ export default async function FightSceneSearchPage({
 
         <div className="flex flex-col gap-1">
           <p className="text-xs text-neutral-400">Member rating (min.)</p>
-          <RatingStepperInput name="memberRating" initialValue={params.memberRating ?? ""} />
+          <RatingStarInput name="memberRating" initialValue={params.memberRating ?? ""} />
         </div>
 
         <div className="flex flex-col gap-1">
           <p className="text-xs text-neutral-400">Editor rating (min.)</p>
-          <RatingStepperInput name="editorRating" initialValue={params.editorRating ?? ""} />
+          <RatingStarInput name="editorRating" initialValue={params.editorRating ?? ""} />
         </div>
 
         <div className="flex flex-col gap-1">
