@@ -155,12 +155,11 @@ export default async function SearchPage({
   const pagedResults = results.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-10">
-      <h1 className="mb-6 font-serif text-xl font-bold text-white">
-        {query ? <>Search results for &ldquo;{query}&rdquo;</> : "Browse movies"}
-      </h1>
-
-      <form method="get" className="mb-8 flex flex-wrap items-end gap-3 rounded-md border border-neutral-800 bg-neutral-900 p-4">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-10 sm:flex-row">
+      <form
+        method="get"
+        className="flex w-full shrink-0 flex-col gap-4 rounded-md border border-neutral-800 bg-neutral-900 p-4 sm:w-64"
+      >
         <div className="flex flex-col gap-1">
           <label htmlFor="q" className="text-xs text-neutral-400">
             Title or actor
@@ -171,7 +170,7 @@ export default async function SearchPage({
             type="text"
             defaultValue={query}
             placeholder="Search…"
-            className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
+            className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
           />
         </div>
 
@@ -183,7 +182,7 @@ export default async function SearchPage({
             id="genre"
             name="genre"
             defaultValue={genre}
-            className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
+            className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
           >
             <option value="">All genres</option>
             {genres.map((g) => (
@@ -202,7 +201,7 @@ export default async function SearchPage({
             id="director"
             name="director"
             defaultValue={director}
-            className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
+            className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
           >
             <option value="">All directors</option>
             {directors.map((d) => (
@@ -221,7 +220,7 @@ export default async function SearchPage({
             id="country"
             name="country"
             defaultValue={country}
-            className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
+            className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
           >
             <option value="">All countries</option>
             {countries.map((c) => (
@@ -240,7 +239,7 @@ export default async function SearchPage({
             id="memberRating"
             name="memberRating"
             defaultValue={params.memberRating ?? ""}
-            className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
+            className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
           >
             <option value="">Any rating</option>
             {MIN_RATING_OPTIONS.map((r) => (
@@ -259,7 +258,7 @@ export default async function SearchPage({
             id="editorRating"
             name="editorRating"
             defaultValue={params.editorRating ?? ""}
-            className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
+            className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
           >
             <option value="">Any rating</option>
             {MIN_RATING_OPTIONS.map((r) => (
@@ -271,31 +270,25 @@ export default async function SearchPage({
         </div>
 
         <div className="flex flex-col gap-1">
-          <label htmlFor="yearFrom" className="text-xs text-neutral-400">
-            Year from
-          </label>
-          <input
-            id="yearFrom"
-            name="yearFrom"
-            type="number"
-            defaultValue={params.yearFrom ?? ""}
-            placeholder="1970"
-            className="w-24 rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
-          />
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <label htmlFor="yearTo" className="text-xs text-neutral-400">
-            Year to
-          </label>
-          <input
-            id="yearTo"
-            name="yearTo"
-            type="number"
-            defaultValue={params.yearTo ?? ""}
-            placeholder="2025"
-            className="w-24 rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
-          />
+          <p className="text-xs text-neutral-400">Year range</p>
+          <div className="flex gap-2">
+            <input
+              name="yearFrom"
+              type="number"
+              aria-label="Year from"
+              defaultValue={params.yearFrom ?? ""}
+              placeholder="1970"
+              className="w-1/2 min-w-0 rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
+            />
+            <input
+              name="yearTo"
+              type="number"
+              aria-label="Year to"
+              defaultValue={params.yearTo ?? ""}
+              placeholder="2025"
+              className="w-1/2 min-w-0 rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
+            />
+          </div>
         </div>
 
         <div className="flex flex-col gap-1">
@@ -306,7 +299,7 @@ export default async function SearchPage({
             id="sort"
             name="sort"
             defaultValue={sort}
-            className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
+            className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
           >
             {SORT_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>
@@ -316,66 +309,74 @@ export default async function SearchPage({
           </select>
         </div>
 
-        <button type="submit" className="rounded-md bg-red-700 px-4 py-1.5 text-sm font-medium text-white hover:bg-red-600">
-          Apply
-        </button>
-        {(query || hasFilters) && (
-          <a href="/search" className="text-sm text-neutral-400 hover:text-white">
-            Clear
-          </a>
-        )}
+        <div className="flex items-center gap-3">
+          <button type="submit" className="rounded-md bg-red-700 px-4 py-1.5 text-sm font-medium text-white hover:bg-red-600">
+            Apply
+          </button>
+          {(query || hasFilters) && (
+            <a href="/search" className="text-sm text-neutral-400 hover:text-white">
+              Clear
+            </a>
+          )}
+        </div>
       </form>
 
-      {!searched ? (
-        <p className="text-neutral-400">Enter a movie title or actor name, or set a filter, to browse the catalog.</p>
-      ) : totalResults === 0 ? (
-        <p className="text-neutral-400">No movies matched your search.</p>
-      ) : (
-        <>
-          {usedFuzzyFallback && (
-            <p className="mb-4 text-sm text-neutral-400">
-              No exact matches for &ldquo;{query}&rdquo; — showing similar titles instead.
-            </p>
-          )}
-          <div className="flex flex-wrap gap-4">
-            {pagedResults.map((movie) => {
-              const summary = ratingSummaries.get(movie.id);
-              return (
-                <MovieCard
-                  key={movie.id}
-                  movie={{
-                    ...movie,
-                    communityAverage: summary?.average ?? null,
-                    communityCount: summary?.count ?? 0,
-                  }}
-                />
-              );
-            })}
-          </div>
+      <div className="min-w-0 flex-1">
+        <h1 className="mb-6 font-serif text-xl font-bold text-white">
+          {query ? <>Search results for &ldquo;{query}&rdquo;</> : "Browse movies"}
+        </h1>
 
-          {totalPages > 1 && (
-            <div className="mt-8 flex items-center justify-center gap-4 text-sm">
-              {page > 1 ? (
-                <a href={pageHref(params, page - 1)} className="text-red-500 hover:underline">
-                  ← Previous
-                </a>
-              ) : (
-                <span className="text-neutral-600">← Previous</span>
-              )}
-              <span className="text-neutral-400">
-                Page {page} of {totalPages} ({totalResults} results)
-              </span>
-              {page < totalPages ? (
-                <a href={pageHref(params, page + 1)} className="text-red-500 hover:underline">
-                  Next →
-                </a>
-              ) : (
-                <span className="text-neutral-600">Next →</span>
-              )}
+        {!searched ? (
+          <p className="text-neutral-400">Enter a movie title or actor name, or set a filter, to browse the catalog.</p>
+        ) : totalResults === 0 ? (
+          <p className="text-neutral-400">No movies matched your search.</p>
+        ) : (
+          <>
+            {usedFuzzyFallback && (
+              <p className="mb-4 text-sm text-neutral-400">
+                No exact matches for &ldquo;{query}&rdquo; — showing similar titles instead.
+              </p>
+            )}
+            <div className="flex flex-wrap gap-4">
+              {pagedResults.map((movie) => {
+                const summary = ratingSummaries.get(movie.id);
+                return (
+                  <MovieCard
+                    key={movie.id}
+                    movie={{
+                      ...movie,
+                      communityAverage: summary?.average ?? null,
+                      communityCount: summary?.count ?? 0,
+                    }}
+                  />
+                );
+              })}
             </div>
-          )}
-        </>
-      )}
+
+            {totalPages > 1 && (
+              <div className="mt-8 flex items-center justify-center gap-4 text-sm">
+                {page > 1 ? (
+                  <a href={pageHref(params, page - 1)} className="text-red-500 hover:underline">
+                    ← Previous
+                  </a>
+                ) : (
+                  <span className="text-neutral-600">← Previous</span>
+                )}
+                <span className="text-neutral-400">
+                  Page {page} of {totalPages} ({totalResults} results)
+                </span>
+                {page < totalPages ? (
+                  <a href={pageHref(params, page + 1)} className="text-red-500 hover:underline">
+                    Next →
+                  </a>
+                ) : (
+                  <span className="text-neutral-600">Next →</span>
+                )}
+              </div>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }

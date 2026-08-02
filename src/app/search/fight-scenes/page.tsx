@@ -108,14 +108,10 @@ export default async function FightSceneSearchPage({
   const pagedScenes = scenes.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-10">
-      <h1 className="mb-6 font-serif text-xl font-bold text-white">
-        {query ? <>Fight scene results for &ldquo;{query}&rdquo;</> : "Browse fight scenes"}
-      </h1>
-
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-10 sm:flex-row">
       <form
         method="get"
-        className="mb-8 flex flex-wrap items-end gap-3 rounded-md border border-neutral-800 bg-neutral-900 p-4"
+        className="flex w-full shrink-0 flex-col gap-4 rounded-md border border-neutral-800 bg-neutral-900 p-4 sm:w-64"
       >
         <div className="flex flex-col gap-1">
           <label htmlFor="q" className="text-xs text-neutral-400">
@@ -127,13 +123,13 @@ export default async function FightSceneSearchPage({
             type="text"
             defaultValue={query}
             placeholder="Search…"
-            className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
+            className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
           />
         </div>
 
         <div className="flex flex-col gap-1">
           <p className="text-xs text-neutral-400">Tags (any of)</p>
-          <div className="flex max-w-md flex-wrap gap-2 rounded-md border border-neutral-700 bg-neutral-950 p-2">
+          <div className="flex flex-wrap gap-2 rounded-md border border-neutral-700 bg-neutral-950 p-2">
             {tags.length === 0 && <span className="text-sm text-neutral-500">No tags yet</span>}
             {tags.map((t) => (
               <label
@@ -161,7 +157,7 @@ export default async function FightSceneSearchPage({
             id="memberRating"
             name="memberRating"
             defaultValue={params.memberRating ?? ""}
-            className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
+            className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
           >
             <option value="">Any rating</option>
             {MIN_RATING_OPTIONS.map((r) => (
@@ -180,7 +176,7 @@ export default async function FightSceneSearchPage({
             id="editorRating"
             name="editorRating"
             defaultValue={params.editorRating ?? ""}
-            className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
+            className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
           >
             <option value="">Any rating</option>
             {MIN_RATING_OPTIONS.map((r) => (
@@ -199,7 +195,7 @@ export default async function FightSceneSearchPage({
             id="sort"
             name="sort"
             defaultValue={sort}
-            className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
+            className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
           >
             {SORT_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>
@@ -209,64 +205,72 @@ export default async function FightSceneSearchPage({
           </select>
         </div>
 
-        <button type="submit" className="rounded-md bg-red-700 px-4 py-1.5 text-sm font-medium text-white hover:bg-red-600">
-          Apply
-        </button>
-        {searched && (
-          <a href="/search/fight-scenes" className="text-sm text-neutral-400 hover:text-white">
-            Clear
-          </a>
-        )}
+        <div className="flex items-center gap-3">
+          <button type="submit" className="rounded-md bg-red-700 px-4 py-1.5 text-sm font-medium text-white hover:bg-red-600">
+            Apply
+          </button>
+          {searched && (
+            <a href="/search/fight-scenes" className="text-sm text-neutral-400 hover:text-white">
+              Clear
+            </a>
+          )}
+        </div>
       </form>
 
-      {!searched ? (
-        <p className="text-neutral-400">Enter a scene or movie title, or set a filter, to browse fight scenes.</p>
-      ) : totalResults === 0 ? (
-        <p className="text-neutral-400">No fight scenes matched your search.</p>
-      ) : (
-        <>
-          <div className="flex flex-wrap gap-4">
-            {pagedScenes.map((scene) => {
-              const memberSummary = memberSummaries.get(scene.id);
-              const editorSummary = editorSummaries.get(scene.id);
-              return (
-                <FightSceneResultCard
-                  key={scene.id}
-                  scene={{
-                    ...scene,
-                    memberRatingAverage: memberSummary?.average ?? null,
-                    memberRatingCount: memberSummary?.count ?? 0,
-                    editorRatingAverage: editorSummary?.average ?? null,
-                    editorRatingCount: editorSummary?.count ?? 0,
-                  }}
-                />
-              );
-            })}
-          </div>
+      <div className="min-w-0 flex-1">
+        <h1 className="mb-6 font-serif text-xl font-bold text-white">
+          {query ? <>Fight scene results for &ldquo;{query}&rdquo;</> : "Browse fight scenes"}
+        </h1>
 
-          {totalPages > 1 && (
-            <div className="mt-8 flex items-center justify-center gap-4 text-sm">
-              {page > 1 ? (
-                <a href={pageHref(params, page - 1)} className="text-red-500 hover:underline">
-                  ← Previous
-                </a>
-              ) : (
-                <span className="text-neutral-600">← Previous</span>
-              )}
-              <span className="text-neutral-400">
-                Page {page} of {totalPages} ({totalResults} results)
-              </span>
-              {page < totalPages ? (
-                <a href={pageHref(params, page + 1)} className="text-red-500 hover:underline">
-                  Next →
-                </a>
-              ) : (
-                <span className="text-neutral-600">Next →</span>
-              )}
+        {!searched ? (
+          <p className="text-neutral-400">Enter a scene or movie title, or set a filter, to browse fight scenes.</p>
+        ) : totalResults === 0 ? (
+          <p className="text-neutral-400">No fight scenes matched your search.</p>
+        ) : (
+          <>
+            <div className="flex flex-wrap gap-4">
+              {pagedScenes.map((scene) => {
+                const memberSummary = memberSummaries.get(scene.id);
+                const editorSummary = editorSummaries.get(scene.id);
+                return (
+                  <FightSceneResultCard
+                    key={scene.id}
+                    scene={{
+                      ...scene,
+                      memberRatingAverage: memberSummary?.average ?? null,
+                      memberRatingCount: memberSummary?.count ?? 0,
+                      editorRatingAverage: editorSummary?.average ?? null,
+                      editorRatingCount: editorSummary?.count ?? 0,
+                    }}
+                  />
+                );
+              })}
             </div>
-          )}
-        </>
-      )}
+
+            {totalPages > 1 && (
+              <div className="mt-8 flex items-center justify-center gap-4 text-sm">
+                {page > 1 ? (
+                  <a href={pageHref(params, page - 1)} className="text-red-500 hover:underline">
+                    ← Previous
+                  </a>
+                ) : (
+                  <span className="text-neutral-600">← Previous</span>
+                )}
+                <span className="text-neutral-400">
+                  Page {page} of {totalPages} ({totalResults} results)
+                </span>
+                {page < totalPages ? (
+                  <a href={pageHref(params, page + 1)} className="text-red-500 hover:underline">
+                    Next →
+                  </a>
+                ) : (
+                  <span className="text-neutral-600">Next →</span>
+                )}
+              </div>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }
