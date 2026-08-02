@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { getFightSceneRatingSummaries, getFightSceneAdminRatingSummaries } from "@/lib/fight-scenes";
 import { parseRatingFilter } from "@/lib/rating-filter";
 import { FightSceneResultCard } from "@/components/fight-scene-result-card";
+import { RatingStepperInput } from "@/components/rating-stepper-input";
 import type { Prisma } from "@/generated/prisma/client";
 
 interface FightSceneSearchParams {
@@ -148,37 +149,13 @@ export default async function FightSceneSearchPage({
         </div>
 
         <div className="flex flex-col gap-1">
-          <label htmlFor="memberRating" className="text-xs text-neutral-400">
-            Member rating (min.)
-          </label>
-          <input
-            id="memberRating"
-            name="memberRating"
-            type="number"
-            min={1}
-            max={10}
-            step={0.1}
-            defaultValue={params.memberRating ?? ""}
-            placeholder="Any"
-            className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
-          />
+          <p className="text-xs text-neutral-400">Member rating (min.)</p>
+          <RatingStepperInput name="memberRating" initialValue={params.memberRating ?? ""} />
         </div>
 
         <div className="flex flex-col gap-1">
-          <label htmlFor="editorRating" className="text-xs text-neutral-400">
-            Editor rating (min.)
-          </label>
-          <input
-            id="editorRating"
-            name="editorRating"
-            type="number"
-            min={1}
-            max={10}
-            step={0.1}
-            defaultValue={params.editorRating ?? ""}
-            placeholder="Any"
-            className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
-          />
+          <p className="text-xs text-neutral-400">Editor rating (min.)</p>
+          <RatingStepperInput name="editorRating" initialValue={params.editorRating ?? ""} />
         </div>
 
         <div className="flex flex-col gap-1">

@@ -4,6 +4,7 @@ import { findSimilarMovies } from "@/lib/fuzzy-search";
 import { parseRatingFilter } from "@/lib/rating-filter";
 import { MovieCard } from "@/components/movie-card";
 import { DirectorFilterInput } from "@/components/director-filter-input";
+import { RatingStepperInput } from "@/components/rating-stepper-input";
 import type { Movie, Prisma } from "@/generated/prisma/client";
 
 interface SearchPageParams {
@@ -214,37 +215,13 @@ export default async function SearchPage({
         </div>
 
         <div className="flex flex-col gap-1">
-          <label htmlFor="memberRating" className="text-xs text-neutral-400">
-            Movie member rating (min.)
-          </label>
-          <input
-            id="memberRating"
-            name="memberRating"
-            type="number"
-            min={1}
-            max={10}
-            step={0.1}
-            defaultValue={params.memberRating ?? ""}
-            placeholder="Any"
-            className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
-          />
+          <p className="text-xs text-neutral-400">Movie member rating (min.)</p>
+          <RatingStepperInput name="memberRating" initialValue={params.memberRating ?? ""} />
         </div>
 
         <div className="flex flex-col gap-1">
-          <label htmlFor="editorRating" className="text-xs text-neutral-400">
-            Movie editor rating (min.)
-          </label>
-          <input
-            id="editorRating"
-            name="editorRating"
-            type="number"
-            min={1}
-            max={10}
-            step={0.1}
-            defaultValue={params.editorRating ?? ""}
-            placeholder="Any"
-            className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
-          />
+          <p className="text-xs text-neutral-400">Movie editor rating (min.)</p>
+          <RatingStepperInput name="editorRating" initialValue={params.editorRating ?? ""} />
         </div>
 
         <div className="flex flex-col gap-1">
