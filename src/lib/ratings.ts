@@ -40,6 +40,23 @@ export async function getEditorsRatingSummary(movieId: string): Promise<RatingSu
   return { average: result._avg.score, count: result._count._all };
 }
 
+export async function getEditorsRatingSummaries(movieIds: string[]): Promise<Map<string, RatingSummary>> {
+  if (movieIds.length === 0) return new Map();
+
+  const rows = await prisma.adminRating.groupBy({
+    by: ["movieId"],
+    where: { movieId: { in: movieIds } },
+    _avg: { score: true },
+    _count: { _all: true },
+  });
+
+  const map = new Map<string, RatingSummary>();
+  for (const row of rows) {
+    map.set(row.movieId, { average: row._avg.score, count: row._count._all });
+  }
+  return map;
+}
+
 const TOP_RATED_MIN_RATINGS = 2;
 
 export async function getTopRatedMovies(limit = 12) {

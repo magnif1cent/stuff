@@ -57,10 +57,8 @@ export function SearchBar({ initialQuery = "" }: { initialQuery?: string }) {
 
   const goToSearchPage = () => {
     const trimmed = query.trim();
-    if (trimmed) {
-      setOpen(false);
-      router.push(`/search?q=${encodeURIComponent(trimmed)}`);
-    }
+    setOpen(false);
+    router.push(trimmed ? `/search?q=${encodeURIComponent(trimmed)}` : "/search");
   };
 
   const visibleResults = query.trim() ? results : [];
