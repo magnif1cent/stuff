@@ -465,7 +465,7 @@ export function FightSceneSection({
               }}
             >
               <div className="flex items-center justify-between text-[10px] tracking-wider uppercase" style={{ color: TICKET_MUTED }}>
-                <span>Round No. {scene.roundNumber}</span>
+                <span>Round {scene.roundNumber}</span>
                 <ShareButton path={permalinkPath} title={scene.title} variant="icon" />
               </div>
 
