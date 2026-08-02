@@ -6,8 +6,24 @@ const DEBOUNCE_MS = 250;
 
 // Plain autocomplete, not an instant-search dropdown — selecting a
 // suggestion just fills the field so it submits with the rest of the
-// filter form on "Apply", it doesn't navigate on its own.
-export function DirectorFilterInput({ initialValue }: { initialValue: string }) {
+// filter form on "Apply", it doesn't navigate on its own. Shared by every
+// filter backed by a "could grow into the thousands" list (director,
+// actor) instead of a full <select> of every value.
+export function AutocompleteFilterInput({
+  id,
+  name,
+  initialValue,
+  endpoint,
+  resultsKey,
+  placeholder,
+}: {
+  id: string;
+  name: string;
+  initialValue: string;
+  endpoint: string;
+  resultsKey: string;
+  placeholder: string;
+}) {
   const [value, setValue] = useState(initialValue);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [open, setOpen] = useState(false);
@@ -24,17 +40,17 @@ export function DirectorFilterInput({ initialValue }: { initialValue: string }) 
     const id = ++requestId.current;
     const timer = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/directors?q=${encodeURIComponent(trimmed)}`);
+        const res = await fetch(`${endpoint}?q=${encodeURIComponent(trimmed)}`);
         if (!res.ok || requestId.current !== id) return;
         const data = await res.json();
-        setSuggestions(data.directors ?? []);
+        setSuggestions(data[resultsKey] ?? []);
       } catch {
         if (requestId.current === id) setSuggestions([]);
       }
     }, DEBOUNCE_MS);
 
     return () => clearTimeout(timer);
-  }, [value]);
+  }, [value, endpoint, resultsKey]);
 
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
@@ -53,13 +69,14 @@ export function DirectorFilterInput({ initialValue }: { initialValue: string }) 
   }
 
   const visibleSuggestions = value.trim() ? suggestions : [];
+  const listboxId = `${id}-suggestions`;
 
   return (
     <div ref={containerRef} className="relative">
       <input
-        id="director"
+        id={id}
         type="text"
-        name="director"
+        name={name}
         value={value}
         onChange={(e) => {
           setValue(e.target.value);
@@ -82,16 +99,16 @@ export function DirectorFilterInput({ initialValue }: { initialValue: string }) 
             select(visibleSuggestions[highlighted]);
           }
         }}
-        placeholder="Any director"
+        placeholder={placeholder}
         autoComplete="off"
         role="combobox"
         aria-expanded={open && visibleSuggestions.length > 0}
-        aria-controls="director-suggestions"
+        aria-controls={listboxId}
         className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
       />
       {open && visibleSuggestions.length > 0 && (
         <ul
-          id="director-suggestions"
+          id={listboxId}
           role="listbox"
           className="absolute left-0 top-full z-30 mt-1 max-h-48 w-full overflow-y-auto rounded-md border border-neutral-800 bg-neutral-900 shadow-xl"
         >

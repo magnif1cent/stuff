@@ -3,11 +3,13 @@ import { getFightSceneRatingSummaries, getFightSceneAdminRatingSummaries } from 
 import { parseRatingFilter } from "@/lib/rating-filter";
 import { FightSceneResultCard } from "@/components/fight-scene-result-card";
 import { RatingStarInput } from "@/components/rating-star-input";
+import { AutocompleteFilterInput } from "@/components/autocomplete-filter-input";
 import type { Prisma } from "@/generated/prisma/client";
 
 interface FightSceneSearchParams {
   q?: string;
   tag?: string | string[];
+  actor?: string;
   memberRating?: string;
   editorRating?: string;
   sort?: string;
@@ -28,6 +30,7 @@ function pageHref(params: FightSceneSearchParams, page: number) {
   for (const t of Array.isArray(params.tag) ? params.tag : params.tag ? [params.tag] : []) {
     search.append("tag", t);
   }
+  if (params.actor) search.set("actor", params.actor);
   if (params.memberRating) search.set("memberRating", params.memberRating);
   if (params.editorRating) search.set("editorRating", params.editorRating);
   if (params.sort) search.set("sort", params.sort);
@@ -44,19 +47,21 @@ export default async function FightSceneSearchPage({
   const params = await searchParams;
   const query = params.q?.trim() ?? "";
   const selectedTags = Array.isArray(params.tag) ? params.tag : params.tag ? [params.tag] : [];
+  const actor = params.actor?.trim() ?? "";
   const memberRating = parseRatingFilter(params.memberRating);
   const editorRating = parseRatingFilter(params.editorRating);
   const sort = SORT_OPTIONS.some((o) => o.value === params.sort) ? params.sort! : "newest";
 
   const tags = await prisma.fightSceneTag.findMany({ orderBy: { name: "asc" } });
 
-  const hasFilters = selectedTags.length > 0 || memberRating !== undefined || editorRating !== undefined;
+  const hasFilters = selectedTags.length > 0 || actor.length > 0 || memberRating !== undefined || editorRating !== undefined;
   const searched = query.length > 0 || hasFilters;
 
   const where: Prisma.FightSceneWhereInput = { isDeleted: false };
   // Checking multiple tags is a broadening OR ("has any of these"), matching
   // the standard convention for multi-select within a single filter facet.
   if (selectedTags.length > 0) where.tags = { some: { name: { in: selectedTags } } };
+  if (actor) where.cast = { some: { person: { name: { contains: actor, mode: "insensitive" } } } };
   if (query) {
     where.OR = [
       { title: { contains: query, mode: "insensitive" } },
@@ -146,6 +151,20 @@ export default async function FightSceneSearchPage({
               </label>
             ))}
           </div>
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <label htmlFor="actor" className="text-xs text-neutral-400">
+            Actor
+          </label>
+          <AutocompleteFilterInput
+            id="actor"
+            name="actor"
+            initialValue={actor}
+            endpoint="/api/fight-scene-actors"
+            resultsKey="actors"
+            placeholder="Any actor"
+          />
         </div>
 
         <div className="flex flex-col gap-1">

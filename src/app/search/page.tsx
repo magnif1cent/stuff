@@ -3,7 +3,7 @@ import { getRatingSummaries, getEditorsRatingSummaries } from "@/lib/ratings";
 import { findSimilarMovies } from "@/lib/fuzzy-search";
 import { parseRatingFilter } from "@/lib/rating-filter";
 import { MovieCard } from "@/components/movie-card";
-import { DirectorFilterInput } from "@/components/director-filter-input";
+import { AutocompleteFilterInput } from "@/components/autocomplete-filter-input";
 import { RatingStarInput } from "@/components/rating-star-input";
 import type { Movie, Prisma } from "@/generated/prisma/client";
 
@@ -11,6 +11,7 @@ interface SearchPageParams {
   q?: string;
   genre?: string;
   director?: string;
+  actor?: string;
   country?: string;
   memberRating?: string;
   editorRating?: string;
@@ -29,12 +30,20 @@ const SORT_OPTIONS = [
 
 const PAGE_SIZE = 24;
 
-function buildFilterWhere(genre: string, director: string, country: string, yearFrom?: number, yearTo?: number) {
+function buildFilterWhere(
+  genre: string,
+  director: string,
+  actor: string,
+  country: string,
+  yearFrom?: number,
+  yearTo?: number,
+) {
   const where: Prisma.MovieWhereInput = {};
   if (genre) where.genres = { some: { name: genre } };
-  // Contains (not exact) since the director field is now free-typed with
+  // Contains (not exact) since director/actor are now free-typed with
   // autocomplete suggestions, not chosen from a closed list of options.
   if (director) where.director = { contains: director, mode: "insensitive" };
+  if (actor) where.cast = { some: { person: { name: { contains: actor, mode: "insensitive" } } } };
   if (country) where.country = country;
   if (yearFrom || yearTo) {
     where.releaseDate = {
@@ -50,6 +59,7 @@ function pageHref(params: SearchPageParams, page: number) {
   if (params.q) search.set("q", params.q);
   if (params.genre) search.set("genre", params.genre);
   if (params.director) search.set("director", params.director);
+  if (params.actor) search.set("actor", params.actor);
   if (params.country) search.set("country", params.country);
   if (params.memberRating) search.set("memberRating", params.memberRating);
   if (params.editorRating) search.set("editorRating", params.editorRating);
@@ -70,6 +80,7 @@ export default async function SearchPage({
   const query = params.q?.trim() ?? "";
   const genre = params.genre?.trim() ?? "";
   const director = params.director?.trim() ?? "";
+  const actor = params.actor?.trim() ?? "";
   const country = params.country?.trim() ?? "";
   const memberRating = parseRatingFilter(params.memberRating);
   const editorRating = parseRatingFilter(params.editorRating);
@@ -88,7 +99,7 @@ export default async function SearchPage({
   ]);
   const countries = countryRows.map((m) => m.country!).filter(Boolean);
 
-  const filterWhere = buildFilterWhere(genre, director, country, yearFrom, yearTo);
+  const filterWhere = buildFilterWhere(genre, director, actor, country, yearFrom, yearTo);
   const hasFilters = Object.keys(filterWhere).length > 0 || memberRating !== undefined || editorRating !== undefined;
 
   let results: Movie[] = [];
@@ -192,7 +203,28 @@ export default async function SearchPage({
           <label htmlFor="director" className="text-xs text-neutral-400">
             Director
           </label>
-          <DirectorFilterInput initialValue={director} />
+          <AutocompleteFilterInput
+            id="director"
+            name="director"
+            initialValue={director}
+            endpoint="/api/directors"
+            resultsKey="directors"
+            placeholder="Any director"
+          />
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <label htmlFor="actor" className="text-xs text-neutral-400">
+            Actor
+          </label>
+          <AutocompleteFilterInput
+            id="actor"
+            name="actor"
+            initialValue={actor}
+            endpoint="/api/actors"
+            resultsKey="actors"
+            placeholder="Any actor"
+          />
         </div>
 
         <div className="flex flex-col gap-1">
