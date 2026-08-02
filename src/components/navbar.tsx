@@ -25,6 +25,9 @@ export async function Navbar() {
           <Link href="/search" className="text-sm text-neutral-300 hover:text-white">
             Browse
           </Link>
+          <Link href="/search/fight-scenes" className="text-sm text-neutral-300 hover:text-white">
+            Fight Scenes
+          </Link>
           {session?.user ? (
             <>
               <Link href="/my-lists" className="text-sm text-neutral-300 hover:text-white">

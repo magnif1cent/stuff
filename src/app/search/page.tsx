@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { getRatingSummaries } from "@/lib/ratings";
+import { getRatingSummaries, getEditorsRatingSummaries } from "@/lib/ratings";
 import { findSimilarMovies } from "@/lib/fuzzy-search";
 import { MovieCard } from "@/components/movie-card";
 import type { Movie, Prisma } from "@/generated/prisma/client";
@@ -9,7 +9,8 @@ interface SearchPageParams {
   genre?: string;
   director?: string;
   country?: string;
-  minRating?: string;
+  memberRating?: string;
+  editorRating?: string;
   yearFrom?: string;
   yearTo?: string;
   sort?: string;
@@ -23,7 +24,7 @@ const SORT_OPTIONS = [
   { value: "oldest", label: "Oldest" },
 ] as const;
 
-// Community ratings are on a 1-10 scale (see the rating API's score validation).
+// Ratings (member and editor) are on a 1-10 scale (see the rating API's score validation).
 const MIN_RATING_OPTIONS = [5, 7, 8, 9] as const;
 
 const PAGE_SIZE = 24;
@@ -48,7 +49,8 @@ function pageHref(params: SearchPageParams, page: number) {
   if (params.genre) search.set("genre", params.genre);
   if (params.director) search.set("director", params.director);
   if (params.country) search.set("country", params.country);
-  if (params.minRating) search.set("minRating", params.minRating);
+  if (params.memberRating) search.set("memberRating", params.memberRating);
+  if (params.editorRating) search.set("editorRating", params.editorRating);
   if (params.yearFrom) search.set("yearFrom", params.yearFrom);
   if (params.yearTo) search.set("yearTo", params.yearTo);
   if (params.sort) search.set("sort", params.sort);
@@ -67,7 +69,8 @@ export default async function SearchPage({
   const genre = params.genre?.trim() ?? "";
   const director = params.director?.trim() ?? "";
   const country = params.country?.trim() ?? "";
-  const minRating = MIN_RATING_OPTIONS.find((r) => String(r) === params.minRating);
+  const memberRating = MIN_RATING_OPTIONS.find((r) => String(r) === params.memberRating);
+  const editorRating = MIN_RATING_OPTIONS.find((r) => String(r) === params.editorRating);
   const yearFrom = params.yearFrom ? Number(params.yearFrom) : undefined;
   const yearTo = params.yearTo ? Number(params.yearTo) : undefined;
   const sort = SORT_OPTIONS.some((o) => o.value === params.sort) ? params.sort! : "relevance";
@@ -91,7 +94,7 @@ export default async function SearchPage({
   const countries = countryRows.map((m) => m.country!).filter(Boolean);
 
   const filterWhere = buildFilterWhere(genre, director, country, yearFrom, yearTo);
-  const hasFilters = Object.keys(filterWhere).length > 0 || minRating !== undefined;
+  const hasFilters = Object.keys(filterWhere).length > 0 || memberRating !== undefined || editorRating !== undefined;
 
   let results: Movie[] = [];
   let usedFuzzyFallback = false;
@@ -121,10 +124,16 @@ export default async function SearchPage({
     results = await prisma.movie.findMany({ where: filterWhere, orderBy: { releaseDate: "desc" } });
   }
 
-  const ratingSummaries = await getRatingSummaries(results.map((m) => m.id));
+  const [ratingSummaries, editorRatingSummaries] = await Promise.all([
+    getRatingSummaries(results.map((m) => m.id)),
+    getEditorsRatingSummaries(results.map((m) => m.id)),
+  ]);
 
-  if (minRating !== undefined) {
-    results = results.filter((m) => (ratingSummaries.get(m.id)?.average ?? 0) >= minRating);
+  if (memberRating !== undefined) {
+    results = results.filter((m) => (ratingSummaries.get(m.id)?.average ?? 0) >= memberRating);
+  }
+  if (editorRating !== undefined) {
+    results = results.filter((m) => (editorRatingSummaries.get(m.id)?.average ?? 0) >= editorRating);
   }
 
   if (sort === "rating") {
@@ -224,13 +233,32 @@ export default async function SearchPage({
         </div>
 
         <div className="flex flex-col gap-1">
-          <label htmlFor="minRating" className="text-xs text-neutral-400">
-            Min. rating
+          <label htmlFor="memberRating" className="text-xs text-neutral-400">
+            Movie member rating
           </label>
           <select
-            id="minRating"
-            name="minRating"
-            defaultValue={params.minRating ?? ""}
+            id="memberRating"
+            name="memberRating"
+            defaultValue={params.memberRating ?? ""}
+            className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
+          >
+            <option value="">Any rating</option>
+            {MIN_RATING_OPTIONS.map((r) => (
+              <option key={r} value={r}>
+                {r}+
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <label htmlFor="editorRating" className="text-xs text-neutral-400">
+            Movie editor rating
+          </label>
+          <select
+            id="editorRating"
+            name="editorRating"
+            defaultValue={params.editorRating ?? ""}
             className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
           >
             <option value="">Any rating</option>
