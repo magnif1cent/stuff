@@ -22,6 +22,9 @@ export async function Navbar() {
           <SearchBar />
         </div>
         <nav className="order-2 ml-auto flex items-center gap-4 sm:order-3">
+          <Link href="/search" className="text-sm text-neutral-300 hover:text-white">
+            Browse
+          </Link>
           {session?.user ? (
             <>
               <Link href="/my-lists" className="text-sm text-neutral-300 hover:text-white">
