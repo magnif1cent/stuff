@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { getRatingSummaries, getEditorsRatingSummaries } from "@/lib/ratings";
 import { findSimilarMovies } from "@/lib/fuzzy-search";
 import { MovieCard } from "@/components/movie-card";
+import { DirectorFilterInput } from "@/components/director-filter-input";
 import type { Movie, Prisma } from "@/generated/prisma/client";
 
 interface SearchPageParams {
@@ -32,7 +33,9 @@ const PAGE_SIZE = 24;
 function buildFilterWhere(genre: string, director: string, country: string, yearFrom?: number, yearTo?: number) {
   const where: Prisma.MovieWhereInput = {};
   if (genre) where.genres = { some: { name: genre } };
-  if (director) where.director = director;
+  // Contains (not exact) since the director field is now free-typed with
+  // autocomplete suggestions, not chosen from a closed list of options.
+  if (director) where.director = { contains: director, mode: "insensitive" };
   if (country) where.country = country;
   if (yearFrom || yearTo) {
     where.releaseDate = {
@@ -75,14 +78,8 @@ export default async function SearchPage({
   const yearTo = params.yearTo ? Number(params.yearTo) : undefined;
   const sort = SORT_OPTIONS.some((o) => o.value === params.sort) ? params.sort! : "relevance";
 
-  const [genres, directorRows, countryRows] = await Promise.all([
+  const [genres, countryRows] = await Promise.all([
     prisma.genre.findMany({ orderBy: { name: "asc" } }),
-    prisma.movie.findMany({
-      where: { director: { not: null } },
-      distinct: ["director"],
-      orderBy: { director: "asc" },
-      select: { director: true },
-    }),
     prisma.movie.findMany({
       where: { country: { not: null } },
       distinct: ["country"],
@@ -90,7 +87,6 @@ export default async function SearchPage({
       select: { country: true },
     }),
   ]);
-  const directors = directorRows.map((m) => m.director!).filter(Boolean);
   const countries = countryRows.map((m) => m.country!).filter(Boolean);
 
   const filterWhere = buildFilterWhere(genre, director, country, yearFrom, yearTo);
@@ -197,19 +193,7 @@ export default async function SearchPage({
           <label htmlFor="director" className="text-xs text-neutral-400">
             Director
           </label>
-          <select
-            id="director"
-            name="director"
-            defaultValue={director}
-            className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
-          >
-            <option value="">All directors</option>
-            {directors.map((d) => (
-              <option key={d} value={d}>
-                {d}
-              </option>
-            ))}
-          </select>
+          <DirectorFilterInput initialValue={director} />
         </div>
 
         <div className="flex flex-col gap-1">
