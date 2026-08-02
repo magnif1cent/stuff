@@ -287,6 +287,7 @@ export function FightSceneSection({
     }
     const { fightScene } = await res.json();
     setScenes((prev) => [
+      ...prev,
       {
         ...fightScene,
         // The new scene is always the most recently created, so it's the
@@ -297,7 +298,6 @@ export function FightSceneSection({
         adminRatingAverage: null,
         adminRatingCount: 0,
       },
-      ...prev,
     ]);
     setAdding(false);
   }
@@ -427,7 +427,9 @@ export function FightSceneSection({
       )}
 
       <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {scenes.map((scene) => {
+        {/* Always sorted by round number left-to-right/top-to-bottom, regardless
+            of insertion order from create/edit/delete. */}
+        {[...scenes].sort((a, b) => a.roundNumber - b.roundNumber).map((scene) => {
           const canEdit = currentUserId === scene.submittedById;
           const canDelete = canEdit || isAdmin;
           const permalinkPath = `/movies/${movieId}/fight-scenes/${scene.id}`;
@@ -463,7 +465,7 @@ export function FightSceneSection({
               }}
             >
               <div className="flex items-center justify-between text-[10px] tracking-wider uppercase" style={{ color: TICKET_MUTED }}>
-                <span>Round No. {scene.roundNumber}</span>
+                <span>Round {scene.roundNumber}</span>
                 <ShareButton path={permalinkPath} title={scene.title} variant="icon" />
               </div>
 

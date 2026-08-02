@@ -77,6 +77,10 @@ model Movie {
   overview       String?  @db.Text
   releaseDate    DateTime?
   posterPath     String?
+  // Admin-uploaded poster (Vercel Blob URL) that takes precedence over the
+  // TMDB-sourced posterPath above when set — lets an admin swap in a
+  // different poster without depending on what TMDB happens to have.
+  posterOverrideUrl String?
   backdropPath   String?
   runtime        Int?
   director       String?
