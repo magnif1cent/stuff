@@ -147,7 +147,7 @@ export default async function SearchPage({
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-10">
-      <h1 className="mb-6 text-xl font-bold text-white">
+      <h1 className="mb-6 font-serif text-xl font-bold text-white">
         {query ? <>Search results for &ldquo;{query}&rdquo;</> : "Browse movies"}
       </h1>
 
@@ -162,7 +162,7 @@ export default async function SearchPage({
             type="text"
             defaultValue={query}
             placeholder="Search…"
-            className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-accent focus:outline-none"
+            className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
           />
         </div>
 
@@ -174,7 +174,7 @@ export default async function SearchPage({
             id="genre"
             name="genre"
             defaultValue={genre}
-            className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-accent focus:outline-none"
+            className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
           >
             <option value="">All genres</option>
             {genres.map((g) => (
@@ -193,7 +193,7 @@ export default async function SearchPage({
             id="director"
             name="director"
             defaultValue={director}
-            className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-accent focus:outline-none"
+            className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
           >
             <option value="">All directors</option>
             {directors.map((d) => (
@@ -212,7 +212,7 @@ export default async function SearchPage({
             id="country"
             name="country"
             defaultValue={country}
-            className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-accent focus:outline-none"
+            className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
           >
             <option value="">All countries</option>
             {countries.map((c) => (
@@ -231,7 +231,7 @@ export default async function SearchPage({
             id="minRating"
             name="minRating"
             defaultValue={params.minRating ?? ""}
-            className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-accent focus:outline-none"
+            className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
           >
             <option value="">Any rating</option>
             {MIN_RATING_OPTIONS.map((r) => (
@@ -252,7 +252,7 @@ export default async function SearchPage({
             type="number"
             defaultValue={params.yearFrom ?? ""}
             placeholder="1970"
-            className="w-24 rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-accent focus:outline-none"
+            className="w-24 rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
           />
         </div>
 
@@ -266,7 +266,7 @@ export default async function SearchPage({
             type="number"
             defaultValue={params.yearTo ?? ""}
             placeholder="2025"
-            className="w-24 rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-accent focus:outline-none"
+            className="w-24 rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
           />
         </div>
 
@@ -278,7 +278,7 @@ export default async function SearchPage({
             id="sort"
             name="sort"
             defaultValue={sort}
-            className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-accent focus:outline-none"
+            className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
           >
             {SORT_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>
@@ -328,7 +328,7 @@ export default async function SearchPage({
           {totalPages > 1 && (
             <div className="mt-8 flex items-center justify-center gap-4 text-sm">
               {page > 1 ? (
-                <a href={pageHref(params, page - 1)} className="text-accent hover:underline">
+                <a href={pageHref(params, page - 1)} className="text-red-500 hover:underline">
                   ← Previous
                 </a>
               ) : (
@@ -338,7 +338,7 @@ export default async function SearchPage({
                 Page {page} of {totalPages} ({totalResults} results)
               </span>
               {page < totalPages ? (
-                <a href={pageHref(params, page + 1)} className="text-accent hover:underline">
+                <a href={pageHref(params, page + 1)} className="text-red-500 hover:underline">
                   Next →
                 </a>
               ) : (

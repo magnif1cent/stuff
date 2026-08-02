@@ -31,11 +31,11 @@ function Slide({ movie, active }: { movie: FeaturedMovie; active: boolean }) {
       <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/40 to-transparent" />
 
       <div className="absolute bottom-0 left-0 flex w-full flex-col gap-2 p-4 sm:p-8">
-        <p className="text-xs font-semibold uppercase tracking-wide text-accent">
+        <p className="text-xs font-semibold uppercase tracking-wide text-red-500">
           Trending this week
         </p>
         <Link href={`/movies/${movie.id}`} className="w-fit">
-          <h2 className="text-2xl font-bold text-white hover:text-red-400 sm:text-4xl">
+          <h2 className="font-serif text-2xl font-bold text-white hover:text-red-400 sm:text-4xl">
             {movie.title} {year && <span className="text-neutral-400">({year})</span>}
           </h2>
         </Link>
@@ -131,7 +131,7 @@ export function HeroCarousel({ movies }: { movies: FeaturedMovie[] }) {
                 aria-label={`Show ${m.title}`}
                 aria-current={i === index}
                 className={`h-1.5 rounded-full transition-all ${
-                  i === index ? "w-6 bg-accent" : "w-1.5 bg-neutral-500/70 hover:bg-neutral-300"
+                  i === index ? "w-6 bg-red-600" : "w-1.5 bg-neutral-500/70 hover:bg-neutral-300"
                 }`}
               />
             ))}

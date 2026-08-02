@@ -34,7 +34,7 @@ export default async function HomePage() {
         emptyMessage={
           <>
             No movies in the catalog yet. An admin can import films from TMDB on the{" "}
-            <a href="/admin/import" className="text-accent hover:underline">
+            <a href="/admin/import" className="text-red-500 hover:underline">
               import page
             </a>
             .

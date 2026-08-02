@@ -7,7 +7,7 @@ import type { Movie } from "@/generated/prisma/client";
 
 async function MovieRow({ title, movies, ratingSummaries }: {
   title: string;
-  movies: Pick<Movie, "id" | "title" | "releaseDate" | "posterPath" | "tmdbRating">[];
+  movies: Pick<Movie, "id" | "title" | "releaseDate" | "posterPath" | "posterOverrideUrl" | "tmdbRating">[];
   ratingSummaries: Awaited<ReturnType<typeof getRatingSummaries>>;
 }) {
   return (

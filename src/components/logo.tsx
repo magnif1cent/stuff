@@ -6,7 +6,7 @@ export function Logo() {
   return (
     <Link
       href="/"
-      className="flex shrink-0 items-center whitespace-nowrap text-lg font-bold tracking-tight text-accent"
+      className="flex shrink-0 items-center whitespace-nowrap font-serif text-lg font-bold tracking-tight text-red-600"
     >
       師父<span className="text-white">Kung Fu DB</span>
     </Link>

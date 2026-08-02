@@ -2,13 +2,23 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { tmdbImageUrl } from "@/lib/tmdb";
+import { tmdbImageUrl, resolvePosterUrl } from "@/lib/tmdb";
 import { getCommunityRatingSummary, getEditorsRatingSummary } from "@/lib/ratings";
 import { getDiscussionPage } from "@/lib/discussion";
+import {
+  getFightScenesForMovie,
+  getFightSceneRatingSummaries,
+  getFightSceneAdminRatingSummaries,
+  getFightSceneTags,
+  getFightSceneRoundNumbers,
+} from "@/lib/fight-scenes";
 import { RatingWidget } from "@/components/rating-widget";
 import { AdminRatingWidget } from "@/components/admin-rating-widget";
 import { ListButtons } from "@/components/list-buttons";
 import { DiscussionThread } from "@/components/discussion-thread";
+import { FightSceneSection } from "@/components/fight-scene-section";
+import { EditorialReview } from "@/components/editorial-review";
+import { PosterOverrideControl } from "@/components/poster-override-control";
 
 export default async function MovieDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -29,19 +39,26 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
     notFound();
   }
 
-  const [communityRating, editorsRating, myRating, myListEntries, discussionPage] = await Promise.all([
-    getCommunityRatingSummary(movie.id),
-    getEditorsRatingSummary(movie.id),
-    session?.user
-      ? prisma.rating.findUnique({
-          where: { userId_movieId: { userId: session.user.id, movieId: movie.id } },
-        })
-      : null,
-    session?.user
-      ? prisma.listEntry.findMany({ where: { userId: session.user.id, movieId: movie.id } })
-      : [],
-    getDiscussionPage(movie.id),
-  ]);
+  const [communityRating, editorsRating, myRating, myListEntries, discussionPage, fightScenes, fightSceneTags, editorialReview] =
+    await Promise.all([
+      getCommunityRatingSummary(movie.id),
+      getEditorsRatingSummary(movie.id),
+      session?.user
+        ? prisma.rating.findUnique({
+            where: { userId_movieId: { userId: session.user.id, movieId: movie.id } },
+          })
+        : null,
+      session?.user
+        ? prisma.listEntry.findMany({ where: { userId: session.user.id, movieId: movie.id } })
+        : [],
+      getDiscussionPage(movie.id),
+      getFightScenesForMovie(movie.id),
+      getFightSceneTags(),
+      prisma.editorialReview.findUnique({
+        where: { movieId: movie.id },
+        include: { author: { select: { name: true } } },
+      }),
+    ]);
 
   const myAdminRating = session?.user?.role === "ADMIN"
     ? await prisma.adminRating.findUnique({
@@ -49,11 +66,72 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
       })
     : null;
 
+  const fightSceneIds = fightScenes.map((s) => s.id);
+  const [
+    fightSceneRatingSummaries,
+    fightSceneAdminRatingSummaries,
+    myFightSceneRatings,
+    myFightSceneAdminRatings,
+    fightSceneRoundNumbers,
+  ] = await Promise.all([
+    getFightSceneRatingSummaries(fightSceneIds),
+    getFightSceneAdminRatingSummaries(fightSceneIds),
+    session?.user
+      ? prisma.fightSceneRating.findMany({
+          where: { userId: session.user.id, fightSceneId: { in: fightSceneIds } },
+        })
+      : [],
+    session?.user?.role === "ADMIN"
+      ? prisma.fightSceneAdminRating.findMany({
+          where: { adminId: session.user.id, fightSceneId: { in: fightSceneIds } },
+        })
+      : [],
+    getFightSceneRoundNumbers(movie.id),
+  ]);
+
   const backdropUrl = tmdbImageUrl(movie.backdropPath, "original");
-  const posterUrl = tmdbImageUrl(movie.posterPath, "w342");
+  const posterUrl = resolvePosterUrl(movie, "w342");
   const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : null;
   const isFavorite = myListEntries.some((e) => e.listType === "FAVORITE");
   const isOnWatchlist = myListEntries.some((e) => e.listType === "WATCHLIST");
+
+  const serializedFightScenes = fightScenes.map((scene) => {
+    const summary = fightSceneRatingSummaries.get(scene.id);
+    const adminSummary = fightSceneAdminRatingSummaries.get(scene.id);
+    return {
+      id: scene.id,
+      roundNumber: fightSceneRoundNumbers.get(scene.id) ?? 0,
+      title: scene.title,
+      youtubeVideoId: scene.youtubeVideoId,
+      youtubeStartSeconds: scene.youtubeStartSeconds,
+      isVerified: scene.isVerified,
+      submittedById: scene.submittedById,
+      createdAt: scene.createdAt.toISOString(),
+      updatedAt: scene.updatedAt.toISOString(),
+      submittedBy: scene.submittedBy,
+      cast: scene.cast,
+      tags: scene.tags,
+      ratingAverage: summary?.average ?? null,
+      ratingCount: summary?.count ?? 0,
+      adminRatingAverage: adminSummary?.average ?? null,
+      adminRatingCount: adminSummary?.count ?? 0,
+    };
+  });
+
+  const myFightSceneRatingMap = Object.fromEntries(myFightSceneRatings.map((r) => [r.fightSceneId, r.score]));
+  const myFightSceneAdminRatingMap = Object.fromEntries(
+    myFightSceneAdminRatings.map((r) => [r.fightSceneId, r.score]),
+  );
+
+  const castOptions = movie.cast.map((credit) => ({ id: credit.person.id, name: credit.person.name }));
+
+  const serializedEditorialReview = editorialReview
+    ? {
+        content: editorialReview.content,
+        updatedAt: editorialReview.updatedAt.toISOString(),
+        author: editorialReview.author,
+      }
+    : null;
 
   const serializedPosts = discussionPage.posts.map((post) => ({
     ...post,
@@ -78,18 +156,23 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
       </div>
 
       <div className="mx-auto -mt-24 flex w-full max-w-6xl flex-col gap-6 px-4 sm:flex-row">
-        <div className="relative aspect-2/3 w-40 shrink-0 overflow-hidden rounded-md bg-neutral-800 shadow-xl sm:w-56">
-          {posterUrl ? (
-            <Image src={posterUrl} alt={movie.title} fill sizes="224px" className="object-cover" />
-          ) : (
-            <div className="flex h-full items-center justify-center px-2 text-center text-xs text-neutral-500">
-              {movie.title}
-            </div>
+        <div className="w-40 shrink-0 sm:w-56">
+          <div className="relative aspect-2/3 overflow-hidden rounded-md bg-neutral-800 shadow-xl">
+            {posterUrl ? (
+              <Image src={posterUrl} alt={movie.title} fill sizes="224px" className="object-cover" />
+            ) : (
+              <div className="flex h-full items-center justify-center px-2 text-center text-xs text-neutral-500">
+                {movie.title}
+              </div>
+            )}
+          </div>
+          {session?.user?.role === "ADMIN" && (
+            <PosterOverrideControl movieId={movie.id} hasOverride={!!movie.posterOverrideUrl} />
           )}
         </div>
 
         <div className="flex-1 pt-6 sm:pt-24">
-          <h1 className="text-3xl font-bold text-white">
+          <h1 className="font-serif text-3xl font-bold text-white">
             {movie.title} {year && <span className="text-neutral-400">({year})</span>}
           </h1>
 
@@ -165,7 +248,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
       <div className="mx-auto w-full max-w-6xl px-4 py-8">
         {movie.cast.length > 0 && (
           <section className="mb-8">
-            <h2 className="mb-4 text-xl font-bold text-white">Cast</h2>
+            <h2 className="mb-4 font-serif text-xl font-bold text-white">Cast</h2>
             <div className="flex gap-4 overflow-x-auto pb-2">
               {movie.cast.map((credit) => (
                 <div key={credit.id} className="w-28 shrink-0 text-center">
@@ -189,6 +272,24 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
             </div>
           </section>
         )}
+
+        <EditorialReview
+          movieId={movie.id}
+          initialReview={serializedEditorialReview}
+          isAdmin={session?.user?.role === "ADMIN"}
+        />
+
+        <FightSceneSection
+          movieId={movie.id}
+          initialFightScenes={serializedFightScenes}
+          castOptions={castOptions}
+          tagOptions={fightSceneTags}
+          signedIn={!!session?.user}
+          currentUserId={session?.user?.id ?? null}
+          isAdmin={session?.user?.role === "ADMIN"}
+          myRatings={myFightSceneRatingMap}
+          myAdminRatings={myFightSceneAdminRatingMap}
+        />
 
         <DiscussionThread
           movieId={movie.id}

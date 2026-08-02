@@ -15,6 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXTAUTH_URL ?? "http://localhost:3000"),
   title: "Kung Fu Movie DB",
   description: "An IMDB-style database for kung fu and martial arts films.",
 };
@@ -29,7 +30,7 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="flex min-h-full flex-col bg-neutral-950 text-neutral-100">
+      <body className="flex min-h-full flex-col bg-neutral-950 font-sans text-neutral-100">
         <Providers>
           <Navbar />
           <main className="flex flex-1 flex-col">{children}</main>

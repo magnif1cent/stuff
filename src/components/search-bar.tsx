@@ -108,7 +108,7 @@ export function SearchBar({ initialQuery = "" }: { initialQuery?: string }) {
           }}
           aria-autocomplete="list"
           placeholder="Search movies or actors…"
-          className="w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-sm text-neutral-100 placeholder:text-neutral-500 focus:border-accent focus:outline-none"
+          className="w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-sm text-neutral-100 placeholder:text-neutral-500 focus:border-red-600 focus:outline-none"
         />
         <button
           type="submit"
@@ -154,7 +154,7 @@ export function SearchBar({ initialQuery = "" }: { initialQuery?: string }) {
               type="button"
               onClick={goToSearchPage}
               onMouseEnter={() => setHighlighted(visibleResults.length)}
-              className={`w-full px-3 py-2 text-left text-sm text-accent hover:underline ${
+              className={`w-full px-3 py-2 text-left text-sm text-red-500 hover:underline ${
                 highlighted === visibleResults.length ? "bg-neutral-800" : ""
               }`}
             >

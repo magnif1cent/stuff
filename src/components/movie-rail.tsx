@@ -42,7 +42,7 @@ export function MovieRail({
   if (movies.length === 0) {
     return (
       <section className="mx-auto w-full max-w-6xl px-4 py-8">
-        <h2 className="mb-4 text-xl font-bold text-white">{title}</h2>
+        <h2 className="mb-4 font-serif text-xl font-bold text-white">{title}</h2>
         <p className="text-sm text-neutral-400">{emptyMessage}</p>
       </section>
     );
@@ -50,7 +50,7 @@ export function MovieRail({
 
   return (
     <section className="mx-auto w-full max-w-6xl px-4 py-8">
-      <h2 className="mb-4 text-xl font-bold text-white">{title}</h2>
+      <h2 className="mb-4 font-serif text-xl font-bold text-white">{title}</h2>
       <div className="group relative">
         {!atStart && (
           <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-12 bg-gradient-to-r from-neutral-950 to-transparent" />

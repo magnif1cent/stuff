@@ -1,19 +1,12 @@
 import { NextResponse } from "next/server";
+import Papa from "papaparse";
 import { requireAdminSession } from "@/lib/require-admin";
-import { prisma } from "@/lib/prisma";
-import { importMovieFromTmdb } from "@/lib/tmdb-import";
+import { bulkImportFromTmdb, MAX_BULK_IMPORT_ROWS, type BulkImportRowInput } from "@/lib/tmdb-bulk-import";
 
-// Kept small so one batch comfortably finishes inside a serverless
-// function's default timeout — the client is responsible for chunking a
-// large file into many requests of this size.
-const MAX_BATCH_SIZE = 15;
-
-interface BulkImportResult {
-  tmdbId: number;
-  status: "imported" | "skipped" | "error";
-  title?: string;
-  error?: string;
-}
+// Bulk imports run TMDB lookups + per-movie cast upserts sequentially for up
+// to MAX_BULK_IMPORT_ROWS rows, which can take a while — opt into the
+// longest duration Vercel allows rather than the framework default.
+export const maxDuration = 60;
 
 export async function POST(request: Request) {
   const session = await requireAdminSession();
@@ -21,39 +14,38 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const { tmdbIds } = await request.json();
-  if (
-    !Array.isArray(tmdbIds) ||
-    tmdbIds.length === 0 ||
-    !tmdbIds.every((id) => typeof id === "number" && Number.isInteger(id))
-  ) {
-    return NextResponse.json({ error: "tmdbIds must be a non-empty array of integers" }, { status: 400 });
-  }
-  if (tmdbIds.length > MAX_BATCH_SIZE) {
-    return NextResponse.json({ error: `tmdbIds must contain at most ${MAX_BATCH_SIZE} ids per request` }, { status: 400 });
+  const formData = await request.formData();
+  const file = formData.get("file");
+  if (!(file instanceof File)) {
+    return NextResponse.json({ error: "A CSV file is required." }, { status: 400 });
   }
 
-  const existing = await prisma.movie.findMany({
-    where: { tmdbId: { in: tmdbIds } },
-    select: { tmdbId: true, title: true },
+  const text = await file.text();
+  const parsed = Papa.parse<BulkImportRowInput>(text, {
+    header: true,
+    skipEmptyLines: true,
+    delimiter: ",",
+    transformHeader: (header) => header.trim().toLowerCase(),
   });
-  const existingByTmdbId = new Map(existing.map((m) => [m.tmdbId, m.title]));
 
-  const results: BulkImportResult[] = [];
-  for (const tmdbId of tmdbIds) {
-    const existingTitle = existingByTmdbId.get(tmdbId);
-    if (existingTitle) {
-      results.push({ tmdbId, status: "skipped", title: existingTitle });
-      continue;
-    }
-
-    try {
-      const movie = await importMovieFromTmdb(tmdbId);
-      results.push({ tmdbId, status: "imported", title: movie.title });
-    } catch (error) {
-      results.push({ tmdbId, status: "error", error: (error as Error).message });
-    }
+  if (parsed.errors.length > 0) {
+    return NextResponse.json({ error: `Couldn't parse CSV: ${parsed.errors[0].message}` }, { status: 400 });
   }
 
+  const rows = parsed.data;
+  if (rows.length === 0) {
+    return NextResponse.json({ error: "The CSV has no rows." }, { status: 400 });
+  }
+  if (rows.length > MAX_BULK_IMPORT_ROWS) {
+    return NextResponse.json(
+      { error: `Too many rows (${rows.length}). Split into batches of ${MAX_BULK_IMPORT_ROWS} or fewer.` },
+      { status: 400 },
+    );
+  }
+  if (!rows.every((row) => row.tmdb_id?.trim() || row.title?.trim())) {
+    return NextResponse.json({ error: 'Every row needs a "title" or "tmdb_id" column filled in.' }, { status: 400 });
+  }
+
+  const results = await bulkImportFromTmdb(rows);
   return NextResponse.json({ results });
 }

@@ -6,10 +6,12 @@ An IMDB-style website for kung fu and martial arts films, built for martial arts
 
 - Landing page with a weekly-rotating "trending" carousel (top 5 most-active movies over the last 7 days) and a recently-added grid
 - Search by movie title or actor name
-- Movie pages with cast, synopsis, a community rating, a separate admin-only "Editors' Score", and a per-movie discussion thread (with spoiler tags, edit/delete on your own posts, and admin moderation)
+- Movie pages with cast, synopsis, a community rating, a separate admin-only "Editors' Score", an admin-authored editorial review, and a per-movie discussion thread (with spoiler tags, edit/delete on your own posts, and admin moderation)
+- **Fight Scenes**: members tag specific fight scenes within a movie — YouTube clip (with an optional start timestamp), the actors involved (picked from that movie's cast), and category tags (e.g. "Weapon Duel", "One vs. Many") — with their own member rating, a separate admin rating, admin verification, and a shareable permalink page (see [Fight Scenes](#fight-scenes) below)
 - Member accounts via email/password (with email verification) or Google sign-in
-- Member capabilities: rate movies, maintain a Favorites list and a Watchlist, post/reply in movie discussions
-- Admin-only TMDB import tool to curate the catalog (`/admin/import`)
+- Member capabilities: rate movies and fight scenes, maintain a Favorites list and a Watchlist, post/reply in movie discussions, submit fight scenes
+- A unified `/admin` dashboard (Movies management incl. permanent deletion, TMDB import incl. bulk CSV upload, Fight Scene Tags, Account settings) plus admin actions that stay inline on regular pages (Editors' Score, editorial reviews, poster overrides, fight scene verification) &mdash; see [Admin Area](#admin-area) below
+- Social sharing (native share sheet on mobile, copy-link/X/Facebook/Reddit fallback on desktop) on movie and fight scene pages
 
 ## Tech Stack
 
@@ -17,6 +19,7 @@ An IMDB-style website for kung fu and martial arts films, built for martial arts
 - [Prisma ORM](https://www.prisma.io/) 7 + PostgreSQL (via the `@prisma/adapter-pg` driver adapter)
 - [Auth.js (NextAuth) v5](https://authjs.dev/) — Credentials (email/password) + Google OAuth
 - [TMDB API](https://developer.themoviedb.org/docs) for movie/person data
+- [Vercel Blob](https://vercel.com/docs/storage/vercel-blob) for admin-uploaded poster overrides
 
 ## Getting Set Up
 
@@ -57,7 +60,7 @@ Pick one:
 cp .env.example .env
 ```
 
-Fill in `DATABASE_URL`, `TMDB_API_KEY`, `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`, and generate an `AUTH_SECRET`. `RESEND_API_KEY`/`EMAIL_FROM` are optional — see [Email Verification](#email-verification) below.
+Fill in `DATABASE_URL`, `TMDB_API_KEY`, `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`, and generate an `AUTH_SECRET`. `RESEND_API_KEY`/`EMAIL_FROM` are optional — see [Email Verification](#email-verification) below. `BLOB_READ_WRITE_TOKEN` is optional too — see [Admin Poster Overrides](#admin-poster-overrides).
 
 ```bash
 npx auth secret
@@ -99,6 +102,47 @@ Without `RESEND_API_KEY` configured, the verification link is logged to the serv
 - Wrap text in `[spoiler]...[/spoiler]` to hide it behind a "click to reveal" toggle — useful for plot twists/endings discussed on the movie's own page. Note this is a client-side reveal (like most forum spoiler tags): the text is present in the page's data, just not shown until clicked, so it isn't a substitute for redacting genuinely secret data.
 - Authors can edit or delete their own posts; admins can delete anyone's post. Deletion is a soft-delete — the row and any replies underneath it are kept (so a thread doesn't fall apart when one comment in it is removed), but the content is blanked and the post renders as `[deleted]`.
 
+## Fight Scenes
+
+Below the cast list on every movie page, members can catalog individual fight scenes from that film:
+
+- **Add a scene**: paste a YouTube URL (any watch/shorts/embed/`youtu.be`/live link, with an optional `t=`/`start=` timestamp), give it a title (the submitter can auto-fill from the video's public oEmbed title), tag which of the movie's own cast members are in it, and optionally attach up to 10 category tags. Requires a verified email.
+- **Round numbers** aren't stored — they're computed on read as the scene's position, by creation order, among that movie's non-deleted scenes. Delete scene 2 of 3 and the old scene 3 becomes Round 2 automatically.
+- **Ratings**: members rate a scene 1–10 (one rating per member, editable); admins have a separate rating with an optional note, mirroring the movie-level Editors' Score.
+- **Verification**: admins can mark a scene "Verified" as a quality signal. Editing a scene's content clears verification, since an admin's earlier check no longer vouches for what's there now.
+- **Editing/deleting**: the submitter can edit or delete their own scene; admins can delete anyone's. Deletion is a soft-delete (like discussion posts) so ratings tied to a scene aren't orphaned.
+- **Tags**: the tag list itself (e.g. "Weapon Duel", "One vs. Many") is admin-curated at `/admin/fight-scene-tags` — members choose from it but can't create new tags.
+- **Permalinks**: each fight scene has its own page at `/movies/[id]/fight-scenes/[fightSceneId]` with dynamic Open Graph metadata (title, rating summary, YouTube thumbnail) for clean link previews when shared.
+
+## Editorial Reviews
+
+Admins can write a long-form review (up to 10,000 characters) for any movie, shown alongside the cast list. There's one review per movie — any admin can write or update it, and the page just tracks who last touched it.
+
+## Admin Poster Overrides
+
+If a movie's TMDB poster is missing, low-quality, or wrong, admins can upload a replacement (JPEG/PNG/WebP, 5MB max) directly on the movie page. The override is stored in [Vercel Blob](https://vercel.com/docs/storage/vercel-blob) and always takes priority over the TMDB poster when set; admins can remove it to fall back to TMDB's image again.
+
+To enable this locally or in your own deployment, create a Blob store in your Vercel project's **Storage** tab and connect it — Vercel injects `BLOB_READ_WRITE_TOKEN` automatically for deployed environments, and you can run `vercel env pull` to get it into your local `.env`. Without this token, poster uploads will fail, but the rest of the app is unaffected.
+
+## Visual Theme
+
+The site's base look (backgrounds, text, accents) is defined once in `src/app/globals.css` as a Tailwind `@theme` override of the neutral/red/yellow/amber color scales, so it applies everywhere those Tailwind classes are used. This palette has changed once already (from a dark neutral theme to a warmer ink-and-paper "Poster House" palette) — check `src/app/globals.css` for the current definition and its inline comment before assuming a specific look when building new UI.
+
+Fight Scene cards ("Fight Ticket" styling) are the one exception: they use hardcoded hex colors rather than the shared Tailwind scale, so they deliberately keep their ink-on-cream, ticket-stub look regardless of whatever the site-wide theme is set to.
+
+## Admin Area
+
+Signed-in admins get an "Admin" link in the navbar to `/admin` &mdash; a dashboard linking every admin section that lives on its own page, all guarded by the same `requireAdminSession()` check in `src/app/admin/layout.tsx`:
+
+- **Movies** (`/admin/movies`) &mdash; browse the catalog and permanently delete a movie entry (type the title to confirm). Deleting cascades through everything attached to it: cast credits, ratings, discussion posts, fight scenes (and their own casts/ratings), the editorial review, and weekly-featured entries.
+- **Import from TMDB** (`/admin/import`) &mdash; search-and-import one movie at a time, plus a bulk-upload section: a CSV with a `title` column (optionally `year` to disambiguate identically-titled results, or `tmdb_id` to skip the search entirely) imports up to 25 movies in one request. Each row is resolved and imported independently, so one bad row (no TMDB match, a transient TMDB error) doesn't fail the rest of the batch &mdash; the response reports created/updated/error per row. CSV parsing uses `papaparse` rather than the `xlsx` npm package, whose published version has known unpatched advisories (SheetJS fixed them only on their own CDN, not on the npm registry).
+- **Fight Scene Tags** (`/admin/fight-scene-tags`) &mdash; manage the category vocabulary members tag fight scenes with (see [Fight Scenes](#fight-scenes) above).
+- **Account** (`/admin/account`) &mdash; change your own admin sign-in email or password (previously only possible via direct SQL). Changing your email re-triggers the normal email-verification flow on the new address; changing your password requires your current one (unless you signed up via Google and have never set one, in which case you can set an initial password). Either change signs you out immediately, since the session is JWT-based and won't otherwise pick up the new credentials until you sign back in.
+
+Account management is deliberately self-service (an admin managing their own credentials) rather than a full user-management CRUD (promoting other users to admin, resetting someone else's password, etc.) &mdash; a reasonable next step if the admin area grows further.
+
+Not every admin capability lives in this dashboard — Editors' Score, editorial reviews, poster overrides, and fight scene verification are admin-only actions that stay inline on the regular movie/fight-scene pages they act on, rather than being relocated here.
+
 ## Weekly Trending Carousel
 
 `/api/cron/weekly-featured` recomputes the top 5 most-active movies (by ratings + discussion activity in the last 7 days) and is protected by the `CRON_SECRET` env var (sent as `Authorization: Bearer <CRON_SECRET>`). `vercel.json` schedules this to run weekly via [Vercel Cron](https://vercel.com/docs/cron-jobs) — Vercel automatically attaches that header when `CRON_SECRET` is set as a project environment variable.
@@ -116,12 +160,12 @@ Without `RESEND_API_KEY` configured, the verification link is logged to the serv
 
 ## Project Structure
 
-- `src/app` — pages and API routes (App Router)
-- `src/components` — UI components
-- `src/lib` — Prisma client, Auth.js config, TMDB client, rating/weekly-featured/verification helpers, email sender
+- `src/app` — pages and API routes (App Router), including admin pages (`/admin/import`, `/admin/fight-scene-tags`) and the fight scene permalink route (`/movies/[id]/fight-scenes/[fightSceneId]`)
+- `src/components` — UI components (`fight-scene-section.tsx`, `editorial-review.tsx`, `poster-override-control.tsx`, `share-button.tsx`, etc.)
+- `src/lib` — Prisma client, Auth.js config, TMDB client, YouTube URL parsing, rating/weekly-featured/verification/fight-scene helpers, email sender
 - `prisma/schema.prisma` — data model
-- `prisma/seed.ts` — sample/dev seed data
+- `prisma/seed.ts` — sample/dev seed data, including a sample fight scene and editorial review
 
 ## Out of Scope (for now)
 
-Person/actor detail pages, catalog-wide pagination, rate limiting, reply notifications, a user-facing "report post" flow, and "related movies" recommendations are not yet implemented.
+Person/actor detail pages, catalog-wide pagination, rate limiting, reply notifications, a user-facing "report post" flow, "related movies" recommendations, and fight scene moderation beyond owner/admin delete are not yet implemented.
