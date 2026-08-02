@@ -29,7 +29,7 @@ export async function Navbar() {
                 My Lists
               </Link>
               {session.user.role === "ADMIN" && (
-                <Link href="/admin/import" className="text-sm text-neutral-300 hover:text-white">
+                <Link href="/admin" className="text-sm text-neutral-300 hover:text-white">
                   Admin
                 </Link>
               )}
