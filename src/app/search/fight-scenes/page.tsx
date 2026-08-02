@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getFightSceneRatingSummaries, getFightSceneAdminRatingSummaries } from "@/lib/fight-scenes";
+import { parseRatingFilter } from "@/lib/rating-filter";
 import { FightSceneResultCard } from "@/components/fight-scene-result-card";
 import type { Prisma } from "@/generated/prisma/client";
 
@@ -17,9 +18,6 @@ const SORT_OPTIONS = [
   { value: "memberRating", label: "Highest Member Rated" },
   { value: "editorRating", label: "Highest Editor Rated" },
 ] as const;
-
-// Ratings (member and editor) are on a 1-10 scale (see the rating API's score validation).
-const MIN_RATING_OPTIONS = [5, 7, 8, 9] as const;
 
 const PAGE_SIZE = 24;
 
@@ -45,8 +43,8 @@ export default async function FightSceneSearchPage({
   const params = await searchParams;
   const query = params.q?.trim() ?? "";
   const selectedTags = Array.isArray(params.tag) ? params.tag : params.tag ? [params.tag] : [];
-  const memberRating = MIN_RATING_OPTIONS.find((r) => String(r) === params.memberRating);
-  const editorRating = MIN_RATING_OPTIONS.find((r) => String(r) === params.editorRating);
+  const memberRating = parseRatingFilter(params.memberRating);
+  const editorRating = parseRatingFilter(params.editorRating);
   const sort = SORT_OPTIONS.some((o) => o.value === params.sort) ? params.sort! : "newest";
 
   const tags = await prisma.fightSceneTag.findMany({ orderBy: { name: "asc" } });
@@ -151,40 +149,36 @@ export default async function FightSceneSearchPage({
 
         <div className="flex flex-col gap-1">
           <label htmlFor="memberRating" className="text-xs text-neutral-400">
-            Member rating
+            Member rating (min.)
           </label>
-          <select
+          <input
             id="memberRating"
             name="memberRating"
+            type="number"
+            min={1}
+            max={10}
+            step={0.1}
             defaultValue={params.memberRating ?? ""}
+            placeholder="Any"
             className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
-          >
-            <option value="">Any rating</option>
-            {MIN_RATING_OPTIONS.map((r) => (
-              <option key={r} value={r}>
-                {r}+
-              </option>
-            ))}
-          </select>
+          />
         </div>
 
         <div className="flex flex-col gap-1">
           <label htmlFor="editorRating" className="text-xs text-neutral-400">
-            Editor rating
+            Editor rating (min.)
           </label>
-          <select
+          <input
             id="editorRating"
             name="editorRating"
+            type="number"
+            min={1}
+            max={10}
+            step={0.1}
             defaultValue={params.editorRating ?? ""}
+            placeholder="Any"
             className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
-          >
-            <option value="">Any rating</option>
-            {MIN_RATING_OPTIONS.map((r) => (
-              <option key={r} value={r}>
-                {r}+
-              </option>
-            ))}
-          </select>
+          />
         </div>
 
         <div className="flex flex-col gap-1">

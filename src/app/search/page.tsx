@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getRatingSummaries, getEditorsRatingSummaries } from "@/lib/ratings";
 import { findSimilarMovies } from "@/lib/fuzzy-search";
+import { parseRatingFilter } from "@/lib/rating-filter";
 import { MovieCard } from "@/components/movie-card";
 import { DirectorFilterInput } from "@/components/director-filter-input";
 import type { Movie, Prisma } from "@/generated/prisma/client";
@@ -24,9 +25,6 @@ const SORT_OPTIONS = [
   { value: "newest", label: "Newest" },
   { value: "oldest", label: "Oldest" },
 ] as const;
-
-// Ratings (member and editor) are on a 1-10 scale (see the rating API's score validation).
-const MIN_RATING_OPTIONS = [5, 7, 8, 9] as const;
 
 const PAGE_SIZE = 24;
 
@@ -72,8 +70,8 @@ export default async function SearchPage({
   const genre = params.genre?.trim() ?? "";
   const director = params.director?.trim() ?? "";
   const country = params.country?.trim() ?? "";
-  const memberRating = MIN_RATING_OPTIONS.find((r) => String(r) === params.memberRating);
-  const editorRating = MIN_RATING_OPTIONS.find((r) => String(r) === params.editorRating);
+  const memberRating = parseRatingFilter(params.memberRating);
+  const editorRating = parseRatingFilter(params.editorRating);
   const yearFrom = params.yearFrom ? Number(params.yearFrom) : undefined;
   const yearTo = params.yearTo ? Number(params.yearTo) : undefined;
   const sort = SORT_OPTIONS.some((o) => o.value === params.sort) ? params.sort! : "relevance";
@@ -217,40 +215,36 @@ export default async function SearchPage({
 
         <div className="flex flex-col gap-1">
           <label htmlFor="memberRating" className="text-xs text-neutral-400">
-            Movie member rating
+            Movie member rating (min.)
           </label>
-          <select
+          <input
             id="memberRating"
             name="memberRating"
+            type="number"
+            min={1}
+            max={10}
+            step={0.1}
             defaultValue={params.memberRating ?? ""}
+            placeholder="Any"
             className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
-          >
-            <option value="">Any rating</option>
-            {MIN_RATING_OPTIONS.map((r) => (
-              <option key={r} value={r}>
-                {r}+
-              </option>
-            ))}
-          </select>
+          />
         </div>
 
         <div className="flex flex-col gap-1">
           <label htmlFor="editorRating" className="text-xs text-neutral-400">
-            Movie editor rating
+            Movie editor rating (min.)
           </label>
-          <select
+          <input
             id="editorRating"
             name="editorRating"
+            type="number"
+            min={1}
+            max={10}
+            step={0.1}
             defaultValue={params.editorRating ?? ""}
+            placeholder="Any"
             className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
-          >
-            <option value="">Any rating</option>
-            {MIN_RATING_OPTIONS.map((r) => (
-              <option key={r} value={r}>
-                {r}+
-              </option>
-            ))}
-          </select>
+          />
         </div>
 
         <div className="flex flex-col gap-1">
