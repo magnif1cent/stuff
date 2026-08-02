@@ -9,7 +9,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ results: [] });
   }
 
-  const [titleMatches, castMatches] = await Promise.all([
+  const [titleMatches, castMatches, directorMatches] = await Promise.all([
     prisma.movie.findMany({
       where: { title: { contains: query, mode: "insensitive" } },
       orderBy: { tmdbPopularity: "desc" },
@@ -22,10 +22,16 @@ export async function GET(request: Request) {
       take: RESULT_LIMIT,
       select: { id: true, title: true, releaseDate: true, posterPath: true },
     }),
+    prisma.movie.findMany({
+      where: { director: { contains: query, mode: "insensitive" } },
+      orderBy: { tmdbPopularity: "desc" },
+      take: RESULT_LIMIT,
+      select: { id: true, title: true, releaseDate: true, posterPath: true },
+    }),
   ]);
 
   const byId = new Map(titleMatches.map((m) => [m.id, m]));
-  for (const movie of castMatches) {
+  for (const movie of [...castMatches, ...directorMatches]) {
     if (!byId.has(movie.id)) byId.set(movie.id, movie);
   }
 
