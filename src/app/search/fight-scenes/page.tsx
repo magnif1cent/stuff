@@ -5,7 +5,7 @@ import type { Prisma } from "@/generated/prisma/client";
 
 interface FightSceneSearchParams {
   q?: string;
-  tag?: string;
+  tag?: string | string[];
   memberRating?: string;
   editorRating?: string;
   sort?: string;
@@ -26,7 +26,9 @@ const PAGE_SIZE = 24;
 function pageHref(params: FightSceneSearchParams, page: number) {
   const search = new URLSearchParams();
   if (params.q) search.set("q", params.q);
-  if (params.tag) search.set("tag", params.tag);
+  for (const t of Array.isArray(params.tag) ? params.tag : params.tag ? [params.tag] : []) {
+    search.append("tag", t);
+  }
   if (params.memberRating) search.set("memberRating", params.memberRating);
   if (params.editorRating) search.set("editorRating", params.editorRating);
   if (params.sort) search.set("sort", params.sort);
@@ -42,18 +44,20 @@ export default async function FightSceneSearchPage({
 }) {
   const params = await searchParams;
   const query = params.q?.trim() ?? "";
-  const tag = params.tag?.trim() ?? "";
+  const selectedTags = Array.isArray(params.tag) ? params.tag : params.tag ? [params.tag] : [];
   const memberRating = MIN_RATING_OPTIONS.find((r) => String(r) === params.memberRating);
   const editorRating = MIN_RATING_OPTIONS.find((r) => String(r) === params.editorRating);
   const sort = SORT_OPTIONS.some((o) => o.value === params.sort) ? params.sort! : "newest";
 
   const tags = await prisma.fightSceneTag.findMany({ orderBy: { name: "asc" } });
 
-  const hasFilters = tag.length > 0 || memberRating !== undefined || editorRating !== undefined;
+  const hasFilters = selectedTags.length > 0 || memberRating !== undefined || editorRating !== undefined;
   const searched = query.length > 0 || hasFilters;
 
   const where: Prisma.FightSceneWhereInput = { isDeleted: false };
-  if (tag) where.tags = { some: { name: tag } };
+  // Checking multiple tags is a broadening OR ("has any of these"), matching
+  // the standard convention for multi-select within a single filter facet.
+  if (selectedTags.length > 0) where.tags = { some: { name: { in: selectedTags } } };
   if (query) {
     where.OR = [
       { title: { contains: query, mode: "insensitive" } },
@@ -128,22 +132,25 @@ export default async function FightSceneSearchPage({
         </div>
 
         <div className="flex flex-col gap-1">
-          <label htmlFor="tag" className="text-xs text-neutral-400">
-            Tag
-          </label>
-          <select
-            id="tag"
-            name="tag"
-            defaultValue={tag}
-            className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
-          >
-            <option value="">All tags</option>
+          <p className="text-xs text-neutral-400">Tags (any of)</p>
+          <div className="flex max-w-md flex-wrap gap-2 rounded-md border border-neutral-700 bg-neutral-950 p-2">
+            {tags.length === 0 && <span className="text-sm text-neutral-500">No tags yet</span>}
             {tags.map((t) => (
-              <option key={t.id} value={t.name}>
+              <label
+                key={t.id}
+                className="flex cursor-pointer items-center gap-1.5 rounded-full border border-neutral-700 px-2 py-1 text-xs text-neutral-300 has-checked:border-red-600 has-checked:bg-red-950/40 has-checked:text-red-300"
+              >
+                <input
+                  type="checkbox"
+                  name="tag"
+                  value={t.name}
+                  defaultChecked={selectedTags.includes(t.name)}
+                  className="sr-only"
+                />
                 {t.name}
-              </option>
+              </label>
             ))}
-          </select>
+          </div>
         </div>
 
         <div className="flex flex-col gap-1">
