@@ -5,7 +5,7 @@ An IMDB-style website for kung fu and martial arts films, built for martial arts
 ## Features
 
 - Landing page with a weekly-rotating "trending" carousel (top 5 most-active movies over the last 7 days) and a recently-added grid
-- Search by movie title or actor name
+- Search by movie title, actor, or director name, with filters (genre, director, country, release-year range, minimum community rating), sorting (relevance, highest rated, newest, oldest), pagination, and a typo-tolerant "did you mean" fallback when nothing matches exactly
 - Movie pages with cast, synopsis, a community rating, a separate admin-only "Editors' Score", an admin-authored editorial review, and a per-movie discussion thread (with spoiler tags, edit/delete on your own posts, and admin moderation)
 - **Fight Scenes**: members tag specific fight scenes within a movie — YouTube clip (with an optional start timestamp), the actors involved (picked from that movie's cast), and category tags (e.g. "Weapon Duel", "One vs. Many") — with their own member rating, a separate admin rating, admin verification, and a shareable permalink page (see [Fight Scenes](#fight-scenes) below)
 - Member accounts via email/password (with email verification) or Google sign-in
@@ -72,6 +72,8 @@ npx auth secret
 npx prisma migrate dev
 npx prisma db seed
 ```
+
+One of the migrations runs `CREATE EXTENSION IF NOT EXISTS pg_trgm` (used for the typo-tolerant search fallback) and needs a role with permission to create extensions — true for a local Postgres superuser and for Neon, but some hosted providers require enabling extensions through their dashboard instead of letting a migration do it.
 
 The seed script creates a few placeholder movies (clearly not real TMDB imports) so the site is browsable immediately, plus two pre-verified test accounts:
 
