@@ -80,3 +80,43 @@ export async function getTmdbMovieDetails(tmdbId: number) {
     append_to_response: "credits",
   });
 }
+
+export interface TmdbKeyword {
+  id: number;
+  name: string;
+}
+
+export async function searchTmdbKeywords(query: string) {
+  const data = await tmdbFetch<{ results: TmdbKeyword[] }>("/search/keyword", { query });
+  return data.results;
+}
+
+export interface TmdbDiscoverMovieResult {
+  id: number;
+  title: string;
+  original_title: string;
+  release_date: string | null;
+  poster_path: string | null;
+  overview: string;
+  vote_average: number;
+}
+
+// TMDB's with_keywords param: comma = AND, pipe = OR (can't mix both in one
+// call). We only need OR here — a film tagged "kung fu" OR "martial arts" is
+// still a match, it doesn't need both tags. with_origin_country (undocumented
+// in TMDB's official reference, but confirmed working) ANDs against that —
+// combined with a keyword OR, it narrows to e.g. (kung fu OR martial arts)
+// AND Hong Kong in a single call instead of filtering client-side.
+export async function discoverMoviesByKeywords(keywordIds: number[], page: number, originCountry?: string) {
+  return tmdbFetch<{
+    results: TmdbDiscoverMovieResult[];
+    page: number;
+    total_pages: number;
+    total_results: number;
+  }>("/discover/movie", {
+    with_keywords: keywordIds.join("|"),
+    page: String(page),
+    include_adult: "false",
+    ...(originCountry ? { with_origin_country: originCountry } : {}),
+  });
+}
