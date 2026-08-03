@@ -31,8 +31,13 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: `page must be between 1 and ${MAX_DISCOVER_PAGE}` }, { status: 400 });
   }
 
+  const countryParam = url.searchParams.get("country");
+  if (countryParam && !/^[A-Z]{2}$/.test(countryParam)) {
+    return NextResponse.json({ error: "country must be a 2-letter ISO 3166-1 code (e.g. HK)" }, { status: 400 });
+  }
+
   try {
-    const discovered = await discoverMoviesByKeywords(keywordIds, page);
+    const discovered = await discoverMoviesByKeywords(keywordIds, page, countryParam ?? undefined);
 
     const alreadyImported = await prisma.movie.findMany({
       where: { tmdbId: { in: discovered.results.map((r) => r.id) } },

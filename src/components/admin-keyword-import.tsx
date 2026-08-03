@@ -29,11 +29,28 @@ interface DiscoverPage {
 // fast, low enough not to hammer TMDB or the DB with a huge burst.
 const IMPORT_CONCURRENCY = 4;
 
+// A curated subset rather than all ~250 ISO countries — these cover where
+// most martial arts films actually come from. TMDB's with_origin_country
+// takes any valid ISO 3166-1 code, so this list is just for a friendlier
+// picker, not a hard restriction.
+const COUNTRY_OPTIONS = [
+  { code: "", name: "Any country" },
+  { code: "HK", name: "Hong Kong" },
+  { code: "CN", name: "China" },
+  { code: "TW", name: "Taiwan" },
+  { code: "JP", name: "Japan" },
+  { code: "KR", name: "South Korea" },
+  { code: "TH", name: "Thailand" },
+  { code: "US", name: "United States" },
+  { code: "GB", name: "United Kingdom" },
+];
+
 export function AdminKeywordImport() {
   const [keywordQuery, setKeywordQuery] = useState("");
   const [keywordOptions, setKeywordOptions] = useState<TmdbKeyword[]>([]);
   const [selectedKeywords, setSelectedKeywords] = useState<TmdbKeyword[]>([]);
   const [searchingKeywords, setSearchingKeywords] = useState(false);
+  const [country, setCountry] = useState("");
 
   const [results, setResults] = useState<DiscoverResult[]>([]);
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -70,7 +87,8 @@ export function AdminKeywordImport() {
 
   async function fetchPage(targetPage: number): Promise<DiscoverPage | null> {
     const keywordIds = selectedKeywords.map((k) => k.id).join(",");
-    const res = await fetch(`/api/admin/tmdb/discover?keywords=${keywordIds}&page=${targetPage}`);
+    const countryQuery = country ? `&country=${country}` : "";
+    const res = await fetch(`/api/admin/tmdb/discover?keywords=${keywordIds}&page=${targetPage}${countryQuery}`);
     const body = await res.json();
     if (!res.ok) {
       setMessage(body.error ?? "Search failed.");
@@ -222,6 +240,22 @@ export function AdminKeywordImport() {
               </button>
             </span>
           ))}
+
+          <label className="flex items-center gap-1.5 text-xs text-neutral-500">
+            Country
+            <select
+              value={country}
+              onChange={(e) => setCountry(e.target.value)}
+              className="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-neutral-100 focus:border-red-600 focus:outline-none"
+            >
+              {COUNTRY_OPTIONS.map((option) => (
+                <option key={option.code} value={option.code}>
+                  {option.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
           <button
             onClick={handleSearchMovies}
             disabled={loading}
