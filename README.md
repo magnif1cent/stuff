@@ -5,12 +5,12 @@ An IMDB-style website for kung fu and martial arts films, built for martial arts
 ## Features
 
 - Landing page with a weekly-rotating "trending" carousel (top 5 most-active movies over the last 7 days) and a recently-added grid
-- Search by movie title or actor name
+- Search by movie title, actor, or director name, with filters (genre, director, country, release-year range, minimum community rating), sorting (relevance, highest rated, newest, oldest), pagination, and a typo-tolerant "did you mean" fallback when nothing matches exactly
 - Movie pages with cast, synopsis, a community rating, a separate admin-only "Editors' Score", an admin-authored editorial review, and a per-movie discussion thread (with spoiler tags, edit/delete on your own posts, and admin moderation)
 - **Fight Scenes**: members tag specific fight scenes within a movie — YouTube clip (with an optional start timestamp), the actors involved (picked from that movie's cast), and category tags (e.g. "Weapon Duel", "One vs. Many") — with their own member rating, a separate admin rating, admin verification, and a shareable permalink page (see [Fight Scenes](#fight-scenes) below)
 - Member accounts via email/password (with email verification) or Google sign-in
 - Member capabilities: rate movies and fight scenes, maintain a Favorites list and a Watchlist, post/reply in movie discussions, submit fight scenes
-- Admin capabilities: TMDB import tool with title search and bulk keyword search (`/admin/import`), Editors' Score, editorial reviews, fight scene verification, fight scene tag management (`/admin/fight-scene-tags`), poster overrides
+- A unified `/admin` dashboard (Movies management incl. permanent deletion, TMDB import incl. title search, keyword search, and bulk CSV upload, Fight Scene Tags, Account settings) plus admin actions that stay inline on regular pages (Editors' Score, editorial reviews, poster overrides, fight scene verification) &mdash; see [Admin Area](#admin-area) below
 - Social sharing (native share sheet on mobile, copy-link/X/Facebook/Reddit fallback on desktop) on movie and fight scene pages
 
 ## Tech Stack
@@ -73,6 +73,8 @@ npx prisma migrate dev
 npx prisma db seed
 ```
 
+One of the migrations runs `CREATE EXTENSION IF NOT EXISTS pg_trgm` (used for the typo-tolerant search fallback) and needs a role with permission to create extensions — true for a local Postgres superuser and for Neon, but some hosted providers require enabling extensions through their dashboard instead of letting a migration do it.
+
 The seed script creates a few placeholder movies (clearly not real TMDB imports) so the site is browsable immediately, plus two pre-verified test accounts:
 
 - `admin@example.com` / `admin1234` (role: ADMIN)
@@ -104,12 +106,13 @@ Without `RESEND_API_KEY` configured, the verification link is logged to the serv
 
 ## TMDB Import
 
-`/admin/import` has two ways to find and import movies:
+`/admin/import` has three ways to find and import movies — search-and-browse (title or keyword) for discovering films, or CSV upload when you already know exactly what you want:
 
 - **By title** — search TMDB by movie title and import one result at a time. Good for a specific film you already know by name.
 - **By keyword** — search for one or more TMDB keywords (e.g. "kung fu", "martial arts"), then browse matching movies (20 per page, "Load more" to page further) with poster, title, release year, production country, and top-billed cast shown for each, so you can judge relevance before importing. Selecting multiple keywords matches movies tagged with *any* of them (TMDB's `with_keywords` OR logic), not all of them. Results are pre-checked by default — uncheck the ones that don't belong rather than checking the ones you want — and movies already in your catalog are shown but excluded from selection. "Import selected" imports the checked movies (a few at a time, not all at once) and reports how many succeeded.
   - TMDB's `/discover/movie` endpoint (used for keyword search) caps at page 500 (10,000 results) regardless of how many total matches it reports; a search with more matches than that needs narrowing (e.g. an additional keyword) to reach everything.
   - Country and cast require an extra per-movie detail lookup beyond what the base keyword search returns, so each page of 20 keyword results costs more TMDB requests than a title search does — still well within TMDB's rate limits for realistic result counts, just not instant.
+- **Bulk CSV upload** — for when you already have a list of titles in hand rather than needing to discover them; see [Admin Area](#admin-area) below for the format.
 
 ## Fight Scenes
 
@@ -139,6 +142,19 @@ The site's base look (backgrounds, text, accents) is defined once in `src/app/gl
 
 Fight Scene cards ("Fight Ticket" styling) are the one exception: they use hardcoded hex colors rather than the shared Tailwind scale, so they deliberately keep their ink-on-cream, ticket-stub look regardless of whatever the site-wide theme is set to.
 
+## Admin Area
+
+Signed-in admins get an "Admin" link in the navbar to `/admin` &mdash; a dashboard linking every admin section that lives on its own page, all guarded by the same `requireAdminSession()` check in `src/app/admin/layout.tsx`:
+
+- **Movies** (`/admin/movies`) &mdash; browse the catalog and permanently delete a movie entry (type the title to confirm). Deleting cascades through everything attached to it: cast credits, ratings, discussion posts, fight scenes (and their own casts/ratings), the editorial review, and weekly-featured entries.
+- **Import from TMDB** (`/admin/import`) &mdash; search-and-import by title or by keyword (see [TMDB Import](#tmdb-import) above), plus a bulk-upload section: a CSV with a `title` column (optionally `year` to disambiguate identically-titled results, or `tmdb_id` to skip the search entirely) imports up to 25 movies in one request. Each row is resolved and imported independently, so one bad row (no TMDB match, a transient TMDB error) doesn't fail the rest of the batch &mdash; the response reports created/updated/error per row. CSV parsing uses `papaparse` rather than the `xlsx` npm package, whose published version has known unpatched advisories (SheetJS fixed them only on their own CDN, not on the npm registry).
+- **Fight Scene Tags** (`/admin/fight-scene-tags`) &mdash; manage the category vocabulary members tag fight scenes with (see [Fight Scenes](#fight-scenes) above).
+- **Account** (`/admin/account`) &mdash; change your own admin sign-in email or password (previously only possible via direct SQL). Changing your email re-triggers the normal email-verification flow on the new address; changing your password requires your current one (unless you signed up via Google and have never set one, in which case you can set an initial password). Either change signs you out immediately, since the session is JWT-based and won't otherwise pick up the new credentials until you sign back in.
+
+Account management is deliberately self-service (an admin managing their own credentials) rather than a full user-management CRUD (promoting other users to admin, resetting someone else's password, etc.) &mdash; a reasonable next step if the admin area grows further.
+
+Not every admin capability lives in this dashboard — Editors' Score, editorial reviews, poster overrides, and fight scene verification are admin-only actions that stay inline on the regular movie/fight-scene pages they act on, rather than being relocated here.
+
 ## Weekly Trending Carousel
 
 `/api/cron/weekly-featured` recomputes the top 5 most-active movies (by ratings + discussion activity in the last 7 days) and is protected by the `CRON_SECRET` env var (sent as `Authorization: Bearer <CRON_SECRET>`). `vercel.json` schedules this to run weekly via [Vercel Cron](https://vercel.com/docs/cron-jobs) — Vercel automatically attaches that header when `CRON_SECRET` is set as a project environment variable.
@@ -156,7 +172,7 @@ Fight Scene cards ("Fight Ticket" styling) are the one exception: they use hardc
 
 ## Project Structure
 
-- `src/app` — pages and API routes (App Router), including admin pages (`/admin/import`, `/admin/fight-scene-tags`) and the fight scene permalink route (`/movies/[id]/fight-scenes/[fightSceneId]`)
+- `src/app` — pages and API routes (App Router), including the `/admin` dashboard and its sub-pages (see [Admin Area](#admin-area)) and the fight scene permalink route (`/movies/[id]/fight-scenes/[fightSceneId]`)
 - `src/components` — UI components (`fight-scene-section.tsx`, `editorial-review.tsx`, `poster-override-control.tsx`, `share-button.tsx`, etc.)
 - `src/lib` — Prisma client, Auth.js config, TMDB client, YouTube URL parsing, rating/weekly-featured/verification/fight-scene helpers, email sender
 - `prisma/schema.prisma` — data model

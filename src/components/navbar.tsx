@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { isEmailVerified } from "@/lib/verification";
+import { Logo } from "@/components/logo";
 import { SearchBar } from "@/components/search-bar";
 import { SignOutButton } from "@/components/sign-out-button";
 import { VerifyEmailBanner } from "@/components/verify-email-banner";
@@ -16,20 +17,24 @@ export async function Navbar() {
     <header className="sticky top-0 z-20 border-b border-neutral-800 bg-neutral-950/95 backdrop-blur">
       {needsVerification && <VerifyEmailBanner />}
       <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-4 px-4 py-3">
-        <Link href="/" className="whitespace-nowrap font-serif text-lg font-bold tracking-tight text-red-600">
-          師父<span className="text-white">Kung Fu DB</span>
-        </Link>
+        <Logo />
         <div className="order-3 w-full sm:order-2 sm:w-auto sm:flex-1">
           <SearchBar />
         </div>
         <nav className="order-2 ml-auto flex items-center gap-4 sm:order-3">
+          <Link href="/search" className="text-sm text-neutral-300 hover:text-white">
+            Browse
+          </Link>
+          <Link href="/search/fight-scenes" className="text-sm text-neutral-300 hover:text-white">
+            Fight Scenes
+          </Link>
           {session?.user ? (
             <>
               <Link href="/my-lists" className="text-sm text-neutral-300 hover:text-white">
                 My Lists
               </Link>
               {session.user.role === "ADMIN" && (
-                <Link href="/admin/import" className="text-sm text-neutral-300 hover:text-white">
+                <Link href="/admin" className="text-sm text-neutral-300 hover:text-white">
                   Admin
                 </Link>
               )}
