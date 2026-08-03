@@ -10,7 +10,7 @@ An IMDB-style website for kung fu and martial arts films, built for martial arts
 - **Fight Scenes**: members tag specific fight scenes within a movie — YouTube clip (with an optional start timestamp), the actors involved (picked from that movie's cast), and category tags (e.g. "Weapon Duel", "One vs. Many") — with their own member rating, a separate admin rating, admin verification, and a shareable permalink page (see [Fight Scenes](#fight-scenes) below)
 - Member accounts via email/password (with email verification) or Google sign-in
 - Member capabilities: rate movies and fight scenes, maintain a Favorites list and a Watchlist, post/reply in movie discussions, submit fight scenes
-- Admin capabilities: TMDB import tool (`/admin/import`), Editors' Score, editorial reviews, fight scene verification, fight scene tag management (`/admin/fight-scene-tags`), poster overrides
+- Admin capabilities: TMDB import tool with title search and bulk keyword search (`/admin/import`), Editors' Score, editorial reviews, fight scene verification, fight scene tag management (`/admin/fight-scene-tags`), poster overrides
 - Social sharing (native share sheet on mobile, copy-link/X/Facebook/Reddit fallback on desktop) on movie and fight scene pages
 
 ## Tech Stack
@@ -84,7 +84,7 @@ The seed script creates a few placeholder movies (clearly not real TMDB imports)
 npm run dev
 ```
 
-Visit `http://localhost:3000`. Sign in as the admin account and use `/admin/import` to search TMDB and pull in real kung fu films (there's no single "kung fu" genre on TMDB, so curation is admin-driven by design — search titles like "Ip Man", "Drunken Master", "Once Upon a Time in China", etc.).
+Visit `http://localhost:3000`. Sign in as the admin account and use `/admin/import` to search TMDB and pull in real kung fu films (there's no single "kung fu" genre on TMDB, so curation is admin-driven by design — see [TMDB Import](#tmdb-import) below for both ways to search).
 
 ## Email Verification
 
@@ -101,6 +101,15 @@ Without `RESEND_API_KEY` configured, the verification link is logged to the serv
 - Any signed-in member can post and reply (one level of replies) on a movie's discussion thread. Discussion is paginated (20 posts/page, "Load more") and content is capped at 5,000 characters.
 - Wrap text in `[spoiler]...[/spoiler]` to hide it behind a "click to reveal" toggle — useful for plot twists/endings discussed on the movie's own page. Note this is a client-side reveal (like most forum spoiler tags): the text is present in the page's data, just not shown until clicked, so it isn't a substitute for redacting genuinely secret data.
 - Authors can edit or delete their own posts; admins can delete anyone's post. Deletion is a soft-delete — the row and any replies underneath it are kept (so a thread doesn't fall apart when one comment in it is removed), but the content is blanked and the post renders as `[deleted]`.
+
+## TMDB Import
+
+`/admin/import` has two ways to find and import movies:
+
+- **By title** — search TMDB by movie title and import one result at a time. Good for a specific film you already know by name.
+- **By keyword** — search for one or more TMDB keywords (e.g. "kung fu", "martial arts"), then browse matching movies (20 per page, "Load more" to page further) with poster, title, release year, production country, and top-billed cast shown for each, so you can judge relevance before importing. Selecting multiple keywords matches movies tagged with *any* of them (TMDB's `with_keywords` OR logic), not all of them. Results are pre-checked by default — uncheck the ones that don't belong rather than checking the ones you want — and movies already in your catalog are shown but excluded from selection. "Import selected" imports the checked movies (a few at a time, not all at once) and reports how many succeeded.
+  - TMDB's `/discover/movie` endpoint (used for keyword search) caps at page 500 (10,000 results) regardless of how many total matches it reports; a search with more matches than that needs narrowing (e.g. an additional keyword) to reach everything.
+  - Country and cast require an extra per-movie detail lookup beyond what the base keyword search returns, so each page of 20 keyword results costs more TMDB requests than a title search does — still well within TMDB's rate limits for realistic result counts, just not instant.
 
 ## Fight Scenes
 

@@ -2,8 +2,39 @@
 
 import { useState } from "react";
 import type { TmdbMovieSearchResult } from "@/lib/tmdb";
+import { AdminKeywordImport } from "@/components/admin-keyword-import";
 
 export function AdminImportSearch() {
+  const [mode, setMode] = useState<"title" | "keyword">("title");
+
+  return (
+    <div>
+      <div className="mb-6 flex gap-2 border-b border-neutral-800">
+        <button
+          onClick={() => setMode("title")}
+          className={`px-3 py-2 text-sm font-medium ${
+            mode === "title" ? "border-b-2 border-red-600 text-white" : "text-neutral-400 hover:text-white"
+          }`}
+        >
+          By title
+        </button>
+        <button
+          onClick={() => setMode("keyword")}
+          className={`px-3 py-2 text-sm font-medium ${
+            mode === "keyword" ? "border-b-2 border-red-600 text-white" : "text-neutral-400 hover:text-white"
+          }`}
+        >
+          By keyword
+        </button>
+      </div>
+
+      {mode === "keyword" && <AdminKeywordImport />}
+      {mode === "title" && <TitleSearch />}
+    </div>
+  );
+}
+
+function TitleSearch() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<TmdbMovieSearchResult[]>([]);
   const [loading, setLoading] = useState(false);
