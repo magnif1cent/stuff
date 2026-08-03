@@ -40,3 +40,22 @@ accurate rather than aspirational.
 - If your change touches the Prisma schema, flag that clearly in the PR
   description — schema-touching PRs should be merged and pulled before
   another schema-touching PR starts, to avoid migration conflicts.
+
+## Stay in sync with master before building
+
+Other conversations merge PRs into `master` while yours is in progress. Before
+starting new feature work on a branch (and again right before opening or
+merging a PR), fetch and check whether `master` has moved ahead:
+
+```bash
+git fetch origin master
+git log HEAD..origin/master --oneline
+```
+
+If that shows commits, merge `master` into your branch, resolve any
+conflicts, and re-run lint/build against the merged code *before* continuing
+— don't build new work on top of a base another PR has already moved past.
+This isn't needed before every intermediate build while iterating on one
+piece of work, just at the start of a new task and before merging, since
+that's when a stale base actually causes problems (structural conflicts,
+duplicated features, docs describing an old layout).
