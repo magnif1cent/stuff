@@ -223,7 +223,7 @@ export function AdminKeywordImport() {
       )}
 
       {selectedKeywords.length > 0 && (
-        <div className="mb-4 flex flex-wrap items-center gap-2">
+        <div className="mb-2 flex flex-wrap items-center gap-2">
           <span className="text-xs text-neutral-500">Matching any of:</span>
           {selectedKeywords.map((keyword) => (
             <span
@@ -240,31 +240,33 @@ export function AdminKeywordImport() {
               </button>
             </span>
           ))}
-
-          <label className="flex items-center gap-1.5 text-xs text-neutral-500">
-            Country
-            <select
-              value={country}
-              onChange={(e) => setCountry(e.target.value)}
-              className="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-neutral-100 focus:border-red-600 focus:outline-none"
-            >
-              {COUNTRY_OPTIONS.map((option) => (
-                <option key={option.code} value={option.code}>
-                  {option.name}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <button
-            onClick={handleSearchMovies}
-            disabled={loading}
-            className="rounded-md bg-red-700 px-4 py-1.5 text-sm font-medium text-white hover:bg-red-600 disabled:opacity-50"
-          >
-            {loading ? "Searching…" : "Search movies"}
-          </button>
         </div>
       )}
+
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <label className="flex items-center gap-1.5 text-xs text-neutral-500">
+          Country
+          <select
+            value={country}
+            onChange={(e) => setCountry(e.target.value)}
+            className="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-neutral-100 focus:border-red-600 focus:outline-none"
+          >
+            {COUNTRY_OPTIONS.map((option) => (
+              <option key={option.code} value={option.code}>
+                {option.name}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <button
+          onClick={handleSearchMovies}
+          disabled={loading || selectedKeywords.length === 0}
+          className="rounded-md bg-red-700 px-4 py-1.5 text-sm font-medium text-white hover:bg-red-600 disabled:opacity-50"
+        >
+          {loading ? "Searching…" : "Search movies"}
+        </button>
+      </div>
 
       {message && <p className="mb-4 text-sm text-neutral-300">{message}</p>}
 
