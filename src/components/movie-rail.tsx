@@ -87,7 +87,7 @@ export function MovieRail({
         <div
           ref={scrollerRef}
           onScroll={updateEdges}
-          className="flex gap-4 overflow-x-auto scroll-smooth pb-2"
+          className="rail-scrollbar flex gap-4 overflow-x-auto scroll-smooth pb-2"
         >
           {movies.map((movie) => (
             <MovieCard key={movie.id} movie={movie} />

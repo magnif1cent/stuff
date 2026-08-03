@@ -33,3 +33,27 @@
   --color-amber-800: #5c4420;
   --color-amber-500: #cf9a3e;
 }
+
+@layer utilities {
+  /* Themed scrollbar for horizontally-scrolling movie rails, replacing the
+     default OS scrollbar so it matches the dark palette instead of clashing
+     with it. Falls back silently to the default bar in browsers that
+     support neither property (still fully scrollable either way). */
+  .rail-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-neutral-600) transparent;
+  }
+  .rail-scrollbar::-webkit-scrollbar {
+    height: 6px;
+  }
+  .rail-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .rail-scrollbar::-webkit-scrollbar-thumb {
+    background-color: var(--color-neutral-600);
+    border-radius: 9999px;
+  }
+  .rail-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-neutral-500);
+  }
+}
