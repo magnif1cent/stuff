@@ -35,10 +35,11 @@
 }
 
 @layer utilities {
-  /* Themed scrollbar for horizontally-scrolling movie rails, replacing the
-     default OS scrollbar so it matches the dark palette instead of clashing
-     with it. Falls back silently to the default bar in browsers that
-     support neither property (still fully scrollable either way). */
+  /* Themed scrollbar for horizontally-scrolling strips (movie rails, cast
+     list, admin nav), replacing the default OS scrollbar so it matches the
+     dark palette instead of clashing with it. Falls back silently to the
+     default bar in browsers that support neither property (still fully
+     scrollable either way). */
   .rail-scrollbar {
     scrollbar-width: thin;
     scrollbar-color: var(--color-neutral-600) transparent;

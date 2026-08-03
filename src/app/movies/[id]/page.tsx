@@ -249,7 +249,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
         {movie.cast.length > 0 && (
           <section className="mb-8">
             <h2 className="mb-4 font-serif text-xl font-bold text-white">Cast</h2>
-            <div className="flex gap-4 overflow-x-auto pb-2">
+            <div className="rail-scrollbar flex gap-4 overflow-x-auto pb-2">
               {movie.cast.map((credit) => (
                 <div key={credit.id} className="w-28 shrink-0 text-center">
                   <div className="relative mb-1 aspect-square overflow-hidden rounded-full bg-neutral-800">
