@@ -81,6 +81,13 @@ piece of work, just at the start of a new task and before merging, since
 that's when a stale base actually causes problems (structural conflicts,
 duplicated features, docs describing an old layout).
 
+Also check **open** PRs, not just what's already merged into `master` — an
+in-flight PR from another conversation can overlap with what you're about to
+build even before it merges, and catching that before you start is cheaper
+than discovering it as a merge conflict later. A quick scan of open PRs
+(titles/descriptions are usually enough) is worth doing at the start of a new
+task, alongside the `master` check above.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 # This is NOT the Next.js you know
