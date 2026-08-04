@@ -155,6 +155,56 @@ async function main() {
     create: { adminId: admin.id, movieId: enterTheDragon.id, score: 9, note: "A genre-defining classic." },
   });
 
+  const FIGHT_SCENE_TAGS = ["One vs. Many", "Weapon Duel", "Mirror Maze"];
+  const tagByName = new Map<string, { id: string }>();
+  for (const name of FIGHT_SCENE_TAGS) {
+    const tag = await prisma.fightSceneTag.upsert({ where: { name }, update: {}, create: { name } });
+    tagByName.set(name, tag);
+  }
+
+  const bruceLee = await prisma.person.findUniqueOrThrow({ where: { tmdbId: 900201 } });
+  const existingFightScene = await prisma.fightScene.findFirst({
+    where: { movieId: enterTheDragon.id, submittedById: member.id },
+  });
+  const fightScene =
+    existingFightScene ??
+    (await prisma.fightScene.create({
+      data: {
+        movieId: enterTheDragon.id,
+        submittedById: member.id,
+        title: "Mirror room finale",
+        // Sample data: not a real YouTube video id.
+        youtubeVideoId: "sampleClip1",
+        isVerified: true,
+        cast: { create: [{ personId: bruceLee.id, order: 0 }] },
+        tags: { connect: ["One vs. Many", "Mirror Maze"].map((name) => ({ id: tagByName.get(name)!.id })) },
+      },
+    }));
+  await prisma.fightSceneRating.upsert({
+    where: { userId_fightSceneId: { userId: member.id, fightSceneId: fightScene.id } },
+    update: { score: 10 },
+    create: { userId: member.id, fightSceneId: fightScene.id, score: 10 },
+  });
+  await prisma.fightSceneAdminRating.upsert({
+    where: { adminId_fightSceneId: { adminId: admin.id, fightSceneId: fightScene.id } },
+    update: { score: 10, note: "The mirror room finale." },
+    create: { adminId: admin.id, fightSceneId: fightScene.id, score: 10, note: "The mirror room finale." },
+  });
+
+  await prisma.editorialReview.upsert({
+    where: { movieId: enterTheDragon.id },
+    update: {},
+    create: {
+      movieId: enterTheDragon.id,
+      authorId: admin.id,
+      content:
+        "Sample data: a genre-defining classic that still holds up. Bruce Lee's only Hollywood " +
+        "co-production remains the gold standard for tournament-style kung fu films, anchored by " +
+        "the mirror room finale — a masterclass in tension and choreography that's been studied " +
+        "and imitated for fifty years.",
+    },
+  });
+
   console.log("Seed complete.", { admin: admin.email, member: member.email });
 }
 

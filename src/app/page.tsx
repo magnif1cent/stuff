@@ -1,51 +1,52 @@
 import { prisma } from "@/lib/prisma";
 import { getFeaturedMovies } from "@/lib/weekly-featured";
-import { getRatingSummaries } from "@/lib/ratings";
+import { getRatingSummaries, getTopRatedMovies } from "@/lib/ratings";
 import { HeroCarousel } from "@/components/hero-carousel";
-import { MovieCard } from "@/components/movie-card";
+import { MovieRail } from "@/components/movie-rail";
 
 export const revalidate = 3600;
 
 export default async function HomePage() {
-  const [featured, recent] = await Promise.all([
+  const [featured, recent, topRated] = await Promise.all([
     getFeaturedMovies(),
     prisma.movie.findMany({ orderBy: { createdAt: "desc" }, take: 12 }),
+    getTopRatedMovies(),
   ]);
 
   const ratingSummaries = await getRatingSummaries(recent.map((m) => m.id));
+
+  const recentWithRatings = recent.map((movie) => {
+    const summary = ratingSummaries.get(movie.id);
+    return {
+      ...movie,
+      communityAverage: summary?.average ?? null,
+      communityCount: summary?.count ?? 0,
+    };
+  });
 
   return (
     <div className="flex flex-1 flex-col">
       <HeroCarousel movies={featured} />
 
-      <section className="mx-auto w-full max-w-6xl px-4 py-8">
-        <h2 className="mb-4 text-xl font-bold text-white">Recently Added</h2>
-        {recent.length === 0 ? (
-          <p className="text-sm text-neutral-400">
+      <MovieRail
+        title="Recently Added"
+        movies={recentWithRatings}
+        emptyMessage={
+          <>
             No movies in the catalog yet. An admin can import films from TMDB on the{" "}
             <a href="/admin/import" className="text-red-500 hover:underline">
               import page
             </a>
             .
-          </p>
-        ) : (
-          <div className="flex gap-4 overflow-x-auto pb-2">
-            {recent.map((movie) => {
-              const summary = ratingSummaries.get(movie.id);
-              return (
-                <MovieCard
-                  key={movie.id}
-                  movie={{
-                    ...movie,
-                    communityAverage: summary?.average ?? null,
-                    communityCount: summary?.count ?? 0,
-                  }}
-                />
-              );
-            })}
-          </div>
-        )}
-      </section>
+          </>
+        }
+      />
+
+      <MovieRail
+        title="Top Rated by the Community"
+        movies={topRated}
+        emptyMessage="No community ratings yet — be the first to rate a movie."
+      />
     </div>
   );
 }

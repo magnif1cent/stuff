@@ -220,7 +220,7 @@ export function DiscussionThread({
 
   return (
     <section className="mt-10">
-      <h2 className="mb-4 text-xl font-bold text-white">Discussion</h2>
+      <h2 className="mb-4 font-serif text-xl font-bold text-white">Discussion</h2>
 
       {signedIn ? (
         <div className="mb-6 flex flex-col gap-2">
