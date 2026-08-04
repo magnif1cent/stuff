@@ -11,7 +11,7 @@ export interface FightSceneRatingSummary {
 }
 
 const fightSceneInclude = {
-  submittedBy: { select: { name: true, image: true } },
+  submittedBy: { select: { username: true, image: true } },
   cast: {
     orderBy: { order: "asc" as const },
     include: { person: true },

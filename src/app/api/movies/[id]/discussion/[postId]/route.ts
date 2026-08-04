@@ -40,7 +40,7 @@ export async function PATCH(
   const post = await prisma.discussionPost.update({
     where: { id: postId },
     data: { content: trimmedContent },
-    include: { user: { select: { name: true, image: true } } },
+    include: { user: { select: { username: true, image: true } } },
   });
 
   return NextResponse.json({ post });

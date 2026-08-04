@@ -56,7 +56,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       content: trimmedContent,
       parentId: typeof parentId === "string" ? parentId : null,
     },
-    include: { user: { select: { name: true, image: true } } },
+    include: { user: { select: { username: true, image: true } } },
   });
 
   return NextResponse.json({ post });

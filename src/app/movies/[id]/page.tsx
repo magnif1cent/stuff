@@ -56,7 +56,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
       getFightSceneTags(),
       prisma.editorialReview.findUnique({
         where: { movieId: movie.id },
-        include: { author: { select: { name: true } } },
+        include: { author: { select: { username: true } } },
       }),
     ]);
 

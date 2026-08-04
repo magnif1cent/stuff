@@ -32,7 +32,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       tags: { connect: tagIds.map((id) => ({ id })) },
     },
     include: {
-      submittedBy: { select: { name: true, image: true } },
+      submittedBy: { select: { username: true, image: true } },
       cast: { orderBy: { order: "asc" }, include: { person: true } },
       tags: true,
     },

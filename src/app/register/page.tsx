@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 export default function RegisterPage() {
-  const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -19,7 +19,7 @@ export default function RegisterPage() {
     const res = await fetch("/api/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password }),
+      body: JSON.stringify({ username, email, password }),
     });
 
     if (!res.ok) {
@@ -58,11 +58,17 @@ export default function RegisterPage() {
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
         <input
           type="text"
-          placeholder="Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
+          required
+          placeholder="Username"
+          pattern="[a-z0-9_]{3,20}"
+          title="3-20 characters: lowercase letters, numbers, and underscores"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
           className="rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
         />
+        <p className="-mt-2 text-xs text-neutral-500">
+          Shown publicly on your posts and ratings. 3-20 characters: lowercase letters, numbers, underscores.
+        </p>
         <input
           type="email"
           required

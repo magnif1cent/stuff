@@ -15,7 +15,8 @@ export async function PATCH(request: Request) {
   if (typeof newEmail !== "string" || !newEmail.trim().includes("@")) {
     return NextResponse.json({ error: "A valid email is required." }, { status: 400 });
   }
-  const trimmedEmail = newEmail.trim();
+  // Same normalization as registration/login — lookups must match on case.
+  const trimmedEmail = newEmail.trim().toLowerCase();
 
   const user = await prisma.user.findUnique({ where: { id: session.user.id } });
   if (!user) {

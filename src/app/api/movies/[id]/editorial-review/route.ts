@@ -30,7 +30,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     where: { movieId },
     update: { content: trimmedContent, authorId: session.user.id },
     create: { movieId, authorId: session.user.id, content: trimmedContent },
-    include: { author: { select: { name: true } } },
+    include: { author: { select: { username: true } } },
   });
 
   return NextResponse.json({ review });
