@@ -38,7 +38,7 @@ export async function Navbar() {
                   Admin
                 </Link>
               )}
-              <span className="text-sm text-neutral-500">{session.user.name ?? session.user.email}</span>
+              <span className="text-sm text-neutral-500">{session.user.username}</span>
               <SignOutButton />
             </>
           ) : (

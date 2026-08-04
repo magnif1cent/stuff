@@ -8,7 +8,7 @@ An IMDB-style website for kung fu and martial arts films, built for martial arts
 - Search by movie title, actor, or director name, with filters (genre, director, country, release-year range, minimum community rating), sorting (relevance, highest rated, newest, oldest), pagination, and a typo-tolerant "did you mean" fallback when nothing matches exactly
 - Movie pages with cast, synopsis, a community rating, a separate admin-only "Editors' Score", an admin-authored editorial review, and a per-movie discussion thread (with spoiler tags, edit/delete on your own posts, and admin moderation)
 - **Fight Scenes**: members tag specific fight scenes within a movie — YouTube clip (with an optional start timestamp), the actors involved (picked from that movie's cast), and category tags (e.g. "Weapon Duel", "One vs. Many") — with their own member rating, a separate admin rating, admin verification, and a shareable permalink page (see [Fight Scenes](#fight-scenes) below)
-- Member accounts via email/password (with email verification) or Google sign-in
+- Member accounts via email/password (with email verification) or Google sign-in, identified publicly by a chosen username rather than their email or real name (see [Usernames](#usernames) below)
 - Member capabilities: rate movies and fight scenes, maintain a Favorites list and a Watchlist, post/reply in movie discussions, submit fight scenes
 - A unified `/admin` dashboard (Movies management incl. permanent deletion, TMDB import incl. title search, keyword search, and bulk CSV upload, Fight Scene Tags, Account settings) plus admin actions that stay inline on regular pages (Editors' Score, editorial reviews, poster overrides, fight scene verification) &mdash; see [Admin Area](#admin-area) below
 - Social sharing (native share sheet on mobile, copy-link/X/Facebook/Reddit fallback on desktop) on movie and fight scene pages
@@ -77,8 +77,8 @@ One of the migrations runs `CREATE EXTENSION IF NOT EXISTS pg_trgm` (used for th
 
 The seed script creates a few placeholder movies (clearly not real TMDB imports) so the site is browsable immediately, plus two pre-verified test accounts:
 
-- `admin@example.com` / `admin1234` (role: ADMIN)
-- `member@example.com` / `member1234` (role: USER)
+- `admin@example.com` / `admin1234` (username `admin`, role: ADMIN)
+- `member@example.com` / `member1234` (username `member`, role: USER)
 
 ### 7. Run the app
 
@@ -87,6 +87,14 @@ npm run dev
 ```
 
 Visit `http://localhost:3000`. Sign in as the admin account and use `/admin/import` to search TMDB and pull in real kung fu films (there's no single "kung fu" genre on TMDB, so curation is admin-driven by design — see [TMDB Import](#tmdb-import) below for both ways to search).
+
+## Usernames
+
+Members are identified publicly by a username, not their email or real name — it's what shows on discussion posts, fight scenes, and editorial reviews. Usernames are unique, 3-20 characters, lowercase letters/numbers/underscores only.
+
+- **Credentials sign-up** requires picking a username on the registration form; taken or invalid usernames are rejected with a specific error.
+- **Google sign-up** has no form step of ours to ask for one, so a starting username is auto-generated from the email's local part (sanitized to the allowed charset, with a numeric suffix if it's taken). There's no self-service rename yet — a reasonable next step once profile editing exists.
+- Accounts created before this feature (on a live deployment with existing data) are backfilled the same way, by the `20260804190000_add_username` migration — no manual action needed beyond running the migration.
 
 ## Email Verification
 
@@ -175,7 +183,7 @@ Not every admin capability lives in this dashboard — Editors' Score, editorial
 
 - `src/app` — pages and API routes (App Router), including the `/admin` dashboard and its sub-pages (see [Admin Area](#admin-area)) and the fight scene permalink route (`/movies/[id]/fight-scenes/[fightSceneId]`)
 - `src/components` — UI components (`fight-scene-section.tsx`, `editorial-review.tsx`, `poster-override-control.tsx`, `share-button.tsx`, etc.)
-- `src/lib` — Prisma client, Auth.js config, TMDB client, YouTube URL parsing, rating/weekly-featured/verification/fight-scene helpers, email sender
+- `src/lib` — Prisma client, Auth.js config, TMDB client, YouTube URL parsing, rating/weekly-featured/verification/fight-scene/username helpers, email sender
 - `prisma/schema.prisma` — data model
 - `prisma/seed.ts` — sample/dev seed data, including a sample fight scene and editorial review
 

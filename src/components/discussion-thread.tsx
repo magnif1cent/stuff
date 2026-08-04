@@ -6,7 +6,7 @@ import type { DiscussionPost, User } from "@/generated/prisma/client";
 
 const MAX_CONTENT_LENGTH = 5000;
 
-type PostUser = Pick<User, "name" | "image">;
+type PostUser = Pick<User, "username" | "image">;
 
 // createdAt/updatedAt are strings here (not the Prisma Date type) because posts
 // cross the server-to-client boundary as JSON, either via the initial page's
@@ -259,7 +259,7 @@ export function DiscussionThread({
         {posts.map((post) => (
           <li key={post.id} className="rounded-md border border-neutral-800 bg-neutral-900 p-3">
             <div className="mb-1 flex items-center gap-2 text-sm">
-              <span className="font-medium text-neutral-100">{post.user.name ?? "Anonymous"}</span>
+              <span className="font-medium text-neutral-100">{post.user.username}</span>
               <span className="text-neutral-500">{timeAgo(post.createdAt)}</span>
               {!post.isDeleted && wasEdited(post) && (
                 <span className="text-xs text-neutral-600">(edited)</span>
@@ -302,9 +302,7 @@ export function DiscussionThread({
                 {post.replies.map((reply) => (
                   <li key={reply.id}>
                     <div className="mb-1 flex items-center gap-2 text-sm">
-                      <span className="font-medium text-neutral-100">
-                        {reply.user.name ?? "Anonymous"}
-                      </span>
+                      <span className="font-medium text-neutral-100">{reply.user.username}</span>
                       <span className="text-neutral-500">{timeAgo(reply.createdAt)}</span>
                       {!reply.isDeleted && wasEdited(reply) && (
                         <span className="text-xs text-neutral-600">(edited)</span>

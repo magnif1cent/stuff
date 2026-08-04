@@ -3,13 +3,23 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { createVerificationToken, buildVerificationUrl } from "@/lib/verification";
 import { sendVerificationEmail } from "@/lib/email";
+import { isValidUsername, USERNAME_MAX_LENGTH, USERNAME_MIN_LENGTH } from "@/lib/username";
 
 export async function POST(request: Request) {
-  const { name, email, password } = await request.json();
+  const { username, email, password } = await request.json();
 
   if (typeof email !== "string" || typeof password !== "string" || password.length < 8) {
     return NextResponse.json(
       { error: "Email and a password of at least 8 characters are required." },
+      { status: 400 },
+    );
+  }
+
+  if (typeof username !== "string" || !isValidUsername(username)) {
+    return NextResponse.json(
+      {
+        error: `Username must be ${USERNAME_MIN_LENGTH}-${USERNAME_MAX_LENGTH} characters, using only lowercase letters, numbers, and underscores.`,
+      },
       { status: 400 },
     );
   }
@@ -23,10 +33,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "An account with that email already exists." }, { status: 409 });
   }
 
+  const existingUsername = await prisma.user.findUnique({ where: { username } });
+  if (existingUsername) {
+    return NextResponse.json({ error: "That username is already taken." }, { status: 409 });
+  }
+
   const passwordHash = await bcrypt.hash(password, 10);
   const user = await prisma.user.create({
     data: {
-      name: typeof name === "string" && name.trim() ? name.trim() : null,
+      username,
       email: normalizedEmail,
       passwordHash,
     },

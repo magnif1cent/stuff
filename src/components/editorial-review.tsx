@@ -6,7 +6,7 @@ import type { EditorialReview as EditorialReviewModel, User } from "@/generated/
 
 const MAX_LENGTH = 10000;
 
-type ReviewAuthor = Pick<User, "name">;
+type ReviewAuthor = Pick<User, "username">;
 
 // updatedAt crosses the server-to-client boundary as a string (JSON), same
 // reasoning as DiscussionThread/FightSceneSection.
@@ -107,7 +107,7 @@ export function EditorialReview({
         <div>
           <p className="max-w-2xl whitespace-pre-wrap text-neutral-300">{review.content}</p>
           <p className="mt-3 text-xs text-neutral-500">
-            Reviewed by {review.author.name ?? "an editor"} &middot; updated {formatDate(review.updatedAt)}
+            Reviewed by {review.author.username} &middot; updated {formatDate(review.updatedAt)}
           </p>
         </div>
       ) : (

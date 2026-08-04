@@ -13,7 +13,7 @@ const MAX_TITLE_LENGTH = 200;
 export type CastOption = Pick<Person, "id" | "name">;
 export type TagOption = Pick<FightSceneTag, "id" | "name">;
 
-type FightSceneSubmitter = Pick<User, "name" | "image">;
+type FightSceneSubmitter = Pick<User, "username" | "image">;
 type FightSceneCastPerson = Pick<Person, "id" | "name" | "profilePath">;
 type FightSceneCastItem = Pick<FightSceneCast, "id" | "order"> & { person: FightSceneCastPerson };
 
@@ -508,7 +508,7 @@ export function FightSceneSection({
                 <p className="text-[10px] tracking-wide uppercase" style={{ color: TICKET_MUTED }}>
                   Submitted by
                   <br />
-                  {scene.submittedBy.name ?? "Anonymous"}
+                  {scene.submittedBy.username}
                   {canEdit && (
                     <button onClick={() => setEditingId(scene.id)} className="ml-2 underline hover:opacity-70">
                       Edit

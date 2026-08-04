@@ -121,7 +121,7 @@ async function main() {
     where: { email: "admin@example.com" },
     update: { emailVerified: new Date() },
     create: {
-      name: "Admin",
+      username: "admin",
       email: "admin@example.com",
       role: "ADMIN",
       passwordHash: await bcrypt.hash("admin1234", 10),
@@ -135,7 +135,7 @@ async function main() {
     where: { email: "member@example.com" },
     update: { emailVerified: new Date() },
     create: {
-      name: "Member",
+      username: "member",
       email: "member@example.com",
       role: "USER",
       passwordHash: await bcrypt.hash("member1234", 10),

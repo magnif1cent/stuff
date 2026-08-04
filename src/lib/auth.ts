@@ -4,6 +4,7 @@ import Google from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { generateUniqueUsername } from "@/lib/username";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
@@ -15,11 +16,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      profile(profile) {
+      async profile(profile) {
+        const email = profile.email.toLowerCase();
+        // Google sign-up has no form step of ours to ask for a username
+        // directly, so seed one from the email's local part; the member can
+        // rename it later once profile editing exists.
+        const username = await generateUniqueUsername(email.split("@")[0]);
         return {
           id: profile.sub,
-          name: profile.name,
-          email: profile.email.toLowerCase(),
+          username,
+          email,
           image: profile.picture,
           role: "USER",
           // Google already verified this address — no reason to make the
@@ -54,7 +60,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         return {
           id: user.id,
-          name: user.name,
+          username: user.username,
           email: user.email,
           image: user.image,
           role: user.role,
@@ -67,9 +73,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (user) {
         token.id = user.id;
         token.role = user.role ?? "USER";
-      } else if (token.id && !token.role) {
+        token.username = user.username;
+      } else if (token.id && (!token.role || !token.username)) {
         const dbUser = await prisma.user.findUnique({ where: { id: token.id as string } });
         token.role = dbUser?.role ?? "USER";
+        token.username = dbUser?.username;
       }
       return token;
     },
@@ -77,6 +85,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (session.user) {
         session.user.id = token.id as string;
         session.user.role = (token.role as string) ?? "USER";
+        session.user.username = token.username as string;
       }
       return session;
     },

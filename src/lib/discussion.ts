@@ -11,11 +11,11 @@ export async function getDiscussionPage(movieId: string, cursor?: string | null)
     take: DISCUSSION_PAGE_SIZE + 1,
     ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
     include: {
-      user: { select: { name: true, image: true } },
+      user: { select: { username: true, image: true } },
       replies: {
         orderBy: { createdAt: "asc" },
         take: MAX_REPLIES_PER_POST,
-        include: { user: { select: { name: true, image: true } } },
+        include: { user: { select: { username: true, image: true } } },
       },
     },
   });
