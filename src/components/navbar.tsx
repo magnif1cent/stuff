@@ -28,11 +28,11 @@ export async function Navbar() {
           <Link href="/search/fight-scenes" className="text-sm text-neutral-300 hover:text-white">
             Fight Scenes
           </Link>
+          <Link href="/leaderboard" className="text-sm text-neutral-300 hover:text-white">
+            Leaderboard
+          </Link>
           {session?.user ? (
             <>
-              <Link href={`/members/${session.user.username}`} className="text-sm text-neutral-300 hover:text-white">
-                My Lists
-              </Link>
               {session.user.role === "ADMIN" && (
                 <Link href="/admin" className="text-sm text-neutral-300 hover:text-white">
                   Admin

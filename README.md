@@ -12,6 +12,7 @@ An IMDB-style website for kung fu and martial arts films, built for martial arts
 - Member capabilities: rate movies and fight scenes, maintain a Favorites list and a Watchlist, create their own public named lists on a profile page at `/members/[username]` (see [Member Lists & Profiles](#member-lists--profiles) below), post/reply in movie discussions, submit fight scenes, and submit a movie missing from the catalog for admin review (see [Member Movie Submissions](#member-movie-submissions) below)
 - A unified `/admin` dashboard (Movies management incl. pending-submission review and permanent deletion, TMDB import incl. title search, keyword search, and bulk CSV upload, Fight Scene Tags, Account settings) plus admin actions that stay inline on regular pages (Editors' Score, editorial reviews, poster overrides, fight scene verification) &mdash; see [Admin Area](#admin-area) below
 - Social sharing (native share sheet on mobile, copy-link/X/Facebook/Reddit fallback on desktop) on movie and fight scene pages
+- A public `/leaderboard` page ranking the Most-Liked Lists (members can like each other's public custom lists) and Top Curators (members with the most movies across their own lists) — see [Member Lists & Profiles](#member-lists--profiles) below
 
 ## Tech Stack
 
@@ -129,10 +130,10 @@ Every member has a profile page at `/members/[username]`. Viewing your own shows
 
 Beyond the built-in Favorites and Watchlist, members can create any number of their own named lists (e.g. "Best One-vs-Many Fights") from the "+ Add to list" control on a movie page, and manage them from their own profile.
 
-- **Custom lists are public by design; Favorites/Watchlist are not.** Every custom list has its own shareable permalink at `/lists/[id]` (also reachable via its owner's profile) that anyone can view signed in or not, with no private option — deliberate groundwork for letting members browse each other's lists later without a schema change. Favorites and Watchlist stay exactly as private as they've always been: only the signed-in owner ever sees their own, on their own profile or anywhere else.
+- **Custom lists are public by design; Favorites/Watchlist are not.** Every custom list has its own shareable permalink at `/lists/[id]` (also reachable via its owner's profile) that anyone can view signed in or not, with no private option. Favorites and Watchlist stay exactly as private as they've always been: only the signed-in owner ever sees their own, on their own profile or anywhere else.
 - A member can have at most 25 lists, with unique names per member; list names are capped at 60 characters.
 - A pending (not yet admin-approved) movie can only be added to a list by its own submitter, and is excluded from the public list/profile view for everyone else, the same as it's excluded from every other public listing — see [Member Movie Submissions](#member-movie-submissions) below.
-- There's no cross-member browsing/discovery page (e.g. "recommended lists") yet — every list already being public and every member already having a profile URL makes that a schema-free follow-up whenever it's wanted.
+- **Liking lists and the leaderboard**: any signed-in, verified member other than the list's own owner can like a public custom list (one like per member per list; self-likes are blocked). `/leaderboard` — reachable via the "Leaderboard" nav link, replacing what used to be a redundant "My Lists" link pointing at the same place as the username link — ranks the Most-Liked Lists and, separately, Top Curators (members with the most total movies across their own lists). Both rankings recompute on every page load rather than being cached/scheduled.
 
 ## Member Movie Submissions
 
