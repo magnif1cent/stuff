@@ -73,7 +73,9 @@ export async function getTopRatedMovies(limit = 12) {
 
   if (ranked.length === 0) return [];
 
-  const movies = await prisma.movie.findMany({ where: { id: { in: ranked.map((r) => r.movieId) } } });
+  const movies = await prisma.movie.findMany({
+    where: { id: { in: ranked.map((r) => r.movieId) }, status: "APPROVED" },
+  });
   const byId = new Map(movies.map((m) => [m.id, m]));
 
   return ranked

@@ -36,14 +36,22 @@ export async function computeWeeklyFeatured() {
     activity.set(row.movieId, (activity.get(row.movieId) ?? 0) + row._count._all);
   }
 
-  let topMovieIds = [...activity.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, FEATURED_COUNT)
-    .map(([movieId]) => movieId);
+  const rankedByActivity = [...activity.entries()].sort((a, b) => b[1] - a[1]).map(([movieId]) => movieId);
+
+  // Activity is computed from Rating/DiscussionPost rows directly, which
+  // doesn't know about a movie's approval status — cross-check against
+  // approved movies so a still-pending submission (even one its own
+  // submitter rated or commented on) can never surface here.
+  const approvedActivityMovies = await prisma.movie.findMany({
+    where: { id: { in: rankedByActivity }, status: "APPROVED" },
+    select: { id: true },
+  });
+  const approvedActivityIds = new Set(approvedActivityMovies.map((m) => m.id));
+  let topMovieIds = rankedByActivity.filter((id) => approvedActivityIds.has(id)).slice(0, FEATURED_COUNT);
 
   if (topMovieIds.length < FEATURED_COUNT) {
     const fallback = await prisma.movie.findMany({
-      where: { id: { notIn: topMovieIds } },
+      where: { id: { notIn: topMovieIds }, status: "APPROVED" },
       orderBy: { tmdbPopularity: "desc" },
       take: FEATURED_COUNT - topMovieIds.length,
       select: { id: true },
@@ -78,6 +86,7 @@ export async function getFeaturedMovies() {
   }
 
   return prisma.movie.findMany({
+    where: { status: "APPROVED" },
     orderBy: { tmdbPopularity: "desc" },
     take: FEATURED_COUNT,
   });

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getRatingSummaries, getEditorsRatingSummaries } from "@/lib/ratings";
 import { findSimilarMovies } from "@/lib/fuzzy-search";
@@ -38,7 +39,7 @@ function buildFilterWhere(
   yearFrom?: number,
   yearTo?: number,
 ) {
-  const where: Prisma.MovieWhereInput = {};
+  const where: Prisma.MovieWhereInput = { status: "APPROVED" };
   if (genre) where.genres = { some: { name: genre } };
   // Contains (not exact) since director/actor are now free-typed with
   // autocomplete suggestions, not chosen from a closed list of options.
@@ -91,7 +92,7 @@ export default async function SearchPage({
   const [genres, countryRows] = await Promise.all([
     prisma.genre.findMany({ orderBy: { name: "asc" } }),
     prisma.movie.findMany({
-      where: { country: { not: null } },
+      where: { country: { not: null }, status: "APPROVED" },
       distinct: ["country"],
       orderBy: { country: "asc" },
       select: { country: true },
@@ -316,7 +317,13 @@ export default async function SearchPage({
         {!searched ? (
           <p className="text-neutral-400">Enter a movie title or actor name, or set a filter, to browse the catalog.</p>
         ) : totalResults === 0 ? (
-          <p className="text-neutral-400">No movies matched your search.</p>
+          <p className="text-neutral-400">
+            No movies matched your search.{" "}
+            <Link href="/movies/submit" className="text-red-500 hover:underline">
+              Can&rsquo;t find it? Add a movie
+            </Link>
+            .
+          </p>
         ) : (
           <>
             {usedFuzzyFallback && (

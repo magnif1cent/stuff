@@ -30,7 +30,7 @@ export async function Navbar() {
           </Link>
           {session?.user ? (
             <>
-              <Link href="/my-lists" className="text-sm text-neutral-300 hover:text-white">
+              <Link href={`/members/${session.user.username}`} className="text-sm text-neutral-300 hover:text-white">
                 My Lists
               </Link>
               {session.user.role === "ADMIN" && (
@@ -38,7 +38,9 @@ export async function Navbar() {
                   Admin
                 </Link>
               )}
-              <span className="text-sm text-neutral-500">{session.user.username}</span>
+              <Link href={`/members/${session.user.username}`} className="text-sm text-neutral-500 hover:text-white">
+                {session.user.username}
+              </Link>
               <SignOutButton />
             </>
           ) : (
