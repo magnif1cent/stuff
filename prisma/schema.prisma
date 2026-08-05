@@ -31,6 +31,7 @@ model User {
   editorialReviews    EditorialReview[]
   submittedMovies     Movie[]
   memberLists         MemberList[]
+  memberListLikes     MemberListLike[]
 }
 
 model Account {
@@ -338,6 +339,7 @@ model MemberList {
 
   user    User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   entries MemberListEntry[]
+  likes   MemberListLike[]
 
   @@unique([userId, name])
   @@index([userId])
@@ -353,6 +355,22 @@ model MemberListEntry {
   movie Movie      @relation(fields: [movieId], references: [id], onDelete: Cascade)
 
   @@unique([listId, movieId])
+  @@index([listId])
+}
+
+// One like per member per list, powering the "Most-Liked Lists" leaderboard.
+// Self-likes are blocked at the API layer (not here) so owners can't inflate
+// their own list's ranking.
+model MemberListLike {
+  id        String   @id @default(cuid())
+  userId    String
+  listId    String
+  createdAt DateTime @default(now())
+
+  user User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  list MemberList @relation(fields: [listId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, listId])
   @@index([listId])
 }
 

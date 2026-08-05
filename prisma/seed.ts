@@ -205,6 +205,25 @@ async function main() {
     },
   });
 
+  const ipMan = await prisma.movie.findUniqueOrThrow({ where: { tmdbId: 900002 } });
+  const drunkenMaster = await prisma.movie.findUniqueOrThrow({ where: { tmdbId: 900003 } });
+  const memberList = await prisma.memberList.upsert({
+    where: { userId_name: { userId: member.id, name: "Essential Kung Fu" } },
+    update: {},
+    create: {
+      userId: member.id,
+      name: "Essential Kung Fu",
+      entries: {
+        create: [{ movieId: enterTheDragon.id }, { movieId: ipMan.id }, { movieId: drunkenMaster.id }],
+      },
+    },
+  });
+  await prisma.memberListLike.upsert({
+    where: { userId_listId: { userId: admin.id, listId: memberList.id } },
+    update: {},
+    create: { userId: admin.id, listId: memberList.id },
+  });
+
   console.log("Seed complete.", { admin: admin.email, member: member.email });
 }
 
