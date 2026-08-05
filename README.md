@@ -9,7 +9,7 @@ An IMDB-style website for kung fu and martial arts films, built for martial arts
 - Movie pages with cast, synopsis, a community rating, a separate admin-only "Editors' Score", an admin-authored editorial review, and a per-movie discussion thread (with spoiler tags, edit/delete on your own posts, and admin moderation)
 - **Fight Scenes**: members tag specific fight scenes within a movie — YouTube clip (with an optional start timestamp), the actors involved (picked from that movie's cast), and category tags (e.g. "Weapon Duel", "One vs. Many") — with their own member rating, a separate admin rating, admin verification, and a shareable permalink page (see [Fight Scenes](#fight-scenes) below)
 - Member accounts via email/password (with email verification) or Google sign-in, identified publicly by a chosen username rather than their email or real name (see [Usernames](#usernames) below)
-- Member capabilities: rate movies and fight scenes, maintain a Favorites list and a Watchlist, create their own public named lists (see [Member Lists](#member-lists) below), post/reply in movie discussions, submit fight scenes, and submit a movie missing from the catalog for admin review (see [Member Movie Submissions](#member-movie-submissions) below)
+- Member capabilities: rate movies and fight scenes, maintain a Favorites list and a Watchlist, create their own public named lists on a profile page at `/members/[username]` (see [Member Lists & Profiles](#member-lists--profiles) below), post/reply in movie discussions, submit fight scenes, and submit a movie missing from the catalog for admin review (see [Member Movie Submissions](#member-movie-submissions) below)
 - A unified `/admin` dashboard (Movies management incl. pending-submission review and permanent deletion, TMDB import incl. title search, keyword search, and bulk CSV upload, Fight Scene Tags, Account settings) plus admin actions that stay inline on regular pages (Editors' Score, editorial reviews, poster overrides, fight scene verification) &mdash; see [Admin Area](#admin-area) below
 - Social sharing (native share sheet on mobile, copy-link/X/Facebook/Reddit fallback on desktop) on movie and fight scene pages
 
@@ -123,14 +123,16 @@ Without `RESEND_API_KEY` configured, the verification link is logged to the serv
   - `with_origin_country` isn't in TMDB's official (outdated) API docs, though it's confirmed working and referenced by TMDB's own support — worth knowing if it ever needs debugging.
 - **Bulk CSV upload** — for when you already have a list of titles in hand rather than needing to discover them; see [Admin Area](#admin-area) below for the format.
 
-## Member Lists
+## Member Lists & Profiles
 
-Beyond the built-in Favorites and Watchlist, members can create any number of their own named lists (e.g. "Best One-vs-Many Fights") from the "+ Add to list" control on a movie page, and manage them (create, rename, delete) from `/my-lists`.
+Every member has a profile page at `/members/[username]`. Viewing your own shows Favorites, Watchlist, and your custom lists with full management controls (create/rename/delete); viewing someone else's shows only their public custom lists, read-only. `/my-lists` still works as a link — it just redirects to your own profile.
 
-- **Public by design** — every list has a shareable permalink at `/lists/[id]` that anyone can view, whether or not they're signed in. There's no private option; this is deliberate groundwork for letting members browse each other's lists later without a schema change, not an oversight.
+Beyond the built-in Favorites and Watchlist, members can create any number of their own named lists (e.g. "Best One-vs-Many Fights") from the "+ Add to list" control on a movie page, and manage them from their own profile.
+
+- **Custom lists are public by design; Favorites/Watchlist are not.** Every custom list has its own shareable permalink at `/lists/[id]` (also reachable via its owner's profile) that anyone can view signed in or not, with no private option — deliberate groundwork for letting members browse each other's lists later without a schema change. Favorites and Watchlist stay exactly as private as they've always been: only the signed-in owner ever sees their own, on their own profile or anywhere else.
 - A member can have at most 25 lists, with unique names per member; list names are capped at 60 characters.
-- A pending (not yet admin-approved) movie can only be added to a list by its own submitter, and is excluded from the public list view for everyone else, the same as it's excluded from every other public listing — see [Member Movie Submissions](#member-movie-submissions) below.
-- There's no cross-member browsing or "recommended lists" page yet — every list already being public makes that a schema-free follow-up whenever it's wanted.
+- A pending (not yet admin-approved) movie can only be added to a list by its own submitter, and is excluded from the public list/profile view for everyone else, the same as it's excluded from every other public listing — see [Member Movie Submissions](#member-movie-submissions) below.
+- There's no cross-member browsing/discovery page (e.g. "recommended lists") yet — every list already being public and every member already having a profile URL makes that a schema-free follow-up whenever it's wanted.
 
 ## Member Movie Submissions
 
@@ -198,7 +200,7 @@ Not every admin capability lives in this dashboard — Editors' Score, editorial
 
 ## Project Structure
 
-- `src/app` — pages and API routes (App Router), including the `/admin` dashboard and its sub-pages (see [Admin Area](#admin-area)), the fight scene permalink route (`/movies/[id]/fight-scenes/[fightSceneId]`), member movie submission (`/movies/submit`), and public member lists (`/lists/[listId]`)
+- `src/app` — pages and API routes (App Router), including the `/admin` dashboard and its sub-pages (see [Admin Area](#admin-area)), the fight scene permalink route (`/movies/[id]/fight-scenes/[fightSceneId]`), member movie submission (`/movies/submit`), member profiles (`/members/[username]`), and public list permalinks (`/lists/[listId]`)
 - `src/components` — UI components (`fight-scene-section.tsx`, `editorial-review.tsx`, `poster-override-control.tsx`, `share-button.tsx`, `member-list-manager.tsx`, `add-to-list-control.tsx`, etc.)
 - `src/lib` — Prisma client, Auth.js config, TMDB client, YouTube URL parsing, rating/weekly-featured/verification/fight-scene/username/member-list helpers, email sender
 - `prisma/schema.prisma` — data model
