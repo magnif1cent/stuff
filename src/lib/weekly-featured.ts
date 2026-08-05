@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { getFeaturedFightSceneClips } from "@/lib/fight-scenes";
 
 const FEATURED_COUNT = 5;
 
@@ -72,6 +73,12 @@ export async function computeWeeklyFeatured() {
 }
 
 export async function getFeaturedMovies() {
+  const movies = await getFeaturedMovieRows();
+  const clipsByMovie = await getFeaturedFightSceneClips(movies.map((m) => m.id));
+  return movies.map((movie) => ({ ...movie, fightSceneClip: clipsByMovie.get(movie.id) ?? null }));
+}
+
+async function getFeaturedMovieRows() {
   const latest = await prisma.weeklyFeatured.findFirst({ orderBy: { weekStart: "desc" } });
 
   if (latest) {
