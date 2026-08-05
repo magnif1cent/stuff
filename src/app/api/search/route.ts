@@ -11,19 +11,22 @@ export async function GET(request: Request) {
 
   const [titleMatches, castMatches, directorMatches] = await Promise.all([
     prisma.movie.findMany({
-      where: { title: { contains: query, mode: "insensitive" } },
+      where: { title: { contains: query, mode: "insensitive" }, status: "APPROVED" },
       orderBy: { tmdbPopularity: "desc" },
       take: RESULT_LIMIT,
       select: { id: true, title: true, releaseDate: true, posterPath: true },
     }),
     prisma.movie.findMany({
-      where: { cast: { some: { person: { name: { contains: query, mode: "insensitive" } } } } },
+      where: {
+        cast: { some: { person: { name: { contains: query, mode: "insensitive" } } } },
+        status: "APPROVED",
+      },
       orderBy: { tmdbPopularity: "desc" },
       take: RESULT_LIMIT,
       select: { id: true, title: true, releaseDate: true, posterPath: true },
     }),
     prisma.movie.findMany({
-      where: { director: { contains: query, mode: "insensitive" } },
+      where: { director: { contains: query, mode: "insensitive" }, status: "APPROVED" },
       orderBy: { tmdbPopularity: "desc" },
       take: RESULT_LIMIT,
       select: { id: true, title: true, releaseDate: true, posterPath: true },

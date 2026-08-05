@@ -3,11 +3,23 @@ import { getTmdbMovieDetails } from "@/lib/tmdb";
 
 const MAX_CAST = 15;
 
-export async function importMovieFromTmdb(tmdbId: number) {
+export interface ImportMovieOptions {
+  // Admin imports (single-title, keyword, bulk CSV) go straight to APPROVED
+  // by omitting this. Member submissions pass "PENDING" so the movie is
+  // hidden from public discovery until an admin approves it. Note: an
+  // existing movie re-imported by an admin always resets to APPROVED, since
+  // an admin action is itself an approval — see submitMovieForReview, which
+  // guards against calling this at all for a tmdbId that already exists.
+  status?: "PENDING" | "APPROVED";
+  submittedById?: string;
+}
+
+export async function importMovieFromTmdb(tmdbId: number, options: ImportMovieOptions = {}) {
   const details = await getTmdbMovieDetails(tmdbId);
   const director = details.credits.crew.find((c) => c.job === "Director")?.name ?? null;
   const country = details.production_countries[0]?.name ?? null;
   const topCast = [...details.credits.cast].sort((a, b) => a.order - b.order).slice(0, MAX_CAST);
+  const status = options.status ?? "APPROVED";
 
   const movie = await prisma.movie.upsert({
     where: { tmdbId: details.id },
@@ -24,6 +36,7 @@ export async function importMovieFromTmdb(tmdbId: number) {
       tmdbPopularity: details.popularity,
       tmdbRating: details.vote_average,
       lastSyncedAt: new Date(),
+      status,
       genres: {
         connectOrCreate: details.genres.map((genre) => ({
           where: { tmdbId: genre.id },
@@ -44,6 +57,8 @@ export async function importMovieFromTmdb(tmdbId: number) {
       country,
       tmdbPopularity: details.popularity,
       tmdbRating: details.vote_average,
+      status,
+      submittedById: options.submittedById,
       genres: {
         connectOrCreate: details.genres.map((genre) => ({
           where: { tmdbId: genre.id },

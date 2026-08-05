@@ -10,7 +10,7 @@ export async function GET(request: Request) {
   }
 
   const rows = await prisma.movie.findMany({
-    where: { director: { contains: query, mode: "insensitive" } },
+    where: { director: { contains: query, mode: "insensitive" }, status: "APPROVED" },
     distinct: ["director"],
     orderBy: { director: "asc" },
     select: { director: true },

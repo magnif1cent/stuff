@@ -12,7 +12,7 @@ export async function GET(request: Request) {
   const rows = await prisma.person.findMany({
     where: {
       name: { contains: query, mode: "insensitive" },
-      castCredits: { some: {} },
+      castCredits: { some: { movie: { status: "APPROVED" } } },
     },
     distinct: ["name"],
     orderBy: { name: "asc" },

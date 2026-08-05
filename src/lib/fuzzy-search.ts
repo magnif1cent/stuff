@@ -16,8 +16,9 @@ export async function findSimilarMovies(query: string, limit = 8): Promise<Movie
   return prisma.$queryRaw<Movie[]>`
     SELECT "Movie".*
     FROM "Movie"
-    WHERE similarity(lower("title"), lower(${trimmed})) > ${SIMILARITY_THRESHOLD}
-       OR similarity(lower(COALESCE("director", '')), lower(${trimmed})) > ${SIMILARITY_THRESHOLD}
+    WHERE "status" = 'APPROVED'
+      AND (similarity(lower("title"), lower(${trimmed})) > ${SIMILARITY_THRESHOLD}
+       OR similarity(lower(COALESCE("director", '')), lower(${trimmed})) > ${SIMILARITY_THRESHOLD})
     ORDER BY GREATEST(
       similarity(lower("title"), lower(${trimmed})),
       similarity(lower(COALESCE("director", '')), lower(${trimmed}))

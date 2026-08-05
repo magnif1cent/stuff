@@ -9,7 +9,7 @@ export const revalidate = 3600;
 export default async function HomePage() {
   const [featured, recent, topRated] = await Promise.all([
     getFeaturedMovies(),
-    prisma.movie.findMany({ orderBy: { createdAt: "desc" }, take: 12 }),
+    prisma.movie.findMany({ where: { status: "APPROVED" }, orderBy: { createdAt: "desc" }, take: 12 }),
     getTopRatedMovies(),
   ]);
 

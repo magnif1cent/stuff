@@ -29,6 +29,8 @@ model User {
   fightSceneRatings   FightSceneRating[]
   fightSceneAdminRatings FightSceneAdminRating[]
   editorialReviews    EditorialReview[]
+  submittedMovies     Movie[]
+  memberLists         MemberList[]
 }
 
 model Account {
@@ -90,6 +92,13 @@ model Movie {
   createdAt      DateTime @default(now())
   lastSyncedAt   DateTime @default(now())
 
+  // "PENDING" | "APPROVED" — member-submitted movies (see submittedBy below)
+  // start PENDING and are hidden from every public listing/search until an
+  // admin approves them; admin imports (single-title, keyword, bulk CSV) go
+  // straight to APPROVED, matching existing behavior.
+  status        String  @default("APPROVED")
+  submittedById String?
+
   genres          Genre[]
   cast            CastCredit[]
   ratings         Rating[]
@@ -99,8 +108,11 @@ model Movie {
   weeklyFeatured  WeeklyFeatured[]
   fightScenes     FightScene[]
   editorialReview EditorialReview?
+  memberListEntries MemberListEntry[]
+  submittedBy     User?   @relation(fields: [submittedById], references: [id], onDelete: SetNull)
 
   @@index([title])
+  @@index([status])
 }
 
 model Genre {
@@ -307,6 +319,41 @@ model FightSceneAdminRating {
 
   @@unique([adminId, fightSceneId])
   @@index([fightSceneId])
+}
+
+// --- Member-created lists ---
+//
+// Separate from the built-in Favorites/Watchlist (ListEntry above) — members
+// can create any number of their own named lists. Public by design (the
+// owner chose that): viewable by anyone via /lists/[id], with room to grow
+// into cross-member browsing/"recommended lists" later without a schema
+// change, since every list is already public.
+
+model MemberList {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entries MemberListEntry[]
+
+  @@unique([userId, name])
+  @@index([userId])
+}
+
+model MemberListEntry {
+  id        String   @id @default(cuid())
+  listId    String
+  movieId   String
+  createdAt DateTime @default(now())
+
+  list  MemberList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  movie Movie      @relation(fields: [movieId], references: [id], onDelete: Cascade)
+
+  @@unique([listId, movieId])
+  @@index([listId])
 }
 
 // --- Weekly featured carousel ---

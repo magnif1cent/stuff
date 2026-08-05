@@ -9,8 +9,8 @@ An IMDB-style website for kung fu and martial arts films, built for martial arts
 - Movie pages with cast, synopsis, a community rating, a separate admin-only "Editors' Score", an admin-authored editorial review, and a per-movie discussion thread (with spoiler tags, edit/delete on your own posts, and admin moderation)
 - **Fight Scenes**: members tag specific fight scenes within a movie — YouTube clip (with an optional start timestamp), the actors involved (picked from that movie's cast), and category tags (e.g. "Weapon Duel", "One vs. Many") — with their own member rating, a separate admin rating, admin verification, and a shareable permalink page (see [Fight Scenes](#fight-scenes) below)
 - Member accounts via email/password (with email verification) or Google sign-in, identified publicly by a chosen username rather than their email or real name (see [Usernames](#usernames) below)
-- Member capabilities: rate movies and fight scenes, maintain a Favorites list and a Watchlist, post/reply in movie discussions, submit fight scenes
-- A unified `/admin` dashboard (Movies management incl. permanent deletion, TMDB import incl. title search, keyword search, and bulk CSV upload, Fight Scene Tags, Account settings) plus admin actions that stay inline on regular pages (Editors' Score, editorial reviews, poster overrides, fight scene verification) &mdash; see [Admin Area](#admin-area) below
+- Member capabilities: rate movies and fight scenes, maintain a Favorites list and a Watchlist, create their own public named lists (see [Member Lists](#member-lists) below), post/reply in movie discussions, submit fight scenes, and submit a movie missing from the catalog for admin review (see [Member Movie Submissions](#member-movie-submissions) below)
+- A unified `/admin` dashboard (Movies management incl. pending-submission review and permanent deletion, TMDB import incl. title search, keyword search, and bulk CSV upload, Fight Scene Tags, Account settings) plus admin actions that stay inline on regular pages (Editors' Score, editorial reviews, poster overrides, fight scene verification) &mdash; see [Admin Area](#admin-area) below
 - Social sharing (native share sheet on mobile, copy-link/X/Facebook/Reddit fallback on desktop) on movie and fight scene pages
 
 ## Tech Stack
@@ -123,6 +123,23 @@ Without `RESEND_API_KEY` configured, the verification link is logged to the serv
   - `with_origin_country` isn't in TMDB's official (outdated) API docs, though it's confirmed working and referenced by TMDB's own support — worth knowing if it ever needs debugging.
 - **Bulk CSV upload** — for when you already have a list of titles in hand rather than needing to discover them; see [Admin Area](#admin-area) below for the format.
 
+## Member Lists
+
+Beyond the built-in Favorites and Watchlist, members can create any number of their own named lists (e.g. "Best One-vs-Many Fights") from the "+ Add to list" control on a movie page, and manage them (create, rename, delete) from `/my-lists`.
+
+- **Public by design** — every list has a shareable permalink at `/lists/[id]` that anyone can view, whether or not they're signed in. There's no private option; this is deliberate groundwork for letting members browse each other's lists later without a schema change, not an oversight.
+- A member can have at most 25 lists, with unique names per member; list names are capped at 60 characters.
+- A pending (not yet admin-approved) movie can only be added to a list by its own submitter, and is excluded from the public list view for everyone else, the same as it's excluded from every other public listing — see [Member Movie Submissions](#member-movie-submissions) below.
+- There's no cross-member browsing or "recommended lists" page yet — every list already being public makes that a schema-free follow-up whenever it's wanted.
+
+## Member Movie Submissions
+
+If a member searches and can't find a movie, `/movies/submit` (linked from a "no results" search) lets them search TMDB and submit a match directly — the same underlying TMDB import used by `/admin/import`, but scoped to one title at a time and requiring a verified email.
+
+- **Submissions start `PENDING`**, not live: hidden from the homepage, search (including the navbar's), autocomplete director/actor filters, and the weekly-trending computation, and its own movie page 404s for everyone except the submitter and admins. This mirrors fight-scene verification's "member-created content, admin-gated visibility" pattern rather than admin imports' "goes live immediately" one, since anyone can trigger this path, not just a trusted admin.
+- Submitting a `tmdbId` that's already in the catalog (approved or still pending) is rejected with a specific error rather than silently re-importing it — re-running the shared import logic on an existing row would otherwise reset an already-approved movie back to pending.
+- Admins review submissions in a **Pending Submissions** section at the top of `/admin/movies` — Approve moves it to the catalog immediately; Reject permanently deletes it, same as deleting any other catalog entry.
+
 ## Fight Scenes
 
 Below the cast list on every movie page, members can catalog individual fight scenes from that film:
@@ -155,7 +172,7 @@ Fight Scene cards ("Fight Ticket" styling) are the one exception: they use hardc
 
 Signed-in admins get an "Admin" link in the navbar to `/admin` &mdash; a dashboard linking every admin section that lives on its own page, all guarded by the same `requireAdminSession()` check in `src/app/admin/layout.tsx`:
 
-- **Movies** (`/admin/movies`) &mdash; browse the catalog and permanently delete a movie entry (type the title to confirm). Deleting cascades through everything attached to it: cast credits, ratings, discussion posts, fight scenes (and their own casts/ratings), the editorial review, and weekly-featured entries.
+- **Movies** (`/admin/movies`) &mdash; a **Pending Submissions** section (see [Member Movie Submissions](#member-movie-submissions) above) to approve or reject member-submitted movies, plus the catalog itself: browse and permanently delete a movie entry (type the title to confirm). Deleting cascades through everything attached to it: cast credits, ratings, discussion posts, fight scenes (and their own casts/ratings), the editorial review, and weekly-featured entries.
 - **Import from TMDB** (`/admin/import`) &mdash; search-and-import by title or by keyword (see [TMDB Import](#tmdb-import) above), plus a bulk-upload section: a CSV with a `title` column (optionally `year` to disambiguate identically-titled results, or `tmdb_id` to skip the search entirely) imports up to 25 movies in one request. Each row is resolved and imported independently, so one bad row (no TMDB match, a transient TMDB error) doesn't fail the rest of the batch &mdash; the response reports created/updated/error per row. CSV parsing uses `papaparse` rather than the `xlsx` npm package, whose published version has known unpatched advisories (SheetJS fixed them only on their own CDN, not on the npm registry).
 - **Fight Scene Tags** (`/admin/fight-scene-tags`) &mdash; manage the category vocabulary members tag fight scenes with (see [Fight Scenes](#fight-scenes) above).
 - **Account** (`/admin/account`) &mdash; change your own admin sign-in email or password (previously only possible via direct SQL). Changing your email re-triggers the normal email-verification flow on the new address; changing your password requires your current one (unless you signed up via Google and have never set one, in which case you can set an initial password). Either change signs you out immediately, since the session is JWT-based and won't otherwise pick up the new credentials until you sign back in.
@@ -181,9 +198,9 @@ Not every admin capability lives in this dashboard — Editors' Score, editorial
 
 ## Project Structure
 
-- `src/app` — pages and API routes (App Router), including the `/admin` dashboard and its sub-pages (see [Admin Area](#admin-area)) and the fight scene permalink route (`/movies/[id]/fight-scenes/[fightSceneId]`)
-- `src/components` — UI components (`fight-scene-section.tsx`, `editorial-review.tsx`, `poster-override-control.tsx`, `share-button.tsx`, etc.)
-- `src/lib` — Prisma client, Auth.js config, TMDB client, YouTube URL parsing, rating/weekly-featured/verification/fight-scene/username helpers, email sender
+- `src/app` — pages and API routes (App Router), including the `/admin` dashboard and its sub-pages (see [Admin Area](#admin-area)), the fight scene permalink route (`/movies/[id]/fight-scenes/[fightSceneId]`), member movie submission (`/movies/submit`), and public member lists (`/lists/[listId]`)
+- `src/components` — UI components (`fight-scene-section.tsx`, `editorial-review.tsx`, `poster-override-control.tsx`, `share-button.tsx`, `member-list-manager.tsx`, `add-to-list-control.tsx`, etc.)
+- `src/lib` — Prisma client, Auth.js config, TMDB client, YouTube URL parsing, rating/weekly-featured/verification/fight-scene/username/member-list helpers, email sender
 - `prisma/schema.prisma` — data model
 - `prisma/seed.ts` — sample/dev seed data, including a sample fight scene and editorial review
 

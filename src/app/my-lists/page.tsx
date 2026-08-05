@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getRatingSummaries } from "@/lib/ratings";
 import { MovieCard } from "@/components/movie-card";
+import { MemberListManager } from "@/components/member-list-manager";
 import type { Movie } from "@/generated/prisma/client";
 
 async function MovieRow({ title, movies, ratingSummaries }: {
@@ -42,21 +43,49 @@ export default async function MyListsPage() {
     redirect("/login?callbackUrl=/my-lists");
   }
 
-  const entries = await prisma.listEntry.findMany({
-    where: { userId: session.user.id },
-    include: { movie: true },
-    orderBy: { createdAt: "desc" },
-  });
+  const [entries, memberLists] = await Promise.all([
+    prisma.listEntry.findMany({
+      where: { userId: session.user.id },
+      include: { movie: true },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.memberList.findMany({
+      where: { userId: session.user.id },
+      include: { entries: { include: { movie: true }, orderBy: { createdAt: "desc" } } },
+      orderBy: { createdAt: "asc" },
+    }),
+  ]);
 
   const favorites = entries.filter((e) => e.listType === "FAVORITE").map((e) => e.movie);
   const watchlist = entries.filter((e) => e.listType === "WATCHLIST").map((e) => e.movie);
-  const ratingSummaries = await getRatingSummaries([...favorites, ...watchlist].map((m) => m.id));
+
+  const allListedMovieIds = [
+    ...favorites,
+    ...watchlist,
+    ...memberLists.flatMap((list) => list.entries.map((entry) => entry.movie)),
+  ].map((m) => m.id);
+  const ratingSummaries = await getRatingSummaries(allListedMovieIds);
+
+  const withRatings = (movie: Movie) => ({
+    ...movie,
+    communityAverage: ratingSummaries.get(movie.id)?.average ?? null,
+    communityCount: ratingSummaries.get(movie.id)?.count ?? 0,
+  });
+
+  const memberListData = memberLists.map((list) => ({
+    id: list.id,
+    name: list.name,
+    movies: list.entries.map((entry) => withRatings(entry.movie)),
+  }));
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-10">
       <h1 className="mb-6 text-2xl font-bold text-white">My Lists</h1>
       <MovieRow title="Favorites" movies={favorites} ratingSummaries={ratingSummaries} />
       <MovieRow title="Watchlist" movies={watchlist} ratingSummaries={ratingSummaries} />
+
+      <h2 className="mb-4 text-xl font-bold text-white">Your Lists</h2>
+      <MemberListManager initialLists={memberListData} />
     </div>
   );
 }

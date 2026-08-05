@@ -15,6 +15,7 @@ import {
 import { RatingWidget } from "@/components/rating-widget";
 import { AdminRatingWidget } from "@/components/admin-rating-widget";
 import { ListButtons } from "@/components/list-buttons";
+import { AddToListControl } from "@/components/add-to-list-control";
 import { DiscussionThread } from "@/components/discussion-thread";
 import { FightSceneSection } from "@/components/fight-scene-section";
 import { EditorialReview } from "@/components/editorial-review";
@@ -39,26 +40,60 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
     notFound();
   }
 
-  const [communityRating, editorsRating, myRating, myListEntries, discussionPage, fightScenes, fightSceneTags, editorialReview] =
-    await Promise.all([
-      getCommunityRatingSummary(movie.id),
-      getEditorsRatingSummary(movie.id),
-      session?.user
-        ? prisma.rating.findUnique({
-            where: { userId_movieId: { userId: session.user.id, movieId: movie.id } },
-          })
-        : null,
-      session?.user
-        ? prisma.listEntry.findMany({ where: { userId: session.user.id, movieId: movie.id } })
-        : [],
-      getDiscussionPage(movie.id),
-      getFightScenesForMovie(movie.id),
-      getFightSceneTags(),
-      prisma.editorialReview.findUnique({
-        where: { movieId: movie.id },
-        include: { author: { select: { username: true } } },
-      }),
-    ]);
+  // Pending (member-submitted, not yet admin-approved) movies are invisible
+  // to everyone except the person who submitted them and admins — everyone
+  // else gets the same 404 as a nonexistent movie, matching how it's already
+  // hidden from every public listing/search.
+  const isVisible =
+    movie.status === "APPROVED" ||
+    session?.user?.role === "ADMIN" ||
+    session?.user?.id === movie.submittedById;
+  if (!isVisible) {
+    notFound();
+  }
+
+  const [
+    communityRating,
+    editorsRating,
+    myRating,
+    myListEntries,
+    myMemberLists,
+    discussionPage,
+    fightScenes,
+    fightSceneTags,
+    editorialReview,
+  ] = await Promise.all([
+    getCommunityRatingSummary(movie.id),
+    getEditorsRatingSummary(movie.id),
+    session?.user
+      ? prisma.rating.findUnique({
+          where: { userId_movieId: { userId: session.user.id, movieId: movie.id } },
+        })
+      : null,
+    session?.user
+      ? prisma.listEntry.findMany({ where: { userId: session.user.id, movieId: movie.id } })
+      : [],
+    session?.user
+      ? prisma.memberList.findMany({
+          where: { userId: session.user.id },
+          orderBy: { createdAt: "asc" },
+          include: { entries: { where: { movieId: movie.id }, select: { id: true } } },
+        })
+      : [],
+    getDiscussionPage(movie.id),
+    getFightScenesForMovie(movie.id),
+    getFightSceneTags(),
+    prisma.editorialReview.findUnique({
+      where: { movieId: movie.id },
+      include: { author: { select: { username: true } } },
+    }),
+  ]);
+
+  const myMemberListItems = myMemberLists.map((list) => ({
+    id: list.id,
+    name: list.name,
+    hasMovie: list.entries.length > 0,
+  }));
 
   const myAdminRating = session?.user?.role === "ADMIN"
     ? await prisma.adminRating.findUnique({
@@ -216,13 +251,14 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
 
           <p className="mt-4 max-w-2xl text-neutral-300">{movie.overview}</p>
 
-          <div className="mt-4">
+          <div className="mt-4 flex flex-wrap items-start gap-2">
             <ListButtons
               movieId={movie.id}
               initialFavorite={isFavorite}
               initialWatchlist={isOnWatchlist}
               signedIn={!!session?.user}
             />
+            <AddToListControl movieId={movie.id} initialLists={myMemberListItems} signedIn={!!session?.user} />
           </div>
 
           <div className="mt-6 max-w-sm">
