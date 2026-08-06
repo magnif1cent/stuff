@@ -160,6 +160,10 @@ function FightSceneForm({
         placeholder="Paste the YouTube link to this fight scene…"
         className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
       />
+      <p className="text-xs text-neutral-500">
+        Tip: include a timestamp in the link (e.g. ?t=1m35s or ?t=95) to start the clip at the fight instead of the
+        beginning of the video.
+      </p>
       <input
         type="text"
         value={title}
@@ -169,7 +173,7 @@ function FightSceneForm({
         className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
       />
       <div>
-        <p className="mb-1 text-xs text-neutral-500">Actors in this scene</p>
+        <p className="mb-1 text-xs text-neutral-500">Actors in this scene (select at least one)</p>
         <ChipPicker options={castOptions} selected={selectedCast} onToggle={toggleCast} />
       </div>
       <div>
@@ -389,15 +393,22 @@ export function FightSceneSection({
   return (
     <section className="mt-10">
       {heading && (
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-4 flex items-center justify-between gap-4">
           <h2 className="font-serif text-xl font-bold text-white">{heading}</h2>
-          {allowAdd && signedIn && !adding && castOptions.length > 0 && (
-            <button
-              onClick={() => setAdding(true)}
-              className="rounded-md border border-neutral-700 px-3 py-1 text-xs text-neutral-300 hover:bg-neutral-800"
-            >
-              + Add fight scene
-            </button>
+          {allowAdd && signedIn && !adding && (
+            castOptions.length > 0 ? (
+              <button
+                onClick={() => setAdding(true)}
+                className="rounded-md border border-neutral-700 px-3 py-1 text-xs text-neutral-300 hover:bg-neutral-800"
+              >
+                + Add fight scene
+              </button>
+            ) : (
+              <p className="text-xs text-neutral-500">
+                This movie doesn&rsquo;t have any cast members listed yet, so fight scenes can&rsquo;t be tagged
+                until one&rsquo;s added.
+              </p>
+            )
           )}
         </div>
       )}
