@@ -4,7 +4,7 @@ An IMDB-style website for kung fu and martial arts films, built for martial arts
 
 ## Features
 
-- Landing page with a weekly-rotating "trending" carousel (top 5 most-active movies over the last 7 days) and a recently-added grid
+- Landing page with a weekly-rotating "trending" carousel (top 5 most-active movies over the last 7 days) and a recently-added grid — each slide plays a short preview of the movie's best verified fight scene when one exists, falling back to the static backdrop otherwise (see [Weekly Trending Carousel](#weekly-trending-carousel) below)
 - Search by movie title, actor, or director name, with filters (genre, director, country, release-year range, minimum community rating), sorting (relevance, highest rated, newest, oldest), pagination, and a typo-tolerant "did you mean" fallback when nothing matches exactly
 - Movie pages with cast, synopsis, a community rating, a separate admin-only "Editors' Score", an admin-authored editorial review, and a per-movie discussion thread (with spoiler tags, edit/delete on your own posts, and admin moderation)
 - **Fight Scenes**: members tag specific fight scenes within a movie — YouTube clip (with an optional start timestamp), the actors involved (picked from that movie's cast), and category tags (e.g. "Weapon Duel", "One vs. Many") — with their own member rating, a separate admin rating, admin verification, and a shareable permalink page (see [Fight Scenes](#fight-scenes) below)
@@ -187,6 +187,14 @@ Not every admin capability lives in this dashboard — Editors' Score, editorial
 ## Weekly Trending Carousel
 
 `/api/cron/weekly-featured` recomputes the top 5 most-active movies (by ratings + discussion activity in the last 7 days) and is protected by the `CRON_SECRET` env var (sent as `Authorization: Bearer <CRON_SECRET>`). `vercel.json` schedules this to run weekly via [Vercel Cron](https://vercel.com/docs/cron-jobs) — Vercel automatically attaches that header when `CRON_SECRET` is set as a project environment variable.
+
+Each slide prefers a fight scene clip over the static TMDB backdrop:
+
+- **Which scene**: for each featured movie, the highest member-rated verified fight scene is chosen, falling back to highest editor-rated, then earliest-tagged. Unverified scenes are never selected.
+- **Which moment**: the clip starts at the scene's tagged `youtubeStartSeconds` (see [Fight Scenes](#fight-scenes) below) rather than the beginning of the source video, capped to a 10-second window.
+- **Playback**: muted, looping, no player controls, starts immediately when its slide becomes active.
+- **Accessibility**: never plays for visitors with `prefers-reduced-motion` set — they always see the static backdrop.
+- **Fallback**: a movie with no verified fight scene keeps the static backdrop unchanged.
 
 ## Continuous Integration
 
