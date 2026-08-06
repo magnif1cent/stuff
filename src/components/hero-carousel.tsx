@@ -18,7 +18,7 @@ const FADE_MS = 700;
 const CLIP_SECONDS = 10;
 // Backdrop shows first so landing on a slide doesn't immediately snap into
 // motion — matches how Netflix/Disney+/Prime delay their hero previews.
-const CLIP_START_DELAY_MS = 1500;
+const CLIP_START_DELAY_MS = 750;
 
 function clipEmbedUrl(videoId: string, startSeconds: number | null) {
   const start = startSeconds ?? 0;
