@@ -6,14 +6,37 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { tmdbImageUrl } from "@/lib/tmdb";
 import type { Movie } from "@/generated/prisma/client";
 
-export type FeaturedMovie = Pick<Movie, "id" | "title" | "overview" | "backdropPath" | "releaseDate">;
+export type FeaturedMovie = Pick<Movie, "id" | "title" | "overview" | "backdropPath" | "releaseDate"> & {
+  fightSceneClip: { youtubeVideoId: string; youtubeStartSeconds: number | null } | null;
+};
 
-const ROTATE_MS = 6000;
+const ROTATE_MS = 15000;
 const FADE_MS = 700;
+// Bounded short preview, not the whole clip — kept in sync with ROTATE_MS
+// above so a slide's clip gets to finish once before the carousel advances,
+// instead of always being cut off mid-loop.
+const CLIP_SECONDS = 15;
 
-function Slide({ movie, active }: { movie: FeaturedMovie; active: boolean }) {
+function clipEmbedUrl(videoId: string, startSeconds: number | null) {
+  const start = startSeconds ?? 0;
+  const params = new URLSearchParams({
+    autoplay: "1",
+    mute: "1",
+    loop: "1",
+    controls: "0",
+    playsinline: "1",
+    rel: "0",
+    playlist: videoId,
+    start: String(start),
+    end: String(start + CLIP_SECONDS),
+  });
+  return `https://www.youtube-nocookie.com/embed/${videoId}?${params.toString()}`;
+}
+
+function Slide({ movie, active, playClip }: { movie: FeaturedMovie; active: boolean; playClip: boolean }) {
   const backdropUrl = tmdbImageUrl(movie.backdropPath, "original");
   const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : null;
+  const showClip = active && playClip && !!movie.fightSceneClip;
 
   return (
     <div
@@ -24,9 +47,29 @@ function Slide({ movie, active }: { movie: FeaturedMovie; active: boolean }) {
       style={{ transitionDuration: `${FADE_MS}ms` }}
     >
       {backdropUrl ? (
-        <Image src={backdropUrl} alt={movie.title} fill priority sizes="100vw" className="object-cover" />
+        <Image
+          src={backdropUrl}
+          alt={movie.title}
+          fill
+          priority
+          sizes="100vw"
+          className={`object-cover transition-opacity ${showClip ? "opacity-0" : "opacity-100"}`}
+          style={{ transitionDuration: `${FADE_MS}ms` }}
+        />
       ) : (
         <div className="h-full w-full bg-neutral-900" />
+      )}
+      {showClip && movie.fightSceneClip && (
+        <iframe
+          key={movie.id}
+          src={clipEmbedUrl(movie.fightSceneClip.youtubeVideoId, movie.fightSceneClip.youtubeStartSeconds)}
+          title={`${movie.title} fight scene preview`}
+          allow="autoplay; encrypted-media"
+          // Larger than the visible frame and centered, so the YouTube
+          // player's own letterboxing doesn't show through as black bars —
+          // same crop-to-fill effect as the backdrop image's object-cover.
+          className="absolute left-1/2 top-1/2 h-[130%] w-[130%] -translate-x-1/2 -translate-y-1/2 border-0"
+        />
       )}
       <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/40 to-transparent" />
 
@@ -53,12 +96,22 @@ export function HeroCarousel({ movies }: { movies: FeaturedMovie[] }) {
   const [index, setIndex] = useState(0);
   const [prevIndex, setPrevIndex] = useState<number | null>(null);
   const [paused, setPaused] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+  );
   const prevIndexRef = useRef(0);
 
   const goTo = useCallback(
     (next: number) => setIndex((next + movies.length) % movies.length),
     [movies.length],
   );
+
+  useEffect(() => {
+    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const onChange = () => setReducedMotion(query.matches);
+    query.addEventListener("change", onChange);
+    return () => query.removeEventListener("change", onChange);
+  }, []);
 
   // Briefly keep the outgoing slide mounted (fading out) so switching slides
   // crossfades instead of hard-cutting, without pre-loading every backdrop.
@@ -70,6 +123,8 @@ export function HeroCarousel({ movies }: { movies: FeaturedMovie[] }) {
     const timer = setTimeout(() => setPrevIndex(null), FADE_MS);
     return () => clearTimeout(timer);
   }, [index]);
+
+  const playClip = !reducedMotion;
 
   useEffect(() => {
     if (movies.length <= 1 || paused) return;
@@ -96,9 +151,9 @@ export function HeroCarousel({ movies }: { movies: FeaturedMovie[] }) {
       className="group relative h-72 w-full overflow-hidden outline-none sm:h-96"
     >
       {prevIndex !== null && prevIndex !== index && (
-        <Slide movie={movies[prevIndex]} active={false} />
+        <Slide movie={movies[prevIndex]} active={false} playClip={false} />
       )}
-      <Slide movie={movies[index]} active />
+      <Slide movie={movies[index]} active playClip={playClip} />
 
       {movies.length > 1 && (
         <>

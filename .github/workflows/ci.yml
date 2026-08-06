@@ -22,3 +22,41 @@ jobs:
       - run: npm run lint
 
       - run: npm run build
+
+  # Soft, non-blocking nudge for the CLAUDE.md convention that user-facing
+  # changes (new pages/routes, schema changes, new env vars) should update
+  # README.md in the same PR. Only a heuristic on file paths — can't judge
+  # intent, so it warns rather than fails, and false positives (legitimate
+  # internal-only changes) are expected and fine to ignore.
+  readme-doc-check:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for likely-undocumented changes
+        run: |
+          set -e
+          PARENT=$(git rev-parse HEAD^1 2>/dev/null || git rev-parse HEAD~1)
+          CHANGED=$(git diff --name-only "$PARENT" HEAD)
+
+          RISKY=false
+          echo "$CHANGED" | grep -qE '^src/app/.*/page\.tsx$' && RISKY=true
+          echo "$CHANGED" | grep -qE '^src/app/api/.*/route\.ts$' && RISKY=true
+          echo "$CHANGED" | grep -qE '^prisma/schema\.prisma$' && RISKY=true
+          echo "$CHANGED" | grep -qE '^\.env\.example$' && RISKY=true
+
+          if [ "$RISKY" = true ] && ! echo "$CHANGED" | grep -qE '^README\.md$'; then
+            echo "::warning::This push added/changed a page, API route, prisma/schema.prisma, or .env.example without touching README.md. Per CLAUDE.md, user-facing changes should document that in the same PR — double check this isn't a gap (internal-only changes are exempt)."
+            {
+              echo "## ⚠️ Possible README documentation gap"
+              echo ""
+              echo "This push touched a page, API route, \`prisma/schema.prisma\`, or \`.env.example\` without touching \`README.md\`."
+              echo ""
+              echo "Per this repo's CLAUDE.md convention, changes like these should update README.md in the same PR. If this is a legitimate exception (internal refactor, no user-facing change), no action needed."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No documentation gap detected."
+          fi

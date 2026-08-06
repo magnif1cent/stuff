@@ -95,6 +95,43 @@ export async function getFightSceneAdminRatingSummaries(
   return map;
 }
 
+// Picks one verified fight scene per movie to preview as a hero clip:
+// highest member rating, falling back to editor rating, falling back to
+// whichever was tagged first (stable rather than random across page loads).
+// Unverified scenes are excluded — the same bar members already have to
+// clear for a scene to show a "verified" badge elsewhere in the app.
+export async function getFeaturedFightSceneClips(
+  movieIds: string[],
+): Promise<Map<string, { youtubeVideoId: string; youtubeStartSeconds: number | null }>> {
+  if (movieIds.length === 0) return new Map();
+
+  const scenes = await prisma.fightScene.findMany({
+    where: { movieId: { in: movieIds }, isVerified: true, isDeleted: false },
+    orderBy: { createdAt: "asc" },
+    select: { id: true, movieId: true, youtubeVideoId: true, youtubeStartSeconds: true },
+  });
+
+  const [memberSummaries, editorSummaries] = await Promise.all([
+    getFightSceneRatingSummaries(scenes.map((s) => s.id)),
+    getFightSceneAdminRatingSummaries(scenes.map((s) => s.id)),
+  ]);
+
+  const bestByMovie = new Map<string, { score: number; scene: (typeof scenes)[number] }>();
+  for (const scene of scenes) {
+    const score = memberSummaries.get(scene.id)?.average ?? editorSummaries.get(scene.id)?.average ?? -1;
+    const current = bestByMovie.get(scene.movieId);
+    if (!current || score > current.score) {
+      bestByMovie.set(scene.movieId, { score, scene });
+    }
+  }
+
+  const result = new Map<string, { youtubeVideoId: string; youtubeStartSeconds: number | null }>();
+  for (const [movieId, { scene }] of bestByMovie) {
+    result.set(movieId, { youtubeVideoId: scene.youtubeVideoId, youtubeStartSeconds: scene.youtubeStartSeconds });
+  }
+  return result;
+}
+
 interface ValidatedFightSceneInput {
   title: string;
   videoId: string;
