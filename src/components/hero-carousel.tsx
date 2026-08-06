@@ -16,9 +16,6 @@ const FADE_MS = 700;
 // short enough to stay well under the rotation interval above so it isn't
 // cut off mid-loop before the carousel advances.
 const CLIP_SECONDS = 10;
-// Backdrop shows first so landing on a slide doesn't immediately snap into
-// motion — matches how Netflix/Disney+/Prime delay their hero previews.
-const CLIP_START_DELAY_MS = 750;
 
 function clipEmbedUrl(videoId: string, startSeconds: number | null) {
   const start = startSeconds ?? 0;
@@ -99,10 +96,6 @@ export function HeroCarousel({ movies }: { movies: FeaturedMovie[] }) {
   const [index, setIndex] = useState(0);
   const [prevIndex, setPrevIndex] = useState<number | null>(null);
   const [paused, setPaused] = useState(false);
-  // Which slide index the clip-start timer has fired for, if any — compared
-  // against the current index at render time rather than a plain boolean, so
-  // switching slides doesn't need an extra "reset to false" state update.
-  const [clipReadyIndex, setClipReadyIndex] = useState<number | null>(null);
   const [reducedMotion, setReducedMotion] = useState(
     () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches,
   );
@@ -131,16 +124,7 @@ export function HeroCarousel({ movies }: { movies: FeaturedMovie[] }) {
     return () => clearTimeout(timer);
   }, [index]);
 
-  // Landing on a slide always shows its backdrop first; the clip only takes
-  // over after a short delay, and only if the slide is still the active one
-  // and motion isn't disabled.
-  useEffect(() => {
-    if (reducedMotion) return;
-    const timer = setTimeout(() => setClipReadyIndex(index), CLIP_START_DELAY_MS);
-    return () => clearTimeout(timer);
-  }, [index, reducedMotion]);
-
-  const playClip = clipReadyIndex === index;
+  const playClip = !reducedMotion;
 
   useEffect(() => {
     if (movies.length <= 1 || paused) return;
