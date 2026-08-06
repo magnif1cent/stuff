@@ -199,7 +199,7 @@ Not every admin capability lives in this dashboard — Editors' Score, editorial
 Each slide prefers a fight scene clip over the static TMDB backdrop:
 
 - **Which scene**: for each featured movie, the highest member-rated verified fight scene is chosen, falling back to highest editor-rated, then earliest-tagged. Unverified scenes are never selected.
-- **Which moment**: the clip starts at the scene's tagged `youtubeStartSeconds` (see [Fight Scenes](#fight-scenes) below) rather than the beginning of the source video, capped to a 10-second window.
+- **Which moment**: the clip starts at the scene's tagged `youtubeStartSeconds` (see [Fight Scenes](#fight-scenes) below) rather than the beginning of the source video, capped to a 15-second window — matched to the carousel's rotation interval so a slide's clip finishes once before it advances.
 - **Playback**: muted, looping, no player controls, starts immediately when its slide becomes active.
 - **Accessibility**: never plays for visitors with `prefers-reduced-motion` set — they always see the static backdrop.
 - **Fallback**: a movie with no verified fight scene keeps the static backdrop unchanged.

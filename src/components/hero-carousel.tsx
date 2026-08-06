@@ -10,12 +10,12 @@ export type FeaturedMovie = Pick<Movie, "id" | "title" | "overview" | "backdropP
   fightSceneClip: { youtubeVideoId: string; youtubeStartSeconds: number | null } | null;
 };
 
-const ROTATE_MS = 10000;
+const ROTATE_MS = 15000;
 const FADE_MS = 700;
-// Bounded short preview, not the whole clip — long enough to read as a fight,
-// short enough to stay well under the rotation interval above so it isn't
-// cut off mid-loop before the carousel advances.
-const CLIP_SECONDS = 10;
+// Bounded short preview, not the whole clip — kept in sync with ROTATE_MS
+// above so a slide's clip gets to finish once before the carousel advances,
+// instead of always being cut off mid-loop.
+const CLIP_SECONDS = 15;
 
 function clipEmbedUrl(videoId: string, startSeconds: number | null) {
   const start = startSeconds ?? 0;
