@@ -155,7 +155,8 @@ If a member searches and can't find a movie, `/movies/submit` (linked from a "no
 
 Below the cast list on every movie page, members can catalog individual fight scenes from that film:
 
-- **Add a scene**: paste a YouTube URL (any watch/shorts/embed/`youtu.be`/live link, with an optional `t=`/`start=` timestamp), give it a title (the submitter can auto-fill from the video's public oEmbed title), tag which of the movie's own cast members are in it, and optionally attach up to 10 category tags. Requires a verified email.
+- **Add a scene**: paste a YouTube URL (any watch/shorts/embed/`youtu.be`/live link, with an optional `t=`/`start=` timestamp used as the clip's initial start time), give it a title (the submitter can auto-fill from the video's public oEmbed title), tag which of the movie's own cast members are in it, and optionally attach up to 10 category tags. Requires a verified email.
+- **Adjusting the start time**: only admins can set or change where a clip starts playing, via a "Start at" mm:ss control shown inline on each scene — no need to re-paste the YouTube link to retime it. A submitter's own edits (title, cast, tags, or even swapping the link) never touch the start time; it's admin-managed independently once the scene exists.
 - **Round numbers** aren't stored — they're computed on read as the scene's position, by creation order, among that movie's non-deleted scenes. Delete scene 2 of 3 and the old scene 3 becomes Round 2 automatically.
 - **Ratings**: members rate a scene 1–10 (one rating per member, editable); admins have a separate rating with an optional note, mirroring the movie-level Editors' Score.
 - **Verification**: admins can mark a scene "Verified" as a quality signal. Editing a scene's content clears verification, since an admin's earlier check no longer vouches for what's there now.

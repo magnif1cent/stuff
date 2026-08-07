@@ -49,6 +49,25 @@ function embedUrl(videoId: string, startSeconds: number | null) {
   return `https://www.youtube-nocookie.com/embed/${videoId}${query ? `?${query}` : ""}`;
 }
 
+// Accepts "ss", "mm:ss", or "hh:mm:ss" — whatever an admin is used to typing
+// for a video timestamp. Returns null for blank input (clears the start
+// time) or `undefined` for unparseable input, so callers can tell the two
+// apart.
+function parseMmSs(input: string): number | null | undefined {
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+  const parts = trimmed.split(":");
+  if (parts.length > 3 || parts.some((p) => !/^\d+$/.test(p))) return undefined;
+  return parts.reduce((total, part) => total * 60 + parseInt(part, 10), 0);
+}
+
+function formatMmSs(totalSeconds: number | null): string {
+  if (totalSeconds === null) return "";
+  const m = Math.floor(totalSeconds / 60);
+  const s = totalSeconds % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
 function ChipPicker({
   options,
   selected,
@@ -93,6 +112,7 @@ function FightSceneForm({
   submitting,
   onCancel,
   onSubmit,
+  isEditing = false,
 }: {
   castOptions: CastOption[];
   tagOptions: TagOption[];
@@ -104,6 +124,7 @@ function FightSceneForm({
   submitting: boolean;
   onCancel?: () => void;
   onSubmit: (title: string, youtubeUrl: string, personIds: string[], tagIds: string[]) => void;
+  isEditing?: boolean;
 }) {
   const [title, setTitle] = useState(initialTitle);
   const [url, setUrl] = useState(initialUrl);
@@ -161,8 +182,9 @@ function FightSceneForm({
         className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
       />
       <p className="text-xs text-neutral-500">
-        Tip: include a timestamp in the link (e.g. ?t=1m35s or ?t=95) to start the clip at the fight instead of the
-        beginning of the video.
+        {isEditing
+          ? "Tip: an admin can set or adjust exactly where the clip starts after you submit — no need to re-paste the link for that."
+          : "Tip: include a timestamp in the link (e.g. ?t=1m35s or ?t=95) to start the clip at the fight instead of the beginning of the video."}
       </p>
       <input
         type="text"
@@ -274,6 +296,7 @@ export function FightSceneSection({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [adminNoteDrafts, setAdminNoteDrafts] = useState<Record<string, string>>({});
+  const [startTimeDrafts, setStartTimeDrafts] = useState<Record<string, string>>({});
 
   async function handleCreate(title: string, youtubeUrl: string, personIds: string[], tagIds: string[]) {
     setSubmitting(true);
@@ -375,6 +398,33 @@ export function FightSceneSection({
     router.refresh();
   }
 
+  async function handleSetStartTime(id: string) {
+    const scene = scenes.find((s) => s.id === id);
+    const draft = startTimeDrafts[id] ?? formatMmSs(scene?.youtubeStartSeconds ?? null);
+    const startSeconds = parseMmSs(draft);
+    if (startSeconds === undefined) {
+      setError("Start time must look like mm:ss (e.g. 1:23), or blank to clear it.");
+      return;
+    }
+    setError(null);
+    const res = await fetch(`/api/movies/${movieId}/fight-scenes/${id}/start-time`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ startSeconds }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setError(body.error ?? "Something went wrong.");
+      return;
+    }
+    setScenes((prev) => prev.map((s) => (s.id === id ? { ...s, youtubeStartSeconds: startSeconds } : s)));
+    setStartTimeDrafts((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+  }
+
   async function handleVerifyToggle(id: string, verified: boolean) {
     setError(null);
     const res = await fetch(`/api/movies/${movieId}/fight-scenes/${id}/verify`, {
@@ -458,6 +508,7 @@ export function FightSceneSection({
                   submitting={submitting}
                   onCancel={() => setEditingId(null)}
                   onSubmit={(title, url, personIds, tagIds) => handleEdit(scene.id, title, url, personIds, tagIds)}
+                  isEditing
                 />
               </li>
             );
@@ -491,6 +542,22 @@ export function FightSceneSection({
                     allowFullScreen
                   />
                 </div>
+                {isAdmin && (
+                  <div className="mt-2 flex items-center justify-center gap-1.5 text-[10px]" style={{ color: TICKET_MUTED }}>
+                    <span className="uppercase tracking-wide">Start at</span>
+                    <input
+                      type="text"
+                      value={startTimeDrafts[scene.id] ?? formatMmSs(scene.youtubeStartSeconds)}
+                      onChange={(e) => setStartTimeDrafts((prev) => ({ ...prev, [scene.id]: e.target.value }))}
+                      placeholder="mm:ss"
+                      className="w-14 border bg-transparent px-1 py-0.5 text-center focus:outline-none"
+                      style={{ borderColor: TICKET_INK, color: TICKET_INK }}
+                    />
+                    <button onClick={() => handleSetStartTime(scene.id)} className="underline hover:opacity-70">
+                      Save
+                    </button>
+                  </div>
+                )}
               </div>
 
               <Link href={permalinkPath} className="mt-3 block text-lg font-bold hover:opacity-70" style={{ fontFamily: "Georgia, serif" }}>
