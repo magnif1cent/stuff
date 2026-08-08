@@ -216,6 +216,15 @@ Each slide prefers a fight scene clip over the static TMDB backdrop:
 3. Run `npx prisma migrate deploy` against the production database (Vercel's build step, or manually).
 4. Update the Google OAuth redirect URI to your production domain.
 
+## Build Version Footer
+
+Every page shows a small `Build <short commit SHA>` line in the footer (with
+a `· preview`/`· development` suffix on non-production deploys), reading
+Vercel's built-in `VERCEL_GIT_COMMIT_SHA`/`VERCEL_ENV` system environment
+variables — no setup or manual version bump needed. It exists to make "is
+this the deploy I think it is?" a glance instead of a debugging session.
+Locally (no Vercel env), it shows "Local dev build" instead.
+
 ## Project Structure
 
 - `src/app` — pages and API routes (App Router), including the `/admin` dashboard and its sub-pages (see [Admin Area](#admin-area)), the fight scene permalink route (`/movies/[id]/fight-scenes/[fightSceneId]`), member movie submission (`/movies/submit`), member profiles (`/members/[username]`), and public list permalinks (`/lists/[listId]`)

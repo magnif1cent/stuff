@@ -91,6 +91,17 @@ the site.
 
 ## Feature Decisions
 
+### Build version footer: commit SHA, not semantic versioning
+**PR #22.** A visible "which deploy is this" indicator was worth adding
+after this project's own Vercel-duplicate-project confusion earlier
+(different preview URLs looked interchangeable). Chose the short git commit
+SHA read from Vercel's built-in `VERCEL_GIT_COMMIT_SHA`/`VERCEL_ENV` env
+vars over a `v1.2.3`-style version number — semantic versioning needs a
+manual tagging/release discipline this project doesn't have anywhere else
+(continuous merges to `master`, no release process), while the commit SHA
+is accurate for free and directly answers the question that caused the
+original confusion.
+
 ### Fight scene start time is admin-only, decoupled from submitter edits
 **PR #20.** Members often add clips without a timestamp, and the only fix
 used to be re-pasting a whole new YouTube link. A submitter's own edits
@@ -208,6 +219,9 @@ time.
 
 ## Deferred & Backlog
 
+- **Move the build version indicator off the global footer** — currently
+  visible on every page for every visitor; may move to a less prominent
+  spot (e.g. an admin-only page) later. Site-wide footer was fine to start.
 - **Pagination on the per-movie fight scene list** — only the dedicated
   `/search/fight-scenes` page paginates today; a single movie's own scene
   list is still unbounded. Explicitly deferred: "not needed now."
