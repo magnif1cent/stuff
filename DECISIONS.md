@@ -259,3 +259,11 @@ time.
 - **Cross-member list browsing / "recommended lists"** — lists were made
   public specifically to leave room for this without another schema change;
   no browse UI for other members' lists exists yet beyond a direct permalink.
+- **Granular roles/permissions** — today access control is a single flat
+  `User.role: "USER" | "ADMIN"` field behind one `requireAdminSession()`
+  guard for the whole `/admin` tree. Replace with per-page/per-action
+  permissions (e.g. a `permissions: String[]` column with fixed capability
+  strings like `MANAGE_MOVIES`, `APPROVE_SUBMISSIONS`, `MANAGE_TAGS`, plus a
+  `hasPermission()` helper) so trusted non-admin moderators can be granted
+  specific actions without full admin access. Worth doing once there's a
+  concrete role split in mind, not speculatively.
