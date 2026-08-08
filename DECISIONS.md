@@ -91,6 +91,20 @@ the site.
 
 ## Feature Decisions
 
+### Recently Reviewed shows full review text, clamped, not a short excerpt
+**No PR yet.** Requested alongside a News & Updates feature (not yet
+built); this piece was built first since it needed no schema change —
+`EditorialReview` already had everything required. *Considered:* a
+short excerpt (first N characters) — rejected in favor of showing the
+full review with a CSS `line-clamp-4` + "Read full review" toggle, the
+same clamp pattern the hero carousel already uses for movie overviews,
+so visitors get the actual content instead of a teaser that requires a
+click to find out if it's relevant. Also chosen as a text-forward feed
+over reusing `MovieRail`: a bare poster tile doesn't communicate *why*
+a movie is in the list the way an excerpt does. Filtered to
+`status: "APPROVED"` movies, matching the pending-submission visibility
+gate established in PR #16.
+
 ### Build version footer: commit SHA, not semantic versioning
 **PR #22.** A visible "which deploy is this" indicator was worth adding
 after this project's own Vercel-duplicate-project confusion earlier
@@ -219,6 +233,10 @@ time.
 
 ## Deferred & Backlog
 
+- **News & Updates (admin blog)** — a new `NewsPost` model, `/admin/news`
+  CRUD, a public `/news` list page, a nav link, and a homepage teaser
+  banner for the latest post. Requested alongside Recently Reviewed;
+  Recently Reviewed was built first since it needed no schema change.
 - **Move the build version indicator off the global footer** — currently
   visible on every page for every visitor; may move to a less prominent
   spot (e.g. an admin-only page) later. Site-wide footer was fine to start.
