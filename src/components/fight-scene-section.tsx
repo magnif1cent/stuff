@@ -49,6 +49,17 @@ function embedUrl(videoId: string, startSeconds: number | null) {
   return `https://www.youtube-nocookie.com/embed/${videoId}${query ? `?${query}` : ""}`;
 }
 
+// A real youtube.com link, not the embed's own watermark tap target — the
+// nocookie embed domain isn't associated with the YouTube mobile app for
+// deep-linking, so tapping its logo can land on the channel instead of the
+// video. This link goes straight to the specific video/timestamp.
+function watchUrl(videoId: string, startSeconds: number | null) {
+  const params = new URLSearchParams();
+  if (startSeconds) params.set("t", `${startSeconds}s`);
+  const query = params.toString();
+  return `https://www.youtube.com/watch?v=${videoId}${query ? `&${query}` : ""}`;
+}
+
 // Accepts "ss", "mm:ss", or "hh:mm:ss" — whatever an admin is used to typing
 // for a video timestamp. Returns null for blank input (clears the start
 // time) or `undefined` for unparseable input, so callers can tell the two
@@ -541,6 +552,17 @@ export function FightSceneSection({
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowFullScreen
                   />
+                </div>
+                <div className="mt-1.5 flex items-center justify-center">
+                  <a
+                    href={watchUrl(scene.youtubeVideoId, scene.youtubeStartSeconds)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[10px] tracking-wide uppercase underline hover:opacity-70"
+                    style={{ color: TICKET_MUTED }}
+                  >
+                    Watch on YouTube ↗
+                  </a>
                 </div>
                 {isAdmin && (
                   <div className="mt-2 flex items-center justify-center gap-1.5 text-[10px]" style={{ color: TICKET_MUTED }}>
