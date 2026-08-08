@@ -60,3 +60,38 @@ jobs:
           else
             echo "No documentation gap detected."
           fi
+
+  # Soft, non-blocking nudge for the CLAUDE.md convention that a real
+  # judgment call (alternatives considered, an architecture/schema-shaping
+  # decision, an explicit deferral) should get an entry in DECISIONS.md in
+  # the same PR. Keyed only off prisma/schema.prisma — the one file-path
+  # signal reliable enough not to fire on most ordinary page/route work,
+  # since not every change is a "decision" worth logging. Narrower than the
+  # README check on purpose; still just a heuristic, so false positives
+  # (a schema change with no real judgment call behind it) are expected.
+  decisions-doc-check:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for likely-undocumented decisions
+        run: |
+          set -e
+          PARENT=$(git rev-parse HEAD^1 2>/dev/null || git rev-parse HEAD~1)
+          CHANGED=$(git diff --name-only "$PARENT" HEAD)
+
+          if echo "$CHANGED" | grep -qE '^prisma/schema\.prisma$' && ! echo "$CHANGED" | grep -qE '^DECISIONS\.md$'; then
+            echo "::warning::This push changed prisma/schema.prisma without touching DECISIONS.md. Per CLAUDE.md, a schema-shaping decision should get an entry in the same PR — double check this isn't a gap (a purely mechanical schema tweak is exempt)."
+            {
+              echo "## ⚠️ Possible DECISIONS.md gap"
+              echo ""
+              echo "This push changed \`prisma/schema.prisma\` without touching \`DECISIONS.md\`."
+              echo ""
+              echo "Per this repo's CLAUDE.md convention, a schema-shaping decision should get an entry in the same PR. If this is a legitimate exception (a mechanical schema tweak with no real judgment call behind it), no action needed."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No documentation gap detected."
+          fi
