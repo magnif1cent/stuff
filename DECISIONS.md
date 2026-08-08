@@ -91,7 +91,7 @@ the site.
 
 ## Feature Decisions
 
-### Recent Editor's Reviews shows full review text, clamped, not a short excerpt
+### Recent Reviews by Editors shows full review text, clamped, not a short excerpt
 **PR #23.** Requested alongside a News & Updates feature (not yet
 built); this piece was built first since it needed no schema change —
 `EditorialReview` already had everything required. *Considered:* a
@@ -241,8 +241,8 @@ time.
 
 - **News & Updates (admin blog)** — a new `NewsPost` model, `/admin/news`
   CRUD, a public `/news` list page, a nav link, and a homepage teaser
-  banner for the latest post. Requested alongside Recent Editor's Reviews;
-  Recent Editor's Reviews was built first since it needed no schema change.
+  banner for the latest post. Requested alongside Recent Reviews by Editors;
+  Recent Reviews by Editors was built first since it needed no schema change.
 - **Move the build version indicator off the global footer** — currently
   visible on every page for every visitor; may move to a less prominent
   spot (e.g. an admin-only page) later. Site-wide footer was fine to start.

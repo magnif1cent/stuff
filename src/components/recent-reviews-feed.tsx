@@ -60,7 +60,7 @@ export function RecentReviewsFeed({ reviews }: { reviews: RecentReviewItem[] }) 
 
   return (
     <section className="mx-auto w-full max-w-6xl px-4 py-8">
-      <h2 className="mb-4 font-serif text-xl font-bold text-white">Recent Editor&rsquo;s Reviews</h2>
+      <h2 className="mb-4 font-serif text-xl font-bold text-white">Recent Reviews by Editors</h2>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {reviews.map((review) => {
           const posterUrl = resolvePosterUrl(review.movie, "w200");
