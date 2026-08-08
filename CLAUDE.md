@@ -25,6 +25,27 @@ When updating README.md, verify your description against the actual code you
 just wrote (or read), not just your intent for it — this keeps the docs
 accurate rather than aspirational.
 
+## Keep DECISIONS.md in sync
+
+`README.md` documents *what* the app does; `DECISIONS.md` documents *why* it
+was built that way and what's still open. Add an entry in the same PR when
+your change involves:
+
+- A real judgment call between alternatives (a UI approach tried and
+  replaced, a library chosen over another, a scope boundary picked
+  deliberately) — goes under **Feature Decisions**.
+- An architecture/stack-level milestone (a new subsystem, a schema-shaping
+  decision, a new infra dependency, a process convention) — goes under
+  **Foundational Changes**.
+- Explicitly deferring something you considered but aren't building now —
+  goes under **Deferred & Backlog**.
+
+Don't add an entry for a pure bug fix, a mechanical refactor, or anything
+that isn't a judgment call — `git log`/the PR description already cover
+those, and a decisions log that logs everything stops being useful for
+finding the decisions that matter. Reference the PR number so the entry
+stays traceable back to the diff.
+
 ## Code integrity across parallel conversations
 
 - Keep Prisma schema changes, migrations, seed data, and any TypeScript types
