@@ -46,7 +46,11 @@ added as a visible backstop at review time.
 override in `globals.css`, so the look changes everywhere those tokens are
 used without per-component edits. The Fight Ticket card is a deliberate
 exception — kept visually distinct (cream/ink ticket-stub styling) from the
-rest of the dark theme because it's the app's differentiator feature.
+rest of the dark theme because it's the app's differentiator feature. A
+competing `--accent` token approach built independently on a parallel branch
+was dropped in favor of this one when the branches were later merged (PR
+#11) — there's only ever been one theming system in the codebase, not two
+reconciled after the fact.
 
 ### Admin area consolidated under one guard
 **PR #10.** Two admin pages had grown independently with no shared nav, each
@@ -73,7 +77,17 @@ name field that was leaking real names publicly), member-created public
 lists with a profile page at `/members/[username]`, and member movie
 submissions with admin approval (`Movie.status`/`submittedById`). Lists were
 made public by explicit design — deliberate groundwork for cross-member list
-browsing later without another schema change, not an oversight.
+browsing later without another schema change, not an oversight. Submitted
+movies start `PENDING` and stay invisible on *every* public discovery
+surface until approved — homepage, search (including the fuzzy fallback),
+navbar typeahead, autocomplete filters, weekly-trending, and any public list
+they've been added to — not just the movie's own page, since a partial gate
+would leak a pending title through a side door. Re-submitting a `tmdbId`
+already in the catalog (approved or still pending) is rejected outright
+rather than silently re-run through the shared import, since that import
+always applies whatever status it's given — without the guard, "submitting"
+an already-live movie again would demote it back to pending and pull it off
+the site.
 
 ## Feature Decisions
 
@@ -140,7 +154,29 @@ second surface, not just the scene's own card.
 username link once lists moved to the profile page. Replaced with a public
 leaderboard (Top Curators, Most-Liked Lists) instead of just deleting the
 slot. Self-likes are blocked server-side so an owner can't inflate their own
-ranking.
+ranking. Top Curators is ranked in memory rather than a SQL aggregate — the
+same tradeoff already made for fight-scene search sorting, since no clean
+aggregate spans the two-join path, and it's fine at this app's scale.
+
+### Bulk TMDB import reuses the single-movie endpoint via a client-side queue
+**PR #13.** Keyword-search bulk import runs a concurrency-limited queue of
+calls against the existing single-movie import endpoint, rather than adding
+a dedicated batch endpoint — avoids serverless timeout risk on a large
+selection, at the cost of more round-trips than one bulk call would take.
+
+### Movie rail scroll affordances only render when there's real overflow
+**PR #11.** Arrows and edge-fades on `MovieRail` are gated on actually
+measuring overflow (`scrollWidth` vs. `clientWidth`) rather than assuming
+any rail with enough items needs them — an early version false-positived on
+rails that happened to fit the viewport, showing scroll affordances for
+content that couldn't actually scroll.
+
+### One bulk-import path in the codebase, not two
+**PR #10/#11.** Two bulk-import approaches were built independently on
+parallel branches — a simple plain-ID-list importer and a CSV importer
+supporting title/year/`tmdb_id` resolution. The CSV version was kept when
+the branches merged; the simpler one was dropped entirely rather than kept
+alongside it, so there's exactly one bulk-import mechanism to reason about.
 
 ### One admin guard for the whole /admin tree; papaparse over xlsx
 **PR #10.** CSV bulk-import parsing uses `papaparse` rather than the `xlsx`
