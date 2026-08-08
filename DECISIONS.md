@@ -259,3 +259,8 @@ time.
 - **Cross-member list browsing / "recommended lists"** — lists were made
   public specifically to leave room for this without another schema change;
   no browse UI for other members' lists exists yet beyond a direct permalink.
+- **Standalone "Add a movie" entry point** — today `/movies/submit` is only
+  reachable from the "Can't find it? Add a movie" link shown on a zero-result
+  search; there's no direct nav link, button, or other path to it. Add one
+  (e.g. nav link or homepage button) so verified members can submit a movie
+  without first having to search for it and get zero results.
