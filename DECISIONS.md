@@ -92,7 +92,7 @@ the site.
 ## Feature Decisions
 
 ### Recently Reviewed shows full review text, clamped, not a short excerpt
-**No PR yet.** Requested alongside a News & Updates feature (not yet
+**PR #23.** Requested alongside a News & Updates feature (not yet
 built); this piece was built first since it needed no schema change —
 `EditorialReview` already had everything required. *Considered:* a
 short excerpt (first N characters) — rejected in favor of showing the
