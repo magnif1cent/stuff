@@ -259,3 +259,11 @@ time.
 - **Cross-member list browsing / "recommended lists"** — lists were made
   public specifically to leave room for this without another schema change;
   no browse UI for other members' lists exists yet beyond a direct permalink.
+- **Explicit "Watch on YouTube" link on fight scene cards** — fixes a
+  reported mobile bug where tapping the embedded player's own watermark
+  opens the YouTube channel instead of the specific clip, because the
+  privacy-enhanced `youtube-nocookie.com` embed domain isn't recognized by
+  the YouTube app for deep-linking. Built and pushed to
+  `claude/youtube-watch-link` (real `youtube.com/watch?v=...&t=...s` link
+  rendered below the video), previewed, but not yet opened as a PR —
+  parked in the backlog for now.
