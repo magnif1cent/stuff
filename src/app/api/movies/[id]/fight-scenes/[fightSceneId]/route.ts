@@ -26,7 +26,7 @@ export async function PATCH(
   if ("error" in result) {
     return NextResponse.json({ error: result.error }, { status: result.status });
   }
-  const { title, videoId, startSeconds, personIds, tagIds } = result;
+  const { title, videoId, personIds, tagIds } = result;
 
   const fightScene = await prisma.$transaction(async (tx) => {
     await tx.fightSceneCast.deleteMany({ where: { fightSceneId } });
@@ -35,7 +35,9 @@ export async function PATCH(
       data: {
         title,
         youtubeVideoId: videoId,
-        youtubeStartSeconds: startSeconds,
+        // Start time is admin-only (set via the separate start-time
+        // endpoint) — a submitter's edit here must not clobber it back to
+        // whatever timestamp happens to be embedded in the pasted URL.
         // Content changed, so an earlier admin verification no longer
         // vouches for what's actually there — require re-review.
         isVerified: false,
