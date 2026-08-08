@@ -168,6 +168,8 @@ Below the cast list on every movie page, members can catalog individual fight sc
 
 Admins can write a long-form review (up to 10,000 characters) for any movie, shown alongside the cast list. There's one review per movie — any admin can write or update it, and the page just tracks who last touched it.
 
+The homepage's **Recent Editor's Reviews** section surfaces the 5 most recently written-or-edited reviews (an admin revising an older review counts, not just brand-new ones) as a two-column grid of compact cards — poster thumbnail, title, reviewer, date, and the review's full text clamped to 3 lines with a "Show more" toggle once it's long enough to need one, rather than a short teaser excerpt.
+
 ## Admin Poster Overrides
 
 If a movie's TMDB poster is missing, low-quality, or wrong, admins can upload a replacement (JPEG/PNG/WebP, 5MB max) directly on the movie page. The override is stored in [Vercel Blob](https://vercel.com/docs/storage/vercel-blob) and always takes priority over the TMDB poster when set; admins can remove it to fall back to TMDB's image again.
