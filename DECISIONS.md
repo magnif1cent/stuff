@@ -92,7 +92,7 @@ the site.
 ## Feature Decisions
 
 ### Build version footer: commit SHA, not semantic versioning
-**No PR yet.** A visible "which deploy is this" indicator was worth adding
+**PR #22.** A visible "which deploy is this" indicator was worth adding
 after this project's own Vercel-duplicate-project confusion earlier
 (different preview URLs looked interchangeable). Chose the short git commit
 SHA read from Vercel's built-in `VERCEL_GIT_COMMIT_SHA`/`VERCEL_ENV` env
@@ -219,6 +219,9 @@ time.
 
 ## Deferred & Backlog
 
+- **Move the build version indicator off the global footer** — currently
+  visible on every page for every visitor; may move to a less prominent
+  spot (e.g. an admin-only page) later. Site-wide footer was fine to start.
 - **Pagination on the per-movie fight scene list** — only the dedicated
   `/search/fight-scenes` page paginates today; a single movie's own scene
   list is still unbounded. Explicitly deferred: "not needed now."
