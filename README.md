@@ -21,6 +21,7 @@ An IMDB-style website for kung fu and martial arts films, built for martial arts
 - [Auth.js (NextAuth) v5](https://authjs.dev/) — Credentials (email/password) + Google OAuth
 - [TMDB API](https://developer.themoviedb.org/docs) for movie/person data
 - [Vercel Blob](https://vercel.com/docs/storage/vercel-blob) for admin-uploaded poster overrides
+- [Vercel Web Analytics](https://vercel.com/docs/analytics) for page-view tracking (see [Web Analytics](#web-analytics) below)
 
 ## Getting Set Up
 
@@ -226,6 +227,12 @@ Vercel's built-in `VERCEL_GIT_COMMIT_SHA`/`VERCEL_ENV` system environment
 variables — no setup or manual version bump needed. It exists to make "is
 this the deploy I think it is?" a glance instead of a debugging session.
 Locally (no Vercel env), it shows "Local dev build" instead.
+
+## Web Analytics
+
+[Vercel Web Analytics](https://vercel.com/docs/analytics) is wired up via the `<Analytics />` component from `@vercel/analytics/next` in the root layout — it tracks page views once deployed, no cookies/consent banner needed (Vercel's Web Analytics is cookieless).
+
+It needs to be turned on per-project after deploying: **Vercel dashboard → this project → Analytics tab → Enable**. Until enabled there, the component is a no-op — nothing to configure locally, and no `.env` variable involved.
 
 ## Project Structure
 
