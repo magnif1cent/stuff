@@ -31,6 +31,9 @@ export async function Navbar() {
           <Link href="/leaderboard" className="text-sm text-neutral-300 hover:text-white">
             Lists
           </Link>
+          <Link href="/movies/submit" className="text-sm text-neutral-300 hover:text-white">
+            + Add Movie
+          </Link>
           {session?.user ? (
             <>
               {session.user.role === "ADMIN" && (
