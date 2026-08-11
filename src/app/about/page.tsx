@@ -17,7 +17,16 @@ export default function AboutPage() {
 
       <section className="mb-10">
         <h2 className="mb-3 font-serif text-lg font-semibold text-white">About the Creators</h2>
-        <p className="text-sm leading-relaxed text-neutral-300">Under construction.</p>
+        <div className="flex flex-col gap-4">
+          <div>
+            <h3 className="mb-1 text-sm font-medium text-neutral-100">Creator 1</h3>
+            <p className="text-sm leading-relaxed text-neutral-300">Under construction.</p>
+          </div>
+          <div>
+            <h3 className="mb-1 text-sm font-medium text-neutral-100">Creator 2</h3>
+            <p className="text-sm leading-relaxed text-neutral-300">Under construction.</p>
+          </div>
+        </div>
       </section>
 
       <section className="mb-10">
