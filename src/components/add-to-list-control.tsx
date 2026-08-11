@@ -6,17 +6,41 @@ import Link from "next/link";
 export interface AddToListItem {
   id: string;
   name: string;
-  hasMovie: boolean;
+  hasItem: boolean;
+}
+
+export type ListTarget = { type: "movie"; id: string } | { type: "fightScene"; id: string };
+
+function entriesEndpoint(listId: string, target: ListTarget) {
+  return target.type === "movie" ? `/api/lists/${listId}/entries` : `/api/lists/${listId}/fight-scene-entries`;
+}
+
+function entryBodyKey(target: ListTarget) {
+  return target.type === "movie" ? "movieId" : "fightSceneId";
+}
+
+const ICON_BUTTON_CLASS =
+  "flex h-8 w-8 items-center justify-center rounded-md border border-neutral-700 text-neutral-400 hover:border-neutral-500 hover:text-white";
+const TEXT_BUTTON_CLASS = "rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-200 hover:bg-neutral-800";
+
+function BookmarkIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+      <path d="M6 3.5h12a1 1 0 011 1V21l-7-4-7 4V4.5a1 1 0 011-1z" />
+    </svg>
+  );
 }
 
 export function AddToListControl({
-  movieId,
+  target,
   initialLists,
   signedIn,
+  variant = "button",
 }: {
-  movieId: string;
+  target: ListTarget;
   initialLists: AddToListItem[];
   signedIn: boolean;
+  variant?: "button" | "icon";
 }) {
   const [open, setOpen] = useState(false);
   const [lists, setLists] = useState(initialLists);
@@ -26,11 +50,8 @@ export function AddToListControl({
 
   if (!signedIn) {
     return (
-      <Link
-        href="/login"
-        className="rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-200 hover:bg-neutral-800"
-      >
-        + Add to list
+      <Link href="/login" title="Save to list" className={variant === "icon" ? ICON_BUTTON_CLASS : TEXT_BUTTON_CLASS}>
+        {variant === "icon" ? <BookmarkIcon /> : "+ Add to list"}
       </Link>
     );
   }
@@ -39,11 +60,11 @@ export function AddToListControl({
     setBusy(true);
     setError(null);
     const res = await fetch(
-      list.hasMovie ? `/api/lists/${list.id}/entries/${movieId}` : `/api/lists/${list.id}/entries`,
+      list.hasItem ? `${entriesEndpoint(list.id, target)}/${target.id}` : entriesEndpoint(list.id, target),
       {
-        method: list.hasMovie ? "DELETE" : "POST",
+        method: list.hasItem ? "DELETE" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: list.hasMovie ? undefined : JSON.stringify({ movieId }),
+        body: list.hasItem ? undefined : JSON.stringify({ [entryBodyKey(target)]: target.id }),
       },
     );
     setBusy(false);
@@ -52,7 +73,7 @@ export function AddToListControl({
       setError(body.error ?? "Something went wrong.");
       return;
     }
-    setLists((prev) => prev.map((l) => (l.id === list.id ? { ...l, hasMovie: !l.hasMovie } : l)));
+    setLists((prev) => prev.map((l) => (l.id === list.id ? { ...l, hasItem: !l.hasItem } : l)));
   }
 
   async function createAndAdd(e: React.FormEvent) {
@@ -72,10 +93,10 @@ export function AddToListControl({
       return;
     }
 
-    const addRes = await fetch(`/api/lists/${createBody.list.id}/entries`, {
+    const addRes = await fetch(entriesEndpoint(createBody.list.id, target), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ movieId }),
+      body: JSON.stringify({ [entryBodyKey(target)]: target.id }),
     });
     setBusy(false);
     if (!addRes.ok) {
@@ -83,26 +104,23 @@ export function AddToListControl({
       setError(addBody.error ?? "Something went wrong.");
       return;
     }
-    setLists((prev) => [...prev, { id: createBody.list.id, name: createBody.list.name, hasMovie: true }]);
+    setLists((prev) => [...prev, { id: createBody.list.id, name: createBody.list.name, hasItem: true }]);
     setNewName("");
   }
 
   return (
     <div className="relative inline-block">
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-200 hover:bg-neutral-800"
-      >
-        + Add to list
+      <button onClick={() => setOpen((v) => !v)} title="Save to list" className={variant === "icon" ? ICON_BUTTON_CLASS : TEXT_BUTTON_CLASS}>
+        {variant === "icon" ? <BookmarkIcon /> : "+ Add to list"}
       </button>
       {open && (
-        <div className="absolute z-10 mt-2 w-64 rounded-md border border-neutral-700 bg-neutral-900 p-3 shadow-xl">
+        <div className="absolute right-0 z-10 mt-2 w-64 rounded-md border border-neutral-700 bg-neutral-900 p-3 shadow-xl">
           {error && <p className="mb-2 text-xs text-red-500">{error}</p>}
           <ul className="mb-3 flex max-h-48 flex-col gap-1 overflow-y-auto">
             {lists.map((list) => (
               <li key={list.id}>
                 <label className="flex items-center gap-2 text-sm text-neutral-200">
-                  <input type="checkbox" checked={list.hasMovie} disabled={busy} onChange={() => toggle(list)} />
+                  <input type="checkbox" checked={list.hasItem} disabled={busy} onChange={() => toggle(list)} />
                   {list.name}
                 </label>
               </li>

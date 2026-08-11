@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -58,6 +59,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
     myRating,
     myListEntries,
     myMemberLists,
+    myFightSceneFavorites,
     discussionPage,
     fightScenes,
     fightSceneTags,
@@ -77,7 +79,15 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
       ? prisma.memberList.findMany({
           where: { userId: session.user.id },
           orderBy: { createdAt: "asc" },
-          include: { entries: { where: { movieId: movie.id }, select: { id: true } } },
+          include: {
+            entries: { where: { movieId: movie.id }, select: { id: true } },
+            fightSceneEntries: { select: { fightSceneId: true } },
+          },
+        })
+      : [],
+    session?.user
+      ? prisma.fightSceneFavorite.findMany({
+          where: { userId: session.user.id, fightScene: { movieId: movie.id } },
         })
       : [],
     getDiscussionPage(movie.id),
@@ -92,8 +102,19 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
   const myMemberListItems = myMemberLists.map((list) => ({
     id: list.id,
     name: list.name,
-    hasMovie: list.entries.length > 0,
+    hasItem: list.entries.length > 0,
   }));
+
+  const myFavoriteFightSceneIds = myFightSceneFavorites.map((e) => e.fightSceneId);
+
+  // Per fight scene, which of the member's lists already contain it — a
+  // scene-scoped view of the same myMemberLists rows fetched above.
+  const mySavedFightSceneListIds: Record<string, string[]> = {};
+  for (const scene of fightScenes) {
+    mySavedFightSceneListIds[scene.id] = myMemberLists
+      .filter((list) => list.fightSceneEntries.some((e) => e.fightSceneId === scene.id))
+      .map((list) => list.id);
+  }
 
   const myAdminRating = session?.user?.role === "ADMIN"
     ? await prisma.adminRating.findUnique({
@@ -258,7 +279,11 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
               initialWatchlist={isOnWatchlist}
               signedIn={!!session?.user}
             />
-            <AddToListControl movieId={movie.id} initialLists={myMemberListItems} signedIn={!!session?.user} />
+            <AddToListControl
+              target={{ type: "movie", id: movie.id }}
+              initialLists={myMemberListItems}
+              signedIn={!!session?.user}
+            />
           </div>
 
           <div className="mt-6 max-w-sm">
@@ -287,7 +312,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
             <h2 className="mb-4 font-serif text-xl font-bold text-white">Cast</h2>
             <div className="rail-scrollbar flex gap-4 overflow-x-auto pb-2">
               {movie.cast.map((credit) => (
-                <div key={credit.id} className="w-28 shrink-0 text-center">
+                <Link key={credit.id} href={`/actors/${credit.person.id}`} className="w-28 shrink-0 text-center hover:opacity-80">
                   <div className="relative mb-1 aspect-square overflow-hidden rounded-full bg-neutral-800">
                     {credit.person.profilePath ? (
                       <Image
@@ -303,7 +328,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
                   {credit.characterName && (
                     <p className="truncate text-xs text-neutral-500">{credit.characterName}</p>
                   )}
-                </div>
+                </Link>
               ))}
             </div>
           </section>
@@ -325,6 +350,9 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
           isAdmin={session?.user?.role === "ADMIN"}
           myRatings={myFightSceneRatingMap}
           myAdminRatings={myFightSceneAdminRatingMap}
+          myMemberLists={myMemberLists.map((list) => ({ id: list.id, name: list.name }))}
+          mySavedListIdsByScene={mySavedFightSceneListIds}
+          myFavoriteSceneIds={myFavoriteFightSceneIds}
         />
 
         <DiscussionThread

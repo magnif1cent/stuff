@@ -3,14 +3,23 @@
 import { useState } from "react";
 import Link from "next/link";
 import { MovieCard, type MovieCardData } from "@/components/movie-card";
+import { FightSceneResultCard, type FightSceneResult } from "@/components/fight-scene-result-card";
+import type { AddToListItem } from "@/components/add-to-list-control";
 
 export interface MemberListData {
   id: string;
   name: string;
   movies: MovieCardData[];
+  fightScenes: (FightSceneResult & { initialLists: AddToListItem[]; initialFavorite: boolean })[];
 }
 
-export function MemberListManager({ initialLists }: { initialLists: MemberListData[] }) {
+export function MemberListManager({
+  initialLists,
+  viewerSignedIn,
+}: {
+  initialLists: MemberListData[];
+  viewerSignedIn: boolean;
+}) {
   const [lists, setLists] = useState(initialLists);
   const [newName, setNewName] = useState("");
   const [creating, setCreating] = useState(false);
@@ -34,7 +43,7 @@ export function MemberListManager({ initialLists }: { initialLists: MemberListDa
       setError(body.error ?? "Something went wrong.");
       return;
     }
-    setLists((prev) => [...prev, { id: body.list.id, name: body.list.name, movies: [] }]);
+    setLists((prev) => [...prev, { id: body.list.id, name: body.list.name, movies: [], fightScenes: [] }]);
     setNewName("");
   }
 
@@ -132,12 +141,23 @@ export function MemberListManager({ initialLists }: { initialLists: MemberListDa
               </>
             )}
           </div>
-          {list.movies.length === 0 ? (
-            <p className="text-sm text-neutral-400">No movies yet — add some from a movie&rsquo;s page.</p>
+          {list.movies.length === 0 && list.fightScenes.length === 0 ? (
+            <p className="text-sm text-neutral-400">
+              Nothing here yet — add movies or fight scenes from their own pages.
+            </p>
           ) : (
             <div className="flex flex-wrap gap-4">
               {list.movies.map((movie) => (
                 <MovieCard key={movie.id} movie={movie} />
+              ))}
+              {list.fightScenes.map((scene) => (
+                <FightSceneResultCard
+                  key={scene.id}
+                  scene={scene}
+                  initialLists={scene.initialLists}
+                  signedIn={viewerSignedIn}
+                  initialFavorite={scene.initialFavorite}
+                />
               ))}
             </div>
           )}

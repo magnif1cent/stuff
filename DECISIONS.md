@@ -91,6 +91,89 @@ the site.
 
 ## Feature Decisions
 
+### Actor pages browse-only for now, not wired into the search actor filter
+**PR #TBD (branch `claude/save-fight-scenes-to-lists`).** New `/actors/[personId]`
+pages (filmography + every tagged fight scene, reusing existing card
+components) needed entry points. Linked from a movie's Cast section and a
+fight scene's "Featuring" line, both of which already show one specific
+person. *Considered:* also linking out from `/search/fight-scenes`'s actor
+filter — passed on it, since that filter is `AutocompleteFilterInput`, a
+plain name-string autocomplete shared with the unrelated director filter;
+it returns names for filling the search form, not person IDs, and has no
+per-suggestion click target. Reworking a shared component for one of its
+two use cases wasn't worth it for a filter whose job (narrow results to
+one actor) is already satisfied without a profile link. No actor search of
+its own exists yet either — browsing via Cast/Featuring links is the only
+way in for now.
+
+### Per-movie fight scene pagination is a client-side "Show more," not URL-based paging
+**PR #TBD (branch `claude/save-fight-scenes-to-lists`).** `/search/fight-scenes`
+already paginates via `?page=` and a server round-trip per page — the
+per-movie list on a movie's own page didn't. *Considered:* the same
+URL-based pattern — rejected because `FightSceneSection` is a client
+component holding a lot of local mutable state (create/edit/delete,
+in-place round-number reflow, draft inputs), and a `?page=` navigation
+would either reset all of that or need it threaded through the URL for no
+real benefit — a movie's scene count is small enough that fetching all of
+them up front (as it already did) isn't a backend concern; the only goal
+was not dumping dozens of ticket cards on the page at once. So the fetch
+stays as-is and a `visibleCount` client state slices the already-sorted
+list, revealed 6 at a time via a "Show more" button — no route change, no
+loss of in-progress edits when a page is revealed.
+
+### Fight scenes get a one-tap Favorite, deliberately no Watchlist
+**PR #TBD (branch `claude/save-fight-scenes-to-lists`).** After building
+custom-list saving for fight scenes (see the `MemberListFightSceneEntry`
+entry below), a follow-up question was whether to also extend movies'
+one-tap Favorite/Watchlist toggle (`ListEntry`, `listType:
+"FAVORITE"|"WATCHLIST"`, distinct from custom lists) to fight scenes for
+UI consistency. *Considered and initially built:* the full pair, mirroring
+`ListEntry` as `FightSceneListEntry` with the same `listType` split —
+reverted after further thought: a Watchlist is "something to get to later,"
+which fits a two-hour movie but not a clip that takes thirty seconds to
+watch right where it's already linked, so the *scene* version of Watchlist
+had no real use case, and *Favorite* — a one-tap toggle for the two-second
+"I like this specific fight," a genuinely different interaction from
+picking from a multi-select list — is the one worth keeping. Modeled as
+`FightSceneFavorite` (`userId`, `fightSceneId`, unique on the pair, no
+`listType` column since there's only ever one kind, unlike `ListEntry`).
+A standalone `FavoriteButton` component (a single heart icon, red when
+active) replaced routing fight scenes through `ListButtons` — forcing a
+single-button case through a component built for a pair would have been
+more awkward than the small duplication of a heart icon button.
+`ListButtons` itself stayed movie-only. Wired into the same six places
+`MemberListFightSceneEntry` was, plus a "Favorite Fight Scenes" section on
+the member's own profile page below the existing movie Favorites/Watchlist
+rows (no "Fight Scene Watchlist" counterpart, per the above). The heart
+shape (not a star) and its red active color were an explicit request,
+carried back to the movie-level Favorite button's own icon/text for
+consistency in the other direction.
+
+### Saved fight scenes get their own MemberListFightSceneEntry model, not a nullable column on MemberListEntry
+**PR #TBD (branch `claude/save-fight-scenes-to-lists`).** Extending member
+lists to hold fight scenes needed a schema decision: add nullable
+`movieId`/`fightSceneId` columns to the existing `MemberListEntry` with an
+app-level "exactly one is set" rule, or a separate mirrored entry model.
+*Considered:* the nullable-column approach — rejected in favor of a second
+model (`MemberListFightSceneEntry`, unique on `[listId, fightSceneId]`),
+matching the established convention of mirroring shapes for a new content
+type (see Fight Scenes' own PR #4 entry above) rather than inventing a
+polymorphic one; it keeps both foreign keys required and avoids a
+CHECK-constraint or XOR-validation layer just to keep one row from having
+both or neither reference set. `AddToListControl` was generalized instead
+of duplicated — it now takes a `target: {type: "movie"|"fightScene", id}`
+discriminated prop and picks the right endpoint/body key, since the
+dropdown/create-list UI is otherwise identical between the two. It also
+gained a compact `variant="icon"` (a bookmark icon, same treatment as
+`ShareButton`'s existing icon variant) so it fits in the Fight Ticket
+card's top row next to the share icon without disrupting that card's
+compact layout. Wired into every page that renders a fight scene card —
+a movie's own Fight Scenes section, a scene's permalink page, fight scene
+search results, a public list page, and a member's own list-management
+view — each fetching the *viewing* member's own lists (not the page
+subject's), so anyone can bookmark a scene into their own list regardless
+of whose page they found it on.
+
 ### Recent Reviews by Editors shows full review text, clamped, not a short excerpt
 **PR #23.** Requested alongside a News & Updates feature (not yet
 built); this piece was built first since it needed no schema change —
@@ -264,9 +347,6 @@ time.
 - **Move the build version indicator off the global footer** — currently
   visible on every page for every visitor; may move to a less prominent
   spot (e.g. an admin-only page) later. Site-wide footer was fine to start.
-- **Pagination on the per-movie fight scene list** — only the dedicated
-  `/search/fight-scenes` page paginates today; a single movie's own scene
-  list is still unbounded. Explicitly deferred: "not needed now."
 - **Editor's Picks rail** — homepage rail surfacing highest editor-rated
   movies; the data model already supports it, the homepage doesn't surface it.
 - **Top Rated Fight Scenes rail** — homepage rail using existing fight-scene

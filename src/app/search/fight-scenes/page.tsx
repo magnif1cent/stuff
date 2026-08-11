@@ -1,5 +1,6 @@
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getFightSceneRatingSummaries, getFightSceneAdminRatingSummaries } from "@/lib/fight-scenes";
+import { getFightSceneRatingSummaries, getFightSceneAdminRatingSummaries, getFightSceneFavoriteCounts } from "@/lib/fight-scenes";
 import { parseRatingFilter } from "@/lib/rating-filter";
 import { FightSceneResultCard } from "@/components/fight-scene-result-card";
 import { RatingStarInput } from "@/components/rating-star-input";
@@ -20,6 +21,7 @@ const SORT_OPTIONS = [
   { value: "newest", label: "Newest" },
   { value: "memberRating", label: "Highest Member Rated" },
   { value: "editorRating", label: "Highest Editor Rated" },
+  { value: "mostFavorited", label: "Most Favorited" },
 ] as const;
 
 const PAGE_SIZE = 24;
@@ -45,6 +47,7 @@ export default async function FightSceneSearchPage({
   searchParams: Promise<FightSceneSearchParams>;
 }) {
   const params = await searchParams;
+  const session = await auth();
   const query = params.q?.trim() ?? "";
   const selectedTags = Array.isArray(params.tag) ? params.tag : params.tag ? [params.tag] : [];
   const actor = params.actor?.trim() ?? "";
@@ -83,9 +86,10 @@ export default async function FightSceneSearchPage({
     });
   }
 
-  const [memberSummaries, editorSummaries] = await Promise.all([
+  const [memberSummaries, editorSummaries, favoriteCounts] = await Promise.all([
     getFightSceneRatingSummaries(scenes.map((s) => s.id)),
     getFightSceneAdminRatingSummaries(scenes.map((s) => s.id)),
+    getFightSceneFavoriteCounts(scenes.map((s) => s.id)),
   ]);
 
   if (memberRating !== undefined) {
@@ -103,6 +107,8 @@ export default async function FightSceneSearchPage({
     scenes = [...scenes].sort(
       (a, b) => (editorSummaries.get(b.id)?.average ?? -1) - (editorSummaries.get(a.id)?.average ?? -1),
     );
+  } else if (sort === "mostFavorited") {
+    scenes = [...scenes].sort((a, b) => (favoriteCounts.get(b.id) ?? 0) - (favoriteCounts.get(a.id) ?? 0));
   }
   // "newest" is already the fetch order (createdAt desc), so no re-sort needed.
 
@@ -110,6 +116,23 @@ export default async function FightSceneSearchPage({
   const totalPages = Math.max(1, Math.ceil(totalResults / PAGE_SIZE));
   const page = Math.min(Math.max(1, Number(params.page) || 1), totalPages);
   const pagedScenes = scenes.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  const myMemberLists = session?.user
+    ? await prisma.memberList.findMany({
+        where: { userId: session.user.id },
+        orderBy: { createdAt: "asc" },
+        include: {
+          fightSceneEntries: { where: { fightSceneId: { in: pagedScenes.map((s) => s.id) } }, select: { fightSceneId: true } },
+        },
+      })
+    : [];
+  const myMemberListItems = myMemberLists.map((list) => ({ id: list.id, name: list.name }));
+
+  const myFightSceneFavorites = session?.user
+    ? await prisma.fightSceneFavorite.findMany({
+        where: { userId: session.user.id, fightSceneId: { in: pagedScenes.map((s) => s.id) } },
+      })
+    : [];
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-10 sm:flex-row">
@@ -222,6 +245,10 @@ export default async function FightSceneSearchPage({
               {pagedScenes.map((scene) => {
                 const memberSummary = memberSummaries.get(scene.id);
                 const editorSummary = editorSummaries.get(scene.id);
+                const initialLists = myMemberListItems.map((list) => {
+                  const listRow = myMemberLists.find((l) => l.id === list.id)!;
+                  return { ...list, hasItem: listRow.fightSceneEntries.some((e) => e.fightSceneId === scene.id) };
+                });
                 return (
                   <FightSceneResultCard
                     key={scene.id}
@@ -232,6 +259,9 @@ export default async function FightSceneSearchPage({
                       editorRatingAverage: editorSummary?.average ?? null,
                       editorRatingCount: editorSummary?.count ?? 0,
                     }}
+                    initialLists={initialLists}
+                    signedIn={!!session?.user}
+                    initialFavorite={myFightSceneFavorites.some((e) => e.fightSceneId === scene.id)}
                   />
                 );
               })}
