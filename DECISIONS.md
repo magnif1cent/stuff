@@ -91,8 +91,20 @@ the site.
 
 ## Feature Decisions
 
+### Standalone "Add Movie" nav link, always visible rather than gated on sign-in
+**PR #TBD.** `/movies/submit` was previously only reachable via the "Can't
+find it? Add a movie" link on a zero-result search — no direct nav link.
+Added a "+ Add Movie" link to the site nav, next to Movies/Fights/Lists.
+*Considered:* showing it only to signed-in members, matching the Admin
+link's conditional pattern — rejected in favor of matching Movies/Fights/
+Lists' always-visible pattern instead, since `/movies/submit` already
+handles a signed-out visitor correctly on its own (redirects to `/login`
+with the right `callbackUrl`, same as every other gated action in the
+app) — no need to duplicate that gate in the nav itself. The zero-result
+search link stays as a second, more contextual entry point.
+
 ### Actor pages browse-only for now, not wired into the search actor filter
-**PR #TBD (branch `claude/save-fight-scenes-to-lists`).** New `/actors/[personId]`
+**PR #28.** New `/actors/[personId]`
 pages (filmography + every tagged fight scene, reusing existing card
 components) needed entry points. Linked from a movie's Cast section and a
 fight scene's "Featuring" line, both of which already show one specific
@@ -107,7 +119,7 @@ its own exists yet either — browsing via Cast/Featuring links is the only
 way in for now.
 
 ### Per-movie fight scene pagination is a client-side "Show more," not URL-based paging
-**PR #TBD (branch `claude/save-fight-scenes-to-lists`).** `/search/fight-scenes`
+**PR #28.** `/search/fight-scenes`
 already paginates via `?page=` and a server round-trip per page — the
 per-movie list on a movie's own page didn't. *Considered:* the same
 URL-based pattern — rejected because `FightSceneSection` is a client
@@ -122,7 +134,7 @@ list, revealed 6 at a time via a "Show more" button — no route change, no
 loss of in-progress edits when a page is revealed.
 
 ### Fight scenes get a one-tap Favorite, deliberately no Watchlist
-**PR #TBD (branch `claude/save-fight-scenes-to-lists`).** After building
+**PR #28.** After building
 custom-list saving for fight scenes (see the `MemberListFightSceneEntry`
 entry below), a follow-up question was whether to also extend movies'
 one-tap Favorite/Watchlist toggle (`ListEntry`, `listType:
@@ -150,7 +162,7 @@ carried back to the movie-level Favorite button's own icon/text for
 consistency in the other direction.
 
 ### Saved fight scenes get their own MemberListFightSceneEntry model, not a nullable column on MemberListEntry
-**PR #TBD (branch `claude/save-fight-scenes-to-lists`).** Extending member
+**PR #28.** Extending member
 lists to hold fight scenes needed a schema decision: add nullable
 `movieId`/`fightSceneId` columns to the existing `MemberListEntry` with an
 app-level "exactly one is set" rule, or a separate mirrored entry model.

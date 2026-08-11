@@ -148,7 +148,7 @@ Beyond the built-in Favorites and Watchlist, members can create any number of th
 
 ## Member Movie Submissions
 
-If a member searches and can't find a movie, `/movies/submit` (linked from a "no results" search) lets them search TMDB and submit a match directly — the same underlying TMDB import used by `/admin/import`, but scoped to one title at a time and requiring a verified email.
+`/movies/submit` lets a member search TMDB and submit a match directly — the same underlying TMDB import used by `/admin/import`, but scoped to one title at a time and requiring a verified email. Reachable two ways: a "+ Add Movie" link in the site nav (visible to everyone; signing in is only required to actually submit), or the "Can't find it? Add a movie" link shown on a zero-result search.
 
 - **Submissions start `PENDING`**, not live: hidden from the homepage, search (including the navbar's), autocomplete director/actor filters, and the weekly-trending computation, and its own movie page 404s for everyone except the submitter and admins. This mirrors fight-scene verification's "member-created content, admin-gated visibility" pattern rather than admin imports' "goes live immediately" one, since anyone can trigger this path, not just a trusted admin.
 - Submitting a `tmdbId` that's already in the catalog (approved or still pending) is rejected with a specific error rather than silently re-importing it — re-running the shared import logic on an existing row would otherwise reset an already-approved movie back to pending.
