@@ -52,7 +52,7 @@ export function ListButtons({
               : "border-neutral-700 text-neutral-200 hover:bg-neutral-800"
           }`}
         >
-          {favorite ? "★ Favorited" : "☆ Favorite"}
+          {favorite ? "♥ Favorited" : "♡ Favorite"}
         </button>
         <button
           onClick={() => toggle("WATCHLIST")}

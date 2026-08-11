@@ -1,5 +1,7 @@
 import Link from "next/link";
 import type { FightScene, FightSceneTag, Movie } from "@/generated/prisma/client";
+import { AddToListControl, type AddToListItem } from "@/components/add-to-list-control";
+import { FavoriteButton } from "@/components/favorite-button";
 
 // Same "Fight Ticket" palette as fight-scene-section.tsx — kept in sync
 // manually since this is a read-only result card, not the interactive one.
@@ -19,7 +21,17 @@ export type FightSceneResult = Pick<
   editorRatingCount: number;
 };
 
-export function FightSceneResultCard({ scene }: { scene: FightSceneResult }) {
+export function FightSceneResultCard({
+  scene,
+  initialLists = [],
+  signedIn = false,
+  initialFavorite = false,
+}: {
+  scene: FightSceneResult;
+  initialLists?: AddToListItem[];
+  signedIn?: boolean;
+  initialFavorite?: boolean;
+}) {
   const year = scene.movie.releaseDate ? new Date(scene.movie.releaseDate).getFullYear() : null;
   const permalink = `/movies/${scene.movieId}/fight-scenes/${scene.id}`;
   const memberLabel = scene.memberRatingAverage ? scene.memberRatingAverage.toFixed(1) : "—";
@@ -33,10 +45,24 @@ export function FightSceneResultCard({ scene }: { scene: FightSceneResult }) {
           "polygon(0 10px, 10px 0, calc(100% - 10px) 0, 100% 10px, 100% calc(100% - 10px), calc(100% - 10px) 100%, 10px 100%, 0 calc(100% - 10px))",
       }}
     >
-      <div className="flex items-center justify-between text-[10px] tracking-wider uppercase" style={{ color: TICKET_MUTED }}>
+      <div className="flex items-center justify-between gap-2 text-[10px] tracking-wider uppercase" style={{ color: TICKET_MUTED }}>
         <Link href={`/movies/${scene.movieId}`} className="truncate hover:opacity-70">
           {scene.movie.title} {year && `(${year})`}
         </Link>
+        <div className="flex shrink-0 items-center gap-1.5">
+          <FavoriteButton
+            movieId={scene.movieId}
+            fightSceneId={scene.id}
+            initialFavorite={initialFavorite}
+            signedIn={signedIn}
+          />
+          <AddToListControl
+            target={{ type: "fightScene", id: scene.id }}
+            initialLists={initialLists}
+            signedIn={signedIn}
+            variant="icon"
+          />
+        </div>
       </div>
 
       <div className="mt-3 border-t-2 border-dashed pt-3" style={{ borderColor: "#b8ab8c" }}>

@@ -95,6 +95,18 @@ export async function getFightSceneAdminRatingSummaries(
   return map;
 }
 
+export async function getFightSceneFavoriteCounts(fightSceneIds: string[]): Promise<Map<string, number>> {
+  if (fightSceneIds.length === 0) return new Map();
+
+  const rows = await prisma.fightSceneFavorite.groupBy({
+    by: ["fightSceneId"],
+    where: { fightSceneId: { in: fightSceneIds } },
+    _count: { _all: true },
+  });
+
+  return new Map(rows.map((row) => [row.fightSceneId, row._count._all]));
+}
+
 // Picks one verified fight scene per movie to preview as a hero clip:
 // highest member rating, falling back to editor rating, falling back to
 // whichever was tagged first (stable rather than random across page loads).

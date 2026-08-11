@@ -5,9 +5,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { FightSceneCast, FightSceneTag, Person, User } from "@/generated/prisma/client";
 import { ShareButton } from "@/components/share-button";
+import { AddToListControl, type AddToListItem } from "@/components/add-to-list-control";
+import { FavoriteButton } from "@/components/favorite-button";
 
 const SCORES = Array.from({ length: 10 }, (_, i) => i + 1);
 const MAX_NOTE_LENGTH = 2000;
+// How many scenes render before a "Show more" click is needed — enough for
+// two full rows on the widest (3-column) layout.
+const SCENES_PAGE_SIZE = 6;
 const MAX_TITLE_LENGTH = 200;
 
 export type CastOption = Pick<Person, "id" | "name">;
@@ -272,6 +277,9 @@ export function FightSceneSection({
   isAdmin,
   myRatings,
   myAdminRatings,
+  myMemberLists = [],
+  mySavedListIdsByScene = {},
+  myFavoriteSceneIds = [],
   heading = "Fight Scenes",
   allowAdd = true,
 }: {
@@ -284,6 +292,12 @@ export function FightSceneSection({
   isAdmin: boolean;
   myRatings: Record<string, number>;
   myAdminRatings: Record<string, number>;
+  // The signed-in member's public lists, and which of those already contain
+  // each scene — used to seed the "save to list" control per card.
+  myMemberLists?: { id: string; name: string }[];
+  mySavedListIdsByScene?: Record<string, string[]>;
+  // Which scenes the signed-in member has already favorited.
+  myFavoriteSceneIds?: string[];
   heading?: string | null;
   allowAdd?: boolean;
 }) {
@@ -297,6 +311,7 @@ export function FightSceneSection({
   const [error, setError] = useState<string | null>(null);
   const [adminNoteDrafts, setAdminNoteDrafts] = useState<Record<string, string>>({});
   const [startTimeDrafts, setStartTimeDrafts] = useState<Record<string, string>>({});
+  const [visibleCount, setVisibleCount] = useState(SCENES_PAGE_SIZE);
 
   async function handleCreate(title: string, youtubeUrl: string, personIds: string[], tagIds: string[]) {
     setSubmitting(true);
@@ -327,6 +342,7 @@ export function FightSceneSection({
       },
     ]);
     setAdding(false);
+    setVisibleCount((prev) => prev + 1);
   }
 
   async function handleEdit(id: string, title: string, youtubeUrl: string, personIds: string[], tagIds: string[]) {
@@ -440,6 +456,14 @@ export function FightSceneSection({
     setScenes((prev) => prev.map((s) => (s.id === id ? { ...s, isVerified: verified } : s)));
   }
 
+  // Always sorted by round number left-to-right/top-to-bottom, regardless of
+  // insertion order from create/edit/delete. Only the first page's worth
+  // renders until "Show more" is clicked, so a movie with many scenes
+  // doesn't dump them all on the page at once.
+  const sortedScenes = [...scenes].sort((a, b) => a.roundNumber - b.roundNumber);
+  const visibleScenes = sortedScenes.slice(0, visibleCount);
+  const remainingSceneCount = sortedScenes.length - visibleScenes.length;
+
   return (
     <section className="mt-10">
       {heading && (
@@ -488,9 +512,7 @@ export function FightSceneSection({
       )}
 
       <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {/* Always sorted by round number left-to-right/top-to-bottom, regardless
-            of insertion order from create/edit/delete. */}
-        {[...scenes].sort((a, b) => a.roundNumber - b.roundNumber).map((scene) => {
+        {visibleScenes.map((scene) => {
           const canEdit = currentUserId === scene.submittedById;
           const canDelete = canEdit || isAdmin;
           const permalinkPath = `/movies/${movieId}/fight-scenes/${scene.id}`;
@@ -515,6 +537,12 @@ export function FightSceneSection({
           }
 
           const avgLabel = scene.ratingAverage ? scene.ratingAverage.toFixed(1) : "—";
+          const savedListIds = mySavedListIdsByScene[scene.id] ?? [];
+          const listItems: AddToListItem[] = myMemberLists.map((list) => ({
+            id: list.id,
+            name: list.name,
+            hasItem: savedListIds.includes(list.id),
+          }));
 
           return (
             <li
@@ -528,7 +556,21 @@ export function FightSceneSection({
             >
               <div className="flex items-center justify-between text-[10px] tracking-wider uppercase" style={{ color: TICKET_MUTED }}>
                 <span>Round {scene.roundNumber}</span>
-                <ShareButton path={permalinkPath} title={scene.title} variant="icon" />
+                <div className="flex items-center gap-1.5">
+                  <FavoriteButton
+                    movieId={movieId}
+                    fightSceneId={scene.id}
+                    initialFavorite={myFavoriteSceneIds.includes(scene.id)}
+                    signedIn={signedIn}
+                  />
+                  <AddToListControl
+                    target={{ type: "fightScene", id: scene.id }}
+                    initialLists={listItems}
+                    signedIn={signedIn}
+                    variant="icon"
+                  />
+                  <ShareButton path={permalinkPath} title={scene.title} variant="icon" />
+                </div>
               </div>
 
               <div className="mt-3 border-t-2 border-dashed pt-3" style={{ borderColor: "#b8ab8c" }}>
@@ -565,7 +607,15 @@ export function FightSceneSection({
               </Link>
               {scene.cast.length > 0 && (
                 <p className="mt-0.5 text-[11px] tracking-wide uppercase" style={{ color: TICKET_MUTED }}>
-                  Featuring {scene.cast.map((c) => c.person.name).join(", ")}
+                  Featuring{" "}
+                  {scene.cast.map((c, i) => (
+                    <span key={c.person.id}>
+                      {i > 0 && ", "}
+                      <Link href={`/actors/${c.person.id}`} className="hover:underline">
+                        {c.person.name}
+                      </Link>
+                    </span>
+                  ))}
                 </p>
               )}
 
@@ -663,6 +713,14 @@ export function FightSceneSection({
           <p className="text-sm text-neutral-500">No fight scenes added yet.</p>
         )}
       </ul>
+      {remainingSceneCount > 0 && (
+        <button
+          onClick={() => setVisibleCount((prev) => prev + SCENES_PAGE_SIZE)}
+          className="mt-4 w-full rounded-md border border-neutral-700 py-2 text-sm text-neutral-300 hover:bg-neutral-800"
+        >
+          Show more ({remainingSceneCount} more)
+        </button>
+      )}
     </section>
   );
 }

@@ -46,7 +46,7 @@ export default async function FightScenePage({ params }: { params: Promise<Param
     notFound();
   }
 
-  const [movieCast, tagOptions, ratingSummaries, adminRatingSummaries, myRating, myAdminRating, roundNumbers] =
+  const [movieCast, tagOptions, ratingSummaries, adminRatingSummaries, myRating, myAdminRating, roundNumbers, myMemberLists, myFightSceneFavorites] =
     await Promise.all([
       prisma.castCredit.findMany({ where: { movieId }, include: { person: true } }),
       getFightSceneTags(),
@@ -63,6 +63,16 @@ export default async function FightScenePage({ params }: { params: Promise<Param
           })
         : null,
       getFightSceneRoundNumbers(movieId),
+      session?.user
+        ? prisma.memberList.findMany({
+            where: { userId: session.user.id },
+            orderBy: { createdAt: "asc" },
+            include: { fightSceneEntries: { where: { fightSceneId: scene.id }, select: { id: true } } },
+          })
+        : [],
+      session?.user
+        ? prisma.fightSceneFavorite.findMany({ where: { userId: session.user.id, fightSceneId: scene.id } })
+        : [],
     ]);
 
   const summary = ratingSummaries.get(scene.id);
@@ -88,6 +98,11 @@ export default async function FightScenePage({ params }: { params: Promise<Param
   };
 
   const castOptions = movieCast.map((credit) => ({ id: credit.person.id, name: credit.person.name }));
+  const myMemberListItems = myMemberLists.map((list) => ({ id: list.id, name: list.name }));
+  const mySavedListIdsByScene = {
+    [scene.id]: myMemberLists.filter((list) => list.fightSceneEntries.length > 0).map((list) => list.id),
+  };
+  const myFavoriteSceneIds = myFightSceneFavorites.map((e) => e.fightSceneId);
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-8">
@@ -108,6 +123,9 @@ export default async function FightScenePage({ params }: { params: Promise<Param
         isAdmin={session?.user?.role === "ADMIN"}
         myRatings={myRating ? { [scene.id]: myRating.score } : {}}
         myAdminRatings={myAdminRating ? { [scene.id]: myAdminRating.score } : {}}
+        myMemberLists={myMemberListItems}
+        mySavedListIdsByScene={mySavedListIdsByScene}
+        myFavoriteSceneIds={myFavoriteSceneIds}
         heading={null}
         allowAdd={false}
       />

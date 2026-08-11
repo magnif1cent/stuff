@@ -8,8 +8,9 @@ An IMDB-style website for kung fu and martial arts films, built for martial arts
 - Search by movie title, actor, or director name, with filters (genre, director, actor, country, release-year range, minimum community rating, minimum editor rating), sorting (relevance, highest rated, newest, oldest), pagination, and a typo-tolerant "did you mean" fallback when nothing matches exactly — plus a dedicated fight-scene search at `/search/fight-scenes` (filter by tag, actor, member/editor rating) — see [Search](#search) below
 - Movie pages with cast, synopsis, a community rating, a separate admin-only "Editors' Score", an admin-authored editorial review, and a per-movie discussion thread (with spoiler tags, edit/delete on your own posts, and admin moderation)
 - **Fight Scenes**: members tag specific fight scenes within a movie — YouTube clip (with an optional start timestamp), the actors involved (picked from that movie's cast), and category tags (e.g. "Weapon Duel", "One vs. Many") — with their own member rating, a separate admin rating, admin verification, and a shareable permalink page (see [Fight Scenes](#fight-scenes) below)
+- Actor pages (`/actors/[personId]`) showing an actor's filmography and every fight scene they're tagged in, linked from a movie's cast list and a scene's "Featuring" line (see [Actor Pages](#actor-pages) below)
 - Member accounts via email/password (with email verification) or Google sign-in, identified publicly by a chosen username rather than their email or real name (see [Usernames](#usernames) below)
-- Member capabilities: rate movies and fight scenes, maintain a Favorites list and a Watchlist, create their own public named lists on a profile page at `/members/[username]` (see [Member Lists & Profiles](#member-lists--profiles) below), post/reply in movie discussions, submit fight scenes, and submit a movie missing from the catalog for admin review (see [Member Movie Submissions](#member-movie-submissions) below)
+- Member capabilities: rate movies and fight scenes, maintain a Favorites list and a Watchlist for movies (fight scenes get a Favorite only — see below), create their own public named lists on a profile page at `/members/[username]` and save both movies and fight scenes to them (see [Member Lists & Profiles](#member-lists--profiles) below), post/reply in movie discussions, submit fight scenes, and submit a movie missing from the catalog for admin review (see [Member Movie Submissions](#member-movie-submissions) below)
 - A unified `/admin` dashboard (Movies management incl. pending-submission review and permanent deletion, TMDB import incl. title search, keyword search, and bulk CSV upload, Fight Scene Tags, Account settings) plus admin actions that stay inline on regular pages (Editors' Score, editorial reviews, poster overrides, fight scene verification) &mdash; see [Admin Area](#admin-area) below
 - Social sharing (native share sheet on mobile, copy-link/X/Facebook/Reddit fallback on desktop) on movie and fight scene pages
 - A public `/leaderboard` page ranking the Most-Liked Lists (members can like each other's public custom lists) and Top Curators (members with the most movies across their own lists) — see [Member Lists & Profiles](#member-lists--profiles) below
@@ -119,7 +120,7 @@ Without `RESEND_API_KEY` configured, the verification link is logged to the serv
 Two dedicated search pages, both with a vertical sidebar of filters, pagination, and sort options — split apart because a fight-scene result is the scene itself, not "a movie that happens to contain one."
 
 - **`/search`** (movies) — filters: genre, director (autocomplete), actor (autocomplete), country, release-year range, minimum community rating, minimum editor rating. Sort by relevance, highest rated, newest, or oldest. A typo-tolerant "did you mean" fallback (via Postgres `pg_trgm`, see [Getting Set Up](#getting-set-up)) kicks in when nothing matches exactly.
-- **`/search/fight-scenes`** — filters: category tag (multi-select, matches any selected), actor (autocomplete, scoped to people actually tagged in a fight scene — not just anyone in a movie's cast), minimum member rating, minimum editor rating. Sort by newest, highest member rated, or highest editor rated.
+- **`/search/fight-scenes`** — filters: category tag (multi-select, matches any selected), actor (autocomplete, scoped to people actually tagged in a fight scene — not just anyone in a movie's cast), minimum member rating, minimum editor rating. Sort by newest, highest member rated, highest editor rated, or most favorited.
 - The navbar's search box submits to `/search` in "browse" mode (no filters) when submitted empty, rather than doing nothing — both pages are also reachable directly via the "Browse" and "Fight Scenes" nav links.
 
 ## TMDB Import
@@ -135,13 +136,14 @@ Two dedicated search pages, both with a vertical sidebar of filters, pagination,
 
 ## Member Lists & Profiles
 
-Every member has a profile page at `/members/[username]`. Viewing your own shows Favorites, Watchlist, and your custom lists with full management controls (create/rename/delete); viewing someone else's shows only their public custom lists, read-only. `/my-lists` still works as a link — it just redirects to your own profile.
+Every member has a profile page at `/members/[username]`. Viewing your own shows Favorites, Watchlist, Favorite Fight Scenes, and your custom lists with full management controls (create/rename/delete); viewing someone else's shows only their public custom lists, read-only. `/my-lists` still works as a link — it just redirects to your own profile.
 
-Beyond the built-in Favorites and Watchlist, members can create any number of their own named lists (e.g. "Best One-vs-Many Fights") from the "+ Add to list" control on a movie page, and manage them from their own profile.
+Beyond the built-in Favorites and Watchlist, members can create any number of their own named lists (e.g. "Best One-vs-Many Fights") from the "+ Add to list" control on a movie page, and manage them from their own profile. Lists hold fight scenes as well as movies — every fight scene card, wherever it appears (a movie page, its own permalink, fight scene search results, or another member's list), has its own bookmark-icon "save to list" control alongside the share icon.
 
-- **Custom lists are public by design; Favorites/Watchlist are not.** Every custom list has its own shareable permalink at `/lists/[id]` (also reachable via its owner's profile) that anyone can view signed in or not, with no private option. Favorites and Watchlist stay exactly as private as they've always been: only the signed-in owner ever sees their own, on their own profile or anywhere else.
+- **Fight scenes get a one-tap Favorite, same red heart icon movies use, but no Watchlist** — a scene is a short clip you can watch right where it's linked, not something to queue up for later the way a full movie is. Every fight scene card has its own heart icon, independent of the movie it belongs to and independent of custom lists — you can favorite a scene without favoriting its movie, or vice versa.
+- **Custom lists are public by design; Favorites/Watchlist are not.** Every custom list has its own shareable permalink at `/lists/[id]` (also reachable via its owner's profile) that anyone can view signed in or not, with no private option. Favorites and Watchlist (for both movies and fight scenes) stay exactly as private as they've always been: only the signed-in owner ever sees their own, on their own profile or anywhere else.
 - A member can have at most 25 lists, with unique names per member; list names are capped at 60 characters.
-- A pending (not yet admin-approved) movie can only be added to a list by its own submitter, and is excluded from the public list/profile view for everyone else, the same as it's excluded from every other public listing — see [Member Movie Submissions](#member-movie-submissions) below.
+- A pending (not yet admin-approved) movie can only be added to a list by its own submitter, and is excluded from the public list/profile view for everyone else, the same as it's excluded from every other public listing — see [Member Movie Submissions](#member-movie-submissions) below. A soft-deleted fight scene is excluded from a public list view the same way.
 - **Liking lists and the leaderboard**: any signed-in, verified member other than the list's own owner can like a public custom list (one like per member per list; self-likes are blocked). `/leaderboard` — reachable via the "Leaderboard" nav link, replacing what used to be a redundant "My Lists" link pointing at the same place as the username link — ranks the Most-Liked Lists and, separately, Top Curators (members with the most total movies across their own lists). Both rankings recompute on every page load rather than being cached/scheduled.
 
 ## Member Movie Submissions
@@ -164,6 +166,11 @@ Below the cast list on every movie page, members can catalog individual fight sc
 - **Editing/deleting**: the submitter can edit or delete their own scene; admins can delete anyone's. Deletion is a soft-delete (like discussion posts) so ratings tied to a scene aren't orphaned.
 - **Tags**: the tag list itself (e.g. "Weapon Duel", "One vs. Many") is admin-curated at `/admin/fight-scene-tags` — members choose from it but can't create new tags.
 - **Permalinks**: each fight scene has its own page at `/movies/[id]/fight-scenes/[fightSceneId]` with dynamic Open Graph metadata (title, rating summary, YouTube thumbnail) for clean link previews when shared.
+- **Saving to a list**: any member can save a fight scene to one of their own custom lists, or one-tap Favorite it — see [Member Lists & Profiles](#member-lists--profiles).
+
+## Actor Pages
+
+Every credited person has a page at `/actors/[personId]` showing their Filmography (movies in the catalog, excluding any still-pending submission) and every Fight Scene they're tagged in across the whole catalog, sorted by most favorited, reusing the same movie/fight-scene cards used everywhere else. Linked from a movie's Cast section and from the "Featuring" line on a fight scene card — there's no dedicated actor search yet, so browsing there is the only way in for now.
 
 ## Editorial Reviews
 
@@ -248,7 +255,7 @@ It needs to be turned on per-project after deploying: **Vercel dashboard → thi
 
 ## Project Structure
 
-- `src/app` — pages and API routes (App Router), including the `/admin` dashboard and its sub-pages (see [Admin Area](#admin-area)), the fight scene permalink route (`/movies/[id]/fight-scenes/[fightSceneId]`), member movie submission (`/movies/submit`), member profiles (`/members/[username]`), and public list permalinks (`/lists/[listId]`)
+- `src/app` — pages and API routes (App Router), including the `/admin` dashboard and its sub-pages (see [Admin Area](#admin-area)), the fight scene permalink route (`/movies/[id]/fight-scenes/[fightSceneId]`), member movie submission (`/movies/submit`), member profiles (`/members/[username]`), public list permalinks (`/lists/[listId]`), and actor pages (`/actors/[personId]`)
 - `src/components` — UI components (`fight-scene-section.tsx`, `editorial-review.tsx`, `poster-override-control.tsx`, `share-button.tsx`, `member-list-manager.tsx`, `add-to-list-control.tsx`, etc.)
 - `src/lib` — Prisma client, Auth.js config, TMDB client, YouTube URL parsing, rating/weekly-featured/verification/fight-scene/username/member-list helpers, email sender
 - `prisma/schema.prisma` — data model

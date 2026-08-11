@@ -24,6 +24,7 @@ model User {
   ratings       Rating[]
   adminRatings  AdminRating[]
   listEntries   ListEntry[]
+  fightSceneFavorites FightSceneFavorite[]
   discussionPosts DiscussionPost[]
   fightScenes         FightScene[]
   fightSceneRatings   FightSceneRating[]
@@ -216,6 +217,22 @@ model ListEntry {
   @@index([userId])
 }
 
+// Fight scenes only get a Favorite, not a Watchlist — unlike a movie, a
+// scene is a short clip, not something to queue up for later. No listType
+// discriminator, unlike ListEntry, since there's only ever one kind.
+model FightSceneFavorite {
+  id           String   @id @default(cuid())
+  userId       String
+  fightSceneId String
+  createdAt    DateTime @default(now())
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fightScene FightScene @relation(fields: [fightSceneId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, fightSceneId])
+  @@index([userId])
+}
+
 // --- Discussion ---
 
 model DiscussionPost {
@@ -263,6 +280,8 @@ model FightScene {
   tags        FightSceneTag[]
   ratings     FightSceneRating[]
   adminRatings FightSceneAdminRating[]
+  memberListEntries MemberListFightSceneEntry[]
+  favorites FightSceneFavorite[]
 
   @@index([movieId])
 }
@@ -339,6 +358,7 @@ model MemberList {
 
   user    User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   entries MemberListEntry[]
+  fightSceneEntries MemberListFightSceneEntry[]
   likes   MemberListLike[]
 
   @@unique([userId, name])
@@ -355,6 +375,23 @@ model MemberListEntry {
   movie Movie      @relation(fields: [movieId], references: [id], onDelete: Cascade)
 
   @@unique([listId, movieId])
+  @@index([listId])
+}
+
+// Mirrors MemberListEntry but for fight scenes, rather than adding a
+// nullable fightSceneId to that model — keeps both content types' foreign
+// keys required and each query shape simple, matching how FightScene's own
+// models mirror Movie's instead of a polymorphic entry type.
+model MemberListFightSceneEntry {
+  id           String   @id @default(cuid())
+  listId       String
+  fightSceneId String
+  createdAt    DateTime @default(now())
+
+  list       MemberList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  fightScene FightScene @relation(fields: [fightSceneId], references: [id], onDelete: Cascade)
+
+  @@unique([listId, fightSceneId])
   @@index([listId])
 }
 
