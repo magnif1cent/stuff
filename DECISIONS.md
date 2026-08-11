@@ -249,12 +249,13 @@ time.
 
 ## Deferred & Backlog
 
-- **About page copy: mission, Contact/feedback, and Community guidelines
-  wording** (**PR #27**) — the mission section ("What this site is") is a
-  placeholder reading "Under construction" pending final copy; the
+- **About page copy: mission, About the Creators, Contact/feedback, and
+  Community guidelines wording** (**PR #27**) — the mission section ("What
+  this site is") and the new "About the Creators" section are both
+  placeholders reading "Under construction" pending final copy; the
   Contact/feedback section has no real contact address yet; the guidelines
   bullets are a first draft, not reviewed. Only the curation section
-  ("How the catalog is curated") is considered final. Revisit all three
+  ("How the catalog is curated") is considered final. Revisit all four
   once final wording, a contact method, and a guidelines review land.
 - **News & Updates (admin blog)** — a new `NewsPost` model, `/admin/news`
   CRUD, a public `/news` list page, a nav link, and a homepage teaser

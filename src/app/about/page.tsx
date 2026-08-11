@@ -16,6 +16,11 @@ export default function AboutPage() {
       </section>
 
       <section className="mb-10">
+        <h2 className="mb-3 font-serif text-lg font-semibold text-white">About the Creators</h2>
+        <p className="text-sm leading-relaxed text-neutral-300">Under construction.</p>
+      </section>
+
+      <section className="mb-10">
         <h2 className="mb-3 font-serif text-lg font-semibold text-white">How the catalog is curated</h2>
         <p className="text-sm leading-relaxed text-neutral-300">
           Every movie in the catalog comes from{" "}
