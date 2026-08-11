@@ -91,8 +91,20 @@ the site.
 
 ## Feature Decisions
 
+### Submission follow-through: a "View submission" link and a member-facing Pending Submissions section
+**PR #30.** Two small follow-ups after adding the "+ Add Movie" nav
+link surfaced: a successful submission only showed a toast-style message
+with no way to see what was just created, and nothing anywhere reminded a
+member they had a submission awaiting review. Added a "View submission →"
+link straight to the new (still-pending) movie page right after submitting,
+and a **Pending Submissions** row on the member's own profile — same
+`MovieRow` component and same owner-only visibility rule already used for
+Favorites/Watchlist, not a new pattern. Reuses the existing pending-movie
+visibility rule (only the submitter or an admin can load that page) rather
+than adding a new one.
+
 ### Standalone "Add Movie" nav link, always visible rather than gated on sign-in
-**PR #TBD.** `/movies/submit` was previously only reachable via the "Can't
+**PR #29.** `/movies/submit` was previously only reachable via the "Can't
 find it? Add a movie" link on a zero-result search — no direct nav link.
 Added a "+ Add Movie" link to the site nav, next to Movies/Fights/Lists.
 *Considered:* showing it only to signed-in members, matching the Admin

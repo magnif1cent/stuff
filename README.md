@@ -153,6 +153,7 @@ Beyond the built-in Favorites and Watchlist, members can create any number of th
 - **Submissions start `PENDING`**, not live: hidden from the homepage, search (including the navbar's), autocomplete director/actor filters, and the weekly-trending computation, and its own movie page 404s for everyone except the submitter and admins. This mirrors fight-scene verification's "member-created content, admin-gated visibility" pattern rather than admin imports' "goes live immediately" one, since anyone can trigger this path, not just a trusted admin.
 - Submitting a `tmdbId` that's already in the catalog (approved or still pending) is rejected with a specific error rather than silently re-importing it — re-running the shared import logic on an existing row would otherwise reset an already-approved movie back to pending.
 - Admins review submissions in a **Pending Submissions** section at the top of `/admin/movies` — Approve moves it to the catalog immediately; Reject permanently deletes it, same as deleting any other catalog entry.
+- A successful submission shows a "View submission →" link straight to the new (still-pending) movie page, and the submitter's own profile lists everything they've got awaiting review in its own **Pending Submissions** section (visible only to them, same as Favorites/Watchlist), so there's somewhere to check status without waiting on an email.
 
 ## Fight Scenes
 

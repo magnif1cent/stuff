@@ -92,11 +92,19 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
   // everyone except the list owner, same as every other public listing.
   const isOwner = session?.user?.id === profileUser.id;
 
-  const [entries, fightSceneFavoriteEntries, memberLists] = await Promise.all([
+  const [entries, pendingSubmissions, fightSceneFavoriteEntries, memberLists] = await Promise.all([
     isOwner
       ? prisma.listEntry.findMany({
           where: { userId: profileUser.id },
           include: { movie: true },
+          orderBy: { createdAt: "desc" },
+        })
+      : [],
+    // Only the submitter (or an admin) can even load a pending movie's own
+    // page — same visibility rule as everywhere else a pending movie shows.
+    isOwner
+      ? prisma.movie.findMany({
+          where: { submittedById: profileUser.id, status: "PENDING" },
           orderBy: { createdAt: "desc" },
         })
       : [],
@@ -140,6 +148,7 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
   const allListedMovieIds = [
     ...favorites,
     ...watchlist,
+    ...pendingSubmissions,
     ...visibleMemberLists.flatMap((list) => list.entries.map((entry) => entry.movie)),
   ].map((m) => m.id);
   const ratingSummaries = await getRatingSummaries(allListedMovieIds);
@@ -224,6 +233,7 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
         <>
           <MovieRow title="Favorites" movies={favorites} ratingSummaries={ratingSummaries} />
           <MovieRow title="Watchlist" movies={watchlist} ratingSummaries={ratingSummaries} />
+          <MovieRow title="Pending Submissions" movies={pendingSubmissions} ratingSummaries={ratingSummaries} />
           <FightSceneRow title="Favorite Fight Scenes" scenes={favoriteFightSceneData} signedIn={!!session?.user} />
         </>
       )}
