@@ -122,6 +122,16 @@ manual tagging/release discipline this project doesn't have anywhere else
 is accurate for free and directly answers the question that caused the
 original confusion.
 
+### About page's footer link gets its own shared Footer component, not a second `<footer>`
+**PR #27.** Adding a footer-only `/about` link meant deciding where it lives
+relative to the existing `BuildVersion` component, which already rendered
+its own `<footer>` on every page. Rather than stacking a second `<footer>`
+element next to it, `BuildVersion` was split down to just its label
+(a `<span>`), and a new `Footer` component (`src/components/footer.tsx`)
+wraps both the About link and that label in one `<footer>` — one footer
+per page, and `BuildVersion` stays reusable if it's ever needed somewhere
+that isn't a page-level footer.
+
 ### Fight scene start time is admin-only, decoupled from submitter edits
 **PR #20.** Members often add clips without a timestamp, and the only fix
 used to be re-pasting a whole new YouTube link. A submitter's own edits
