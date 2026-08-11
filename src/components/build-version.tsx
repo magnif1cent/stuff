@@ -12,9 +12,5 @@ export function BuildVersion() {
     ? `Build ${sha.slice(0, 7)}${env && env !== "production" ? ` · ${env}` : ""}`
     : "Local dev build";
 
-  return (
-    <footer className="border-t border-neutral-800 px-4 py-3 text-center font-mono text-[11px] text-neutral-600">
-      {label}
-    </footer>
-  );
+  return <span className="font-mono text-[11px] text-neutral-600">{label}</span>;
 }

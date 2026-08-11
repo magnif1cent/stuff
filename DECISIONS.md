@@ -122,6 +122,16 @@ manual tagging/release discipline this project doesn't have anywhere else
 is accurate for free and directly answers the question that caused the
 original confusion.
 
+### About page's footer link gets its own shared Footer component, not a second `<footer>`
+**PR #27.** Adding a footer-only `/about` link meant deciding where it lives
+relative to the existing `BuildVersion` component, which already rendered
+its own `<footer>` on every page. Rather than stacking a second `<footer>`
+element next to it, `BuildVersion` was split down to just its label
+(a `<span>`), and a new `Footer` component (`src/components/footer.tsx`)
+wraps both the About link and that label in one `<footer>` — one footer
+per page, and `BuildVersion` stays reusable if it's ever needed somewhere
+that isn't a page-level footer.
+
 ### Fight scene start time is admin-only, decoupled from submitter edits
 **PR #20.** Members often add clips without a timestamp, and the only fix
 used to be re-pasting a whole new YouTube link. A submitter's own edits
@@ -239,6 +249,14 @@ time.
 
 ## Deferred & Backlog
 
+- **About page copy: mission, About the Creators, Contact/feedback, and
+  Community guidelines wording** (**PR #27**) — the mission section ("What
+  this site is") and the new "About the Creators" section are both
+  placeholders reading "Under construction" pending final copy; the
+  Contact/feedback section has no real contact address yet; the guidelines
+  bullets are a first draft, not reviewed. Only the curation section
+  ("How the catalog is curated") is considered final. Revisit all four
+  once final wording, a contact method, and a guidelines review land.
 - **News & Updates (admin blog)** — a new `NewsPost` model, `/admin/news`
   CRUD, a public `/news` list page, a nav link, and a homepage teaser
   banner for the latest post. Requested alongside Recent Reviews by Editors;
