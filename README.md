@@ -219,14 +219,26 @@ Each slide prefers a fight scene clip over the static TMDB backdrop:
 3. Run `npx prisma migrate deploy` against the production database (Vercel's build step, or manually).
 4. Update the Google OAuth redirect URI to your production domain.
 
-## Build Version Footer
+## Footer & About Page
 
-Every page shows a small `Build <short commit SHA>` line in the footer (with
-a `· preview`/`· development` suffix on non-production deploys), reading
-Vercel's built-in `VERCEL_GIT_COMMIT_SHA`/`VERCEL_ENV` system environment
-variables — no setup or manual version bump needed. It exists to make "is
-this the deploy I think it is?" a glance instead of a debugging session.
-Locally (no Vercel env), it shows "Local dev build" instead.
+Every page has a site-wide footer (`src/components/footer.tsx`) with an
+`About` link on the left and a build version indicator on the right. It's
+deliberately not in the main navbar — Movies/Fights/Lists stays focused on
+the core browsing links.
+
+`/about` is a public page with four sections: what the site is, how the
+catalog is curated (echoing the TMDB keyword-search curation described
+under [TMDB Import](#tmdb-import) above), how to reach an admin with
+feedback or a bug report, and community guidelines for discussion posts and
+fight scene submissions.
+
+The build version indicator (`src/components/build-version.tsx`) shows a
+small `Build <short commit SHA>` line (with a `· preview`/`· development`
+suffix on non-production deploys), reading Vercel's built-in
+`VERCEL_GIT_COMMIT_SHA`/`VERCEL_ENV` system environment variables — no setup
+or manual version bump needed. It exists to make "is this the deploy I
+think it is?" a glance instead of a debugging session. Locally (no Vercel
+env), it shows "Local dev build" instead.
 
 ## Web Analytics
 
