@@ -12,13 +12,7 @@ export default function AboutPage() {
 
       <section className="mb-10">
         <h2 className="mb-3 font-serif text-lg font-semibold text-white">What this site is</h2>
-        <p className="text-sm leading-relaxed text-neutral-300">
-          Kung Fu Movie DB is an IMDB-style database built for martial arts movie enthusiasts — a place to look
-          up a film&apos;s cast and synopsis, rate it, catalog its fight scenes shot by shot, and see what other
-          fans think, without wading through a general-purpose movie site that treats martial arts cinema as a
-          genre footnote. It&apos;s for anyone who wants to find a great kung fu film, settle an argument about
-          which movie has the best one-vs-many fight, or just browse.
-        </p>
+        <p className="text-sm leading-relaxed text-neutral-300">Under construction.</p>
       </section>
 
       <section className="mb-10">
