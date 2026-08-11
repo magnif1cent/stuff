@@ -249,6 +249,11 @@ time.
 
 ## Deferred & Backlog
 
+- **About page copy: Contact/feedback and Community guidelines wording**
+  (**PR #27**) — both sections shipped as placeholders/first drafts on
+  purpose: no real contact address existed yet, and the guidelines bullets
+  hadn't been reviewed. Mission and curation sections are considered final.
+  Revisit once a contact method is decided and the guidelines are reviewed.
 - **News & Updates (admin blog)** — a new `NewsPost` model, `/admin/news`
   CRUD, a public `/news` list page, a nav link, and a homepage teaser
   banner for the latest post. Requested alongside Recent Reviews by Editors;
