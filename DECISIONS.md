@@ -91,6 +91,18 @@ the site.
 
 ## Feature Decisions
 
+### Submission follow-through: a "View submission" link and a member-facing Pending Submissions section
+**PR #TBD.** Two small follow-ups after adding the "+ Add Movie" nav
+link surfaced: a successful submission only showed a toast-style message
+with no way to see what was just created, and nothing anywhere reminded a
+member they had a submission awaiting review. Added a "View submission →"
+link straight to the new (still-pending) movie page right after submitting,
+and a **Pending Submissions** row on the member's own profile — same
+`MovieRow` component and same owner-only visibility rule already used for
+Favorites/Watchlist, not a new pattern. Reuses the existing pending-movie
+visibility rule (only the submitter or an admin can load that page) rather
+than adding a new one.
+
 ### Actor pages browse-only for now, not wired into the search actor filter
 **PR #TBD (branch `claude/save-fight-scenes-to-lists`).** New `/actors/[personId]`
 pages (filmography + every tagged fight scene, reusing existing card

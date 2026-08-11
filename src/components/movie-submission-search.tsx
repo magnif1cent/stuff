@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import type { TmdbMovieSearchResult } from "@/lib/tmdb";
 
 type SubmissionResult = TmdbMovieSearchResult & { catalogStatus: string | null };
@@ -10,6 +11,7 @@ export function MovieSubmissionSearch() {
   const [results, setResults] = useState<SubmissionResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [lastSubmittedMovie, setLastSubmittedMovie] = useState<{ id: string; title: string } | null>(null);
   const [submittedIds, setSubmittedIds] = useState<Set<number>>(new Set());
   const [submittingId, setSubmittingId] = useState<number | null>(null);
 
@@ -17,6 +19,7 @@ export function MovieSubmissionSearch() {
     e.preventDefault();
     setLoading(true);
     setMessage(null);
+    setLastSubmittedMovie(null);
     const res = await fetch(`/api/movies/search?q=${encodeURIComponent(query)}`);
     const body = await res.json();
     setLoading(false);
@@ -30,6 +33,7 @@ export function MovieSubmissionSearch() {
   async function handleSubmit(tmdbId: number) {
     setSubmittingId(tmdbId);
     setMessage(null);
+    setLastSubmittedMovie(null);
     const res = await fetch("/api/movies/submit", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -42,6 +46,7 @@ export function MovieSubmissionSearch() {
       return;
     }
     setSubmittedIds((prev) => new Set(prev).add(tmdbId));
+    setLastSubmittedMovie({ id: body.movie.id, title: body.movie.title });
     setMessage(`"${body.movie.title}" submitted for review.`);
   }
 
@@ -64,7 +69,19 @@ export function MovieSubmissionSearch() {
         </button>
       </form>
 
-      {message && <p className="mb-4 text-sm text-neutral-300">{message}</p>}
+      {message && (
+        <p className="mb-4 text-sm text-neutral-300">
+          {message}
+          {lastSubmittedMovie && (
+            <>
+              {" "}
+              <Link href={`/movies/${lastSubmittedMovie.id}`} className="text-red-500 hover:underline">
+                View submission →
+              </Link>
+            </>
+          )}
+        </p>
+      )}
 
       <ul className="flex flex-col gap-3">
         {results.map((movie) => {
