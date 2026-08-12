@@ -7,6 +7,7 @@ import type { FightSceneCast, FightSceneTag, Person, User } from "@/generated/pr
 import { ShareButton } from "@/components/share-button";
 import { AddToListControl, type AddToListItem } from "@/components/add-to-list-control";
 import { FavoriteButton } from "@/components/favorite-button";
+import { youtubeWatchUrl } from "@/lib/youtube";
 
 const SCORES = Array.from({ length: 10 }, (_, i) => i + 1);
 const MAX_NOTE_LENGTH = 2000;
@@ -610,6 +611,18 @@ export function FightSceneSection({
                     allowFullScreen
                   />
                 </div>
+                {/* Tapping the embed on mobile often opens the YouTube app to the
+                    channel instead of this clip — an explicit link to the exact
+                    watch URL (with timestamp) is a reliable fallback. */}
+                <a
+                  href={youtubeWatchUrl(scene.youtubeVideoId, scene.youtubeStartSeconds)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-1.5 block text-center text-[10px] tracking-wide uppercase underline hover:opacity-70"
+                  style={{ color: TICKET_MUTED }}
+                >
+                  Watch on YouTube ↗
+                </a>
                 {isAdmin && expandedAdminIds.has(scene.id) && (
                   <div className="mt-2 flex items-center justify-center gap-1.5 text-[10px]" style={{ color: TICKET_MUTED }}>
                     <span className="uppercase tracking-wide">Start at</span>

@@ -61,6 +61,12 @@ export function youtubeEmbedUrl(videoId: string, startSeconds?: number | null): 
   return `https://www.youtube-nocookie.com/embed/${videoId}${query ? `?${query}` : ""}`;
 }
 
+export function youtubeWatchUrl(videoId: string, startSeconds?: number | null): string {
+  const params = new URLSearchParams({ v: videoId });
+  if (startSeconds) params.set("t", `${startSeconds}s`);
+  return `https://www.youtube.com/watch?${params.toString()}`;
+}
+
 export function youtubeThumbnailUrl(videoId: string): string {
   return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
 }
