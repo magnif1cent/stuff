@@ -3,18 +3,23 @@ import { adminBadgeColor, adminInitial } from "@/lib/admin-badge";
 import { ADMIN_BADGE_ICONS } from "@/lib/admin-badge-icons";
 import type { MovieRecommender } from "@/lib/movie-recommendations";
 
-const SIZES = { sm: 20, md: 28 } as const;
+const SIZES = { sm: 20, md: 28, lg: 36 } as const;
+const DIMENSION_CLASSES = {
+  sm: "h-5 w-5 text-[10px]",
+  md: "h-7 w-7 text-xs",
+  lg: "h-9 w-9 text-sm",
+} as const;
 
 export function RecommendedBadges({
   recommenders,
   size = "sm",
 }: {
   recommenders: MovieRecommender[];
-  size?: "sm" | "md";
+  size?: "sm" | "md" | "lg";
 }) {
   if (recommenders.length === 0) return null;
 
-  const dimensionClass = size === "sm" ? "h-5 w-5 text-[10px]" : "h-7 w-7 text-xs";
+  const dimensionClass = DIMENSION_CLASSES[size];
   const pixels = SIZES[size];
 
   return (
