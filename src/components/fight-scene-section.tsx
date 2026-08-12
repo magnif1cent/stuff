@@ -463,6 +463,7 @@ export function FightSceneSection({
   const sortedScenes = [...scenes].sort((a, b) => a.roundNumber - b.roundNumber);
   const visibleScenes = sortedScenes.slice(0, visibleCount);
   const remainingSceneCount = sortedScenes.length - visibleScenes.length;
+  const editingScene = visibleScenes.find((s) => s.id === editingId) ?? null;
 
   return (
     <section className="mt-10">
@@ -511,30 +512,41 @@ export function FightSceneSection({
         </div>
       )}
 
+      {/* Rendered outside the grid below, same as the "add" form above —
+          a full-width item spliced into a multi-column CSS grid only lands
+          in its original card's spot when that card happened to start a
+          row; otherwise auto-placement bumps it to wherever it next fits,
+          which is why editing used to open in a different-looking spot
+          depending on which scene was clicked. */}
+      {editingScene && (
+        <div className="mb-6 rounded-md border border-neutral-800 bg-neutral-900 p-3">
+          <FightSceneForm
+            castOptions={castOptions}
+            tagOptions={tagOptions}
+            initialTitle={editingScene.title}
+            initialUrl={`https://www.youtube.com/watch?v=${editingScene.youtubeVideoId}`}
+            initialPersonIds={editingScene.cast.map((c) => c.person.id)}
+            initialTagIds={editingScene.tags.map((t) => t.id)}
+            submitLabel="Save"
+            submitting={submitting}
+            onCancel={() => setEditingId(null)}
+            onSubmit={(title, url, personIds, tagIds) => handleEdit(editingScene.id, title, url, personIds, tagIds)}
+            isEditing
+          />
+        </div>
+      )}
+
       <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {visibleScenes.map((scene) => {
           const canEdit = currentUserId === scene.submittedById;
           const canDelete = canEdit || isAdmin;
           const permalinkPath = `/movies/${movieId}/fight-scenes/${scene.id}`;
 
+          // Shown as its own full-width form above the grid instead
+          // (see editingScene above) rather than inline here, so it
+          // doesn't duplicate the card also being edited.
           if (editingId === scene.id) {
-            return (
-              <li key={scene.id} className="rounded-md border border-neutral-800 bg-neutral-900 p-3 sm:col-span-2 lg:col-span-3">
-                <FightSceneForm
-                  castOptions={castOptions}
-                  tagOptions={tagOptions}
-                  initialTitle={scene.title}
-                  initialUrl={`https://www.youtube.com/watch?v=${scene.youtubeVideoId}`}
-                  initialPersonIds={scene.cast.map((c) => c.person.id)}
-                  initialTagIds={scene.tags.map((t) => t.id)}
-                  submitLabel="Save"
-                  submitting={submitting}
-                  onCancel={() => setEditingId(null)}
-                  onSubmit={(title, url, personIds, tagIds) => handleEdit(scene.id, title, url, personIds, tagIds)}
-                  isEditing
-                />
-              </li>
-            );
+            return null;
           }
 
           const avgLabel = scene.ratingAverage ? scene.ratingAverage.toFixed(1) : "—";
