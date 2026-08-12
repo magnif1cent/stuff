@@ -38,8 +38,8 @@ export function MovieCard({ movie }: { movie: MovieCardData }) {
           </div>
         )}
         {movie.recommendedBy && movie.recommendedBy.length > 0 && (
-          <div className="absolute top-1.5 left-1.5">
-            <RecommendedBadges recommenders={movie.recommendedBy} />
+          <div className="absolute top-2 left-2">
+            <RecommendedBadges recommenders={movie.recommendedBy} size="lg" />
           </div>
         )}
       </div>
