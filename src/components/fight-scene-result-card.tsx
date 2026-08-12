@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { FightScene, FightSceneTag, Movie } from "@/generated/prisma/client";
+import type { FightScene, FightSceneTag, Movie, Person } from "@/generated/prisma/client";
 import { AddToListControl, type AddToListItem } from "@/components/add-to-list-control";
 import { FavoriteButton } from "@/components/favorite-button";
 
@@ -15,6 +15,7 @@ export type FightSceneResult = Pick<
 > & {
   movie: Pick<Movie, "id" | "title" | "releaseDate">;
   tags: Pick<FightSceneTag, "id" | "name">[];
+  cast: { id: string; person: Pick<Person, "id" | "name"> }[];
   memberRatingAverage: number | null;
   memberRatingCount: number;
   editorRatingAverage: number | null;
@@ -80,6 +81,19 @@ export function FightSceneResultCard({
       <Link href={permalink} className="mt-3 block truncate text-lg font-bold hover:opacity-70" style={{ fontFamily: "Georgia, serif" }}>
         {scene.title}
       </Link>
+      {scene.cast.length > 0 && (
+        <p className="mt-0.5 truncate text-[11px] tracking-wide uppercase" style={{ color: TICKET_MUTED }}>
+          Featuring{" "}
+          {scene.cast.map((c, i) => (
+            <span key={c.person.id}>
+              {i > 0 && ", "}
+              <Link href={`/actors/${c.person.id}`} className="hover:underline">
+                {c.person.name}
+              </Link>
+            </span>
+          ))}
+        </p>
+      )}
 
       <div className="mt-3 flex flex-wrap gap-1.5">
         {scene.tags.map((tag) => (

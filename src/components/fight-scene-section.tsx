@@ -312,6 +312,19 @@ export function FightSceneSection({
   const [adminNoteDrafts, setAdminNoteDrafts] = useState<Record<string, string>>({});
   const [startTimeDrafts, setStartTimeDrafts] = useState<Record<string, string>>({});
   const [visibleCount, setVisibleCount] = useState(SCENES_PAGE_SIZE);
+  // Which cards have their admin-only controls (start time, editor
+  // rating/note) expanded — collapsed by default so an admin's own cards
+  // aren't cluttered with tools they're not currently using.
+  const [expandedAdminIds, setExpandedAdminIds] = useState<Set<string>>(new Set());
+
+  function toggleAdminTools(id: string) {
+    setExpandedAdminIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
 
   async function handleCreate(title: string, youtubeUrl: string, personIds: string[], tagIds: string[]) {
     setSubmitting(true);
@@ -597,7 +610,7 @@ export function FightSceneSection({
                     allowFullScreen
                   />
                 </div>
-                {isAdmin && (
+                {isAdmin && expandedAdminIds.has(scene.id) && (
                   <div className="mt-2 flex items-center justify-center gap-1.5 text-[10px]" style={{ color: TICKET_MUTED }}>
                     <span className="uppercase tracking-wide">Start at</span>
                     <input
@@ -670,6 +683,11 @@ export function FightSceneSection({
                       {scene.isVerified ? "Unverify" : "Verify"}
                     </button>
                   )}
+                  {isAdmin && (
+                    <button onClick={() => toggleAdminTools(scene.id)} className="ml-2 underline hover:opacity-70">
+                      {expandedAdminIds.has(scene.id) ? "Hide admin tools" : "Admin tools"}
+                    </button>
+                  )}
                 </p>
 
                 <div className="flex gap-3">
@@ -704,7 +722,7 @@ export function FightSceneSection({
                 <RatingRow label="Your rating" score={ratings[scene.id] ?? null} onRate={(value) => handleRate(scene.id, value)} disabled={false} />
               )}
 
-              {isAdmin && (
+              {isAdmin && expandedAdminIds.has(scene.id) && (
                 <div className="mt-3 border-t pt-3" style={{ borderColor: "#b8ab8c" }}>
                   <RatingRow
                     label="Editors' rating (admin only)"

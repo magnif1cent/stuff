@@ -91,6 +91,24 @@ the site.
 
 ## Feature Decisions
 
+### Fight scene card UI cleanup: cast on the read-only card, admin tools collapsed by default
+**PR #TBD.** Two small improvements to the Fight Ticket card, from a
+self-review of what was already shipped this session. *Cast on
+`FightSceneResultCard`*: the interactive card (`FightSceneSection`, used
+on a movie's own page) has always shown "Featuring X, Y" linked to actor
+pages; the read-only result card (search results, list pages, profile,
+actor pages) never did, so a scene browsed anywhere except its own movie
+page didn't say who was in it. Added the same cast display, which meant
+adding `cast` to the Prisma `include` at all four call sites that feed
+that card. *Admin tools collapsed*: the "Start at" mm:ss control and the
+editor rating/note field were always expanded for admins on every card.
+*Considered:* two separate toggles matching their two separate positions
+in the card — went with one combined "Admin tools" toggle per card
+instead (default collapsed), since both are the same kind of thing
+(admin-only, not needed on every view) and a single toggle is simpler
+than two without losing anything; each card's toggle state is
+independent, so expanding one scene's tools doesn't affect the others.
+
 ### Browse-by-tag/genre quick links reuse existing badges rather than adding a new pill strip
 **PR #TBD.** The backlog item described "pill-link strips deep-linking
 into filtered search." *Considered:* a dedicated new section (e.g. a

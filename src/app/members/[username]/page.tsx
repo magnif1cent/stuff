@@ -10,6 +10,12 @@ import type { AddToListItem } from "@/components/add-to-list-control";
 import { MemberListManager } from "@/components/member-list-manager";
 import type { Movie } from "@/generated/prisma/client";
 
+const fightSceneCardInclude = {
+  movie: { select: { id: true, title: true, releaseDate: true } as const },
+  tags: true,
+  cast: { orderBy: { order: "asc" as const }, include: { person: true } },
+} as const;
+
 async function MovieRow({
   title,
   movies,
@@ -111,7 +117,7 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
     isOwner
       ? prisma.fightSceneFavorite.findMany({
           where: { userId: profileUser.id },
-          include: { fightScene: { include: { movie: { select: { id: true, title: true, releaseDate: true } }, tags: true } } },
+          include: { fightScene: { include: fightSceneCardInclude } },
           orderBy: { createdAt: "desc" },
         })
       : [],
@@ -120,7 +126,7 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
       include: {
         entries: { include: { movie: true }, orderBy: { createdAt: "desc" } },
         fightSceneEntries: {
-          include: { fightScene: { include: { movie: { select: { id: true, title: true, releaseDate: true } }, tags: true } } },
+          include: { fightScene: { include: fightSceneCardInclude } },
           orderBy: { createdAt: "desc" },
         },
       },
