@@ -524,6 +524,7 @@ export function FightSceneSection({
                   castOptions={castOptions}
                   tagOptions={tagOptions}
                   initialTitle={scene.title}
+                  initialUrl={`https://www.youtube.com/watch?v=${scene.youtubeVideoId}`}
                   initialPersonIds={scene.cast.map((c) => c.person.id)}
                   initialTagIds={scene.tags.map((t) => t.id)}
                   submitLabel="Save"
