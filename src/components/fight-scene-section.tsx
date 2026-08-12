@@ -7,6 +7,7 @@ import type { FightSceneCast, FightSceneTag, Person, User } from "@/generated/pr
 import { ShareButton } from "@/components/share-button";
 import { AddToListControl, type AddToListItem } from "@/components/add-to-list-control";
 import { FavoriteButton } from "@/components/favorite-button";
+import { youtubeWatchUrl } from "@/lib/youtube";
 
 const SCORES = Array.from({ length: 10 }, (_, i) => i + 1);
 const MAX_NOTE_LENGTH = 2000;
@@ -601,13 +602,24 @@ export function FightSceneSection({
 
               <div className="mt-3 border-t-2 border-dashed pt-3" style={{ borderColor: "#b8ab8c" }}>
                 {/* Smaller inset "photo" rather than a full-width player, to read as a ticket detail. */}
-                <div className="mx-auto aspect-video w-2/3 max-w-[180px] overflow-hidden border-[3px]" style={{ borderColor: TICKET_INK, background: TICKET_INK }}>
+                <div className="relative mx-auto aspect-video w-2/3 max-w-[180px] overflow-hidden border-[3px]" style={{ borderColor: TICKET_INK, background: TICKET_INK }}>
                   <iframe
                     src={embedUrl(scene.youtubeVideoId, scene.youtubeStartSeconds)}
                     title={scene.title}
-                    className="h-full w-full"
+                    className="pointer-events-none h-full w-full"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowFullScreen
+                  />
+                  {/* An overlay link, not the iframe's own controls — tapping the
+                      embed on mobile often opens the YouTube app to the channel
+                      instead of this clip, so the whole frame goes straight to
+                      the exact watch URL (with timestamp) instead. */}
+                  <a
+                    href={youtubeWatchUrl(scene.youtubeVideoId, scene.youtubeStartSeconds)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`Watch "${scene.title}" on YouTube`}
+                    className="absolute inset-0"
                   />
                 </div>
                 {isAdmin && expandedAdminIds.has(scene.id) && (

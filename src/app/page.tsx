@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getFeaturedMovies } from "@/lib/weekly-featured";
 import { getRatingSummaries, getTopRatedMovies } from "@/lib/ratings";
+import { getMovieRecommendationsByMovieIds } from "@/lib/movie-recommendations";
 import { getRecentEditorialReviews } from "@/lib/editorial-reviews";
 import { getRecentNewsPosts } from "@/lib/news";
 import { HeroCarousel } from "@/components/hero-carousel";
@@ -40,6 +41,10 @@ export default async function HomePage() {
   }));
 
   const ratingSummaries = await getRatingSummaries(recent.map((m) => m.id));
+  const recommendationsByMovieId = await getMovieRecommendationsByMovieIds([
+    ...recent.map((m) => m.id),
+    ...topRated.map((m) => m.id),
+  ]);
 
   const recentWithRatings = recent.map((movie) => {
     const summary = ratingSummaries.get(movie.id);
@@ -47,8 +52,14 @@ export default async function HomePage() {
       ...movie,
       communityAverage: summary?.average ?? null,
       communityCount: summary?.count ?? 0,
+      recommendedBy: recommendationsByMovieId.get(movie.id) ?? [],
     };
   });
+
+  const topRatedWithRecommendations = topRated.map((movie) => ({
+    ...movie,
+    recommendedBy: recommendationsByMovieId.get(movie.id) ?? [],
+  }));
 
   return (
     <div className="flex flex-1 flex-col">
@@ -82,7 +93,7 @@ export default async function HomePage() {
 
       <MovieRail
         title="Top Rated by the Community"
-        movies={topRated}
+        movies={topRatedWithRecommendations}
         emptyMessage="No community ratings yet — be the first to rate a movie."
       />
 

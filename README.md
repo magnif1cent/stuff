@@ -13,7 +13,7 @@ An IMDB-style website for kung fu and martial arts films, built for martial arts
 - Member capabilities: rate movies and fight scenes, maintain a Favorites list and a Watchlist for movies (fight scenes get a Favorite only — see below), create their own public named lists on a profile page at `/members/[username]` and save both movies and fight scenes to them (see [Member Lists & Profiles](#member-lists--profiles) below), post/reply in movie discussions, submit fight scenes, and submit a movie missing from the catalog for admin review (see [Member Movie Submissions](#member-movie-submissions) below)
 - A unified `/admin` dashboard (Movies management incl. pending-submission review and permanent deletion, TMDB import incl. title search, keyword search, and bulk CSV upload, Fight Scene Tags, News & Updates, Account settings) plus admin actions that stay inline on regular pages (Editors' Score, editorial reviews, poster overrides, fight scene verification) &mdash; see [Admin Area](#admin-area) below
 - Social sharing (native share sheet on mobile, copy-link/X/Facebook/Reddit fallback on desktop) on movie and fight scene pages
-- A public `/leaderboard` page ranking the Most-Liked Lists (members can like each other's public custom lists) and Top Curators (members with the most movies across their own lists) — see [Member Lists & Profiles](#member-lists--profiles) below
+- A public `/lists` page for browsing every member's public custom lists (sorted by newest-updated or most-liked, paginated), plus a `/leaderboard` page ranking the Most-Liked Lists (members can like each other's public custom lists) and Top Curators (members with the most movies across their own lists) — see [Member Lists & Profiles](#member-lists--profiles) below
 - Admin-published News & Updates posts: the 5 most recent shown flat on the homepage, with a full paginated archive at `/news` — see [News & Updates](#news--updates) below
 
 ## Tech Stack
@@ -146,7 +146,8 @@ Beyond the built-in Favorites and Watchlist, members can create any number of th
 - **Custom lists are public by design; Favorites/Watchlist are not.** Every custom list has its own shareable permalink at `/lists/[id]` (also reachable via its owner's profile) that anyone can view signed in or not, with no private option. Favorites and Watchlist (for both movies and fight scenes) stay exactly as private as they've always been: only the signed-in owner ever sees their own, on their own profile or anywhere else.
 - A member can have at most 25 lists, with unique names per member; list names are capped at 60 characters.
 - A pending (not yet admin-approved) movie can only be added to a list by its own submitter, and is excluded from the public list/profile view for everyone else, the same as it's excluded from every other public listing — see [Member Movie Submissions](#member-movie-submissions) below. A soft-deleted fight scene is excluded from a public list view the same way.
-- **Liking lists and the leaderboard**: any signed-in, verified member other than the list's own owner can like a public custom list (one like per member per list; self-likes are blocked). `/leaderboard` — reachable via the "Leaderboard" nav link, replacing what used to be a redundant "My Lists" link pointing at the same place as the username link — ranks the Most-Liked Lists and, separately, Top Curators (members with the most total movies across their own lists). Both rankings recompute on every page load rather than being cached/scheduled.
+- **Liking lists and the leaderboard**: any signed-in, verified member other than the list's own owner can like a public custom list (one like per member per list; self-likes are blocked). `/leaderboard` ranks the Most-Liked Lists and, separately, Top Curators (members with the most total movies across their own lists). Both rankings recompute on every page load rather than being cached/scheduled.
+- **Browsing lists**: `/lists` — reachable via the "Lists" nav link — lists every public custom list with at least one item, sorted by newest-updated or most-liked, 12 per page. Each card links to the list's permalink and shows its owner, item counts, and like count. It cross-links to `/leaderboard` and vice versa, so both surfaces are reachable from one another.
 
 ## Member Movie Submissions
 
@@ -180,6 +181,10 @@ Every credited person has a page at `/actors/[personId]` showing their Filmograp
 Admins can write a long-form review (up to 10,000 characters) for any movie, shown alongside the cast list. There's one review per movie — any admin can write or update it, and the page just tracks who last touched it.
 
 The homepage's **Recent Reviews by Editors** section surfaces the 5 most recently written-or-edited reviews (an admin revising an older review counts, not just brand-new ones) as a two-column grid of compact cards — poster thumbnail, title, reviewer, date, and the review's full text clamped to 3 lines with a "Show more" toggle once it's long enough to need one, rather than a short teaser excerpt.
+
+## Admin Recommendations
+
+Any admin can mark a movie as one of their personal recommendations from the movie's detail page — a small "+ Recommend this movie" toggle sits next to the title. Each admin's recommendation is independent: a movie can carry zero, one, or both admins' picks at once, and each shows as its own badge (a colored circle with the admin's initial — a placeholder until real per-admin icon images are provided) next to the title and on the movie's card everywhere it appears in search/browse grids.
 
 ## Admin Poster Overrides
 

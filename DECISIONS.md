@@ -91,6 +91,61 @@ the site.
 
 ## Feature Decisions
 
+### Admin Recommendations: per-admin badges, not a single shared flag
+**PR #TBD.** Two admins each need their own "I recommend this" mark on a
+movie, distinct from the existing single shared Editorial Review.
+
+- Modeled as `MovieRecommendation` with a `@@unique([adminId, movieId])`
+  constraint — same shape as `AdminRating`, not `EditorialReview` — so each
+  admin's recommendation is independent. A movie can carry zero, one, or
+  both admins' picks at once; recommending doesn't overwrite the other
+  admin's mark.
+- The badge is a colored circle with the admin's initial, deterministically
+  colored from their user id, as the default — the fallback for any admin
+  without a real icon yet. `son323`'s real icon shipped in the same PR:
+  `ADMIN_BADGE_ICONS` (`src/lib/admin-badge-icons.ts`) maps a username to an
+  image under `public/badges/`, and `RecommendedBadges` renders that `<img>`
+  instead of the circle when a match exists — no schema or call-site changes
+  needed, exactly the swap this was designed for.
+- The icon (`public/badges/wang-seal.png`) is a cropped photo of a red
+  Chinese name-seal ("chop") stamp, supplied and explicitly approved by the
+  admin after being told it originated from a commercial marketplace product
+  listing (with the seller's watermark cropped out of this specific crop,
+  but the underlying photography still theirs). An original SVG recreation
+  in the same style was built and offered as a no-licensing-question
+  alternative; the admin chose the real photo instead, so this is worth
+  revisiting if that becomes a concern later.
+- The toggle and badges live next to the movie title on the detail page
+  (not tucked next to Editorial Review further down the page) since the
+  point is at-a-glance visibility, and the same badge is reused as a small
+  overlay on `MovieCard` so it shows up automatically everywhere that
+  shared component is used — currently wired into `/search`'s browse grid
+  and the homepage's `MovieRail` sections.
+
+### Cross-member list browsing at `/lists`, separate from the leaderboard
+**PR #38.** Lists have been public since day one specifically to leave room
+for this (see the schema comment on `MemberList`), but the only way to find
+another member's list was a direct permalink or the capped top-20
+Most-Liked-Lists ranking on `/leaderboard`.
+
+- Built `/lists` as its own paginated browse page (12/page, newest-updated
+  or most-liked sort) rather than folding browsing into `/leaderboard` —
+  the leaderboard is a ranking (top 20, likes-only), while browsing needs
+  every list, including ones with zero likes or an unranked position.
+  Reusing one page for both would mean either capping the leaderboard's
+  browse value or losing its "top 20" framing.
+- The nav's "Lists" link (previously pointing straight at `/leaderboard`,
+  the only lists surface that existed) now points at `/lists` instead,
+  since general browsing is the more literal reading of "Lists" in a nav.
+  `/leaderboard` stays reachable via a cross-link on `/lists`, and `/lists`
+  is linked back from `/leaderboard` the same way, so neither page is an
+  orphan.
+- Only lists with at least one item (movie or fight scene) are listed —
+  matches `/leaderboard`'s existing `entries: { some: {} }` filter,
+  extended to also count fight-scene-only lists so a scene-only list isn't
+  invisible to browsing the way it already wasn't invisible to the
+  leaderboard's movie-count-based Top Curators ranking.
+
 ### News & Updates: flat homepage preview + separate paginated archive
 **PR #35.** Landed on this shape after three iterations in preview, each
 a real judgment call worth keeping for the "why":
@@ -445,6 +500,3 @@ time.
 - **Top Rated Fight Scenes rail** — homepage rail using existing fight-scene
   rating data, to put the feature in front of visitors who'd otherwise only
   find it via nav.
-- **Cross-member list browsing / "recommended lists"** — lists were made
-  public specifically to leave room for this without another schema change;
-  no browse UI for other members' lists exists yet beyond a direct permalink.
