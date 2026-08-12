@@ -186,6 +186,32 @@ also means the homepage strip needs no client-side interactivity at all
 (no `"use client"`), unlike the archive's `NewsList`, which still needs
 one for its toggle.
 
+**Homepage strip shrunk further to title + byline only (5th iteration, PR
+#43):** a follow-up pass first tried a 2-column card grid with a red
+eyebrow label per post (echoing the hero carousel's "Trending this week"
+treatment), then reverted that on explicit direction back to the original
+single-column layout, then shrunk again past even that — the homepage
+strip now drops post-body text entirely (`news-strip.tsx` no longer reads
+`post.content` at all), showing just a title and byline per row inside a
+single divider-separated list rather than individual bordered cards. The
+"View all →" link was already the intended way to read further, so the
+excerpt was doing very little work beyond taking up vertical space; cutting
+it makes the section closer to a true at-a-glance ticker. The `/news`
+archive is unaffected — it still shows full text, clamped to 4 lines with
+a "Show more" toggle.
+
+**Reverted to the original single-post teaser banner (6th iteration, PR
+#43):** rather than shrinking the multi-post strip further, went back to
+the very first homepage treatment from before the 2nd iteration above —
+`NewsTeaser`, a single-line banner showing only the *latest* post (red
+"Latest Update" label, title, "Read more →"), the whole banner linking to
+`/news`. `getRecentNewsPosts`/`NEWS_HOMEPAGE_COUNT` and `news-strip.tsx`
+are removed as unused now that the homepage only ever needs the single
+newest post; `getLatestNewsPost()` replaces them (mirrors the original
+`9900ab7` implementation, minus its now-unneeded `author` include since
+the teaser doesn't show a byline). Every prior text-treatment reasoning
+above (300-char excerpt, then title+byline-only) no longer applies to the
+homepage at all — there's exactly one post shown, with no post-body text.
 Any admin can edit/delete any post (mirrors Editorial Reviews'
 shared-not-per-author model, not fight scenes' owner-only model, since
 posts aren't member-submitted content).
