@@ -662,7 +662,7 @@ export function FightSceneSection({
                   <Link
                     key={tag.id}
                     href={`/search/fight-scenes?tag=${encodeURIComponent(tag.name)}`}
-                    className="border px-2 py-0.5 text-[10px] tracking-wide uppercase hover:opacity-70"
+                    className="border px-2 py-0.5 text-[10px] tracking-wide uppercase underline underline-offset-2 hover:opacity-70"
                     style={{ borderColor: TICKET_INK }}
                   >
                     {tag.name}
