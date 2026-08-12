@@ -91,6 +91,37 @@ the site.
 
 ## Feature Decisions
 
+### Admin Recommendations: per-admin badges, not a single shared flag
+**PR #TBD.** Two admins each need their own "I recommend this" mark on a
+movie, distinct from the existing single shared Editorial Review.
+
+- Modeled as `MovieRecommendation` with a `@@unique([adminId, movieId])`
+  constraint — same shape as `AdminRating`, not `EditorialReview` — so each
+  admin's recommendation is independent. A movie can carry zero, one, or
+  both admins' picks at once; recommending doesn't overwrite the other
+  admin's mark.
+- The badge is a colored circle with the admin's initial, deterministically
+  colored from their user id, as the default — the fallback for any admin
+  without a real icon yet. `son323`'s real icon shipped in the same PR:
+  `ADMIN_BADGE_ICONS` (`src/lib/admin-badge-icons.ts`) maps a username to an
+  image under `public/badges/`, and `RecommendedBadges` renders that `<img>`
+  instead of the circle when a match exists — no schema or call-site changes
+  needed, exactly the swap this was designed for.
+- The icon (`public/badges/wang-seal.png`) is a cropped photo of a red
+  Chinese name-seal ("chop") stamp, supplied and explicitly approved by the
+  admin after being told it originated from a commercial marketplace product
+  listing (with the seller's watermark cropped out of this specific crop,
+  but the underlying photography still theirs). An original SVG recreation
+  in the same style was built and offered as a no-licensing-question
+  alternative; the admin chose the real photo instead, so this is worth
+  revisiting if that becomes a concern later.
+- The toggle and badges live next to the movie title on the detail page
+  (not tucked next to Editorial Review further down the page) since the
+  point is at-a-glance visibility, and the same badge is reused as a small
+  overlay on `MovieCard` so it shows up automatically everywhere that
+  shared component is used — currently wired into `/search`'s browse grid
+  and the homepage's `MovieRail` sections.
+
 ### Cross-member list browsing at `/lists`, separate from the leaderboard
 **PR #38.** Lists have been public since day one specifically to leave room
 for this (see the schema comment on `MemberList`), but the only way to find

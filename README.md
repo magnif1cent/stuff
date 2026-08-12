@@ -182,6 +182,10 @@ Admins can write a long-form review (up to 10,000 characters) for any movie, sho
 
 The homepage's **Recent Reviews by Editors** section surfaces the 5 most recently written-or-edited reviews (an admin revising an older review counts, not just brand-new ones) as a two-column grid of compact cards — poster thumbnail, title, reviewer, date, and the review's full text clamped to 3 lines with a "Show more" toggle once it's long enough to need one, rather than a short teaser excerpt.
 
+## Admin Recommendations
+
+Any admin can mark a movie as one of their personal recommendations from the movie's detail page — a small "+ Recommend this movie" toggle sits next to the title. Each admin's recommendation is independent: a movie can carry zero, one, or both admins' picks at once, and each shows as its own badge (a colored circle with the admin's initial — a placeholder until real per-admin icon images are provided) next to the title and on the movie's card everywhere it appears in search/browse grids.
+
 ## Admin Poster Overrides
 
 If a movie's TMDB poster is missing, low-quality, or wrong, admins can upload a replacement (JPEG/PNG/WebP, 5MB max) directly on the movie page. The override is stored in [Vercel Blob](https://vercel.com/docs/storage/vercel-blob) and always takes priority over the TMDB poster when set; admins can remove it to fall back to TMDB's image again.

@@ -1,6 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { resolvePosterUrl } from "@/lib/tmdb";
+import { RecommendedBadges } from "@/components/recommended-badge";
+import type { MovieRecommender } from "@/lib/movie-recommendations";
 import type { Movie } from "@/generated/prisma/client";
 
 export type MovieCardData = Pick<
@@ -9,6 +11,7 @@ export type MovieCardData = Pick<
 > & {
   communityAverage?: number | null;
   communityCount?: number;
+  recommendedBy?: MovieRecommender[];
 };
 
 export function MovieCard({ movie }: { movie: MovieCardData }) {
@@ -32,6 +35,11 @@ export function MovieCard({ movie }: { movie: MovieCardData }) {
         ) : (
           <div className="flex h-full items-center justify-center px-2 text-center text-xs text-neutral-500">
             {movie.title}
+          </div>
+        )}
+        {movie.recommendedBy && movie.recommendedBy.length > 0 && (
+          <div className="absolute top-1.5 left-1.5">
+            <RecommendedBadges recommenders={movie.recommendedBy} />
           </div>
         )}
       </div>

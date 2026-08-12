@@ -34,6 +34,7 @@ model User {
   submittedMovies     Movie[]
   memberLists         MemberList[]
   memberListLikes     MemberListLike[]
+  movieRecommendations MovieRecommendation[]
 }
 
 model Account {
@@ -112,6 +113,7 @@ model Movie {
   fightScenes     FightScene[]
   editorialReview EditorialReview?
   memberListEntries MemberListEntry[]
+  recommendations MovieRecommendation[]
   submittedBy     User?   @relation(fields: [submittedById], references: [id], onDelete: SetNull)
 
   @@index([title])
@@ -200,6 +202,26 @@ model EditorialReview {
 
   movie  Movie @relation(fields: [movieId], references: [id], onDelete: Cascade)
   author User  @relation(fields: [authorId], references: [id], onDelete: Cascade)
+}
+
+// --- Admin recommendations ---
+//
+// Each admin can independently mark a movie as recommended (unlike
+// EditorialReview above, this is per-admin, not one shared row) — a movie
+// can carry zero, one, or both admins' recommendation at once, each shown
+// as its own badge/icon on movie cards.
+
+model MovieRecommendation {
+  id        String   @id @default(cuid())
+  movieId   String
+  adminId   String
+  createdAt DateTime @default(now())
+
+  movie Movie @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  admin User  @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@unique([adminId, movieId])
+  @@index([movieId])
 }
 
 // --- News & Updates ---

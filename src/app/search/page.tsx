@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getRatingSummaries, getEditorsRatingSummaries } from "@/lib/ratings";
+import { getMovieRecommendationsByMovieIds } from "@/lib/movie-recommendations";
 import { findSimilarMovies } from "@/lib/fuzzy-search";
 import { parseRatingFilter } from "@/lib/rating-filter";
 import { MovieCard } from "@/components/movie-card";
@@ -160,6 +161,7 @@ export default async function SearchPage({
   const totalPages = Math.max(1, Math.ceil(totalResults / PAGE_SIZE));
   const page = Math.min(Math.max(1, Number(params.page) || 1), totalPages);
   const pagedResults = results.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const recommendationsByMovieId = await getMovieRecommendationsByMovieIds(pagedResults.map((m) => m.id));
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-10 sm:flex-row">
@@ -341,6 +343,7 @@ export default async function SearchPage({
                       ...movie,
                       communityAverage: summary?.average ?? null,
                       communityCount: summary?.count ?? 0,
+                      recommendedBy: recommendationsByMovieId.get(movie.id) ?? [],
                     }}
                   />
                 );
