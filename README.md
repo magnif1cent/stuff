@@ -269,11 +269,10 @@ still giving anyone who wants the full history a real place to browse it.
 
 The two pages show post text differently, on purpose:
 
-- **Homepage strip** — every post is trimmed to a fixed ~300-character
-  excerpt (cut at the last full word, no mid-word cuts), regardless of how
-  long the post actually is, and with no expand control — the section's
-  "View all" link is the way to read further, so a second per-post
-  click-to-expand would be redundant here.
+- **Homepage strip** — a compact list of title + byline rows only, no post
+  body text and no expand control — the section's "View all" link is the
+  way to read further, so showing any body text here would just be a
+  shorter version of the same content the archive already shows in full.
 - **`/news` archive** — shows each post's full text, clamped to 4 lines
   with a "Show more" toggle once it's long enough to need one, reusing the
   same clamp pattern the homepage's Recent Reviews by Editors feed already

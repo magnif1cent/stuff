@@ -186,6 +186,20 @@ also means the homepage strip needs no client-side interactivity at all
 (no `"use client"`), unlike the archive's `NewsList`, which still needs
 one for its toggle.
 
+**Homepage strip shrunk further to title + byline only (5th iteration, PR
+#43):** a follow-up pass first tried a 2-column card grid with a red
+eyebrow label per post (echoing the hero carousel's "Trending this week"
+treatment), then reverted that on explicit direction back to the original
+single-column layout, then shrunk again past even that — the homepage
+strip now drops post-body text entirely (`news-strip.tsx` no longer reads
+`post.content` at all), showing just a title and byline per row inside a
+single divider-separated list rather than individual bordered cards. The
+"View all →" link was already the intended way to read further, so the
+excerpt was doing very little work beyond taking up vertical space; cutting
+it makes the section closer to a true at-a-glance ticker. The `/news`
+archive is unaffected — it still shows full text, clamped to 4 lines with
+a "Show more" toggle.
+
 Any admin can edit/delete any post (mirrors Editorial Reviews'
 shared-not-per-author model, not fight scenes' owner-only model, since
 posts aren't member-submitted content).
