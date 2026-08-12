@@ -83,9 +83,14 @@ export function FightSceneResultCard({
 
       <div className="mt-3 flex flex-wrap gap-1.5">
         {scene.tags.map((tag) => (
-          <span key={tag.id} className="border px-2 py-0.5 text-[10px] tracking-wide uppercase" style={{ borderColor: TICKET_INK }}>
+          <Link
+            key={tag.id}
+            href={`/search/fight-scenes?tag=${encodeURIComponent(tag.name)}`}
+            className="border px-2 py-0.5 text-[10px] tracking-wide uppercase hover:opacity-70"
+            style={{ borderColor: TICKET_INK }}
+          >
             {tag.name}
-          </span>
+          </Link>
         ))}
         {scene.isVerified && (
           <span className="px-2 py-0.5 text-[10px] tracking-wide uppercase" style={{ background: TICKET_INK, color: "#e8dcc4" }}>

@@ -241,12 +241,13 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
           {movie.genres.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-2">
               {movie.genres.map((genre) => (
-                <span
+                <Link
                   key={genre.id}
-                  className="rounded-full border border-neutral-700 px-2 py-0.5 text-xs text-neutral-300"
+                  href={`/search?genre=${encodeURIComponent(genre.name)}`}
+                  className="rounded-full border border-neutral-700 px-2 py-0.5 text-xs text-neutral-300 hover:border-neutral-500 hover:text-white"
                 >
                   {genre.name}
-                </span>
+                </Link>
               ))}
             </div>
           )}
