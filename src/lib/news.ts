@@ -3,18 +3,12 @@ import { prisma } from "@/lib/prisma";
 export const MAX_NEWS_TITLE_LENGTH = 200;
 export const MAX_NEWS_CONTENT_LENGTH = 10000;
 
-// Matches Recent Reviews by Editors' scale for a consistent homepage
-// rhythm — flat, no pagination, since the full paginated history lives on
-// the /news archive page instead.
-export const NEWS_HOMEPAGE_COUNT = 5;
 export const NEWS_ARCHIVE_PAGE_SIZE = 10;
 
-export async function getRecentNewsPosts(limit = NEWS_HOMEPAGE_COUNT) {
-  return prisma.newsPost.findMany({
-    orderBy: { createdAt: "desc" },
-    take: limit,
-    include: { author: { select: { username: true } } },
-  });
+// Latest post only, for the homepage teaser banner — separate from the
+// paginated archive query below since it only ever needs the newest row.
+export async function getLatestNewsPost() {
+  return prisma.newsPost.findFirst({ orderBy: { createdAt: "desc" } });
 }
 
 export async function getNewsArchivePage(page: number) {

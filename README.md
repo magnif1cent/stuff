@@ -14,7 +14,7 @@ An IMDB-style website for kung fu and martial arts films, built for martial arts
 - A unified `/admin` dashboard (Movies management incl. pending-submission review and permanent deletion, TMDB import incl. title search, keyword search, and bulk CSV upload, Fight Scene Tags, News & Updates, Account settings) plus admin actions that stay inline on regular pages (Editors' Score, editorial reviews, poster overrides, fight scene verification) &mdash; see [Admin Area](#admin-area) below
 - Social sharing (native share sheet on mobile, copy-link/X/Facebook/Reddit fallback on desktop) on movie and fight scene pages
 - A public `/lists` page for browsing every member's public custom lists (sorted by newest-updated or most-liked, paginated), plus a `/leaderboard` page ranking the Most-Liked Lists (members can like each other's public custom lists) and Top Curators (members with the most movies across their own lists) — see [Member Lists & Profiles](#member-lists--profiles) below
-- Admin-published News & Updates posts: the 5 most recent shown flat on the homepage, with a full paginated archive at `/news` — see [News & Updates](#news--updates) below
+- Admin-published News & Updates posts: the latest one shown as a teaser banner on the homepage, with a full paginated archive at `/news` — see [News & Updates](#news--updates) below
 
 ## Tech Stack
 
@@ -259,24 +259,14 @@ env), it shows "Local dev build" instead.
 ## News & Updates
 
 Admins can publish short posts (title + up to 10,000 characters) from
-`/admin/news`. The 5 most recent show flat (no pagination) as a "News &
-Updates" section directly on the homepage, right under the hero carousel,
-with a "View all →" link to the full paginated archive at `/news` (10 per
-page, same Previous/Next pattern used elsewhere). Splitting it this way —
-rather than pagination controls inline on the homepage — keeps the
-homepage itself lightweight regardless of how many posts exist, while
-still giving anyone who wants the full history a real place to browse it.
-
-The two pages show post text differently, on purpose:
-
-- **Homepage strip** — a compact list of title + byline rows only, no post
-  body text and no expand control — the section's "View all" link is the
-  way to read further, so showing any body text here would just be a
-  shorter version of the same content the archive already shows in full.
-- **`/news` archive** — shows each post's full text, clamped to 4 lines
-  with a "Show more" toggle once it's long enough to need one, reusing the
-  same clamp pattern the homepage's Recent Reviews by Editors feed already
-  established.
+`/admin/news`. The homepage shows only the single latest post as a thin
+teaser banner directly under the hero carousel — a red "Latest Update"
+label, the post's title, and a "Read more →" link, the whole banner
+clickable through to the full paginated archive at `/news` (10 per page,
+same Previous/Next pattern used elsewhere). The `/news` archive shows each
+post's full text, clamped to 4 lines with a "Show more" toggle once it's
+long enough to need one, reusing the same clamp pattern the homepage's
+Recent Reviews by Editors feed already established.
 
 Any admin can edit or delete any post, mirroring Editorial Reviews'
 shared-not-per-author model.

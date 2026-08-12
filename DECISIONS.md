@@ -200,6 +200,18 @@ it makes the section closer to a true at-a-glance ticker. The `/news`
 archive is unaffected — it still shows full text, clamped to 4 lines with
 a "Show more" toggle.
 
+**Reverted to the original single-post teaser banner (6th iteration, PR
+#43):** rather than shrinking the multi-post strip further, went back to
+the very first homepage treatment from before the 2nd iteration above —
+`NewsTeaser`, a single-line banner showing only the *latest* post (red
+"Latest Update" label, title, "Read more →"), the whole banner linking to
+`/news`. `getRecentNewsPosts`/`NEWS_HOMEPAGE_COUNT` and `news-strip.tsx`
+are removed as unused now that the homepage only ever needs the single
+newest post; `getLatestNewsPost()` replaces them (mirrors the original
+`9900ab7` implementation, minus its now-unneeded `author` include since
+the teaser doesn't show a byline). Every prior text-treatment reasoning
+above (300-char excerpt, then title+byline-only) no longer applies to the
+homepage at all — there's exactly one post shown, with no post-body text.
 Any admin can edit/delete any post (mirrors Editorial Reviews'
 shared-not-per-author model, not fight scenes' owner-only model, since
 posts aren't member-submitted content).
