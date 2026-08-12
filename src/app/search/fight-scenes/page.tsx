@@ -75,6 +75,7 @@ export default async function FightSceneSearchPage({
   const sceneInclude = {
     movie: { select: { id: true, title: true, releaseDate: true } as const },
     tags: true,
+    cast: { orderBy: { order: "asc" as const }, include: { person: true } },
   } as const;
 
   let scenes: Prisma.FightSceneGetPayload<{ include: typeof sceneInclude }>[] = [];

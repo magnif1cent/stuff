@@ -17,7 +17,15 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
     include: {
       castCredits: { include: { movie: true }, orderBy: { movie: { releaseDate: "desc" } } },
       fightSceneAppearances: {
-        include: { fightScene: { include: { movie: { select: { id: true, title: true, releaseDate: true } }, tags: true } } },
+        include: {
+          fightScene: {
+            include: {
+              movie: { select: { id: true, title: true, releaseDate: true } },
+              tags: true,
+              cast: { orderBy: { order: "asc" }, include: { person: true } },
+            },
+          },
+        },
         orderBy: { fightScene: { createdAt: "desc" } },
       },
     },

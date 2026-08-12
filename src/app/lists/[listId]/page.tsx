@@ -17,7 +17,15 @@ export default async function PublicListPage({ params }: { params: Promise<{ lis
       user: { select: { username: true } },
       entries: { include: { movie: true }, orderBy: { createdAt: "desc" } },
       fightSceneEntries: {
-        include: { fightScene: { include: { movie: { select: { id: true, title: true, releaseDate: true } }, tags: true } } },
+        include: {
+          fightScene: {
+            include: {
+              movie: { select: { id: true, title: true, releaseDate: true } },
+              tags: true,
+              cast: { orderBy: { order: "asc" }, include: { person: true } },
+            },
+          },
+        },
         orderBy: { createdAt: "desc" },
       },
       _count: { select: { likes: true } },
