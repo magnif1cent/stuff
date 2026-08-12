@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { tmdbImageUrl, resolvePosterUrl } from "@/lib/tmdb";
 import { getCommunityRatingSummary, getEditorsRatingSummary } from "@/lib/ratings";
+import { getMovieRecommenders } from "@/lib/movie-recommendations";
 import { getDiscussionPage } from "@/lib/discussion";
 import {
   getFightScenesForMovie,
@@ -21,6 +22,7 @@ import { DiscussionThread } from "@/components/discussion-thread";
 import { FightSceneSection } from "@/components/fight-scene-section";
 import { EditorialReview } from "@/components/editorial-review";
 import { PosterOverrideControl } from "@/components/poster-override-control";
+import { RecommendationControl } from "@/components/recommendation-control";
 
 export default async function MovieDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -64,6 +66,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
     fightScenes,
     fightSceneTags,
     editorialReview,
+    movieRecommenders,
   ] = await Promise.all([
     getCommunityRatingSummary(movie.id),
     getEditorsRatingSummary(movie.id),
@@ -97,6 +100,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
       where: { movieId: movie.id },
       include: { author: { select: { username: true } } },
     }),
+    getMovieRecommenders(movie.id),
   ]);
 
   const myMemberListItems = myMemberLists.map((list) => ({
@@ -231,6 +235,15 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
           <h1 className="font-serif text-3xl font-bold text-white">
             {movie.title} {year && <span className="text-neutral-400">({year})</span>}
           </h1>
+
+          <div className="mt-2">
+            <RecommendationControl
+              movieId={movie.id}
+              initialRecommenders={movieRecommenders}
+              currentAdminId={session?.user?.role === "ADMIN" ? session.user.id : null}
+              isAdmin={session?.user?.role === "ADMIN"}
+            />
+          </div>
 
           <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-neutral-400">
             {movie.runtime && <span>{movie.runtime} min</span>}

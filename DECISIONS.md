@@ -91,6 +91,28 @@ the site.
 
 ## Feature Decisions
 
+### Admin Recommendations: per-admin badges, not a single shared flag
+**PR #TBD.** Two admins each need their own "I recommend this" mark on a
+movie, distinct from the existing single shared Editorial Review.
+
+- Modeled as `MovieRecommendation` with a `@@unique([adminId, movieId])`
+  constraint — same shape as `AdminRating`, not `EditorialReview` — so each
+  admin's recommendation is independent. A movie can carry zero, one, or
+  both admins' picks at once; recommending doesn't overwrite the other
+  admin's mark.
+- The badge is a colored circle with the admin's initial, deterministically
+  colored from their user id, rather than waiting on the real per-admin
+  icon images (not available yet). Swapping in real icons later is a
+  one-line change inside `RecommendedBadges` (render an `<img>` keyed by
+  admin id/username instead of the circle) — no schema or call-site changes
+  needed.
+- The toggle and badges live next to the movie title on the detail page
+  (not tucked next to Editorial Review further down the page) since the
+  point is at-a-glance visibility, and the same badge is reused as a small
+  overlay on `MovieCard` so it shows up automatically everywhere that
+  shared component is used — currently wired into `/search`'s browse grid
+  and the homepage's `MovieRail` sections.
+
 ### Cross-member list browsing at `/lists`, separate from the leaderboard
 **PR #38.** Lists have been public since day one specifically to leave room
 for this (see the schema comment on `MemberList`), but the only way to find
