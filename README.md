@@ -122,6 +122,7 @@ Two dedicated search pages, both with a vertical sidebar of filters, pagination,
 - **`/search`** (movies) — filters: genre, director (autocomplete), actor (autocomplete), country, release-year range, minimum community rating, minimum editor rating. Sort by relevance, highest rated, newest, or oldest. A typo-tolerant "did you mean" fallback (via Postgres `pg_trgm`, see [Getting Set Up](#getting-set-up)) kicks in when nothing matches exactly.
 - **`/search/fight-scenes`** — filters: category tag (multi-select, matches any selected), actor (autocomplete, scoped to people actually tagged in a fight scene — not just anyone in a movie's cast), minimum member rating, minimum editor rating. Sort by newest, highest member rated, highest editor rated, or most favorited.
 - The navbar's search box submits to `/search` in "browse" mode (no filters) when submitted empty, rather than doing nothing — both pages are also reachable directly via the "Browse" and "Fight Scenes" nav links.
+- **Quick links into filtered search**: a movie's genre badges and a fight scene's category-tag badges are clickable, deep-linking straight into the matching filtered search (`/search?genre=`, `/search/fight-scenes?tag=`) instead of requiring the filter to be set by hand.
 
 ## TMDB Import
 

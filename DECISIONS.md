@@ -91,6 +91,17 @@ the site.
 
 ## Feature Decisions
 
+### Browse-by-tag/genre quick links reuse existing badges rather than adding a new pill strip
+**PR #TBD.** The backlog item described "pill-link strips deep-linking
+into filtered search." *Considered:* a dedicated new section (e.g. a
+homepage genre/tag rail) — passed on it in favor of making the genre
+badges already shown on a movie page, and the category-tag badges already
+shown on every fight scene card, into links themselves (`/search?genre=`
+and `/search/fight-scenes?tag=`). Same destination, no new UI surface or
+page real estate, and it puts the link exactly where someone is already
+looking at that genre/tag rather than a separate browsing section they'd
+have to notice first.
+
 ### Submission follow-through: a "View submission" link and a member-facing Pending Submissions section
 **PR #30.** Two small follow-ups after adding the "+ Add Movie" nav
 link surfaced: a successful submission only showed a toast-style message
@@ -376,8 +387,6 @@ time.
 - **Top Rated Fight Scenes rail** — homepage rail using existing fight-scene
   rating data, to put the feature in front of visitors who'd otherwise only
   find it via nav.
-- **Browse-by-tag / browse-by-genre quick links** — pill-link strips
-  deep-linking straight into filtered search.
 - **Cross-member list browsing / "recommended lists"** — lists were made
   public specifically to leave room for this without another schema change;
   no browse UI for other members' lists exists yet beyond a direct permalink.
