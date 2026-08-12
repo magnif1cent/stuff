@@ -22,11 +22,9 @@ function clipEmbedUrl(videoId: string, startSeconds: number | null) {
   const params = new URLSearchParams({
     autoplay: "1",
     mute: "1",
-    loop: "1",
     controls: "0",
     playsinline: "1",
     rel: "0",
-    playlist: videoId,
     start: String(start),
     end: String(start + CLIP_SECONDS),
   });
