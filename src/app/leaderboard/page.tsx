@@ -6,7 +6,12 @@ export default async function LeaderboardPage() {
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-10">
-      <h1 className="mb-6 text-2xl font-bold text-white">Leaderboard</h1>
+      <div className="mb-6 flex items-center justify-between gap-4">
+        <h1 className="text-2xl font-bold text-white">Leaderboard</h1>
+        <Link href="/lists" className="text-sm text-red-500 hover:underline">
+          Browse all lists →
+        </Link>
+      </div>
 
       <section className="mb-10">
         <h2 className="mb-4 text-lg font-semibold text-white">Most-Liked Lists</h2>

@@ -91,6 +91,30 @@ the site.
 
 ## Feature Decisions
 
+### Cross-member list browsing at `/lists`, separate from the leaderboard
+**PR #38.** Lists have been public since day one specifically to leave room
+for this (see the schema comment on `MemberList`), but the only way to find
+another member's list was a direct permalink or the capped top-20
+Most-Liked-Lists ranking on `/leaderboard`.
+
+- Built `/lists` as its own paginated browse page (12/page, newest-updated
+  or most-liked sort) rather than folding browsing into `/leaderboard` —
+  the leaderboard is a ranking (top 20, likes-only), while browsing needs
+  every list, including ones with zero likes or an unranked position.
+  Reusing one page for both would mean either capping the leaderboard's
+  browse value or losing its "top 20" framing.
+- The nav's "Lists" link (previously pointing straight at `/leaderboard`,
+  the only lists surface that existed) now points at `/lists` instead,
+  since general browsing is the more literal reading of "Lists" in a nav.
+  `/leaderboard` stays reachable via a cross-link on `/lists`, and `/lists`
+  is linked back from `/leaderboard` the same way, so neither page is an
+  orphan.
+- Only lists with at least one item (movie or fight scene) are listed —
+  matches `/leaderboard`'s existing `entries: { some: {} }` filter,
+  extended to also count fight-scene-only lists so a scene-only list isn't
+  invisible to browsing the way it already wasn't invisible to the
+  leaderboard's movie-count-based Top Curators ranking.
+
 ### News & Updates: flat homepage preview + separate paginated archive
 **PR #35.** Landed on this shape after three iterations in preview, each
 a real judgment call worth keeping for the "why":
@@ -445,6 +469,3 @@ time.
 - **Top Rated Fight Scenes rail** — homepage rail using existing fight-scene
   rating data, to put the feature in front of visitors who'd otherwise only
   find it via nav.
-- **Cross-member list browsing / "recommended lists"** — lists were made
-  public specifically to leave room for this without another schema change;
-  no browse UI for other members' lists exists yet beyond a direct permalink.
