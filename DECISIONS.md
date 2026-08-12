@@ -91,6 +91,20 @@ the site.
 
 ## Feature Decisions
 
+### News & Updates paginates from day one, reusing the Recent Reviews clamp pattern
+**PR #TBD.** Backlog originally recommended shipping `/news` as a flat list
+first, matching how Recent Reviews by Editors started — added pagination
+once there was actual volume. Explicit direction here reversed that:
+paginate immediately (`NEWS_PAGE_SIZE = 10`, same Previous/Next + "Page X
+of Y" pattern already used by movie and fight-scene search). Each post
+shows its full text clamped to 4 lines with a "Show more" toggle, reusing
+Recent Reviews by Editors' clamp component rather than inventing a second
+truncation scheme. Any admin can edit/delete any post (mirrors Editorial
+Reviews' shared-not-per-author model, not fight scenes' owner-only model,
+since posts aren't member-submitted content). Homepage teaser placed
+directly under the hero carousel, per the original design recommendation —
+confirmed as the right spot once actually built and previewed.
+
 ### Fight scene card UI cleanup: cast on the read-only card, admin tools collapsed by default
 **PR #TBD.** Two small improvements to the Fight Ticket card, from a
 self-review of what was already shipped this session. *Cast on
@@ -393,10 +407,6 @@ time.
   bullets are a first draft, not reviewed. Only the curation section
   ("How the catalog is curated") is considered final. Revisit all four
   once final wording, a contact method, and a guidelines review land.
-- **News & Updates (admin blog)** — a new `NewsPost` model, `/admin/news`
-  CRUD, a public `/news` list page, a nav link, and a homepage teaser
-  banner for the latest post. Requested alongside Recent Reviews by Editors;
-  Recent Reviews by Editors was built first since it needed no schema change.
 - **Move the build version indicator off the global footer** — currently
   visible on every page for every visitor; may move to a less prominent
   spot (e.g. an admin-only page) later. Site-wide footer was fine to start.

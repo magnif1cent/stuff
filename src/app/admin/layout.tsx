@@ -7,6 +7,7 @@ const NAV_LINKS = [
   { href: "/admin/movies", label: "Movies" },
   { href: "/admin/import", label: "Import from TMDB" },
   { href: "/admin/fight-scene-tags", label: "Fight Scene Tags" },
+  { href: "/admin/news", label: "News & Updates" },
   { href: "/admin/account", label: "Account" },
 ];
 

@@ -2,18 +2,21 @@ import { prisma } from "@/lib/prisma";
 import { getFeaturedMovies } from "@/lib/weekly-featured";
 import { getRatingSummaries, getTopRatedMovies } from "@/lib/ratings";
 import { getRecentEditorialReviews } from "@/lib/editorial-reviews";
+import { getLatestNewsPost } from "@/lib/news";
 import { HeroCarousel } from "@/components/hero-carousel";
 import { MovieRail } from "@/components/movie-rail";
 import { RecentReviewsFeed, type RecentReviewItem } from "@/components/recent-reviews-feed";
+import { NewsTeaser } from "@/components/news-teaser";
 
 export const revalidate = 3600;
 
 export default async function HomePage() {
-  const [featured, recent, topRated, recentReviews] = await Promise.all([
+  const [featured, recent, topRated, recentReviews, latestNewsPost] = await Promise.all([
     getFeaturedMovies(),
     prisma.movie.findMany({ where: { status: "APPROVED" }, orderBy: { createdAt: "desc" }, take: 12 }),
     getTopRatedMovies(),
     getRecentEditorialReviews(),
+    getLatestNewsPost(),
   ]);
 
   const recentReviewItems: RecentReviewItem[] = recentReviews.map((review) => ({
@@ -41,6 +44,7 @@ export default async function HomePage() {
   return (
     <div className="flex flex-1 flex-col">
       <HeroCarousel movies={featured} />
+      {latestNewsPost && <NewsTeaser title={latestNewsPost.title} />}
 
       <MovieRail
         title="Recently Added"
