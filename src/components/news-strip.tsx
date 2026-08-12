@@ -20,10 +20,9 @@ function formatDate(iso: string) {
 
 export function NewsStrip({ posts }: { posts: NewsPostItem[] }) {
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+    <div className="flex flex-col gap-4">
       {posts.map((post) => (
         <article key={post.id} className="rounded-md border border-neutral-800 bg-neutral-900 p-4">
-          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-red-500">Site Update</p>
           <h3 className="font-serif text-lg font-bold text-white">{post.title}</h3>
           <p className="mb-2 text-xs text-neutral-500">
             {post.author.username} · {formatDate(post.createdAt)}
