@@ -17,6 +17,11 @@ const SECTIONS = [
     description: "Manage the category vocabulary members tag fight scenes with.",
   },
   {
+    href: "/admin/news",
+    title: "News & Updates",
+    description: "Publish posts shown on /news and as a homepage teaser.",
+  },
+  {
     href: "/admin/account",
     title: "Account",
     description: "Change your own admin sign-in email or password.",

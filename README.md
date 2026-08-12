@@ -11,9 +11,10 @@ An IMDB-style website for kung fu and martial arts films, built for martial arts
 - Actor pages (`/actors/[personId]`) showing an actor's filmography and every fight scene they're tagged in, linked from a movie's cast list and a scene's "Featuring" line (see [Actor Pages](#actor-pages) below)
 - Member accounts via email/password (with email verification) or Google sign-in, identified publicly by a chosen username rather than their email or real name (see [Usernames](#usernames) below)
 - Member capabilities: rate movies and fight scenes, maintain a Favorites list and a Watchlist for movies (fight scenes get a Favorite only — see below), create their own public named lists on a profile page at `/members/[username]` and save both movies and fight scenes to them (see [Member Lists & Profiles](#member-lists--profiles) below), post/reply in movie discussions, submit fight scenes, and submit a movie missing from the catalog for admin review (see [Member Movie Submissions](#member-movie-submissions) below)
-- A unified `/admin` dashboard (Movies management incl. pending-submission review and permanent deletion, TMDB import incl. title search, keyword search, and bulk CSV upload, Fight Scene Tags, Account settings) plus admin actions that stay inline on regular pages (Editors' Score, editorial reviews, poster overrides, fight scene verification) &mdash; see [Admin Area](#admin-area) below
+- A unified `/admin` dashboard (Movies management incl. pending-submission review and permanent deletion, TMDB import incl. title search, keyword search, and bulk CSV upload, Fight Scene Tags, News & Updates, Account settings) plus admin actions that stay inline on regular pages (Editors' Score, editorial reviews, poster overrides, fight scene verification) &mdash; see [Admin Area](#admin-area) below
 - Social sharing (native share sheet on mobile, copy-link/X/Facebook/Reddit fallback on desktop) on movie and fight scene pages
 - A public `/leaderboard` page ranking the Most-Liked Lists (members can like each other's public custom lists) and Top Curators (members with the most movies across their own lists) — see [Member Lists & Profiles](#member-lists--profiles) below
+- Admin-published News & Updates posts: the 5 most recent shown flat on the homepage, with a full paginated archive at `/news` — see [News & Updates](#news--updates) below
 
 ## Tech Stack
 
@@ -199,6 +200,7 @@ Signed-in admins get an "Admin" link in the navbar to `/admin` &mdash; a dashboa
 - **Movies** (`/admin/movies`) &mdash; a **Pending Submissions** section (see [Member Movie Submissions](#member-movie-submissions) above) to approve or reject member-submitted movies, plus the catalog itself: browse and permanently delete a movie entry (type the title to confirm). Deleting cascades through everything attached to it: cast credits, ratings, discussion posts, fight scenes (and their own casts/ratings), the editorial review, and weekly-featured entries.
 - **Import from TMDB** (`/admin/import`) &mdash; search-and-import by title or by keyword (see [TMDB Import](#tmdb-import) above), plus a bulk-upload section: a CSV with a `title` column (optionally `year` to disambiguate identically-titled results, or `tmdb_id` to skip the search entirely) imports up to 25 movies in one request. Each row is resolved and imported independently, so one bad row (no TMDB match, a transient TMDB error) doesn't fail the rest of the batch &mdash; the response reports created/updated/error per row. CSV parsing uses `papaparse` rather than the `xlsx` npm package, whose published version has known unpatched advisories (SheetJS fixed them only on their own CDN, not on the npm registry).
 - **Fight Scene Tags** (`/admin/fight-scene-tags`) &mdash; manage the category vocabulary members tag fight scenes with (see [Fight Scenes](#fight-scenes) above).
+- **News & Updates** (`/admin/news`) &mdash; publish, edit, or delete posts shown on the homepage and the `/news` archive (see [News & Updates](#news--updates) above).
 - **Account** (`/admin/account`) &mdash; change your own admin sign-in email or password (previously only possible via direct SQL). Changing your email re-triggers the normal email-verification flow on the new address; changing your password requires your current one (unless you signed up via Google and have never set one, in which case you can set an initial password). Either change signs you out immediately, since the session is JWT-based and won't otherwise pick up the new credentials until you sign back in.
 
 Account management is deliberately self-service (an admin managing their own credentials) rather than a full user-management CRUD (promoting other users to admin, resetting someone else's password, etc.) &mdash; a reasonable next step if the admin area grows further.
@@ -230,10 +232,10 @@ Each slide prefers a fight scene clip over the static TMDB backdrop:
 
 ## Footer & About Page
 
-Every page has a site-wide footer (`src/components/footer.tsx`) with an
-`About` link on the left and a build version indicator on the right. It's
-deliberately not in the main navbar — Movies/Fights/Lists stays focused on
-the core browsing links.
+Every page has a site-wide footer (`src/components/footer.tsx`) with
+`About` and `News` links on the left and a build version indicator on the
+right. It's deliberately not in the main navbar — Movies/Fights/Lists stays
+focused on the core browsing links.
 
 `/about` is a public page with four sections: what the site is, how the
 catalog is curated (echoing the TMDB keyword-search curation described
@@ -248,6 +250,32 @@ suffix on non-production deploys), reading Vercel's built-in
 or manual version bump needed. It exists to make "is this the deploy I
 think it is?" a glance instead of a debugging session. Locally (no Vercel
 env), it shows "Local dev build" instead.
+
+## News & Updates
+
+Admins can publish short posts (title + up to 10,000 characters) from
+`/admin/news`. The 5 most recent show flat (no pagination) as a "News &
+Updates" section directly on the homepage, right under the hero carousel,
+with a "View all →" link to the full paginated archive at `/news` (10 per
+page, same Previous/Next pattern used elsewhere). Splitting it this way —
+rather than pagination controls inline on the homepage — keeps the
+homepage itself lightweight regardless of how many posts exist, while
+still giving anyone who wants the full history a real place to browse it.
+
+The two pages show post text differently, on purpose:
+
+- **Homepage strip** — every post is trimmed to a fixed ~300-character
+  excerpt (cut at the last full word, no mid-word cuts), regardless of how
+  long the post actually is, and with no expand control — the section's
+  "View all" link is the way to read further, so a second per-post
+  click-to-expand would be redundant here.
+- **`/news` archive** — shows each post's full text, clamped to 4 lines
+  with a "Show more" toggle once it's long enough to need one, reusing the
+  same clamp pattern the homepage's Recent Reviews by Editors feed already
+  established.
+
+Any admin can edit or delete any post, mirroring Editorial Reviews'
+shared-not-per-author model.
 
 ## Web Analytics
 

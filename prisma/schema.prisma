@@ -30,6 +30,7 @@ model User {
   fightSceneRatings   FightSceneRating[]
   fightSceneAdminRatings FightSceneAdminRating[]
   editorialReviews    EditorialReview[]
+  newsPosts           NewsPost[]
   submittedMovies     Movie[]
   memberLists         MemberList[]
   memberListLikes     MemberListLike[]
@@ -199,6 +200,24 @@ model EditorialReview {
 
   movie  Movie @relation(fields: [movieId], references: [id], onDelete: Cascade)
   author User  @relation(fields: [authorId], references: [id], onDelete: Cascade)
+}
+
+// --- News & Updates ---
+
+// Not movie-scoped (unlike EditorialReview) — site-level admin posts, so no
+// unique constraint tying it to another model. Any admin can create/edit/
+// delete any post; authorId just tracks who wrote it for the byline.
+model NewsPost {
+  id        String   @id @default(cuid())
+  title     String
+  content   String   @db.Text
+  authorId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
 }
 
 // --- Member lists ---

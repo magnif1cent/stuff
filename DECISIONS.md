@@ -91,6 +91,50 @@ the site.
 
 ## Feature Decisions
 
+### News & Updates: flat homepage preview + separate paginated archive
+**PR #35.** Landed on this shape after three iterations in preview, each
+a real judgment call worth keeping for the "why":
+
+1. Backlog originally recommended a flat `/news` list first (like Recent
+   Reviews by Editors started), pagination added once there was volume —
+   explicit direction reversed this before building: paginate from day
+   one (`/news`, 10/page, footer link, one-line homepage teaser for the
+   latest post).
+2. After previewing, explicit direction reversed the *page* itself: no
+   separate route at all — the full paginated list moved directly onto
+   the homepage as a "News & Updates" section (footer link and `/news`
+   removed), paginated via a `newsPage` query param scoped to the section
+   so it wouldn't collide with anything else on the page.
+3. Previewing *that* showed the actual problem: pagination controls
+   embedded in the homepage made the section dominate the page (10 full
+   posts before you even reached "Recently Added"), and every page-turn
+   reloaded the entire homepage server-side (hero, rails, everything) —
+   a heavier interaction than pagination usually implies. Landed here:
+   the homepage shows a **flat** 5-post preview (matching Recent Reviews'
+   scale, no pagination chrome at all) with a "View all →" link, and
+   `/news` came back as a real paginated archive (10/page) for anyone who
+   wants the full history. This isn't the same redundancy as the
+   discarded teaser-plus-page version — a flat preview and a paginated
+   archive serve genuinely different intents (glance vs. browse), not two
+   views of the same single item.
+
+**Text treatment differs by page, deliberately (4th iteration):** the
+homepage strip and the `/news` archive show post text two different ways,
+not the same component reused. The archive keeps the full-text-clamped-
+to-4-lines-with-a-"Show more"-toggle behavior (reusing Recent Reviews by
+Editors' clamp component). The homepage strip instead trims every post to
+a fixed ~300-character excerpt (`news-strip.tsx`, cut at the last full
+word) regardless of actual length, with **no** expand toggle — the
+section's "View all" link already exists as the way to read further, so a
+second per-post click-to-expand on the homepage would be redundant. This
+also means the homepage strip needs no client-side interactivity at all
+(no `"use client"`), unlike the archive's `NewsList`, which still needs
+one for its toggle.
+
+Any admin can edit/delete any post (mirrors Editorial Reviews'
+shared-not-per-author model, not fight scenes' owner-only model, since
+posts aren't member-submitted content).
+
 ### Fight scene card UI cleanup: cast on the read-only card, admin tools collapsed by default
 **PR #TBD.** Two small improvements to the Fight Ticket card, from a
 self-review of what was already shipped this session. *Cast on
@@ -393,10 +437,6 @@ time.
   bullets are a first draft, not reviewed. Only the curation section
   ("How the catalog is curated") is considered final. Revisit all four
   once final wording, a contact method, and a guidelines review land.
-- **News & Updates (admin blog)** — a new `NewsPost` model, `/admin/news`
-  CRUD, a public `/news` list page, a nav link, and a homepage teaser
-  banner for the latest post. Requested alongside Recent Reviews by Editors;
-  Recent Reviews by Editors was built first since it needed no schema change.
 - **Move the build version indicator off the global footer** — currently
   visible on every page for every visitor; may move to a less prominent
   spot (e.g. an admin-only page) later. Site-wide footer was fine to start.
