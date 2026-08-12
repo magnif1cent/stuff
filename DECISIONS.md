@@ -118,11 +118,22 @@ a real judgment call worth keeping for the "why":
    archive serve genuinely different intents (glance vs. browse), not two
    views of the same single item.
 
-Each post shows its full text clamped to 4 lines with a "Show more"
-toggle, reusing Recent Reviews by Editors' clamp component rather than
-inventing a second truncation scheme. Any admin can edit/delete any post
-(mirrors Editorial Reviews' shared-not-per-author model, not fight
-scenes' owner-only model, since posts aren't member-submitted content).
+**Text treatment differs by page, deliberately (4th iteration):** the
+homepage strip and the `/news` archive show post text two different ways,
+not the same component reused. The archive keeps the full-text-clamped-
+to-4-lines-with-a-"Show more"-toggle behavior (reusing Recent Reviews by
+Editors' clamp component). The homepage strip instead trims every post to
+a fixed ~300-character excerpt (`news-strip.tsx`, cut at the last full
+word) regardless of actual length, with **no** expand toggle — the
+section's "View all" link already exists as the way to read further, so a
+second per-post click-to-expand on the homepage would be redundant. This
+also means the homepage strip needs no client-side interactivity at all
+(no `"use client"`), unlike the archive's `NewsList`, which still needs
+one for its toggle.
+
+Any admin can edit/delete any post (mirrors Editorial Reviews'
+shared-not-per-author model, not fight scenes' owner-only model, since
+posts aren't member-submitted content).
 
 ### Fight scene card UI cleanup: cast on the read-only card, admin tools collapsed by default
 **PR #TBD.** Two small improvements to the Fight Ticket card, from a

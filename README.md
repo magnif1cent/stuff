@@ -261,11 +261,21 @@ page, same Previous/Next pattern used elsewhere). Splitting it this way —
 rather than pagination controls inline on the homepage — keeps the
 homepage itself lightweight regardless of how many posts exist, while
 still giving anyone who wants the full history a real place to browse it.
-Each post shows its full text, clamped to 4 lines with a "Show more"
-toggle once it's long enough to need one — the same pattern the homepage's
-Recent Reviews by Editors feed already established, reused here rather
-than inventing a second clamp scheme. Any admin can edit or delete any
-post, mirroring Editorial Reviews' shared-not-per-author model.
+
+The two pages show post text differently, on purpose:
+
+- **Homepage strip** — every post is trimmed to a fixed ~300-character
+  excerpt (cut at the last full word, no mid-word cuts), regardless of how
+  long the post actually is, and with no expand control — the section's
+  "View all" link is the way to read further, so a second per-post
+  click-to-expand would be redundant here.
+- **`/news` archive** — shows each post's full text, clamped to 4 lines
+  with a "Show more" toggle once it's long enough to need one, reusing the
+  same clamp pattern the homepage's Recent Reviews by Editors feed already
+  established.
+
+Any admin can edit or delete any post, mirroring Editorial Reviews'
+shared-not-per-author model.
 
 ## Web Analytics
 

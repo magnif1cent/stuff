@@ -6,7 +6,8 @@ import { getRecentNewsPosts } from "@/lib/news";
 import { HeroCarousel } from "@/components/hero-carousel";
 import { MovieRail } from "@/components/movie-rail";
 import { RecentReviewsFeed, type RecentReviewItem } from "@/components/recent-reviews-feed";
-import { NewsList, type NewsPostItem } from "@/components/news-list";
+import { NewsStrip } from "@/components/news-strip";
+import type { NewsPostItem } from "@/components/news-list";
 
 export const revalidate = 3600;
 
@@ -61,7 +62,7 @@ export default async function HomePage() {
               View all →
             </a>
           </div>
-          <NewsList posts={newsItems} />
+          <NewsStrip posts={newsItems} />
         </section>
       )}
 
