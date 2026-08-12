@@ -92,7 +92,7 @@ the site.
 ## Feature Decisions
 
 ### News & Updates paginates from day one, reusing the Recent Reviews clamp pattern
-**PR #TBD.** Backlog originally recommended shipping `/news` as a flat list
+**PR #35.** Backlog originally recommended shipping `/news` as a flat list
 first, matching how Recent Reviews by Editors started — added pagination
 once there was actual volume. Explicit direction here reversed that:
 paginate immediately (`NEWS_PAGE_SIZE = 10`, same Previous/Next + "Page X
