@@ -602,27 +602,26 @@ export function FightSceneSection({
 
               <div className="mt-3 border-t-2 border-dashed pt-3" style={{ borderColor: "#b8ab8c" }}>
                 {/* Smaller inset "photo" rather than a full-width player, to read as a ticket detail. */}
-                <div className="mx-auto aspect-video w-2/3 max-w-[180px] overflow-hidden border-[3px]" style={{ borderColor: TICKET_INK, background: TICKET_INK }}>
+                <div className="relative mx-auto aspect-video w-2/3 max-w-[180px] overflow-hidden border-[3px]" style={{ borderColor: TICKET_INK, background: TICKET_INK }}>
                   <iframe
                     src={embedUrl(scene.youtubeVideoId, scene.youtubeStartSeconds)}
                     title={scene.title}
-                    className="h-full w-full"
+                    className="pointer-events-none h-full w-full"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowFullScreen
                   />
+                  {/* An overlay link, not the iframe's own controls — tapping the
+                      embed on mobile often opens the YouTube app to the channel
+                      instead of this clip, so the whole frame goes straight to
+                      the exact watch URL (with timestamp) instead. */}
+                  <a
+                    href={youtubeWatchUrl(scene.youtubeVideoId, scene.youtubeStartSeconds)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`Watch "${scene.title}" on YouTube`}
+                    className="absolute inset-0"
+                  />
                 </div>
-                {/* Tapping the embed on mobile often opens the YouTube app to the
-                    channel instead of this clip — an explicit link to the exact
-                    watch URL (with timestamp) is a reliable fallback. */}
-                <a
-                  href={youtubeWatchUrl(scene.youtubeVideoId, scene.youtubeStartSeconds)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-1.5 block text-center text-[10px] tracking-wide uppercase underline hover:opacity-70"
-                  style={{ color: TICKET_MUTED }}
-                >
-                  Watch on YouTube ↗
-                </a>
                 {isAdmin && expandedAdminIds.has(scene.id) && (
                   <div className="mt-2 flex items-center justify-center gap-1.5 text-[10px]" style={{ color: TICKET_MUTED }}>
                     <span className="uppercase tracking-wide">Start at</span>
