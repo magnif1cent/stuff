@@ -35,7 +35,7 @@ export function RecommendedBadges({
               title={`Recommended by ${recommender.username}`}
               width={pixels}
               height={pixels}
-              className={`${dimensionClass} shrink-0 rounded-full border-2 border-neutral-950 object-contain bg-white`}
+              className={`${dimensionClass} shrink-0 rounded-md border-2 border-neutral-950 object-contain bg-white`}
             />
           );
         }
