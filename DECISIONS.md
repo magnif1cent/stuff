@@ -91,19 +91,38 @@ the site.
 
 ## Feature Decisions
 
-### News & Updates paginates from day one, reusing the Recent Reviews clamp pattern
-**PR #35.** Backlog originally recommended shipping `/news` as a flat list
-first, matching how Recent Reviews by Editors started — added pagination
-once there was actual volume. Explicit direction here reversed that:
-paginate immediately (`NEWS_PAGE_SIZE = 10`, same Previous/Next + "Page X
-of Y" pattern already used by movie and fight-scene search). Each post
-shows its full text clamped to 4 lines with a "Show more" toggle, reusing
-Recent Reviews by Editors' clamp component rather than inventing a second
-truncation scheme. Any admin can edit/delete any post (mirrors Editorial
-Reviews' shared-not-per-author model, not fight scenes' owner-only model,
-since posts aren't member-submitted content). Homepage teaser placed
-directly under the hero carousel, per the original design recommendation —
-confirmed as the right spot once actually built and previewed.
+### News & Updates: flat homepage preview + separate paginated archive
+**PR #35.** Landed on this shape after three iterations in preview, each
+a real judgment call worth keeping for the "why":
+
+1. Backlog originally recommended a flat `/news` list first (like Recent
+   Reviews by Editors started), pagination added once there was volume —
+   explicit direction reversed this before building: paginate from day
+   one (`/news`, 10/page, footer link, one-line homepage teaser for the
+   latest post).
+2. After previewing, explicit direction reversed the *page* itself: no
+   separate route at all — the full paginated list moved directly onto
+   the homepage as a "News & Updates" section (footer link and `/news`
+   removed), paginated via a `newsPage` query param scoped to the section
+   so it wouldn't collide with anything else on the page.
+3. Previewing *that* showed the actual problem: pagination controls
+   embedded in the homepage made the section dominate the page (10 full
+   posts before you even reached "Recently Added"), and every page-turn
+   reloaded the entire homepage server-side (hero, rails, everything) —
+   a heavier interaction than pagination usually implies. Landed here:
+   the homepage shows a **flat** 5-post preview (matching Recent Reviews'
+   scale, no pagination chrome at all) with a "View all →" link, and
+   `/news` came back as a real paginated archive (10/page) for anyone who
+   wants the full history. This isn't the same redundancy as the
+   discarded teaser-plus-page version — a flat preview and a paginated
+   archive serve genuinely different intents (glance vs. browse), not two
+   views of the same single item.
+
+Each post shows its full text clamped to 4 lines with a "Show more"
+toggle, reusing Recent Reviews by Editors' clamp component rather than
+inventing a second truncation scheme. Any admin can edit/delete any post
+(mirrors Editorial Reviews' shared-not-per-author model, not fight
+scenes' owner-only model, since posts aren't member-submitted content).
 
 ### Fight scene card UI cleanup: cast on the read-only card, admin tools collapsed by default
 **PR #TBD.** Two small improvements to the Fight Ticket card, from a
