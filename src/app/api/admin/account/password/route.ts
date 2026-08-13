@@ -2,8 +2,7 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { requireReviewerSession } from "@/lib/require-admin";
 import { prisma } from "@/lib/prisma";
-
-const MIN_PASSWORD_LENGTH = 8;
+import { hashPassword, MIN_PASSWORD_LENGTH } from "@/lib/password";
 
 export async function PATCH(request: Request) {
   const session = await requireReviewerSession();
@@ -30,7 +29,7 @@ export async function PATCH(request: Request) {
     }
   }
 
-  const passwordHash = await bcrypt.hash(newPassword, 10);
+  const passwordHash = await hashPassword(newPassword);
   await prisma.user.update({ where: { id: user.id }, data: { passwordHash } });
 
   return NextResponse.json({ ok: true });

@@ -257,6 +257,64 @@ that shouldn't be made silently as part of a security patch.
   weakness) and re-hashing existing users' passwords isn't free, so left
   alone rather than bundled into this pass.
 
+### Forgot-password added, CAPTCHA added, registration enumeration closed as "not doing"
+Follow-up to the two items deferred above (registration enumeration,
+bcrypt cost) plus a real functional gap found separately: there was no
+self-service account recovery at all — a password-only member who forgot
+their password had no path back into their account (only Google-sign-in
+users had a fallback).
+
+- **Forgot-password, built anti-enumeration from the start**: unlike
+  registration, a forgot-password endpoint has no reason to ever reveal
+  whether an email has an account — `/api/forgot-password` always returns
+  the same response and only sends an email (with a fresh
+  `PasswordResetToken`, 1 hour TTL, single-use) when a password actually
+  exists to reset. A Google-only account gets no email either, on purpose:
+  offering to "reset" a nonexistent password would itself be a signal that
+  distinguishes it from a nonexistent email, reopening exactly the gap this
+  flow is supposed to avoid. `PasswordResetToken` is a separate model from
+  the existing `VerificationToken`, not a reuse of it — a password-reset
+  token grants account takeover, a verification token doesn't, and mixing
+  the two risks a bug where one gets accepted as the other. The
+  reset-password step itself (token + new password) needs no CAPTCHA — it's
+  already gated by possession of the emailed token, not open to bulk
+  probing the way the request step is.
+- **CAPTCHA (Cloudflare Turnstile) added to registration and
+  forgot-password, not login**: both endpoints are attractive to automated
+  bulk abuse (mass account creation; mass password-reset email spam) in a
+  way login isn't — login already has a per-email rate limit, and a CAPTCHA
+  on every mistyped password would be pure friction for legitimate members
+  with no bulk-abuse upside to justify it. Fails open the same way every
+  other optional service in this app does: without
+  `NEXT_PUBLIC_TURNSTILE_SITE_KEY`/`TURNSTILE_SECRET_KEY` set, the widget
+  doesn't render and the server doesn't require a token, so local dev and
+  CI are unaffected. The widget is a client component fed the page's CSP
+  nonce as a prop (read server-side via `headers()` in a Server Component
+  wrapper, since a client component can't read response headers itself) —
+  `'strict-dynamic'` means the CSP's trailing `https:` fallback is ignored
+  entirely once present, so the nonce is required, not optional, for
+  Turnstile's script tag to load at all. `frame-src` and `connect-src` both
+  needed `challenges.cloudflare.com` added — Turnstile's challenge UI runs
+  in an iframe from that host, separate from the script itself.
+- **bcrypt cost bumped 10 → 12**: the deferral above was about whether it
+  was worth doing at all (still-acceptable range), not a technical
+  blocker — once touching password code for forgot-password anyway, it was
+  cheap to include. Note this only changes the cost for newly-created
+  hashes (registration, password change, password reset); existing users'
+  hashes stay at cost 10 until they next change their password — bcrypt
+  embeds its own cost factor per-hash, so `bcrypt.compare` handles either
+  transparently, and there's no forced re-hash migration.
+- **Registration enumeration: closed as "not doing," not deferred
+  further**: the earlier deferral was pending a product decision on the
+  full fix (drop auto-login-after-registration for everyone, permanently).
+  With CAPTCHA now on registration, the actual threat that fix was guarding
+  against — bulk automated harvesting of which emails have accounts — is
+  already neutralized; a manual, targeted check of a handful of specific
+  emails was never something the full redesign would have stopped either
+  (a patient attacker can still time responses). The UX cost of the full
+  fix no longer buys enough to be worth it, so registration keeps its
+  explicit "account already exists" message.
+
 ## Feature Decisions
 
 ### Admin Recommendations: per-admin badges, not a single shared flag
