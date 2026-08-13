@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { isEmailVerified } from "@/lib/verification";
 import { submitMovieForReview } from "@/lib/movie-submission";
+import { checkRateLimit, movieSubmitLimiter } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
   const session = await auth();
@@ -10,6 +11,14 @@ export async function POST(request: Request) {
   }
   if (!(await isEmailVerified(session.user.id))) {
     return NextResponse.json({ error: "Verify your email before adding a movie." }, { status: 403 });
+  }
+
+  const rateLimit = await checkRateLimit(movieSubmitLimiter, session.user.id);
+  if (!rateLimit.success) {
+    return NextResponse.json(
+      { error: "You're submitting too quickly. Try again shortly." },
+      { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } },
+    );
   }
 
   const { tmdbId } = await request.json();

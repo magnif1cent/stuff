@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 // can't allow Next's own injected scripts without 'unsafe-inline', which
 // defeats the point of having one). 'unsafe-eval' is dev-only — Turbopack's
 // dev server/React Refresh needs it, production builds don't.
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
   const isDev = process.env.NODE_ENV === "development";
 

@@ -4,8 +4,17 @@ import { prisma } from "@/lib/prisma";
 import { createVerificationToken, buildVerificationUrl } from "@/lib/verification";
 import { sendVerificationEmail } from "@/lib/email";
 import { isValidUsername, USERNAME_MAX_LENGTH, USERNAME_MIN_LENGTH } from "@/lib/username";
+import { checkRateLimit, getClientIp, registerLimiter } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
+  const rateLimit = await checkRateLimit(registerLimiter, getClientIp(request));
+  if (!rateLimit.success) {
+    return NextResponse.json(
+      { error: "Too many registration attempts. Try again shortly." },
+      { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } },
+    );
+  }
+
   const { username, email, password } = await request.json();
 
   if (typeof email !== "string" || typeof password !== "string" || password.length < 8) {

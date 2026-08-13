@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 // Static, route-independent headers. The Content-Security-Policy is
-// per-request (needs a nonce), so it's set in middleware.ts instead — these
+// per-request (needs a nonce), so it's set in proxy.ts instead — these
 // don't need that and apply broadly, including to API routes, for
 // defense in depth even though CSP itself only matters for HTML pages.
 const SECURITY_HEADERS = [

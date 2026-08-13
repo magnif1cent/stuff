@@ -5,6 +5,7 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { generateUniqueUsername } from "@/lib/username";
+import { checkRateLimit, loginLimiter } from "@/lib/rate-limit";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
@@ -48,7 +49,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
 
         // Same normalization as registration — lookups must match on case.
-        const user = await prisma.user.findUnique({ where: { email: email.trim().toLowerCase() } });
+        const normalizedEmail = email.trim().toLowerCase();
+
+        // Keyed by the target email, not IP (easily rotated, and not
+        // reliably available here) — this is a brute-force defense against
+        // one account, not a general request throttle. A rate-limited
+        // attempt just fails like a wrong password: no separate error path,
+        // so it doesn't leak rate-limit state to the client either.
+        const rateLimit = await checkRateLimit(loginLimiter, normalizedEmail);
+        if (!rateLimit.success) {
+          return null;
+        }
+
+        const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
         if (!user?.passwordHash) {
           return null;
         }
