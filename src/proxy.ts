@@ -14,8 +14,8 @@ export function proxy(request: NextRequest) {
     style-src 'self' 'unsafe-inline';
     img-src 'self' data: https://image.tmdb.org https://*.public.blob.vercel-storage.com https://img.youtube.com;
     font-src 'self';
-    connect-src 'self';
-    frame-src https://www.youtube-nocookie.com;
+    connect-src 'self' https://challenges.cloudflare.com;
+    frame-src https://www.youtube-nocookie.com https://challenges.cloudflare.com;
     object-src 'none';
     base-uri 'self';
     form-action 'self';

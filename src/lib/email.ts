@@ -30,3 +30,30 @@ export async function sendVerificationEmail(email: string, verifyUrl: string) {
     throw new Error(`Failed to send verification email: ${res.status} ${await res.text()}`);
   }
 }
+
+export async function sendPasswordResetEmail(email: string, resetUrl: string) {
+  const apiKey = process.env.RESEND_API_KEY;
+
+  if (!apiKey) {
+    console.log(`[email:dev] Password reset link for ${email}: ${resetUrl}`);
+    return;
+  }
+
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: process.env.EMAIL_FROM ?? "Kung Fu Movie DB <onboarding@resend.dev>",
+      to: email,
+      subject: "Reset your password — Kung Fu Movie DB",
+      html: `<p>Click <a href="${resetUrl}">this link</a> to set a new password. It expires in 1 hour. If you didn't request this, ignore this email — your password won't change.</p>`,
+    }),
+  });
+
+  if (!res.ok) {
+    throw new Error(`Failed to send password reset email: ${res.status} ${await res.text()}`);
+  }
+}

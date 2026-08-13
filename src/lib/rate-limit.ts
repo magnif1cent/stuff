@@ -28,6 +28,10 @@ function makeLimiter(prefix: string, limit: number, window: `${number} ${"s" | "
 export const loginLimiter = makeLimiter("login", 5, "5 m");
 export const registerLimiter = makeLimiter("register", 5, "10 m");
 export const resendVerificationLimiter = makeLimiter("resend-verification", 3, "1 h");
+// Keyed by IP, not email — unlike the limiters above, this request is
+// unauthenticated and must not reveal whether the email has an account, so
+// it can't be keyed by identity without leaking exactly that.
+export const forgotPasswordLimiter = makeLimiter("forgot-password", 5, "10 m");
 
 // Content-creation surfaces: looser limits, keyed by user id — spam/abuse
 // deterrent rather than a credential-attack defense, so the threshold is

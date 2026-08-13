@@ -73,6 +73,17 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
+// Separate from VerificationToken above (rather than reusing it) so a
+// forgot-password link and an email-verification link can never be confused
+// for one another — one grants account takeover, the other doesn't.
+model PasswordResetToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
 // --- Movie catalog ---
 
 model Movie {

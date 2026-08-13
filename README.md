@@ -9,13 +9,13 @@ An IMDB-style website for kung fu and martial arts films, built for martial arts
 - Movie pages with cast, synopsis, a community rating, a separate admin-only "Editors' Score", an admin-authored editorial review, and a per-movie discussion thread (with spoiler tags, edit/delete on your own posts, and admin moderation)
 - **Fight Scenes**: members tag specific fight scenes within a movie — YouTube clip (with an optional start timestamp), the actors involved (picked from that movie's cast), and category tags (e.g. "Weapon Duel", "One vs. Many") — with their own member rating, a separate admin rating, admin verification, and a shareable permalink page (see [Fight Scenes](#fight-scenes) below)
 - Actor pages (`/actors/[personId]`) showing an actor's filmography and every fight scene they're tagged in, linked from a movie's cast list and a scene's "Featuring" line (see [Actor Pages](#actor-pages) below)
-- Member accounts via email/password (with email verification) or Google sign-in, identified publicly by a chosen username rather than their email or real name (see [Usernames](#usernames) below)
+- Member accounts via email/password (with email verification and self-service password recovery) or Google sign-in, identified publicly by a chosen username rather than their email or real name (see [Usernames](#usernames) and [Password Recovery](#password-recovery) below)
 - Member capabilities: rate movies and fight scenes, maintain a Favorites list and a Watchlist for movies (fight scenes get a Favorite only — see below), create their own public named lists on a profile page at `/members/[username]` and save both movies and fight scenes to them (see [Member Lists & Profiles](#member-lists--profiles) below), post/reply in movie discussions, submit fight scenes, and submit a movie missing from the catalog for admin review (see [Member Movie Submissions](#member-movie-submissions) below)
 - A unified `/admin` dashboard (Movies management incl. pending-submission review and permanent deletion, TMDB import incl. title search, keyword search, and bulk CSV upload, Fight Scene Tags, News & Updates, Account settings), shared by two roles &mdash; `ADMIN` (everything) and a narrower `REVIEWER` (movie-submission review, fight-scene-tag management, fight-scene verification) &mdash; plus admin actions that stay inline on regular pages (Editors' Score, editorial reviews, poster overrides, fight scene verification) &mdash; see [Admin Area & Roles](#admin-area--roles) below
 - Social sharing (native share sheet on mobile, copy-link/X/Facebook/Reddit fallback on desktop) on movie and fight scene pages
 - A public `/lists` page for browsing every member's public custom lists (sorted by newest-updated or most-liked, paginated), plus a `/leaderboard` page ranking the Most-Liked Lists (members can like each other's public custom lists) and Top Curators (members with the most movies across their own lists) — see [Member Lists & Profiles](#member-lists--profiles) below
 - Admin-published News & Updates posts: the latest one shown as a teaser banner on the homepage, with a full paginated archive at `/news` — see [News & Updates](#news--updates) below
-- Security headers (CSP, HSTS, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`) on every response, plus rate limiting on login, registration, and content-creation endpoints — see [Security](#security) below
+- Security headers (CSP, HSTS, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`) on every response, plus rate limiting and CAPTCHA on login, registration, forgot-password, and content-creation endpoints — see [Security](#security) below
 
 ## Tech Stack
 
@@ -26,6 +26,7 @@ An IMDB-style website for kung fu and martial arts films, built for martial arts
 - [Vercel Blob](https://vercel.com/docs/storage/vercel-blob) for admin-uploaded poster overrides
 - [Vercel Web Analytics](https://vercel.com/docs/analytics) for page-view tracking (see [Web Analytics](#web-analytics) below)
 - [Upstash Redis](https://upstash.com) for rate limiting (see [Security](#security) below)
+- [Cloudflare Turnstile](https://developers.cloudflare.com/turnstile/) for CAPTCHA (see [Security](#security) below)
 
 ## Getting Set Up
 
@@ -66,7 +67,7 @@ Pick one:
 cp .env.example .env
 ```
 
-Fill in `DATABASE_URL`, `TMDB_API_KEY`, `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`, and generate an `AUTH_SECRET`. `RESEND_API_KEY`/`EMAIL_FROM` are optional — see [Email Verification](#email-verification) below. `BLOB_READ_WRITE_TOKEN` is optional too — see [Admin Poster Overrides](#admin-poster-overrides). `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` are optional too — see [Security](#security).
+Fill in `DATABASE_URL`, `TMDB_API_KEY`, `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`, and generate an `AUTH_SECRET`. `RESEND_API_KEY`/`EMAIL_FROM` are optional — see [Email Verification](#email-verification) below. `BLOB_READ_WRITE_TOKEN` is optional too — see [Admin Poster Overrides](#admin-poster-overrides). `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` and `NEXT_PUBLIC_TURNSTILE_SITE_KEY`/`TURNSTILE_SECRET_KEY` are optional too — see [Security](#security).
 
 ```bash
 npx auth secret
@@ -112,6 +113,10 @@ Without `RESEND_API_KEY` configured, the verification link is logged to the serv
 1. Create a free account at [resend.com](https://resend.com) and get an API key.
 2. Set `RESEND_API_KEY` (and `EMAIL_FROM`, once you've verified a sending domain in Resend — until then their shared `onboarding@resend.dev` sender only delivers to your own Resend account email).
 3. To use a different provider, replace the `fetch` call in `src/lib/email.ts`.
+
+## Password Recovery
+
+A "Forgot password?" link on the sign-in page (`/forgot-password`) emails a reset link to accounts that signed up with email/password — Google sign-ins have no password to reset, so they get no link (see [Security](#security) below for why). The link expires in 1 hour and is single-use; requesting a new one invalidates any earlier outstanding link for that account. Uses the same `RESEND_API_KEY` setup as email verification above — without it, the reset link is logged to the server console instead (`[email:dev] Password reset link for ...`).
 
 ## Discussion & Moderation
 
@@ -233,7 +238,10 @@ Each slide prefers a fight scene clip over the static TMDB backdrop:
   - Locally, expect one harmless console warning about `/_vercel/insights/script.js` returning the wrong MIME type — that path is only handled specially by Vercel's actual platform; `next dev`/`next start` don't serve it, so Web Analytics is a documented no-op outside a real Vercel deployment. Not a CSP misconfiguration.
   - Running `next start` locally (not `next dev`) also needs `AUTH_TRUST_HOST=true` in your `.env` — Auth.js v5 is stricter about validating the request host outside development mode.
 - **Dependencies**: `npm audit` is expected to report 0 vulnerabilities; re-run `npm audit fix` (and bump `next`/`prisma` directly if a fix needs a version not covered by their `^` range) if a future dependency update reintroduces any.
-- **Rate limiting**: `src/lib/rate-limit.ts` throttles the endpoints most worth throttling — login (5 attempts / 5 min, keyed by email), registration (5 / 10 min, keyed by IP), resend-verification (3 / hour, keyed by user), and the content-creation endpoints (discussion posts, fight scene submissions, movie submissions, list creation — 10-20 / 10 min, keyed by user). Login failures caused by rate limiting look identical to a wrong password (a generic `CredentialsSignin` error) so the limiter doesn't leak its own state to an attacker. Backed by [Upstash Redis](https://upstash.com) via `@upstash/ratelimit`, so limits are enforced correctly across serverless instances rather than reset per cold start. Without `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` configured, rate limiting is a no-op — every request is allowed, not blocked — so local dev and CI work unchanged. To enable it, create a free database at [console.upstash.com](https://console.upstash.com), copy its REST URL/token into `.env`, and restart the dev server.
+- **Rate limiting**: `src/lib/rate-limit.ts` throttles the endpoints most worth throttling — login (5 attempts / 5 min, keyed by email), registration and forgot-password (5 / 10 min, keyed by IP), resend-verification (3 / hour, keyed by user), and the content-creation endpoints (discussion posts, fight scene submissions, movie submissions, list creation — 10-20 / 10 min, keyed by user). Login failures caused by rate limiting look identical to a wrong password (a generic `CredentialsSignin` error) so the limiter doesn't leak its own state to an attacker. Backed by [Upstash Redis](https://upstash.com) via `@upstash/ratelimit`, so limits are enforced correctly across serverless instances rather than reset per cold start. Without `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` configured, rate limiting is a no-op — every request is allowed, not blocked — so local dev and CI work unchanged. To enable it, create a free database at [console.upstash.com](https://console.upstash.com), copy its REST URL/token into `.env`, and restart the dev server.
+- **CAPTCHA**: registration and forgot-password both render a [Cloudflare Turnstile](https://developers.cloudflare.com/turnstile/) widget and verify the token server-side, guarding the two flows most attractive to automated bulk abuse (mass account creation, mass password-reset email spam). Not added to login — that's already covered by the per-email rate limit above, and a CAPTCHA on every mistyped password would just be friction for legitimate members. Without `NEXT_PUBLIC_TURNSTILE_SITE_KEY`/`TURNSTILE_SECRET_KEY` configured, no widget renders and no verification is required — local dev and CI work unchanged. To enable it, create a free widget at [the Cloudflare dashboard](https://dash.cloudflare.com/?to=/:account/turnstile) and copy its site key/secret key into `.env`.
+- **Password hashing**: bcrypt cost factor 12 (OWASP's current recommended minimum, bumped from 10).
+- Registration intentionally still reveals whether an email is already registered (`"An account with that email already exists"`) rather than a generic response — closing that fully would mean dropping the instant sign-in that currently happens right after registration, for everyone, to guard against a risk (bulk email harvesting) that CAPTCHA above already covers. See `DECISIONS.md` for the full reasoning.
 
 ## Continuous Integration
 

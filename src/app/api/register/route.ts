@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { createVerificationToken, buildVerificationUrl } from "@/lib/verification";
 import { sendVerificationEmail } from "@/lib/email";
 import { isValidUsername, USERNAME_MAX_LENGTH, USERNAME_MIN_LENGTH } from "@/lib/username";
 import { checkRateLimit, getClientIp, registerLimiter } from "@/lib/rate-limit";
+import { verifyCaptcha } from "@/lib/captcha";
+import { hashPassword, MIN_PASSWORD_LENGTH } from "@/lib/password";
 
 export async function POST(request: Request) {
   const rateLimit = await checkRateLimit(registerLimiter, getClientIp(request));
@@ -15,13 +16,17 @@ export async function POST(request: Request) {
     );
   }
 
-  const { username, email, password } = await request.json();
+  const { username, email, password, captchaToken } = await request.json();
 
-  if (typeof email !== "string" || typeof password !== "string" || password.length < 8) {
+  if (typeof email !== "string" || typeof password !== "string" || password.length < MIN_PASSWORD_LENGTH) {
     return NextResponse.json(
-      { error: "Email and a password of at least 8 characters are required." },
+      { error: `Email and a password of at least ${MIN_PASSWORD_LENGTH} characters are required.` },
       { status: 400 },
     );
+  }
+
+  if (!(await verifyCaptcha(captchaToken))) {
+    return NextResponse.json({ error: "Captcha verification failed. Try again." }, { status: 400 });
   }
 
   if (typeof username !== "string" || !isValidUsername(username)) {
@@ -47,7 +52,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "That username is already taken." }, { status: 409 });
   }
 
-  const passwordHash = await bcrypt.hash(password, 10);
+  const passwordHash = await hashPassword(password);
   const user = await prisma.user.create({
     data: {
       username,
