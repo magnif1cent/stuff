@@ -5,7 +5,7 @@ import { sendVerificationEmail } from "@/lib/email";
 import { isValidUsername, USERNAME_MAX_LENGTH, USERNAME_MIN_LENGTH } from "@/lib/username";
 import { checkRateLimit, getClientIp, registerLimiter } from "@/lib/rate-limit";
 import { verifyCaptcha } from "@/lib/captcha";
-import { hashPassword, MIN_PASSWORD_LENGTH } from "@/lib/password";
+import { hashPassword, validateNewPassword } from "@/lib/password";
 
 export async function POST(request: Request) {
   const rateLimit = await checkRateLimit(registerLimiter, getClientIp(request));
@@ -18,11 +18,13 @@ export async function POST(request: Request) {
 
   const { username, email, password, captchaToken } = await request.json();
 
-  if (typeof email !== "string" || typeof password !== "string" || password.length < MIN_PASSWORD_LENGTH) {
-    return NextResponse.json(
-      { error: `Email and a password of at least ${MIN_PASSWORD_LENGTH} characters are required.` },
-      { status: 400 },
-    );
+  if (typeof email !== "string") {
+    return NextResponse.json({ error: "A valid email is required." }, { status: 400 });
+  }
+
+  const passwordCheck = await validateNewPassword(password);
+  if (!passwordCheck.valid) {
+    return NextResponse.json({ error: passwordCheck.error }, { status: 400 });
   }
 
   if (!(await verifyCaptcha(captchaToken))) {

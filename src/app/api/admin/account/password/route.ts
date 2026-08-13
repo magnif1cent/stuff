@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { requireReviewerSession } from "@/lib/require-admin";
 import { prisma } from "@/lib/prisma";
-import { hashPassword, MIN_PASSWORD_LENGTH } from "@/lib/password";
+import { hashPassword, validateNewPassword } from "@/lib/password";
 
 export async function PATCH(request: Request) {
   const session = await requireReviewerSession();
@@ -11,11 +11,9 @@ export async function PATCH(request: Request) {
   }
 
   const { currentPassword, newPassword } = await request.json();
-  if (typeof newPassword !== "string" || newPassword.length < MIN_PASSWORD_LENGTH) {
-    return NextResponse.json(
-      { error: `New password must be at least ${MIN_PASSWORD_LENGTH} characters.` },
-      { status: 400 },
-    );
+  const passwordCheck = await validateNewPassword(newPassword);
+  if (!passwordCheck.valid) {
+    return NextResponse.json({ error: passwordCheck.error }, { status: 400 });
   }
 
   const user = await prisma.user.findUnique({ where: { id: session.user.id } });

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { hashPassword, MIN_PASSWORD_LENGTH } from "@/lib/password";
+import { hashPassword, validateNewPassword } from "@/lib/password";
 
 export async function POST(request: Request) {
   const { token, password } = await request.json();
@@ -8,11 +8,9 @@ export async function POST(request: Request) {
   if (typeof token !== "string" || !token) {
     return NextResponse.json({ error: "Missing reset token." }, { status: 400 });
   }
-  if (typeof password !== "string" || password.length < MIN_PASSWORD_LENGTH) {
-    return NextResponse.json(
-      { error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` },
-      { status: 400 },
-    );
+  const passwordCheck = await validateNewPassword(password);
+  if (!passwordCheck.valid) {
+    return NextResponse.json({ error: passwordCheck.error }, { status: 400 });
   }
 
   const record = await prisma.passwordResetToken.findUnique({ where: { token } });

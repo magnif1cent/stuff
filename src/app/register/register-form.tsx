@@ -91,7 +91,7 @@ export function RegisterForm({ nonce }: { nonce: string | null }) {
         <input
           type="password"
           required
-          placeholder="Password (min 8 characters)"
+          placeholder="Password (min 12 characters)"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           className="rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
