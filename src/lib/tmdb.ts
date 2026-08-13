@@ -120,3 +120,17 @@ export async function discoverMoviesByKeywords(keywordIds: number[], page: numbe
     ...(originCountry ? { with_origin_country: originCountry } : {}),
   });
 }
+
+export interface TmdbPersonDetails {
+  id: number;
+  name: string;
+  biography: string;
+  birthday: string | null;
+  deathday: string | null;
+  place_of_birth: string | null;
+  profile_path: string | null;
+}
+
+export async function getTmdbPersonDetails(tmdbId: number) {
+  return tmdbFetch<TmdbPersonDetails>(`/person/${tmdbId}`);
+}

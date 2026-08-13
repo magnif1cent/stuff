@@ -192,6 +192,8 @@ Below the cast list on every movie page, members can catalog individual fight sc
 
 Every credited person has a page at `/actors/[personId]` showing their Filmography (movies in the catalog, excluding any still-pending submission) and every Fight Scene they're tagged in across the whole catalog, sorted by most favorited, reusing the same movie/fight-scene cards used everywhere else. Linked from a movie's Cast section and from the "Featuring" line on a fight scene card — there's no dedicated actor search yet, so browsing there is the only way in for now.
 
+Biography, birthday, and place of birth (when TMDB has them) are shown under the actor's name, live-fetched via their `person.tmdbId` on each page view rather than stored in our own database — if TMDB is unreachable or has nothing on record, that section is simply omitted.
+
 ## Editorial Reviews
 
 Admins can write a long-form review (up to 10,000 characters) for any movie, shown alongside the cast list. There's one review per movie — any admin can write or update it, and the page just tracks who last touched it.
