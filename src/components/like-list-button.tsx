@@ -21,7 +21,7 @@ export function LikeListButton({
 
   async function toggle() {
     if (!canLike) {
-      window.location.href = "/login";
+      router.push("/login");
       return;
     }
     setError(null);
