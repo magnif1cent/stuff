@@ -923,3 +923,31 @@ time.
   feature (secret generation/storage, an enrollment flow, backup/recovery
   codes, a recovery path for a lost authenticator), not a small hardening
   patch. Revisit as its own scoped piece of work.
+- **Movie page SEO metadata (`generateMetadata`)** — `/movies/[id]` and a
+  prospective `/people/[id]` have no per-page title/description/Open Graph
+  tags yet; every page falls back to the site-wide default, and shared links
+  don't unfurl with a poster/synopsis. Fight scene detail pages already do
+  this (see `src/app/movies/[id]/fight-scenes/[fightSceneId]/page.tsx`) —
+  worth following the same pattern.
+- **Trailer/video embed on movie pages** — TMDB's `/movie/{id}/videos`
+  endpoint returns trailer keys per movie; not yet surfaced on the movie
+  detail page. The fight-scene YouTube-embed pattern already in the
+  codebase is a reasonable starting point.
+- **Related/similar movies** — a "you might also like" row on movie pages.
+  Needs to be computed against our own curated catalog (shared
+  genres/cast/director), not TMDB's `/movie/{id}/similar`, since our catalog
+  is a curated subset and TMDB's neighbors won't all exist here.
+- **Watch-provider / streaming availability** — TMDB's watch-providers
+  endpoint (region-gated) could show where a movie is streaming; not yet
+  explored, and the region-gating needs a product decision (ask the visitor,
+  guess from locale, or pick one region) before it's built.
+- **Backdrop/still image gallery** — movie pages show a single hero
+  backdrop; TMDB exposes additional stills/backdrops per movie that aren't
+  surfaced anywhere.
+- **External links to TMDB/IMDb** — movie and person pages don't link out to
+  the source TMDB record or IMDb. Simple to add, but deferred pending a call
+  on whether a curation-focused site wants to send visitors off-site at all.
+- **Person/actor detail pages** — cast members aren't clickable anywhere;
+  still listed in `README.md`'s Out of Scope section. Filmography would need
+  to be computed against our own catalog (via `CastCredit`), and bio/photo
+  data live-fetched from TMDB via the existing `person.tmdbId`.
