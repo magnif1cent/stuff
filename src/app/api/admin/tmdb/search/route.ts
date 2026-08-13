@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdminSession } from "@/lib/require-admin";
 import { searchTmdbMovies } from "@/lib/tmdb";
+import { tmdbErrorResponse } from "@/lib/api-error";
 
 export async function GET(request: Request) {
   const session = await requireAdminSession();
@@ -17,6 +18,6 @@ export async function GET(request: Request) {
     const results = await searchTmdbMovies(query);
     return NextResponse.json({ results });
   } catch (error) {
-    return NextResponse.json({ error: (error as Error).message }, { status: 502 });
+    return tmdbErrorResponse(`Failed to search TMDB for "${query}":`, error);
   }
 }

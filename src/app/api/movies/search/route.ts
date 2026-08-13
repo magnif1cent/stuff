@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { isEmailVerified } from "@/lib/verification";
 import { searchTmdbMoviesForSubmission } from "@/lib/movie-submission";
+import { tmdbErrorResponse } from "@/lib/api-error";
 
 export async function GET(request: Request) {
   const session = await auth();
@@ -21,6 +22,6 @@ export async function GET(request: Request) {
     const results = await searchTmdbMoviesForSubmission(query);
     return NextResponse.json({ results });
   } catch (error) {
-    return NextResponse.json({ error: (error as Error).message }, { status: 502 });
+    return tmdbErrorResponse(`Failed to search TMDB for "${query}":`, error);
   }
 }
