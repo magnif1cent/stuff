@@ -60,6 +60,7 @@ function LoginForm() {
         <input
           type="email"
           required
+          autoComplete="email"
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -68,6 +69,7 @@ function LoginForm() {
         <input
           type="password"
           required
+          autoComplete="current-password"
           placeholder="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}

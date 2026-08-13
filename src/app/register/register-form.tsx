@@ -70,6 +70,7 @@ export function RegisterForm({ nonce }: { nonce: string | null }) {
         <input
           type="text"
           required
+          autoComplete="username"
           placeholder="Username"
           pattern="[a-z0-9_]{3,20}"
           title="3-20 characters: lowercase letters, numbers, and underscores"
@@ -83,6 +84,7 @@ export function RegisterForm({ nonce }: { nonce: string | null }) {
         <input
           type="email"
           required
+          autoComplete="email"
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -91,6 +93,7 @@ export function RegisterForm({ nonce }: { nonce: string | null }) {
         <input
           type="password"
           required
+          autoComplete="new-password"
           placeholder="Password (min 12 characters)"
           value={password}
           onChange={(e) => setPassword(e.target.value)}

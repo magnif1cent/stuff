@@ -66,6 +66,7 @@ export function ForgotPasswordForm({ nonce }: { nonce: string | null }) {
         <input
           type="email"
           required
+          autoComplete="email"
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
