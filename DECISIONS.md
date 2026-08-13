@@ -481,7 +481,7 @@ both self-contained enough not to need their own entry.
 ## Feature Decisions
 
 ### Movie/actor SEO metadata and actor-page TMDB bios
-**PR #TBD.** `/movies/[id]` and `/actors/[personId]` previously had no
+**PR #53.** `/movies/[id]` and `/actors/[personId]` previously had no
 per-page `<title>`/description/Open Graph tags — every page fell back to
 the site-wide default, and shared links didn't unfurl with a poster or
 synopsis. Actor pages also showed filmography and fight-scene appearances
