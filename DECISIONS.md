@@ -923,12 +923,20 @@ time.
   feature (secret generation/storage, an enrollment flow, backup/recovery
   codes, a recovery path for a lost authenticator), not a small hardening
   patch. Revisit as its own scoped piece of work.
-- **Movie page SEO metadata (`generateMetadata`)** — `/movies/[id]` and a
-  prospective `/people/[id]` have no per-page title/description/Open Graph
+- **Movie/actor page SEO metadata (`generateMetadata`)** — `/movies/[id]`
+  and `/actors/[personId]` have no per-page title/description/Open Graph
   tags yet; every page falls back to the site-wide default, and shared links
   don't unfurl with a poster/synopsis. Fight scene detail pages already do
   this (see `src/app/movies/[id]/fight-scenes/[fightSceneId]/page.tsx`) —
-  worth following the same pattern.
+  worth following the same pattern. Note `layout.tsx` already sets
+  `metadataBase` (off `NEXTAUTH_URL`) — reuse that instead of introducing a
+  second derivation.
+- **TMDB bio on actor pages** — `/actors/[personId]` (**PR #28**) shows
+  filmography and fight-scene appearances from our own catalog, but no
+  biography/birthday/place-of-birth. TMDB's `/person/{id}` endpoint has
+  this, live-fetchable via the existing `person.tmdbId`, same as movie
+  detail data — a real gap, not full duplicate work, since the page itself
+  already exists.
 - **Trailer/video embed on movie pages** — TMDB's `/movie/{id}/videos`
   endpoint returns trailer keys per movie; not yet surfaced on the movie
   detail page. The fight-scene YouTube-embed pattern already in the
@@ -944,10 +952,6 @@ time.
 - **Backdrop/still image gallery** — movie pages show a single hero
   backdrop; TMDB exposes additional stills/backdrops per movie that aren't
   surfaced anywhere.
-- **External links to TMDB/IMDb** — movie and person pages don't link out to
+- **External links to TMDB/IMDb** — movie and actor pages don't link out to
   the source TMDB record or IMDb. Simple to add, but deferred pending a call
   on whether a curation-focused site wants to send visitors off-site at all.
-- **Person/actor detail pages** — cast members aren't clickable anywhere;
-  still listed in `README.md`'s Out of Scope section. Filmography would need
-  to be computed against our own catalog (via `CastCredit`), and bio/photo
-  data live-fetched from TMDB via the existing `person.tmdbId`.
