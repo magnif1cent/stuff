@@ -1,9 +1,13 @@
+import { cache } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
+import type { Session } from "next-auth";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { tmdbImageUrl, resolvePosterUrl } from "@/lib/tmdb";
+import { truncate } from "@/lib/text";
 import { getCommunityRatingSummary, getEditorsRatingSummary } from "@/lib/ratings";
 import { getMovieRecommenders } from "@/lib/movie-recommendations";
 import { getDiscussionPage } from "@/lib/discussion";
@@ -24,11 +28,8 @@ import { EditorialReview } from "@/components/editorial-review";
 import { PosterOverrideControl } from "@/components/poster-override-control";
 import { RecommendationControl } from "@/components/recommendation-control";
 
-export default async function MovieDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  const session = await auth();
-
-  const movie = await prisma.movie.findUnique({
+const getMovie = cache((id: string) =>
+  prisma.movie.findUnique({
     where: { id },
     include: {
       genres: true,
@@ -37,23 +38,71 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
         include: { person: true },
       },
     },
-  });
+  }),
+);
+
+// Pending (member-submitted, not yet admin-approved) movies are invisible to
+// everyone except the person who submitted them and admins/reviewers (who
+// need to see it to review it) — everyone else gets the same 404 as a
+// nonexistent movie, matching how it's already hidden from every public
+// listing/search. generateMetadata is a side door onto the same data (page
+// title, OG tags), so it needs the identical check, not just the page body.
+function isMovieVisible(
+  movie: { status: string; submittedById: string | null },
+  session: Session | null,
+) {
+  return (
+    movie.status === "APPROVED" ||
+    session?.user?.role === "ADMIN" ||
+    session?.user?.role === "REVIEWER" ||
+    session?.user?.id === movie.submittedById
+  );
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const [movie, session] = await Promise.all([getMovie(id), auth()]);
+  if (!movie || !isMovieVisible(movie, session)) return {};
+
+  const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : null;
+  const title = year ? `${movie.title} (${year})` : movie.title;
+  const description = movie.overview
+    ? truncate(movie.overview, 200)
+    : `${movie.title} on Kung Fu Movie DB.`;
+  const image = resolvePosterUrl(movie, "w500");
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      images: image ? [image] : undefined,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: image ? [image] : undefined,
+    },
+  };
+}
+
+export default async function MovieDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const session = await auth();
+
+  const movie = await getMovie(id);
 
   if (!movie) {
     notFound();
   }
 
-  // Pending (member-submitted, not yet admin-approved) movies are invisible
-  // to everyone except the person who submitted them and admins/reviewers
-  // (who need to see it to review it) — everyone else gets the same 404 as
-  // a nonexistent movie, matching how it's already hidden from every public
-  // listing/search.
-  const isVisible =
-    movie.status === "APPROVED" ||
-    session?.user?.role === "ADMIN" ||
-    session?.user?.role === "REVIEWER" ||
-    session?.user?.id === movie.submittedById;
-  if (!isVisible) {
+  if (!isMovieVisible(movie, session)) {
     notFound();
   }
 

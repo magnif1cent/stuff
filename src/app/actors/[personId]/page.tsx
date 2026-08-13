@@ -1,18 +1,17 @@
+import { cache } from "react";
 import Image from "next/image";
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { tmdbImageUrl } from "@/lib/tmdb";
+import { tmdbImageUrl, getTmdbPersonDetails } from "@/lib/tmdb";
 import { getFightSceneRatingSummaries, getFightSceneAdminRatingSummaries, getFightSceneFavoriteCounts } from "@/lib/fight-scenes";
 import { MovieCard } from "@/components/movie-card";
 import { FightSceneResultCard } from "@/components/fight-scene-result-card";
 import { getRatingSummaries } from "@/lib/ratings";
 
-export default async function ActorPage({ params }: { params: Promise<{ personId: string }> }) {
-  const { personId } = await params;
-  const session = await auth();
-
-  const person = await prisma.person.findUnique({
+const getPerson = cache((personId: string) =>
+  prisma.person.findUnique({
     where: { id: personId },
     include: {
       castCredits: { include: { movie: true }, orderBy: { movie: { releaseDate: "desc" } } },
@@ -29,10 +28,55 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
         orderBy: { fightScene: { createdAt: "desc" } },
       },
     },
-  });
+  }),
+);
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ personId: string }>;
+}): Promise<Metadata> {
+  const { personId } = await params;
+  const person = await getPerson(personId);
+  if (!person) return {};
+
+  const knownFor = person.castCredits
+    .filter((c) => c.movie.status === "APPROVED")
+    .slice(0, 3)
+    .map((c) => c.movie.title);
+  const description =
+    knownFor.length > 0
+      ? `${person.name}, known for ${knownFor.join(", ")}, on Kung Fu Movie DB.`
+      : `${person.name} on Kung Fu Movie DB.`;
+  const image = tmdbImageUrl(person.profilePath, "w500");
+
+  return {
+    title: person.name,
+    description,
+    openGraph: {
+      title: person.name,
+      description,
+      images: image ? [image] : undefined,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: person.name,
+      description,
+      images: image ? [image] : undefined,
+    },
+  };
+}
+
+export default async function ActorPage({ params }: { params: Promise<{ personId: string }> }) {
+  const { personId } = await params;
+  const session = await auth();
+
+  const person = await getPerson(personId);
   if (!person) {
     notFound();
   }
+
+  const bio = await getTmdbPersonDetails(person.tmdbId).catch(() => null);
 
   // A pending (not yet admin-approved) movie is excluded the same way it's
   // excluded from every other public listing.
@@ -72,13 +116,29 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-10">
-      <div className="mb-8 flex items-center gap-4">
+      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start">
         <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-full bg-neutral-800">
           {person.profilePath && (
             <Image src={tmdbImageUrl(person.profilePath, "w200") ?? ""} alt={person.name} fill sizes="96px" className="object-cover" />
           )}
         </div>
-        <h1 className="text-2xl font-bold text-white">{person.name}</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-white">{person.name}</h1>
+          {bio && (
+            <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-neutral-400">
+              {bio.birthday && (
+                <span>
+                  Born {new Date(bio.birthday).toLocaleDateString(undefined, { dateStyle: "long" })}
+                  {bio.deathday && ` — Died ${new Date(bio.deathday).toLocaleDateString(undefined, { dateStyle: "long" })}`}
+                </span>
+              )}
+              {bio.place_of_birth && <span>{bio.place_of_birth}</span>}
+            </div>
+          )}
+          {bio?.biography && (
+            <p className="mt-2 max-w-2xl whitespace-pre-line text-sm text-neutral-300">{bio.biography}</p>
+          )}
+        </div>
       </div>
 
       <h2 className="mb-4 text-xl font-bold text-white">Filmography</h2>

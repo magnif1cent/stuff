@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { getRatingSummaries, getEditorsRatingSummaries } from "@/lib/ratings";
 import { getMovieRecommendationsByMovieIds } from "@/lib/movie-recommendations";
@@ -8,6 +9,10 @@ import { MovieCard } from "@/components/movie-card";
 import { AutocompleteFilterInput } from "@/components/autocomplete-filter-input";
 import { RatingStarInput } from "@/components/rating-star-input";
 import type { Movie, Prisma } from "@/generated/prisma/client";
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: true },
+};
 
 interface SearchPageParams {
   q?: string;
