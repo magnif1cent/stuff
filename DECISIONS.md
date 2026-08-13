@@ -480,6 +480,42 @@ both self-contained enough not to need their own entry.
 
 ## Feature Decisions
 
+### Movie/actor SEO metadata and actor-page TMDB bios
+**PR #TBD.** `/movies/[id]` and `/actors/[personId]` previously had no
+per-page `<title>`/description/Open Graph tags — every page fell back to
+the site-wide default, and shared links didn't unfurl with a poster or
+synopsis. Actor pages also showed filmography and fight-scene appearances
+from our own catalog but no biography/birthday/place-of-birth, even though
+that data is one TMDB `/person/{id}` call away via the existing
+`person.tmdbId`.
+
+- Both pages' `generateMetadata` share the same Prisma lookup as the page
+  body via React's `cache()`, rather than querying twice per request (the
+  simpler pattern already used by
+  `movies/[id]/fight-scenes/[fightSceneId]/page.tsx`, which re-fetches) —
+  worth the extra `cache()` wrapper here since these are heavier
+  multi-relation queries than a single fight-scene lookup.
+- `generateMetadata` on the movie page re-runs the exact same
+  pending-movie visibility check (`status === "APPROVED"` or
+  submitter/admin/reviewer) as the page body, not just a `notFound()` in
+  the body — metadata output is as much a side door onto a pending movie's
+  title/synopsis as any other public surface, and PR #15/#16 was explicit
+  that a partial gate defeats the point.
+- `layout.tsx` already had a `metadataBase` (derived from `NEXTAUTH_URL`);
+  reused it directly rather than introducing a second derivation off
+  `VERCEL_PROJECT_PRODUCTION_URL` from an earlier, since-abandoned attempt
+  at this same feature — one metadataBase source, not two disagreeing ones.
+- Actor bios are live-fetched from TMDB on every page view and never cached
+  in our own database, same tradeoff already made for movie posters/details
+  elsewhere — gracefully omitted (not an error page) if TMDB is unreachable
+  or has nothing on record for that person.
+- `noindex` added to thin/duplicate-content and account-only pages that
+  don't benefit from ranking: both search pages (`follow: true`, so
+  crawlers still reach movie/actor pages linked from results), and
+  login/register/forgot-password/reset-password/verify-email/my-lists
+  (`follow: false`). The whole `/admin` subtree got one `noindex` on its
+  shared layout rather than one per admin page.
+
 ### Admin Recommendations: per-admin badges, not a single shared flag
 **PR #TBD.** Two admins each need their own "I recommend this" mark on a
 movie, distinct from the existing single shared Editorial Review.

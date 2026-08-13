@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import type { Metadata } from "next";
 import { requireReviewerSession } from "@/lib/require-admin";
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 // REVIEWER only gets Movies (pending-submission review, not the full
 // catalog — see AdminMoviesPage) and Fight Scene Tags, plus the same

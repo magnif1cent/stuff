@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getFightSceneRatingSummaries, getFightSceneAdminRatingSummaries, getFightSceneFavoriteCounts } from "@/lib/fight-scenes";
@@ -6,6 +7,10 @@ import { FightSceneResultCard } from "@/components/fight-scene-result-card";
 import { RatingStarInput } from "@/components/rating-star-input";
 import { AutocompleteFilterInput } from "@/components/autocomplete-filter-input";
 import type { Prisma } from "@/generated/prisma/client";
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: true },
+};
 
 interface FightSceneSearchParams {
   q?: string;
