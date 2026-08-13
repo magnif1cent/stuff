@@ -377,6 +377,72 @@ reason to exist (locking out someone who already has your password/cookie).
     promotion now takes effect on a user's very next request instead of
     requiring them to sign out and back in first.
 
+### Password strength requirements: length over composition, plus a breach check
+Minimum was 8 characters with no other rule. Raised to 12 and added two
+more checks, all through one shared `validateNewPassword()` in
+`src/lib/password.ts` used by registration, admin password change, and
+forgot-password reset, rather than three separately-drifting checks.
+
+- **Length over composition rules, deliberately**: considered requiring a
+  mix of uppercase/number/symbol (the older, more familiar pattern) and
+  rejected it — current NIST/OWASP guidance argues against composition
+  rules specifically because they push people toward predictable,
+  guessable patterns (`Password1!`) rather than actually harder-to-guess
+  passwords, and a longer minimum accomplishes more for the same UX cost.
+  12 was picked as a modern-baseline number, not derived from a specific
+  threat model beyond "meaningfully more than 8."
+- **72-byte max, tied to bcrypt's real limit, not an arbitrary cap**: bcrypt
+  silently truncates its input past 72 bytes — anything after that is never
+  actually hashed, so a very long password was already giving less benefit
+  than its length implied, silently. Capping input at 72 bytes turns a
+  silent limitation into an explicit, honest one. Checked by UTF-8 byte
+  length, not JS string length/character count, since bcrypt's limit is a
+  byte limit and multi-byte characters (emoji, non-Latin scripts) would
+  otherwise let a password past the real limit while still under a
+  character-count cap.
+- **HaveIBeenPwned Pwned Passwords check, keyless, no `.env` entry**: unlike
+  every other external service integration in this app (Resend, Vercel
+  Blob, Upstash, Turnstile), this needed no account, no API key, and no new
+  environment variable — it's a free, keyless public API built specifically
+  for this k-anonymity use case (only a 5-character hash prefix leaves the
+  server, never the password or its full hash), so there's nothing to gate
+  behind an optional env var. What is shared with every other integration:
+  it fails open. A network failure or non-200 response is treated as "not
+  known to be pwned" rather than blocking the request — an outage in a
+  third-party breach-password lookup should never be the reason someone
+  can't register or recover their account. Verified this specific path
+  matters here: this sandbox's network policy blocks
+  `api.pwnedpasswords.com` outright (confirmed via the agent proxy's own
+  status endpoint, not just an assumption), so registration in local
+  testing exercises the fail-open path on every request — real detection
+  of a known-breached password was verified separately, by mocking `fetch`
+  around the actual `isPwnedPassword()` function rather than only
+  reasoning about it, to confirm the SHA-1 prefix/suffix split and match
+  logic are correct independent of network access.
+
+### Login timing side-channel closed with a dummy bcrypt comparison
+Found while reviewing what else was worth hardening around login, after
+the password-strength pass above. `authorize()` in `auth.ts` returned
+immediately when no account matched the submitted email — skipping
+`bcrypt.compare()` entirely — but ran a real (deliberately slow) compare
+whenever an account did exist, even on a wrong password. That's a timing
+side-channel: "no such account" answers fast, "wrong password" answers
+slow, letting an attacker tell the two apart by response latency alone,
+regardless of both cases returning the identical generic `CredentialsSignin`
+error text. That generic error was specifically written earlier (see the
+rate-limiting entry above) to avoid leaking exactly this distinction
+through the response *content* — a timing gap re-opens the same leak
+through a different channel the earlier fix didn't address, since it
+wasn't in scope at the time.
+
+Fixed with the standard mitigation: a fixed, valid bcrypt hash
+(`DUMMY_PASSWORD_HASH`, cost 12 — matching real hashes' cost, since a
+mismatched cost factor would itself reintroduce a smaller timing gap)
+that isn't derived from any real password and always fails comparison.
+`bcrypt.compare()` now runs against either the real hash or this dummy
+one, unconditionally, so both code paths do the same amount of work
+regardless of whether the account exists.
+
 ## Feature Decisions
 
 ### Admin Recommendations: per-admin badges, not a single shared flag
