@@ -30,7 +30,7 @@ export async function PATCH(request: Request) {
   }
 
   const passwordHash = await hashPassword(newPassword);
-  await prisma.user.update({ where: { id: user.id }, data: { passwordHash } });
+  await prisma.user.update({ where: { id: user.id }, data: { passwordHash, passwordChangedAt: new Date() } });
 
   return NextResponse.json({ ok: true });
 }

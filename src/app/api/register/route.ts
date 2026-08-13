@@ -58,6 +58,7 @@ export async function POST(request: Request) {
       username,
       email: normalizedEmail,
       passwordHash,
+      passwordChangedAt: new Date(),
     },
   });
 

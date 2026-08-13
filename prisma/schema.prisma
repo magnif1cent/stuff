@@ -16,6 +16,11 @@ model User {
   emailVerified DateTime?
   image         String?
   passwordHash  String?
+  // Set whenever passwordHash is (re)written — registration, admin password
+  // change, or a forgot-password reset — so a JWT session issued before the
+  // most recent change can be told apart from one issued after. Never set
+  // for Google-only accounts (no password to invalidate a session over).
+  passwordChangedAt DateTime?
   role          String    @default("USER") // "USER" | "ADMIN" | "REVIEWER"
   createdAt     DateTime  @default(now())
 

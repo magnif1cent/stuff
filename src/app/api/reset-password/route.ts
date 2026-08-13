@@ -30,7 +30,12 @@ export async function POST(request: Request) {
   }
 
   const passwordHash = await hashPassword(password);
-  await prisma.user.update({ where: { id: user.id }, data: { passwordHash } });
+  // Setting passwordChangedAt here is the actual point of this endpoint's
+  // existence, not an afterthought — it's what makes the JWT callback
+  // invalidate every other session on the account (a stolen cookie, a
+  // forgotten logged-in device) rather than just changing the password
+  // while they keep working.
+  await prisma.user.update({ where: { id: user.id }, data: { passwordHash, passwordChangedAt: new Date() } });
 
   // Single-use: consume this token and any other outstanding ones for the
   // same account so an old, unused link can't reset the password again later.
