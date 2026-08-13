@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getDiscussionPage, MAX_DISCUSSION_CONTENT_LENGTH } from "@/lib/discussion";
 import { isEmailVerified } from "@/lib/verification";
+import { checkRateLimit, discussionPostLimiter } from "@/lib/rate-limit";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id: movieId } = await params;
@@ -19,6 +20,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
   if (!(await isEmailVerified(session.user.id))) {
     return NextResponse.json({ error: "Verify your email before posting in discussions." }, { status: 403 });
+  }
+
+  const rateLimit = await checkRateLimit(discussionPostLimiter, session.user.id);
+  if (!rateLimit.success) {
+    return NextResponse.json(
+      { error: "You're posting too quickly. Try again shortly." },
+      { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } },
+    );
   }
 
   const { id: movieId } = await params;

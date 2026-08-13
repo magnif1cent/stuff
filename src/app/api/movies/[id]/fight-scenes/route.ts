@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isEmailVerified } from "@/lib/verification";
 import { parseAndValidateFightSceneInput } from "@/lib/fight-scenes";
+import { checkRateLimit, fightSceneSubmitLimiter } from "@/lib/rate-limit";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -11,6 +12,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
   if (!(await isEmailVerified(session.user.id))) {
     return NextResponse.json({ error: "Verify your email before adding a fight scene." }, { status: 403 });
+  }
+
+  const rateLimit = await checkRateLimit(fightSceneSubmitLimiter, session.user.id);
+  if (!rateLimit.success) {
+    return NextResponse.json(
+      { error: "You're submitting too quickly. Try again shortly." },
+      { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } },
+    );
   }
 
   const { id: movieId } = await params;

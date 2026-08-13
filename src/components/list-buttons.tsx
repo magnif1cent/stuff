@@ -21,7 +21,7 @@ export function ListButtons({
 
   async function toggle(listType: "FAVORITE" | "WATCHLIST") {
     if (!signedIn) {
-      window.location.href = "/login";
+      router.push("/login");
       return;
     }
     setError(null);

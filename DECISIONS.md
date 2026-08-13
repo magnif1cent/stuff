@@ -135,6 +135,88 @@ moderation).
   account to REVIEWER (or ADMIN) is still a direct database `UPDATE`,
   consistent with how ADMIN promotion has always worked in this project.
 
+### Security headers and a nonce-based CSP added
+Driven by a security review that found no headers configured at all — no
+CSP, no clickjacking protection, no HSTS. Two files split the work by
+what needs per-request state:
+
+- `next.config.ts`'s `headers()` sets the static ones (`X-Frame-Options`,
+  `X-Content-Type-Options`, `Referrer-Policy`, `Strict-Transport-Security`)
+  across every route, API included — cheap defense in depth even though
+  most of them only matter for HTML pages.
+- `src/proxy.ts` sets `Content-Security-Policy` separately, since a
+  meaningful `script-src` needs a fresh nonce per request. Considered a
+  static `script-src` allowlist first — rejected because Next.js injects
+  its own bootstrap/hydration scripts, so a static policy would need
+  `'unsafe-inline'` to avoid breaking the app, which defeats CSP's main
+  purpose. Followed Next's own documented nonce + `'strict-dynamic'`
+  pattern instead: the proxy function generates a nonce, sets it as both a
+  request header (`x-nonce`) and on the CSP response header, and Next
+  auto-applies it to its own script tags with no other code changes
+  needed. `'unsafe-eval'` is added to `script-src` in development only —
+  Turbopack's dev server/React Refresh needs it, production doesn't, and
+  gating it behind `NODE_ENV` keeps the deployed policy strict without
+  breaking local dev. (Written as `src/middleware.ts` originally; renamed to
+  `src/proxy.ts` after Next.js 16.3.0 deprecated the `middleware` file
+  convention in favor of `proxy` — same behavior, new file/export name.)
+- `img-src`/`frame-src` explicitly allowlist only the external hosts the
+  app actually embeds (TMDB images, Vercel Blob poster overrides, YouTube
+  thumbnails and `youtube-nocookie.com` embeds) rather than a broader
+  wildcard — narrower than "works," but every current embed source is
+  already a known, fixed list.
+- Verified against both a production build (`next start`) and `next dev`,
+  not just `next build` succeeding: logged in, registered a new account,
+  and confirmed a fight scene's YouTube iframe actually rendered, all with
+  browser console CSP-violation monitoring attached. One console warning
+  is expected and left alone: `/_vercel/insights/script.js` 404s locally
+  because that path is only ever handled by Vercel's actual platform, not
+  `next dev`/`next start` — not a CSP bug, Vercel Analytics is a
+  documented no-op outside a real Vercel deployment.
+- Rate limiting (login, registration, content-creation endpoints) was
+  identified in the same review but deliberately not addressed here — it
+  needs an infrastructure decision (an external store like Upstash Redis
+  for correctness across serverless instances, vs. a weaker in-memory
+  approximation, vs. Vercel's platform-level Firewall) that headers and
+  dependency bumps don't, so it's tracked separately rather than folded
+  into this change.
+
+### Rate limiting added via Upstash Redis
+Follow-up to the deferred item above. `src/lib/rate-limit.ts` centralizes
+seven limiters built on `@upstash/ratelimit`'s sliding-window algorithm.
+
+- **Upstash Redis over in-memory or Vercel Firewall**: an in-memory counter
+  resets on every serverless cold start and isn't shared across instances,
+  so it wouldn't actually stop a distributed attempt — the whole point of
+  the feature. Vercel's platform Firewall operates below the
+  application (IP/path-based), so it can't key a limit by email or user id
+  the way login and per-user content limits need. Upstash's free tier and
+  its REST-based client (works over plain HTTPS, no persistent connection
+  needed from serverless functions) made it the practical choice.
+- **Fails open, not closed, when unconfigured**: every limiter is `null`
+  unless `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` are set, and
+  `checkRateLimit()` no-ops on a `null` limiter rather than blocking every
+  request — same pattern as `RESEND_API_KEY` and `BLOB_READ_WRITE_TOKEN`
+  elsewhere in this app. Local dev and CI never need Upstash credentials.
+- **Keyed by identity where identity is what's attacked, by IP otherwise**:
+  login is keyed by the target email (a credential-stuffing/brute-force
+  defense against one account — IP is easily rotated, and not reliably
+  available inside `authorize()` anyway) and content-creation limiters are
+  keyed by user id (already authenticated at that point). Registration,
+  the one unauthenticated write endpoint, is keyed by IP since there's no
+  identity yet to key on.
+- **Rate-limited logins fail exactly like a wrong password**: `authorize()`
+  returns `null` either way, surfacing Auth.js's generic `CredentialsSignin`
+  error in both cases — a distinct "you're rate limited" response would
+  itself leak information (that the email/rate-limit state is real) to an
+  attacker probing accounts.
+- **Verified against a real Redis-backed limiter, not just code review**:
+  since Upstash's REST API is fundamentally "a JSON array Redis command
+  over HTTP," a small local shim (Node `http` server plus a local
+  `redis-server`) stood in for a real Upstash database during testing,
+  confirming both the no-op-when-unconfigured path and actual enforcement
+  (5-per-window on login/registration, etc., with 429s and a correct
+  `Retry-After` once exceeded) for all seven limiters.
+
 ## Feature Decisions
 
 ### Admin Recommendations: per-admin badges, not a single shared flag

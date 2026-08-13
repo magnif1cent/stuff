@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isEmailVerified } from "@/lib/verification";
 import { MAX_MEMBER_LISTS, MEMBER_LIST_NAME_MAX_LENGTH } from "@/lib/member-lists";
+import { checkRateLimit, listCreateLimiter } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
   const session = await auth();
@@ -11,6 +12,14 @@ export async function POST(request: Request) {
   }
   if (!(await isEmailVerified(session.user.id))) {
     return NextResponse.json({ error: "Verify your email before creating a list." }, { status: 403 });
+  }
+
+  const rateLimit = await checkRateLimit(listCreateLimiter, session.user.id);
+  if (!rateLimit.success) {
+    return NextResponse.json(
+      { error: "You're creating lists too quickly. Try again shortly." },
+      { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } },
+    );
   }
 
   const { name } = await request.json();

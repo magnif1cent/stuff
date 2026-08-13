@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 function HeartIcon({ filled }: { filled: boolean }) {
@@ -25,10 +26,11 @@ export function FavoriteButton({
 }) {
   const [favorite, setFavorite] = useState(initialFavorite);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   async function toggle() {
     if (!signedIn) {
-      window.location.href = "/login";
+      router.push("/login");
       return;
     }
     setError(null);

@@ -15,6 +15,7 @@ An IMDB-style website for kung fu and martial arts films, built for martial arts
 - Social sharing (native share sheet on mobile, copy-link/X/Facebook/Reddit fallback on desktop) on movie and fight scene pages
 - A public `/lists` page for browsing every member's public custom lists (sorted by newest-updated or most-liked, paginated), plus a `/leaderboard` page ranking the Most-Liked Lists (members can like each other's public custom lists) and Top Curators (members with the most movies across their own lists) — see [Member Lists & Profiles](#member-lists--profiles) below
 - Admin-published News & Updates posts: the latest one shown as a teaser banner on the homepage, with a full paginated archive at `/news` — see [News & Updates](#news--updates) below
+- Security headers (CSP, HSTS, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`) on every response, plus rate limiting on login, registration, and content-creation endpoints — see [Security](#security) below
 
 ## Tech Stack
 
@@ -24,6 +25,7 @@ An IMDB-style website for kung fu and martial arts films, built for martial arts
 - [TMDB API](https://developer.themoviedb.org/docs) for movie/person data
 - [Vercel Blob](https://vercel.com/docs/storage/vercel-blob) for admin-uploaded poster overrides
 - [Vercel Web Analytics](https://vercel.com/docs/analytics) for page-view tracking (see [Web Analytics](#web-analytics) below)
+- [Upstash Redis](https://upstash.com) for rate limiting (see [Security](#security) below)
 
 ## Getting Set Up
 
@@ -64,7 +66,7 @@ Pick one:
 cp .env.example .env
 ```
 
-Fill in `DATABASE_URL`, `TMDB_API_KEY`, `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`, and generate an `AUTH_SECRET`. `RESEND_API_KEY`/`EMAIL_FROM` are optional — see [Email Verification](#email-verification) below. `BLOB_READ_WRITE_TOKEN` is optional too — see [Admin Poster Overrides](#admin-poster-overrides).
+Fill in `DATABASE_URL`, `TMDB_API_KEY`, `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`, and generate an `AUTH_SECRET`. `RESEND_API_KEY`/`EMAIL_FROM` are optional — see [Email Verification](#email-verification) below. `BLOB_READ_WRITE_TOKEN` is optional too — see [Admin Poster Overrides](#admin-poster-overrides). `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` are optional too — see [Security](#security).
 
 ```bash
 npx auth secret
@@ -225,6 +227,14 @@ Each slide prefers a fight scene clip over the static TMDB backdrop:
 - **Accessibility**: never plays for visitors with `prefers-reduced-motion` set — they always see the static backdrop.
 - **Fallback**: a movie with no verified fight scene keeps the static backdrop unchanged.
 
+## Security
+
+- **Headers**: `next.config.ts`'s `headers()` sets `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, and `Strict-Transport-Security` on every response (pages and API routes alike). `src/proxy.ts` separately sets a nonce-based `Content-Security-Policy` — `script-src` uses a per-request nonce plus `'strict-dynamic'` rather than a static allowlist, following [Next.js's documented CSP pattern](https://nextjs.org/docs/app/building-your-application/configuring/content-security-policy), so Next's own injected scripts work without `'unsafe-inline'`. `'unsafe-eval'` is added to `script-src` in development only (Turbopack's dev server/React Refresh needs it; production builds don't). `img-src`/`frame-src` explicitly allowlist the external hosts the app actually embeds: `image.tmdb.org`, `*.public.blob.vercel-storage.com`, `img.youtube.com`, and `youtube-nocookie.com`.
+  - Locally, expect one harmless console warning about `/_vercel/insights/script.js` returning the wrong MIME type — that path is only handled specially by Vercel's actual platform; `next dev`/`next start` don't serve it, so Web Analytics is a documented no-op outside a real Vercel deployment. Not a CSP misconfiguration.
+  - Running `next start` locally (not `next dev`) also needs `AUTH_TRUST_HOST=true` in your `.env` — Auth.js v5 is stricter about validating the request host outside development mode.
+- **Dependencies**: `npm audit` is expected to report 0 vulnerabilities; re-run `npm audit fix` (and bump `next`/`prisma` directly if a fix needs a version not covered by their `^` range) if a future dependency update reintroduces any.
+- **Rate limiting**: `src/lib/rate-limit.ts` throttles the endpoints most worth throttling — login (5 attempts / 5 min, keyed by email), registration (5 / 10 min, keyed by IP), resend-verification (3 / hour, keyed by user), and the content-creation endpoints (discussion posts, fight scene submissions, movie submissions, list creation — 10-20 / 10 min, keyed by user). Login failures caused by rate limiting look identical to a wrong password (a generic `CredentialsSignin` error) so the limiter doesn't leak its own state to an attacker. Backed by [Upstash Redis](https://upstash.com) via `@upstash/ratelimit`, so limits are enforced correctly across serverless instances rather than reset per cold start. Without `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` configured, rate limiting is a no-op — every request is allowed, not blocked — so local dev and CI work unchanged. To enable it, create a free database at [console.upstash.com](https://console.upstash.com), copy its REST URL/token into `.env`, and restart the dev server.
+
 ## Continuous Integration
 
 `.github/workflows/ci.yml` runs `npm run lint` and `npm run build` on every push and pull request. It needs no database or secrets — the app has no statically-generated pages that touch Prisma at build time, so `next build` succeeds without a live connection, and `npm ci` regenerates the Prisma client automatically via a `postinstall` hook.
@@ -288,4 +298,4 @@ It needs to be turned on per-project after deploying: **Vercel dashboard → thi
 
 ## Out of Scope (for now)
 
-Person/actor detail pages, catalog-wide pagination, rate limiting, reply notifications, a user-facing "report post" flow, "related movies" recommendations, and fight scene moderation beyond owner/admin delete are not yet implemented.
+Person/actor detail pages, catalog-wide pagination, reply notifications, a user-facing "report post" flow, "related movies" recommendations, and fight scene moderation beyond owner/admin delete are not yet implemented.
