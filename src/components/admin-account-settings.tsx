@@ -17,6 +17,45 @@ export function AdminAccountSettings({
     <div className="flex flex-col gap-8">
       <EmailForm currentEmail={currentEmail} requirePassword={hasPassword} />
       <PasswordForm requireCurrent={hasPassword} />
+      <SignOutEverywhere />
+    </div>
+  );
+}
+
+function SignOutEverywhere() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleClick() {
+    setLoading(true);
+    setError(null);
+    const res = await fetch("/api/admin/account/sign-out-everywhere", { method: "POST" });
+    if (!res.ok) {
+      setLoading(false);
+      const body = await res.json().catch(() => ({}));
+      setError(body.error ?? "Something went wrong.");
+      return;
+    }
+    signOut({ callbackUrl: "/login" });
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div>
+        <h2 className="mb-1 text-sm font-semibold text-white">Sessions</h2>
+        <p className="text-xs text-neutral-500">
+          Sign out of every device signed into your account, including this one — use this if you suspect
+          someone else has access.
+        </p>
+      </div>
+      {error && <p className="text-sm text-red-500">{error}</p>}
+      <button
+        onClick={handleClick}
+        disabled={loading}
+        className="self-start rounded-md border border-neutral-700 bg-neutral-900 px-4 py-1.5 text-sm font-medium text-neutral-100 hover:bg-neutral-800 disabled:opacity-50"
+      >
+        {loading ? "Signing out…" : "Sign out everywhere"}
+      </button>
     </div>
   );
 }
@@ -60,6 +99,7 @@ function EmailForm({ currentEmail, requirePassword }: { currentEmail: string; re
       <input
         type="email"
         required
+        autoComplete="email"
         placeholder="New email"
         value={newEmail}
         onChange={(e) => setNewEmail(e.target.value)}
@@ -69,6 +109,7 @@ function EmailForm({ currentEmail, requirePassword }: { currentEmail: string; re
         <input
           type="password"
           required
+          autoComplete="current-password"
           placeholder="Current password"
           value={currentPassword}
           onChange={(e) => setCurrentPassword(e.target.value)}
@@ -129,6 +170,7 @@ function PasswordForm({ requireCurrent }: { requireCurrent: boolean }) {
         <input
           type="password"
           required
+          autoComplete="current-password"
           placeholder="Current password"
           value={currentPassword}
           onChange={(e) => setCurrentPassword(e.target.value)}
@@ -138,6 +180,7 @@ function PasswordForm({ requireCurrent }: { requireCurrent: boolean }) {
       <input
         type="password"
         required
+        autoComplete="new-password"
         placeholder="New password"
         value={newPassword}
         onChange={(e) => setNewPassword(e.target.value)}
@@ -146,6 +189,7 @@ function PasswordForm({ requireCurrent }: { requireCurrent: boolean }) {
       <input
         type="password"
         required
+        autoComplete="new-password"
         placeholder="Confirm new password"
         value={confirmPassword}
         onChange={(e) => setConfirmPassword(e.target.value)}

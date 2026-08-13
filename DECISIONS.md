@@ -443,6 +443,41 @@ that isn't derived from any real password and always fails comparison.
 one, unconditionally, so both code paths do the same amount of work
 regardless of whether the account exists.
 
+### Manual "sign out everywhere" reuses the password-change invalidation, doesn't duplicate it
+Two more small findings from the same login/password hardening pass,
+both self-contained enough not to need their own entry.
+
+- **"Sign out everywhere" is a thin trigger on existing machinery, not a
+  new mechanism**: the session-invalidation check added earlier already
+  compares `User.passwordChangedAt` against each session's baseline on
+  every request. Rather than build a second, parallel way to invalidate
+  sessions (e.g. a session-version counter), `POST
+  /api/admin/account/sign-out-everywhere` just bumps that same column
+  without touching `passwordHash` — the existing `jwt` callback does the
+  rest, unchanged. Deliberately signs out the calling session too, not
+  just other devices: matches how "sign out everywhere" reads to a user,
+  and avoids a special case in the invalidation check to exempt "this one
+  session, for now." Verified server-side, not just via the client's
+  `signOut()` call — the calling session's own cookie was confirmed
+  invalid via `/api/auth/session` immediately after, independent of any
+  client-side cleanup.
+- **Only reachable from `/admin/account`, so only `ADMIN`/`REVIEWER`
+  accounts get it right now**: regular `USER` members have no
+  account-settings page at all today (a pre-existing gap, not something
+  this pass introduced or was scoped to fix) — forgot-password is their
+  only self-service credential path. Adding a member-facing account page
+  was out of scope for what was asked here; worth revisiting alongside
+  whatever eventually gives regular members self-service settings.
+- **`autoComplete` attributes added to every credential input**: a
+  concrete, previously-observed gap (a real browser dev-console warning
+  surfaced during earlier testing in this same hardening pass) rather
+  than a speculative one. Matters beyond tidiness — a password manager
+  that can't tell a field is `new-password` vs. `current-password` is
+  less likely to offer to save or generate a credential, nudging people
+  toward typing something memorable (i.e. weaker) by hand instead, which
+  works against the length/breach-check requirements added earlier in
+  this same pass.
+
 ## Feature Decisions
 
 ### Admin Recommendations: per-admin badges, not a single shared flag
