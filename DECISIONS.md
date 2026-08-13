@@ -89,6 +89,52 @@ always applies whatever status it's given — without the guard, "submitting"
 an already-live movie again would demote it back to pending and pull it off
 the site.
 
+### REVIEWER introduced as a role narrower than ADMIN
+A three-role model (`USER`/`REVIEWER`/`ADMIN`) replaces the previous binary
+one, driven by a concrete need: someone who should be able to verify
+member-submitted movies, manage the fight-scene-tag vocabulary, and verify
+fight scenes, without the rest of `ADMIN`'s reach (TMDB import, News &
+Updates, catalog deletion, Editors' Score, editorial reviews, discussion
+moderation).
+
+- No schema migration — `role` was already a plain `String` with no DB-level
+  check constraint, just an app-level convention (documented in a schema
+  comment). Adding a third accepted value only required updating that
+  comment and the permission checks themselves.
+- `requireReviewerSession()` (ADMIN or REVIEWER) added alongside the existing
+  `requireAdminSession()` (ADMIN-only, unchanged) in `src/lib/require-admin.ts`,
+  rather than replacing the single admin check everywhere — most admin-gated
+  routes (TMDB import, News, catalog deletion, Editors' Score/rating,
+  editorial reviews, discussion moderation, poster overrides,
+  recommendations, fight-scene start-time/admin-rating) stay on
+  `requireAdminSession()` untouched. Only the three routes REVIEWER actually
+  needed — movie approval, fight-scene-tag CRUD, fight-scene verify — moved
+  to the broader check.
+- Movie rejection needed its own endpoint (`POST /api/admin/movies/[id]/reject`,
+  REVIEWER-accessible but scoped to `status: "PENDING"` rows only) rather
+  than granting REVIEWER access to the existing general `DELETE
+  /api/admin/movies/[id]` (ADMIN-only, deletes *any* catalog movie). Branching
+  that shared route on role and target status would have made "can this
+  account delete this movie" depend on two different things read together;
+  a separate, narrowly-scoped route keeps REVIEWER's blast radius provably
+  limited to their own review queue.
+- `FightSceneSection`'s existing `isAdmin` prop already bundled several
+  admin-only powers together (delete any scene, start-time adjustment,
+  editors' rating/note) behind one boolean and one "Admin tools" toggle.
+  Rather than broaden `isAdmin` itself (which would have handed REVIEWER all
+  of those, not just verify), a second prop `canVerify` was added,
+  defaulting to `isAdmin`'s value so no other call site's behavior changed
+  by omission. Only the Verify/Unverify button reads `canVerify`; everything
+  else under the "Admin tools" toggle still reads `isAdmin`.
+- REVIEWER also gets self-service `/admin/account` access (own email/password),
+  not just the three review capabilities — same rationale as why that page
+  exists for ADMIN at all (self-service beats needing someone to run raw
+  SQL), and managing your own credentials isn't a content-moderation power
+  that needs withholding.
+- No user-management UI added for granting the role itself — promoting an
+  account to REVIEWER (or ADMIN) is still a direct database `UPDATE`,
+  consistent with how ADMIN promotion has always worked in this project.
+
 ## Feature Decisions
 
 ### Admin Recommendations: per-admin badges, not a single shared flag

@@ -276,6 +276,7 @@ export function FightSceneSection({
   signedIn,
   currentUserId,
   isAdmin,
+  canVerify = isAdmin,
   myRatings,
   myAdminRatings,
   myMemberLists = [],
@@ -290,7 +291,14 @@ export function FightSceneSection({
   tagOptions: TagOption[];
   signedIn: boolean;
   currentUserId: string | null;
+  // Full admin powers: delete any scene, adjust start-time, set the
+  // editors' rating/note. Deliberately not the same gate as canVerify below.
   isAdmin: boolean;
+  // Verify/unverify only — granted to REVIEWER as well as ADMIN. Defaults to
+  // isAdmin's value so existing call sites that don't pass it yet keep
+  // exactly today's behavior (admin-only) instead of silently losing the
+  // verify button.
+  canVerify?: boolean;
   myRatings: Record<string, number>;
   myAdminRatings: Record<string, number>;
   // The signed-in member's public lists, and which of those already contain
@@ -690,7 +698,7 @@ export function FightSceneSection({
                       Delete
                     </button>
                   )}
-                  {isAdmin && (
+                  {canVerify && (
                     <button onClick={() => handleVerifyToggle(scene.id, !scene.isVerified)} className="ml-2 underline hover:opacity-70">
                       {scene.isVerified ? "Unverify" : "Verify"}
                     </button>

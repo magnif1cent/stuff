@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { requireAdminSession } from "@/lib/require-admin";
+import { requireReviewerSession } from "@/lib/require-admin";
 import { prisma } from "@/lib/prisma";
 
 const MIN_PASSWORD_LENGTH = 8;
 
 export async function PATCH(request: Request) {
-  const session = await requireAdminSession();
+  const session = await requireReviewerSession();
   if (!session) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }

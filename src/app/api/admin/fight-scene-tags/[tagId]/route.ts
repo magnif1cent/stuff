@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { requireAdminSession } from "@/lib/require-admin";
+import { requireReviewerSession } from "@/lib/require-admin";
 import { prisma } from "@/lib/prisma";
 
 const MAX_TAG_NAME_LENGTH = 40;
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ tagId: string }> }) {
-  const session = await requireAdminSession();
+  const session = await requireReviewerSession();
   if (!session) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
@@ -38,7 +38,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ ta
 }
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ tagId: string }> }) {
-  const session = await requireAdminSession();
+  const session = await requireReviewerSession();
   if (!session) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }

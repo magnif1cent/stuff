@@ -121,6 +121,7 @@ export default async function FightScenePage({ params }: { params: Promise<Param
         signedIn={!!session?.user}
         currentUserId={session?.user?.id ?? null}
         isAdmin={session?.user?.role === "ADMIN"}
+        canVerify={session?.user?.role === "ADMIN" || session?.user?.role === "REVIEWER"}
         myRatings={myRating ? { [scene.id]: myRating.score } : {}}
         myAdminRatings={myAdminRating ? { [scene.id]: myAdminRating.score } : {}}
         myMemberLists={myMemberListItems}
