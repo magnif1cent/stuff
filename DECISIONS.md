@@ -880,3 +880,11 @@ time.
 - **Top Rated Fight Scenes rail** — homepage rail using existing fight-scene
   rating data, to put the feature in front of visitors who'd otherwise only
   find it via nav.
+- **Two-factor authentication (TOTP)** — identified during the
+  login/password hardening pass as the one remaining major lever beyond
+  what's already shipped (rate limiting, CAPTCHA, breach-password
+  checking, session invalidation on password change, the login timing
+  fix). Deliberately not folded into any of those changes — it's a real
+  feature (secret generation/storage, an enrollment flow, backup/recovery
+  codes, a recovery path for a lost authenticator), not a small hardening
+  patch. Revisit as its own scoped piece of work.
