@@ -166,6 +166,20 @@ async function main() {
     update: { score: 9, note: "A genre-defining classic." },
     create: { adminId: admin.id, movieId: enterTheDragon.id, score: 9, note: "A genre-defining classic." },
   });
+  await prisma.subcategoryRating.upsert({
+    where: {
+      userId_movieId_category: { userId: member.id, movieId: enterTheDragon.id, category: "FIGHT_CHOREOGRAPHY" },
+    },
+    update: { score: 10 },
+    create: { userId: member.id, movieId: enterTheDragon.id, category: "FIGHT_CHOREOGRAPHY", score: 10 },
+  });
+  await prisma.subcategoryAdminRating.upsert({
+    where: {
+      adminId_movieId_category: { adminId: admin.id, movieId: enterTheDragon.id, category: "FIGHT_CHOREOGRAPHY" },
+    },
+    update: { score: 10 },
+    create: { adminId: admin.id, movieId: enterTheDragon.id, category: "FIGHT_CHOREOGRAPHY", score: 10 },
+  });
 
   const FIGHT_SCENE_TAGS = ["One vs. Many", "Weapon Duel", "Mirror Maze"];
   const tagByName = new Map<string, { id: string }>();

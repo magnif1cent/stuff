@@ -480,7 +480,52 @@ both self-contained enough not to need their own entry.
 
 ## Feature Decisions
 
-### Admin Recommendations: per-admin badges, not a single shared flag
+### Subcategory ratings: supplement the overall score, fixed category list, movies only
+**PR #TBD.** Members and admins can now rate a movie by category (Fight
+Choreography, Story, Acting) in addition to the existing overall 1–10 score.
+Several judgment calls, made explicit with the user before building rather
+than guessed:
+
+- **Supplement, not replacement**: the overall score (`Rating`/`AdminRating`)
+  is untouched — category ratings live in new `SubcategoryRating`/
+  `SubcategoryAdminRating` tables, unique on `[userId, movieId, category]` /
+  `[adminId, movieId, category]`. A member can rate overall, by category,
+  both, or neither; the Community Score/Editors' Score aggregates are not
+  derived from category averages. Considered computing the overall score as
+  an average of categories, and dropping the standalone score entirely —
+  rejected both: purely additive was the lowest-risk option and the
+  overall score is a well-established, independently-understood number members
+  already rely on.
+- **Fixed, hardcoded category list, not an admin-configurable taxonomy
+  table**: `RATING_CATEGORIES` in `src/lib/ratings.ts` is a small constant
+  (`FIGHT_CHOREOGRAPHY`, `STORY`, `ACTING`), and `category` is a plain
+  `String` column with app-level validation (`isRatingCategoryKey`) — same
+  convention as `User.role`, not the `Genre`/`FightSceneTag` pattern.
+  Considered a `RatingCategory` table editable from `/admin` — rejected as
+  more machinery (CRUD UI, handling a category being renamed/deleted out
+  from under existing rating rows) than a 3-item list that isn't expected to
+  grow member-by-member needs.
+- **Movies only, not fight scenes**: despite the established
+  mirror-the-shape-for-new-content-types convention (see Fight Scenes' own
+  entry above), category ratings were scoped to movies only per explicit
+  direction — `FightSceneRating`/`FightSceneAdminRating` are unchanged.
+- **Editors' Score gets category breakdowns too**, per explicit direction —
+  `SubcategoryAdminRating` mirrors `SubcategoryRating` the same way
+  `AdminRating` mirrors `Rating`. No per-category note field, though:
+  `AdminRating.note` already covers freeform editor commentary, and
+  duplicating a note box per category wasn't asked for and would have
+  bulked up the widget for little gain.
+- **One upsert per category, not a combined batch endpoint**: two new routes
+  (`POST /api/movies/[id]/rating/category`, `POST
+  /api/movies/[id]/admin-rating/category`) each take a single `{category,
+  score}` and upsert one row — mirroring the existing overall-score route's
+  immediate-save-on-click UX (`RatingWidget`/`AdminRatingWidget` already
+  save the instant a number button is clicked, no separate "Submit"). A
+  combined endpoint taking all categories at once was considered and
+  dropped — it would've forced a save-all-at-once UX inconsistent with how
+  the overall score already behaves on the same page.
+
+
 **PR #TBD.** Two admins each need their own "I recommend this" mark on a
 movie, distinct from the existing single shared Editorial Review.
 

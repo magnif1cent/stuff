@@ -28,6 +28,8 @@ model User {
   sessions      Session[]
   ratings       Rating[]
   adminRatings  AdminRating[]
+  subcategoryRatings      SubcategoryRating[]
+  subcategoryAdminRatings SubcategoryAdminRating[]
   listEntries   ListEntry[]
   fightSceneFavorites FightSceneFavorite[]
   discussionPosts DiscussionPost[]
@@ -123,6 +125,8 @@ model Movie {
   cast            CastCredit[]
   ratings         Rating[]
   adminRatings    AdminRating[]
+  subcategoryRatings      SubcategoryRating[]
+  subcategoryAdminRatings SubcategoryAdminRating[]
   listEntries     ListEntry[]
   discussionPosts DiscussionPost[]
   weeklyFeatured  WeeklyFeatured[]
@@ -199,6 +203,50 @@ model AdminRating {
   movie Movie @relation(fields: [movieId], references: [id], onDelete: Cascade)
 
   @@unique([adminId, movieId])
+  @@index([movieId])
+}
+
+// Per-category breakdown that supplements (not replaces) Rating's single
+// overall score above — a member can rate a movie overall, by category,
+// both, or neither, independently. `category` is a plain String with an
+// app-level fixed vocabulary (see RATING_CATEGORIES in src/lib/ratings.ts),
+// same convention as User.role, rather than an admin-configurable taxonomy
+// table like Genre/FightSceneTag — there's no plan to let this vocabulary
+// grow member-by-member or admin-by-admin the way those do. Movies only for
+// now, not fight scenes.
+model SubcategoryRating {
+  id        String   @id @default(cuid())
+  userId    String
+  movieId   String
+  category  String
+  score     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  movie Movie @relation(fields: [movieId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, movieId, category])
+  @@index([movieId])
+}
+
+// Admin equivalent of SubcategoryRating above, mirroring how AdminRating
+// mirrors Rating. No per-category note field — AdminRating's existing note
+// already covers the editor's freeform commentary; duplicating it per
+// category wasn't asked for and would multiply the UI for little gain.
+model SubcategoryAdminRating {
+  id        String   @id @default(cuid())
+  adminId   String
+  movieId   String
+  category  String
+  score     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  admin User  @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  movie Movie @relation(fields: [movieId], references: [id], onDelete: Cascade)
+
+  @@unique([adminId, movieId, category])
   @@index([movieId])
 }
 
