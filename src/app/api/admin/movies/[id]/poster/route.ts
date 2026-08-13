@@ -12,18 +12,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // put() throws if this isn't set, which — left uncaught — surfaces to the
-  // admin as a bare 500 with no JSON body (the client's generic "Something
-  // went wrong" fallback). Checking up front, before doing any of the
-  // request work below, gives a message that actually says what's wrong.
-  if (!process.env.BLOB_READ_WRITE_TOKEN) {
-    console.error("Poster upload failed: BLOB_READ_WRITE_TOKEN is not configured.");
-    return NextResponse.json(
-      { error: "Poster uploads aren't configured on this deployment (missing BLOB_READ_WRITE_TOKEN)." },
-      { status: 500 },
-    );
-  }
-
   const { id: movieId } = await params;
   const movie = await prisma.movie.findUnique({ where: { id: movieId } });
   if (!movie) {
