@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdminSession } from "@/lib/require-admin";
 import { importMovieFromTmdb } from "@/lib/tmdb-import";
+import { tmdbErrorResponse } from "@/lib/api-error";
 
 export async function POST(request: Request) {
   const session = await requireAdminSession();
@@ -17,6 +18,6 @@ export async function POST(request: Request) {
     const movie = await importMovieFromTmdb(tmdbId);
     return NextResponse.json({ movie });
   } catch (error) {
-    return NextResponse.json({ error: (error as Error).message }, { status: 502 });
+    return tmdbErrorResponse(`Failed to import TMDB movie ${tmdbId}:`, error);
   }
 }

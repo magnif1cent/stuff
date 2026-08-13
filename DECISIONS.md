@@ -217,6 +217,46 @@ seven limiters built on `@upstash/ratelimit`'s sliding-window algorithm.
   (5-per-window on login/registration, etc., with 429s and a correct
   `Retry-After` once exceeded) for all seven limiters.
 
+### Medium-risk security findings: two fixed, two deferred
+Follow-up to the original security review (see above). Of the five
+remaining findings, two were clean, self-contained fixes; the other three
+were left alone — either genuinely low-risk or a real product tradeoff
+that shouldn't be made silently as part of a security patch.
+
+- **Fixed — raw exception messages returned to clients**: six routes
+  (`movies/search`, `movies/submit`, and four `admin/tmdb/*` routes) caught
+  errors and returned `(error as Error).message` directly, which could
+  surface an upstream TMDB response body or an internal misconfiguration
+  hint (e.g. a missing-API-key message) to the client. New
+  `src/lib/api-error.ts` centralizes the fix: log the real error
+  server-side, return a fixed generic message to the client.
+- **Fixed — `CRON_SECRET` compared with `!==`**: string `!==` short-circuits
+  on the first differing byte, which is a textbook timing side-channel
+  (impractical to exploit over typical network jitter, but a one-line fix
+  with `crypto.timingSafeEqual` removes the anti-pattern entirely rather
+  than relying on that impracticality).
+- **Deferred — registration email enumeration**: registering with an
+  already-used email returns an explicit "account already exists" error,
+  letting an attacker check which emails have accounts. Closing this fully
+  means the client can no longer auto-sign-in right after registration
+  (a successful sign-in for a genuine new account vs. a failed one for an
+  attacker guessing an existing account's password re-leaks the same
+  signal at the login step) — i.e. it's a permanent UX regression (no more
+  instant browsing after signup) for every future user, not just
+  attackers, to close a signal that rate limiting (already shipped) makes
+  expensive to exploit at scale. Left as-is pending a product decision
+  rather than folded into a security patch.
+- **Deferred — poster upload MIME validation**: `admin/movies/[id]/poster`
+  trusts the browser-reported `file.type` rather than sniffing actual file
+  content, so a spoofed `Content-Type` could get stored/served with a
+  mismatched type. Left as low-risk since the route is `ADMIN`-only —
+  exploiting it needs an already-privileged account, which has much more
+  direct ways to cause damage than a poster upload.
+- **Deferred — bcrypt cost factor of 10**: still within OWASP's accepted
+  range (bumping to 12 is best-practice hardening, not a fix for an actual
+  weakness) and re-hashing existing users' passwords isn't free, so left
+  alone rather than bundled into this pass.
+
 ## Feature Decisions
 
 ### Admin Recommendations: per-admin badges, not a single shared flag

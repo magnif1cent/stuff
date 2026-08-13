@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { isEmailVerified } from "@/lib/verification";
 import { submitMovieForReview } from "@/lib/movie-submission";
 import { checkRateLimit, movieSubmitLimiter } from "@/lib/rate-limit";
+import { tmdbErrorResponse } from "@/lib/api-error";
 
 export async function POST(request: Request) {
   const session = await auth();
@@ -33,6 +34,6 @@ export async function POST(request: Request) {
     }
     return NextResponse.json({ movie: result.movie });
   } catch (error) {
-    return NextResponse.json({ error: (error as Error).message }, { status: 502 });
+    return tmdbErrorResponse(`Failed to submit TMDB movie ${tmdbId}:`, error);
   }
 }

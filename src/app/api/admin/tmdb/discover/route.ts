@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAdminSession } from "@/lib/require-admin";
 import { discoverMoviesByKeywords, getTmdbMovieDetails } from "@/lib/tmdb";
 import { prisma } from "@/lib/prisma";
+import { tmdbErrorResponse } from "@/lib/api-error";
 
 // TMDB refuses to serve page 501+ even when total_pages reports higher.
 const MAX_DISCOVER_PAGE = 500;
@@ -81,6 +82,6 @@ export async function GET(request: Request) {
       totalResults: discovered.total_results,
     });
   } catch (error) {
-    return NextResponse.json({ error: (error as Error).message }, { status: 502 });
+    return tmdbErrorResponse(`Failed to discover TMDB movies for keywords ${keywordsParam}:`, error);
   }
 }
