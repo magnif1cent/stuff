@@ -7,6 +7,16 @@ import { prisma } from "@/lib/prisma";
 import { generateUniqueUsername } from "@/lib/username";
 import { checkRateLimit, loginLimiter } from "@/lib/rate-limit";
 
+// Fixed, valid bcrypt hash (cost 12, matching real password hashes) used
+// only to keep bcrypt.compare()'s timing consistent when no real account
+// exists to compare against — it isn't derived from anyone's real
+// password, and comparing against it always fails. Without this, "no such
+// account" would return fast (a DB lookup only) while "wrong password"
+// returns slow (DB lookup + a deliberately expensive bcrypt compare),
+// letting an attacker tell the two apart by response time even though
+// both return the same generic CredentialsSignin error text.
+const DUMMY_PASSWORD_HASH = "$2b$12$OAuvW7xrGm4fX4kAMToA/.pztsNU0brwBk3QSkZjwVwCqKuw8XCb.";
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
   session: { strategy: "jwt" },
@@ -62,12 +72,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
 
         const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
-        if (!user?.passwordHash) {
-          return null;
-        }
-
-        const valid = await bcrypt.compare(password, user.passwordHash);
-        if (!valid) {
+        // Always run bcrypt.compare(), even when there's no real hash to
+        // check against — see DUMMY_PASSWORD_HASH above for why.
+        const valid = await bcrypt.compare(password, user?.passwordHash ?? DUMMY_PASSWORD_HASH);
+        if (!user?.passwordHash || !valid) {
           return null;
         }
 

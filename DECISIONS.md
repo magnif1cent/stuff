@@ -420,6 +420,29 @@ forgot-password reset, rather than three separately-drifting checks.
   reasoning about it, to confirm the SHA-1 prefix/suffix split and match
   logic are correct independent of network access.
 
+### Login timing side-channel closed with a dummy bcrypt comparison
+Found while reviewing what else was worth hardening around login, after
+the password-strength pass above. `authorize()` in `auth.ts` returned
+immediately when no account matched the submitted email — skipping
+`bcrypt.compare()` entirely — but ran a real (deliberately slow) compare
+whenever an account did exist, even on a wrong password. That's a timing
+side-channel: "no such account" answers fast, "wrong password" answers
+slow, letting an attacker tell the two apart by response latency alone,
+regardless of both cases returning the identical generic `CredentialsSignin`
+error text. That generic error was specifically written earlier (see the
+rate-limiting entry above) to avoid leaking exactly this distinction
+through the response *content* — a timing gap re-opens the same leak
+through a different channel the earlier fix didn't address, since it
+wasn't in scope at the time.
+
+Fixed with the standard mitigation: a fixed, valid bcrypt hash
+(`DUMMY_PASSWORD_HASH`, cost 12 — matching real hashes' cost, since a
+mismatched cost factor would itself reintroduce a smaller timing gap)
+that isn't derived from any real password and always fails comparison.
+`bcrypt.compare()` now runs against either the real hash or this dummy
+one, unconditionally, so both code paths do the same amount of work
+regardless of whether the account exists.
+
 ## Feature Decisions
 
 ### Admin Recommendations: per-admin badges, not a single shared flag
