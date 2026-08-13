@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { RATING_CATEGORIES, type RatingCategoryKey } from "@/lib/rating-categories";
+import { StarRatingPicker } from "@/components/star-rating-picker";
 
 const SCORES = Array.from({ length: 10 }, (_, i) => i + 1);
 
@@ -89,33 +90,29 @@ export function RatingWidget({
       </div>
       {error && <p className="mt-1 text-sm text-red-500">{error}</p>}
 
-      <p className="mt-4 mb-1 text-sm text-neutral-400">Rate by category (optional)</p>
-      <div className="flex flex-col gap-2">
-        {RATING_CATEGORIES.map(({ key, label }) => {
-          const categoryScore = categoryScores[key] ?? null;
-          return (
-            <div key={key}>
-              <p className="mb-1 text-xs text-neutral-500">{label}</p>
-              <div className="flex flex-wrap gap-1">
-                {SCORES.map((value) => (
-                  <button
-                    key={value}
+      {/* Only rendered once a member has rated overall — keeps the widget
+          from front-loading three more picker rows before someone's done
+          the one thing most visitors come to do. */}
+      {score !== null && (
+        <>
+          <p className="mt-4 mb-1 text-sm text-neutral-400">Rate by category (optional)</p>
+          <div className="flex flex-col gap-1.5">
+            {RATING_CATEGORIES.map(({ key, label }) => {
+              const categoryScore = categoryScores[key] ?? null;
+              return (
+                <div key={key} className="flex items-center gap-3">
+                  <p className="w-32 shrink-0 text-xs text-neutral-500">{label}</p>
+                  <StarRatingPicker
+                    value={categoryScore}
                     disabled={savingCategory === key}
-                    onClick={() => handleRateCategory(key, value)}
-                    className={`h-6 w-6 rounded text-xs font-medium transition disabled:opacity-50 ${
-                      categoryScore !== null && value <= categoryScore
-                        ? "bg-yellow-500 text-neutral-950"
-                        : "bg-neutral-800 text-neutral-300 hover:bg-neutral-700"
-                    }`}
-                  >
-                    {value}
-                  </button>
-                ))}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+                    onSelect={(value) => handleRateCategory(key, value)}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
     </div>
   );
 }

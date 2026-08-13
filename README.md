@@ -124,6 +124,7 @@ Alongside the existing overall 1–10 Community Score and admin-only Editors' Sc
 
 - The category list is a fixed, hardcoded set (not an admin-editable taxonomy like Genres) — changing it is a code change.
 - Each category is scored 1–10 independently, upserted one category at a time (like the overall score), and averaged per-category the same way the overall score is. A movie page shows a per-category average line (member average / editor average) once at least one rating exists for that category.
+- On the member-facing widget, category rows only appear after you've rated the movie overall, and are rated via a 5-star half-click picker (still 1–10 under the hood — same half-star mechanic already used by the search filters' rating pickers) rather than a row of number buttons, to keep the widget from front-loading three extra picker rows before someone's rated at all. The admin (Editors' Score) category widget is unchanged — always visible, number-button rows.
 - Movies only for now — fight scenes don't have category ratings.
 
 ## Discussion & Moderation

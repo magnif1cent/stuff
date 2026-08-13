@@ -480,6 +480,47 @@ both self-contained enough not to need their own entry.
 
 ## Feature Decisions
 
+### Subcategory rating widget: progressive reveal + star picker, member-facing only
+**PR #TBD.** Follow-up to the subcategory ratings feature below, before it
+shipped — the initial member widget (three stacked rows of ten number
+buttons, always visible under the overall picker) read as visually busy on
+review. Landed here after comparing several options live via screenshots
+with the user, iterating rather than guessing at a single "obviously
+correct" design:
+
+- **Progressive reveal**: the "Rate by category" section now only renders
+  once `score !== null` — i.e. once the member has rated the movie
+  overall. Considered collapsing it behind a manual toggle instead (same
+  declutter effect) — went with tying it to an action the member has
+  already taken over a toggle they'd have to notice and click, since it
+  needs no extra affordance and nothing users don't ask for stays hidden
+  forever if they never rate at all.
+- **5-star half-click picker over ten number buttons**: `StarRatingPicker`
+  (`src/components/star-rating-picker.tsx`) reuses the same half-star
+  mechanic as the existing search-filter rating picker
+  (`RatingStarInput`) — 5 stars, click the left/right half for the
+  odd/even value — so it's still a full 1–10 scale under the hood, just
+  lighter chrome than 10 square buttons per row. Considered actually
+  narrowing categories to a 1–5 scale to cut the number of choices —
+  rejected: it would've needed different validation bounds than the
+  overall score and made the numbers hard to compare at a glance
+  wherever they appear together (the breakdown line, admin panel), for a
+  friction reduction the star picker already delivers without touching
+  the data model.
+- **Shared `StarIcon` extracted, `RatingStarInput` refactored to use
+  it**: both the search-filter picker and the new category picker draw
+  the same star SVG: rather than duplicate the path string a second
+  time, `src/components/star-icon.tsx` now owns it and
+  `rating-star-input.tsx` was refactored to import from there instead of
+  defining its own local `Star`. Pure extraction, no behavior change —
+  verified the filter sidebar renders identically before and after via
+  screenshot.
+- **Admin (Editors' Score) widget intentionally left unchanged**: the
+  redesign was only previewed and approved for the member-facing widget;
+  `AdminRatingWidget` keeps its original always-visible number-button
+  rows. Worth revisiting for consistency later, but extending the
+  redesign there wasn't part of what was compared/approved here.
+
 ### Subcategory ratings: supplement the overall score, fixed category list, movies only
 **PR #TBD.** Members and admins can now rate a movie by category (Fight
 Choreography, Story, Acting) in addition to the existing overall 1–10 score.
