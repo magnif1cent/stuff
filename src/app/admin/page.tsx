@@ -1,39 +1,49 @@
 import Link from "next/link";
+import { auth } from "@/lib/auth";
 
 const SECTIONS = [
   {
     href: "/admin/movies",
     title: "Movies",
     description: "Browse the catalog and permanently delete a movie entry.",
+    adminOnly: false,
   },
   {
     href: "/admin/import",
     title: "Import from TMDB",
     description: "Search TMDB and pull new films into the catalog.",
+    adminOnly: true,
   },
   {
     href: "/admin/fight-scene-tags",
     title: "Fight Scene Tags",
     description: "Manage the category vocabulary members tag fight scenes with.",
+    adminOnly: false,
   },
   {
     href: "/admin/news",
     title: "News & Updates",
     description: "Publish posts shown on /news and as a homepage teaser.",
+    adminOnly: true,
   },
   {
     href: "/admin/account",
     title: "Account",
-    description: "Change your own admin sign-in email or password.",
+    description: "Change your own sign-in email or password.",
+    adminOnly: false,
   },
 ];
 
-export default function AdminDashboardPage() {
+export default async function AdminDashboardPage() {
+  const session = await auth();
+  const isAdmin = session?.user?.role === "ADMIN";
+  const sections = SECTIONS.filter((section) => isAdmin || !section.adminOnly);
+
   return (
     <div>
       <h1 className="mb-6 text-2xl font-bold text-white">Admin</h1>
       <div className="grid gap-4 sm:grid-cols-2">
-        {SECTIONS.map((section) => (
+        {sections.map((section) => (
           <Link
             key={section.href}
             href={section.href}

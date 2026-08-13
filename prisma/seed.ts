@@ -143,6 +143,18 @@ async function main() {
     },
   });
 
+  await prisma.user.upsert({
+    where: { email: "reviewer@example.com" },
+    update: { emailVerified: new Date() },
+    create: {
+      username: "reviewer",
+      email: "reviewer@example.com",
+      role: "REVIEWER",
+      passwordHash: await bcrypt.hash("reviewer1234", 10),
+      emailVerified: new Date(),
+    },
+  });
+
   const enterTheDragon = await prisma.movie.findUniqueOrThrow({ where: { tmdbId: 900001 } });
   await prisma.rating.upsert({
     where: { userId_movieId: { userId: member.id, movieId: enterTheDragon.id } },

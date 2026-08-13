@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { requireAdminSession } from "@/lib/require-admin";
+import { requireReviewerSession } from "@/lib/require-admin";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const session = await requireAdminSession();
+  const session = await requireReviewerSession();
   if (!session) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }

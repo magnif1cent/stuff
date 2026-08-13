@@ -36,7 +36,7 @@ export async function Navbar() {
           </Link>
           {session?.user ? (
             <>
-              {session.user.role === "ADMIN" && (
+              {(session.user.role === "ADMIN" || session.user.role === "REVIEWER") && (
                 <Link href="/admin" className="text-sm whitespace-nowrap text-neutral-300 hover:text-white">
                   Admin
                 </Link>

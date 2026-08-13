@@ -44,12 +44,14 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
   }
 
   // Pending (member-submitted, not yet admin-approved) movies are invisible
-  // to everyone except the person who submitted them and admins — everyone
-  // else gets the same 404 as a nonexistent movie, matching how it's already
-  // hidden from every public listing/search.
+  // to everyone except the person who submitted them and admins/reviewers
+  // (who need to see it to review it) — everyone else gets the same 404 as
+  // a nonexistent movie, matching how it's already hidden from every public
+  // listing/search.
   const isVisible =
     movie.status === "APPROVED" ||
     session?.user?.role === "ADMIN" ||
+    session?.user?.role === "REVIEWER" ||
     session?.user?.id === movie.submittedById;
   if (!isVisible) {
     notFound();
@@ -362,6 +364,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
           signedIn={!!session?.user}
           currentUserId={session?.user?.id ?? null}
           isAdmin={session?.user?.role === "ADMIN"}
+          canVerify={session?.user?.role === "ADMIN" || session?.user?.role === "REVIEWER"}
           myRatings={myFightSceneRatingMap}
           myAdminRatings={myFightSceneAdminRatingMap}
           myMemberLists={myMemberLists.map((list) => ({ id: list.id, name: list.name }))}

@@ -30,7 +30,7 @@ export function AdminPendingMovies({ initialMovies }: { initialMovies: PendingMo
     if (!window.confirm(`Reject and permanently remove "${title}"?`)) return;
     setBusyId(id);
     setError(null);
-    const res = await fetch(`/api/admin/movies/${id}`, { method: "DELETE" });
+    const res = await fetch(`/api/admin/movies/${id}/reject`, { method: "POST" });
     setBusyId(null);
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
