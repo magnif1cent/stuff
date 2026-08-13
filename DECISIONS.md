@@ -315,6 +315,68 @@ users had a fallback).
   fix no longer buys enough to be worth it, so registration keeps its
   explicit "account already exists" message.
 
+### Poster upload MIME sniffing, and JWT sessions invalidated on password change
+Closes the last item deferred above (poster upload MIME validation) plus a
+gap found while building forgot-password but not fixed at the time: a
+password reset changed the password but didn't revoke any other session
+already open on the account, which undercuts forgot-password's whole
+reason to exist (locking out someone who already has your password/cookie).
+
+- **Poster upload now sniffs actual file bytes**: `admin/movies/[id]/poster`
+  previously trusted the browser-reported `file.type`, which a client fully
+  controls independent of what it actually uploads. New
+  `src/lib/image-type.ts` checks the real signature (JPEG's `FF D8 FF`,
+  PNG's 8-byte magic, WebP's `RIFF`/`WEBP` markers) with no new dependency —
+  three signatures didn't justify pulling in a library. The sniffed type,
+  not the client-declared one, is what gets sent to Vercel Blob as the
+  stored `Content-Type` too, so a spoofed declaration can't get a mismatched
+  type all the way to storage.
+- **JWT sessions now carry a `passwordChangedAt` baseline, checked on every
+  request**: a new `User.passwordChangedAt`, set whenever `passwordHash` is
+  (re)written (registration, admin password change, forgot-password reset),
+  is embedded in the JWT at sign-in and re-compared against the live DB
+  value in every subsequent `jwt` callback invocation — Auth.js re-runs this
+  callback on every session check for JWT-strategy sessions, not just at
+  sign-in, which is what makes a fresh per-request check possible at all.
+  A mismatch returns `null`, which Auth.js's own session handling treats as
+  "clear this cookie" — confirmed against `@auth/core`'s actual
+  `session()` action source, not just its types, since a wrong assumption
+  here silently breaks either the invalidation itself or every unrelated
+  session, and both are hard to notice without staring at the specific
+  cookie behavior.
+  - **Real bug caught while building this, not just theorized**: the
+    first version compared against `null` as the "unset" baseline and
+    skipped the check whenever the token had one — which meant *any*
+    account's very first password change after this shipped (every
+    account that existed before it, and any brand-new one before the fix
+    below) silently failed to invalidate other sessions, since both the
+    old session's baseline and the freshly-changed DB value read as
+    equivalent "nothing to compare." Reproduced end-to-end against a real
+    two-session test before fixing it: switched the sentinel from `null`
+    to `0` on both sides of the comparison (and registration now sets
+    `passwordChangedAt` at account creation, not just on later changes),
+    so an account's first-ever change is a real transition from `0` to a
+    timestamp instead of an unset-to-unset no-op.
+  - **Ships a one-time global sign-out**: a session issued before this
+    check existed has no `passwordChangedAt` claim on its token at all
+    (`undefined`, not `0`), which never equals any DB value and so is
+    always treated as stale on its first post-deploy request. Accepted
+    deliberately rather than designed around — it costs nothing (everyone
+    just signs back in) and avoids a permanently-exempt class of
+    pre-existing sessions that a more careful migration would otherwise
+    require.
+  - **A real per-request DB query, not a cached claim**: the existing
+    `role`/`username` caching in this callback only re-queried when those
+    fields were missing from the token (i.e., effectively once per
+    session). That pattern doesn't work here — checking "sometimes" would
+    mean a reset mostly doesn't revoke anything, since most requests
+    would hit the cached, already-stale path. Accepted the extra query on
+    every authenticated request as the cost of the property actually
+    holding, and folded the existing role/username refresh into the same
+    query rather than running two — which incidentally also means a role
+    promotion now takes effect on a user's very next request instead of
+    requiring them to sign out and back in first.
+
 ## Feature Decisions
 
 ### Admin Recommendations: per-admin badges, not a single shared flag

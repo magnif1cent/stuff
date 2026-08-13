@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import { put, del } from "@vercel/blob";
 import { requireAdminSession } from "@/lib/require-admin";
 import { prisma } from "@/lib/prisma";
+import { sniffImageType } from "@/lib/image-type";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await requireAdminSession();
@@ -23,16 +23,23 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (!(file instanceof File)) {
     return NextResponse.json({ error: "file is required." }, { status: 400 });
   }
-  if (!ALLOWED_TYPES.includes(file.type)) {
-    return NextResponse.json({ error: "Poster must be a JPEG, PNG, or WebP image." }, { status: 400 });
-  }
   if (file.size > MAX_FILE_SIZE) {
     return NextResponse.json({ error: "Poster must be 5MB or smaller." }, { status: 400 });
   }
 
-  const blob = await put(`movie-posters/${movieId}-${Date.now()}`, file, {
+  // Sniffed from the actual bytes, not file.type — a client fully controls
+  // the declared Content-Type/File.type independent of what it actually
+  // uploads, so trusting it would let a non-image file get stored (and
+  // served back) with a spoofed image content type.
+  const bytes = await file.arrayBuffer();
+  const sniffedType = sniffImageType(new Uint8Array(bytes));
+  if (!sniffedType) {
+    return NextResponse.json({ error: "Poster must be a JPEG, PNG, or WebP image." }, { status: 400 });
+  }
+
+  const blob = await put(`movie-posters/${movieId}-${Date.now()}`, bytes, {
     access: "public",
-    contentType: file.type,
+    contentType: sniffedType,
   });
 
   // Best-effort cleanup of the previous override so replacing a poster
