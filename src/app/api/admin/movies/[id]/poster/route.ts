@@ -37,10 +37,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "Poster must be a JPEG, PNG, or WebP image." }, { status: 400 });
   }
 
-  const blob = await put(`movie-posters/${movieId}-${Date.now()}`, bytes, {
-    access: "public",
-    contentType: sniffedType,
-  });
+  let blob;
+  try {
+    blob = await put(`movie-posters/${movieId}-${Date.now()}`, bytes, {
+      access: "public",
+      contentType: sniffedType,
+    });
+  } catch (error) {
+    console.error("Poster upload to Vercel Blob failed:", error);
+    return NextResponse.json({ error: "Failed to upload poster. Please try again." }, { status: 500 });
+  }
 
   // Best-effort cleanup of the previous override so replacing a poster
   // doesn't silently accumulate orphaned blobs — not worth failing the
