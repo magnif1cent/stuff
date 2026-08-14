@@ -189,11 +189,10 @@ Below the cast list on every movie page, members can catalog individual fight sc
 - **Tags**: the tag list itself (e.g. "Weapon Duel", "One vs. Many") is admin-curated at `/admin/fight-scene-tags` — members choose from it but can't create new tags.
 - **Permalinks**: each fight scene has its own page at `/movies/[id]/fight-scenes/[fightSceneId]` with dynamic Open Graph metadata (title, rating summary, YouTube thumbnail) for clean link previews when shared.
 - **Saving to a list**: any member can save a fight scene to one of their own custom lists, or one-tap Favorite it — see [Member Lists & Profiles](#member-lists--profiles).
-- **Scene count**: a movie's detail page shows a "N fight scenes cataloged" stat alongside runtime/director/country once at least one scene exists (verified or not — it matches what's actually listed below, not just the verified ones). This is distinct from Fight Count below — see that section for why.
 
 ## Fight Count
 
-Every movie page also shows a **Fight Count** — a member-maintained "true" number of fights in the movie, separate from the "N fight scenes cataloged" stat above (which only counts scenes that have actually been clipped and tagged, almost always an undercount of the real thing).
+Directly above the Fight Scenes list on every movie page: a **Fight Count** — a member-maintained "true" number of fights in the movie. This is independent of the Fight Scenes listed below (an admin-verifiable, individually clipped/tagged catalog) — Fight Count is a simpler, single number for "how many fights does this movie actually have," which will often be higher than what's been individually cataloged, since not every fight gets clipped and tagged. There's no separate "N scenes cataloged" count shown — with submission volume this low per movie, that's easy enough to see at a glance in the list itself.
 
 This is deliberately a single shared value, not an aggregate of individual member submissions like ratings are: any verified member can overwrite it directly, last edit wins, no consensus step. That simplicity trades away any built-in resistance to a bad-faith edit, so it's paired with guardrails rather than left unprotected:
 

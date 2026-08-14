@@ -240,7 +240,6 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
   const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : null;
   const isFavorite = myListEntries.some((e) => e.listType === "FAVORITE");
   const isOnWatchlist = myListEntries.some((e) => e.listType === "WATCHLIST");
-  const fightSceneCount = fightScenes.length;
 
   const serializedFightScenes = fightScenes.map((scene) => {
     const summary = fightSceneRatingSummaries.get(scene.id);
@@ -344,19 +343,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
             {movie.runtime && <span>{movie.runtime} min</span>}
             {movie.director && <span>Dir. {movie.director}</span>}
             {movie.country && <span>{movie.country}</span>}
-            {fightSceneCount > 0 && (
-              <span>
-                {fightSceneCount} fight scene{fightSceneCount === 1 ? "" : "s"} cataloged
-              </span>
-            )}
           </div>
-
-          <FightCountControl
-            movieId={movie.id}
-            initialCount={movie.trueFightCount}
-            recentEdits={serializedFightCountEdits}
-            signedIn={!!session?.user}
-          />
 
           {movie.genres.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-2">
@@ -483,6 +470,13 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
           movieId={movie.id}
           initialReview={serializedEditorialReview}
           isAdmin={session?.user?.role === "ADMIN"}
+        />
+
+        <FightCountControl
+          movieId={movie.id}
+          initialCount={movie.trueFightCount}
+          recentEdits={serializedFightCountEdits}
+          signedIn={!!session?.user}
         />
 
         <FightSceneSection
