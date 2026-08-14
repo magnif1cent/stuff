@@ -480,13 +480,17 @@ both self-contained enough not to need their own entry.
 
 ## Feature Decisions
 
-### Subcategory rating widget: progressive reveal + star picker, member-facing only
+### Subcategory rating widget: progressive reveal + star picker, now on both member and admin widgets
 **PR #TBD.** Follow-up to the subcategory ratings feature below, before it
 shipped — the initial member widget (three stacked rows of ten number
 buttons, always visible under the overall picker) read as visually busy on
 review. Landed here after comparing several options live via screenshots
 with the user, iterating rather than guessing at a single "obviously
-correct" design:
+correct" design. Originally shipped member-widget-only (see the "left
+unchanged" bullet below); extended to `AdminRatingWidget` in a same-PR
+follow-up once the user asked for parity, rather than needing a second
+comparison pass — the design itself was already settled, just not yet
+applied to the second widget.
 
 - **Progressive reveal**: the "Rate by category" section now only renders
   once `score !== null` — i.e. once the member has rated the movie
@@ -515,11 +519,35 @@ correct" design:
   defining its own local `Star`. Pure extraction, no behavior change —
   verified the filter sidebar renders identically before and after via
   screenshot.
-- **Admin (Editors' Score) widget intentionally left unchanged**: the
-  redesign was only previewed and approved for the member-facing widget;
-  `AdminRatingWidget` keeps its original always-visible number-button
-  rows. Worth revisiting for consistency later, but extending the
-  redesign there wasn't part of what was compared/approved here.
+- **Admin (Editors' Score) widget initially left unchanged, then given
+  parity**: the redesign was first previewed and approved for the
+  member-facing widget only, so `AdminRatingWidget` shipped keeping its
+  original always-visible number-button rows. Extended to match on
+  request: `StarIcon` and `StarRatingPicker` both gained an optional
+  `fillColorClassName` prop (default the site's yellow) so the admin
+  panel's stars render amber, matching its existing amber theme, rather
+  than introducing a second star component or hardcoding yellow into a
+  shared one.
+- **Admin reveal triggers on local selection, not on save**: unlike the
+  member widget (where `score` only becomes non-null after a successful
+  save — there's no separate save step), `AdminRatingWidget`'s overall
+  score is a local, editable value that only reaches the server when
+  "Save editors' rating" is clicked. Reusing the identical `score !==
+  null` gate means the category section appears the moment an admin
+  picks a number, before saving — accepted as the more natural reading of
+  "once you've rated overall" for a workflow that already separates
+  picking a value from committing it, rather than adding a second,
+  save-specific condition that the member widget doesn't have.
+- **Fetch failures now handled in both widgets, not just the member
+  one**: while extending the redesign, `AdminRatingWidget`'s `handleSave`
+  and `handleRateCategory` were also wrapped in try/catch (previously
+  neither had one, and the widget had no error UI at all — a failed
+  request failed completely silently). Matches the same fix already
+  applied to `RatingWidget` after a report that a rating appeared to
+  "not save" with no explanation, which turned out to be an unrelated
+  stale preview-deployment URL, but the missing error handling it
+  surfaced was real regardless and worth closing in both widgets while
+  already touching this file.
 
 ### Subcategory ratings: supplement the overall score, fixed category list, movies only
 **PR #TBD.** Members and admins can now rate a movie by category (Fight

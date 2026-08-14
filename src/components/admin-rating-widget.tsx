@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { RATING_CATEGORIES, type RatingCategoryKey } from "@/lib/rating-categories";
+import { StarRatingPicker } from "@/components/star-rating-picker";
 
 const SCORES = Array.from({ length: 10 }, (_, i) => i + 1);
 
@@ -22,33 +23,52 @@ export function AdminRatingWidget({
   const [categoryScores, setCategoryScores] = useState(initialCategoryScores ?? {});
   const [saving, setSaving] = useState(false);
   const [savingCategory, setSavingCategory] = useState<RatingCategoryKey | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   async function handleSave() {
     if (score === null) return;
     setSaving(true);
-    const res = await fetch(`/api/movies/${movieId}/admin-rating`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ score, note }),
-    });
-    setSaving(false);
-    if (res.ok) {
-      router.refresh();
+    setError(null);
+    try {
+      const res = await fetch(`/api/movies/${movieId}/admin-rating`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ score, note }),
+      });
+      if (res.ok) {
+        router.refresh();
+      } else {
+        const body = await res.json().catch(() => ({}));
+        setError(body.error ?? "Something went wrong.");
+      }
+    } catch {
+      setError("Couldn't reach the server. Check your connection and try again.");
+    } finally {
+      setSaving(false);
     }
   }
 
   async function handleRateCategory(category: RatingCategoryKey, value: number) {
     setSavingCategory(category);
-    const res = await fetch(`/api/movies/${movieId}/admin-rating/category`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ category, score: value }),
-    });
-    setSavingCategory(null);
-    if (res.ok) {
-      setCategoryScores((prev) => ({ ...prev, [category]: value }));
-      router.refresh();
+    setError(null);
+    try {
+      const res = await fetch(`/api/movies/${movieId}/admin-rating/category`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ category, score: value }),
+      });
+      if (res.ok) {
+        setCategoryScores((prev) => ({ ...prev, [category]: value }));
+        router.refresh();
+      } else {
+        const body = await res.json().catch(() => ({}));
+        setError(body.error ?? "Something went wrong.");
+      }
+    } catch {
+      setError("Couldn't reach the server. Check your connection and try again.");
+    } finally {
+      setSavingCategory(null);
     }
   }
 
@@ -84,34 +104,31 @@ export function AdminRatingWidget({
       >
         {saving ? "Saving…" : "Save editors' rating"}
       </button>
+      {error && <p className="mt-1 text-sm text-red-500">{error}</p>}
 
-      <p className="mt-3 mb-1 text-xs font-semibold text-amber-500">Rate by category (optional)</p>
-      <div className="flex flex-col gap-2">
-        {RATING_CATEGORIES.map(({ key, label }) => {
-          const categoryScore = categoryScores[key] ?? null;
-          return (
-            <div key={key}>
-              <p className="mb-1 text-xs text-amber-200/70">{label}</p>
-              <div className="flex flex-wrap gap-1">
-                {SCORES.map((value) => (
-                  <button
-                    key={value}
+      {/* Same progressive-reveal treatment as the member widget: category
+          rows only appear once an overall score has been picked. */}
+      {score !== null && (
+        <>
+          <p className="mt-3 mb-1 text-xs font-semibold text-amber-500">Rate by category (optional)</p>
+          <div className="flex flex-col gap-1.5">
+            {RATING_CATEGORIES.map(({ key, label }) => {
+              const categoryScore = categoryScores[key] ?? null;
+              return (
+                <div key={key} className="flex items-center gap-3">
+                  <p className="w-32 shrink-0 text-xs text-amber-200/70">{label}</p>
+                  <StarRatingPicker
+                    value={categoryScore}
                     disabled={savingCategory === key}
-                    onClick={() => handleRateCategory(key, value)}
-                    className={`h-6 w-6 rounded text-xs font-medium transition disabled:opacity-50 ${
-                      categoryScore !== null && value <= categoryScore
-                        ? "bg-amber-500 text-neutral-950"
-                        : "bg-neutral-800 text-neutral-300 hover:bg-neutral-700"
-                    }`}
-                  >
-                    {value}
-                  </button>
-                ))}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+                    onSelect={(value) => handleRateCategory(key, value)}
+                    fillColorClassName="text-amber-500"
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
     </div>
   );
 }

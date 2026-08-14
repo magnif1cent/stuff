@@ -11,10 +11,12 @@ export function StarRatingPicker({
   value,
   onSelect,
   disabled,
+  fillColorClassName,
 }: {
   value: number | null;
   onSelect: (score: number) => void;
   disabled?: boolean;
+  fillColorClassName?: string;
 }) {
   const [hover, setHover] = useState<number | null>(null);
   const display = hover ?? value ?? 0;
@@ -27,7 +29,7 @@ export function StarRatingPicker({
         const fillPct = display >= high ? 100 : display >= low ? 50 : 0;
         return (
           <span key={i} className="relative">
-            <StarIcon fillPct={fillPct} className="h-5 w-5" />
+            <StarIcon fillPct={fillPct} className="h-5 w-5" fillColorClassName={fillColorClassName} />
             <button
               type="button"
               disabled={disabled}
