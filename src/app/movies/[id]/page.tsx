@@ -345,7 +345,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
             {movie.country && <span>{movie.country}</span>}
             {movie.trueFightCount != null && (
               <a href="#fight-count" className="hover:text-neutral-200 hover:underline">
-                {movie.trueFightCount} fight{movie.trueFightCount === 1 ? "" : "s"}
+                Fight Count: {movie.trueFightCount}
               </a>
             )}
           </div>
