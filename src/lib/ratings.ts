@@ -1,8 +1,19 @@
 import { prisma } from "@/lib/prisma";
+import { RATING_CATEGORIES, isRatingCategoryKey, type RatingCategoryKey } from "@/lib/rating-categories";
 
 export interface RatingSummary {
   average: number | null;
   count: number;
+}
+
+export { RATING_CATEGORIES, isRatingCategoryKey, type RatingCategoryKey };
+
+export type SubcategoryRatingSummaries = Record<RatingCategoryKey, RatingSummary>;
+
+function emptySubcategorySummaries(): SubcategoryRatingSummaries {
+  return Object.fromEntries(
+    RATING_CATEGORIES.map((c) => [c.key, { average: null, count: 0 }]),
+  ) as SubcategoryRatingSummaries;
 }
 
 export async function getRatingSummaries(movieIds: string[]): Promise<Map<string, RatingSummary>> {
@@ -55,6 +66,40 @@ export async function getEditorsRatingSummaries(movieIds: string[]): Promise<Map
     map.set(row.movieId, { average: row._avg.score, count: row._count._all });
   }
   return map;
+}
+
+export async function getSubcategoryRatingSummary(movieId: string): Promise<SubcategoryRatingSummaries> {
+  const rows = await prisma.subcategoryRating.groupBy({
+    by: ["category"],
+    where: { movieId },
+    _avg: { score: true },
+    _count: { _all: true },
+  });
+
+  const summaries = emptySubcategorySummaries();
+  for (const row of rows) {
+    if (isRatingCategoryKey(row.category)) {
+      summaries[row.category] = { average: row._avg.score, count: row._count._all };
+    }
+  }
+  return summaries;
+}
+
+export async function getSubcategoryEditorsRatingSummary(movieId: string): Promise<SubcategoryRatingSummaries> {
+  const rows = await prisma.subcategoryAdminRating.groupBy({
+    by: ["category"],
+    where: { movieId },
+    _avg: { score: true },
+    _count: { _all: true },
+  });
+
+  const summaries = emptySubcategorySummaries();
+  for (const row of rows) {
+    if (isRatingCategoryKey(row.category)) {
+      summaries[row.category] = { average: row._avg.score, count: row._count._all };
+    }
+  }
+  return summaries;
 }
 
 const TOP_RATED_MIN_RATINGS = 2;

@@ -6,7 +6,7 @@ An IMDB-style website for kung fu and martial arts films, built for martial arts
 
 - Landing page with a weekly-rotating "trending" carousel (top 5 most-active movies over the last 7 days) and a recently-added grid — each slide plays a short preview of the movie's best verified fight scene when one exists, falling back to the static backdrop otherwise (see [Weekly Trending Carousel](#weekly-trending-carousel) below)
 - Search by movie title, actor, or director name, with filters (genre, director, actor, country, release-year range, minimum community rating, minimum editor rating), sorting (relevance, highest rated, newest, oldest), pagination, and a typo-tolerant "did you mean" fallback when nothing matches exactly — plus a dedicated fight-scene search at `/search/fight-scenes` (filter by tag, actor, member/editor rating) — see [Search](#search) below
-- Movie pages with cast, synopsis, a community rating, a separate admin-only "Editors' Score", an admin-authored editorial review, and a per-movie discussion thread (with spoiler tags, edit/delete on your own posts, and admin moderation)
+- Movie pages with cast, synopsis, a community rating, a separate admin-only "Editors' Score", an admin-authored editorial review, and a per-movie discussion thread (with spoiler tags, edit/delete on your own posts, and admin moderation). Members and admins can also rate a movie by category (Fight Choreography, Story, Acting) alongside the overall score, shown as a per-category average when at least one rating exists — see [Ratings](#ratings) below
 - **Fight Scenes**: members tag specific fight scenes within a movie — YouTube clip (with an optional start timestamp), the actors involved (picked from that movie's cast), and category tags (e.g. "Weapon Duel", "One vs. Many") — with their own member rating, a separate admin rating, admin verification, and a shareable permalink page (see [Fight Scenes](#fight-scenes) below)
 - Actor pages (`/actors/[personId]`) showing an actor's filmography and every fight scene they're tagged in, linked from a movie's cast list and a scene's "Featuring" line (see [Actor Pages](#actor-pages) below)
 - Member accounts via email/password (with email verification and self-service password recovery) or Google sign-in, identified publicly by a chosen username rather than their email or real name (see [Usernames](#usernames) and [Password Recovery](#password-recovery) below)
@@ -117,6 +117,15 @@ Without `RESEND_API_KEY` configured, the verification link is logged to the serv
 ## Password Recovery
 
 A "Forgot password?" link on the sign-in page (`/forgot-password`) emails a reset link to accounts that signed up with email/password — Google sign-ins have no password to reset, so they get no link (see [Security](#security) below for why). The link expires in 1 hour and is single-use; requesting a new one invalidates any earlier outstanding link for that account. Uses the same `RESEND_API_KEY` setup as email verification above — without it, the reset link is logged to the server console instead (`[email:dev] Password reset link for ...`).
+
+## Ratings
+
+Alongside the existing overall 1–10 Community Score and admin-only Editors' Score, both members and admins can optionally rate a movie by category: **Fight Choreography**, **Story**, and **Acting**. Category ratings are a supplement, not a replacement — the overall score is unaffected by them and works exactly as before if you never touch the category widget.
+
+- The category list is a fixed, hardcoded set (not an admin-editable taxonomy like Genres) — changing it is a code change.
+- Each category is scored 1–10 independently, upserted one category at a time (like the overall score), and averaged per-category the same way the overall score is. A movie page shows a per-category average line (member average / editor average) once at least one rating exists for that category.
+- Category rows only appear after an overall score has been given, and are rated via a 5-star half-click picker (still 1–10 under the hood — same half-star mechanic already used by the search filters' rating pickers) rather than a row of number buttons, to keep the widget from front-loading three extra picker rows before someone's rated at all. Both the member widget and the admin Editors' Score widget use this treatment (member stars are yellow, admin stars are amber to match its existing theme); on the admin widget the category rows appear as soon as an overall score is picked, even before "Save editors' rating" is clicked.
+- Movies only for now — fight scenes don't have category ratings.
 
 ## Discussion & Moderation
 

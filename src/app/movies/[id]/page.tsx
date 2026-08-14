@@ -8,7 +8,13 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { tmdbImageUrl, resolvePosterUrl } from "@/lib/tmdb";
 import { truncate } from "@/lib/text";
-import { getCommunityRatingSummary, getEditorsRatingSummary } from "@/lib/ratings";
+import {
+  getCommunityRatingSummary,
+  getEditorsRatingSummary,
+  getSubcategoryRatingSummary,
+  getSubcategoryEditorsRatingSummary,
+  RATING_CATEGORIES,
+} from "@/lib/ratings";
 import { getMovieRecommenders } from "@/lib/movie-recommendations";
 import { getDiscussionPage } from "@/lib/discussion";
 import {
@@ -109,7 +115,10 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
   const [
     communityRating,
     editorsRating,
+    subcategoryRating,
+    subcategoryEditorsRating,
     myRating,
+    myCategoryRatings,
     myListEntries,
     myMemberLists,
     myFightSceneFavorites,
@@ -121,11 +130,18 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
   ] = await Promise.all([
     getCommunityRatingSummary(movie.id),
     getEditorsRatingSummary(movie.id),
+    getSubcategoryRatingSummary(movie.id),
+    getSubcategoryEditorsRatingSummary(movie.id),
     session?.user
       ? prisma.rating.findUnique({
           where: { userId_movieId: { userId: session.user.id, movieId: movie.id } },
         })
       : null,
+    session?.user
+      ? prisma.subcategoryRating.findMany({
+          where: { userId: session.user.id, movieId: movie.id },
+        })
+      : [],
     session?.user
       ? prisma.listEntry.findMany({ where: { userId: session.user.id, movieId: movie.id } })
       : [],
@@ -176,6 +192,17 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
         where: { adminId_movieId: { adminId: session.user.id, movieId: movie.id } },
       })
     : null;
+
+  const myAdminCategoryRatings = session?.user?.role === "ADMIN"
+    ? await prisma.subcategoryAdminRating.findMany({
+        where: { adminId: session.user.id, movieId: movie.id },
+      })
+    : [];
+
+  const myCategoryRatingMap = Object.fromEntries(myCategoryRatings.map((r) => [r.category, r.score]));
+  const myAdminCategoryRatingMap = Object.fromEntries(
+    myAdminCategoryRatings.map((r) => [r.category, r.score]),
+  );
 
   const fightSceneIds = fightScenes.map((s) => s.id);
   const [
@@ -335,6 +362,28 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
             )}
           </div>
 
+          {RATING_CATEGORIES.some(
+            ({ key }) => subcategoryRating[key].count > 0 || subcategoryEditorsRating[key].count > 0,
+          ) && (
+            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-neutral-500">
+              {RATING_CATEGORIES.map(({ key, label }) => {
+                const community = subcategoryRating[key];
+                const editors = subcategoryEditorsRating[key];
+                if (community.count === 0 && editors.count === 0) return null;
+                return (
+                  <span key={key}>
+                    {label}:{" "}
+                    {community.count > 0 && (
+                      <span className="text-yellow-500">{community.average!.toFixed(1)}</span>
+                    )}
+                    {community.count > 0 && editors.count > 0 && " / "}
+                    {editors.count > 0 && <span className="text-amber-500">{editors.average!.toFixed(1)}</span>}
+                  </span>
+                );
+              })}
+            </div>
+          )}
+
           <p className="mt-4 max-w-2xl text-neutral-300">{movie.overview}</p>
 
           <div className="mt-4 flex flex-wrap items-start gap-2">
@@ -355,6 +404,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
             <RatingWidget
               movieId={movie.id}
               initialScore={myRating?.score ?? null}
+              initialCategoryScores={myCategoryRatingMap}
               signedIn={!!session?.user}
             />
           </div>
@@ -365,6 +415,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
                 movieId={movie.id}
                 initialScore={myAdminRating?.score ?? null}
                 initialNote={myAdminRating?.note ?? null}
+                initialCategoryScores={myAdminCategoryRatingMap}
               />
             </div>
           )}

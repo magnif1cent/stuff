@@ -480,6 +480,120 @@ both self-contained enough not to need their own entry.
 
 ## Feature Decisions
 
+### Subcategory rating widget: progressive reveal + star picker, now on both member and admin widgets
+**PR #TBD.** Follow-up to the subcategory ratings feature below, before it
+shipped — the initial member widget (three stacked rows of ten number
+buttons, always visible under the overall picker) read as visually busy on
+review. Landed here after comparing several options live via screenshots
+with the user, iterating rather than guessing at a single "obviously
+correct" design. Originally shipped member-widget-only (see the "left
+unchanged" bullet below); extended to `AdminRatingWidget` in a same-PR
+follow-up once the user asked for parity, rather than needing a second
+comparison pass — the design itself was already settled, just not yet
+applied to the second widget.
+
+- **Progressive reveal**: the "Rate by category" section now only renders
+  once `score !== null` — i.e. once the member has rated the movie
+  overall. Considered collapsing it behind a manual toggle instead (same
+  declutter effect) — went with tying it to an action the member has
+  already taken over a toggle they'd have to notice and click, since it
+  needs no extra affordance and nothing users don't ask for stays hidden
+  forever if they never rate at all.
+- **5-star half-click picker over ten number buttons**: `StarRatingPicker`
+  (`src/components/star-rating-picker.tsx`) reuses the same half-star
+  mechanic as the existing search-filter rating picker
+  (`RatingStarInput`) — 5 stars, click the left/right half for the
+  odd/even value — so it's still a full 1–10 scale under the hood, just
+  lighter chrome than 10 square buttons per row. Considered actually
+  narrowing categories to a 1–5 scale to cut the number of choices —
+  rejected: it would've needed different validation bounds than the
+  overall score and made the numbers hard to compare at a glance
+  wherever they appear together (the breakdown line, admin panel), for a
+  friction reduction the star picker already delivers without touching
+  the data model.
+- **Shared `StarIcon` extracted, `RatingStarInput` refactored to use
+  it**: both the search-filter picker and the new category picker draw
+  the same star SVG: rather than duplicate the path string a second
+  time, `src/components/star-icon.tsx` now owns it and
+  `rating-star-input.tsx` was refactored to import from there instead of
+  defining its own local `Star`. Pure extraction, no behavior change —
+  verified the filter sidebar renders identically before and after via
+  screenshot.
+- **Admin (Editors' Score) widget initially left unchanged, then given
+  parity**: the redesign was first previewed and approved for the
+  member-facing widget only, so `AdminRatingWidget` shipped keeping its
+  original always-visible number-button rows. Extended to match on
+  request: `StarIcon` and `StarRatingPicker` both gained an optional
+  `fillColorClassName` prop (default the site's yellow) so the admin
+  panel's stars render amber, matching its existing amber theme, rather
+  than introducing a second star component or hardcoding yellow into a
+  shared one.
+- **Admin reveal triggers on local selection, not on save**: unlike the
+  member widget (where `score` only becomes non-null after a successful
+  save — there's no separate save step), `AdminRatingWidget`'s overall
+  score is a local, editable value that only reaches the server when
+  "Save editors' rating" is clicked. Reusing the identical `score !==
+  null` gate means the category section appears the moment an admin
+  picks a number, before saving — accepted as the more natural reading of
+  "once you've rated overall" for a workflow that already separates
+  picking a value from committing it, rather than adding a second,
+  save-specific condition that the member widget doesn't have.
+- **Fetch failures now handled in both widgets, not just the member
+  one**: while extending the redesign, `AdminRatingWidget`'s `handleSave`
+  and `handleRateCategory` were also wrapped in try/catch (previously
+  neither had one, and the widget had no error UI at all — a failed
+  request failed completely silently). Matches the same fix already
+  applied to `RatingWidget` after a report that a rating appeared to
+  "not save" with no explanation, which turned out to be an unrelated
+  stale preview-deployment URL, but the missing error handling it
+  surfaced was real regardless and worth closing in both widgets while
+  already touching this file.
+
+### Subcategory ratings: supplement the overall score, fixed category list, movies only
+**PR #TBD.** Members and admins can now rate a movie by category (Fight
+Choreography, Story, Acting) in addition to the existing overall 1–10 score.
+Several judgment calls, made explicit with the user before building rather
+than guessed:
+
+- **Supplement, not replacement**: the overall score (`Rating`/`AdminRating`)
+  is untouched — category ratings live in new `SubcategoryRating`/
+  `SubcategoryAdminRating` tables, unique on `[userId, movieId, category]` /
+  `[adminId, movieId, category]`. A member can rate overall, by category,
+  both, or neither; the Community Score/Editors' Score aggregates are not
+  derived from category averages. Considered computing the overall score as
+  an average of categories, and dropping the standalone score entirely —
+  rejected both: purely additive was the lowest-risk option and the
+  overall score is a well-established, independently-understood number members
+  already rely on.
+- **Fixed, hardcoded category list, not an admin-configurable taxonomy
+  table**: `RATING_CATEGORIES` in `src/lib/ratings.ts` is a small constant
+  (`FIGHT_CHOREOGRAPHY`, `STORY`, `ACTING`), and `category` is a plain
+  `String` column with app-level validation (`isRatingCategoryKey`) — same
+  convention as `User.role`, not the `Genre`/`FightSceneTag` pattern.
+  Considered a `RatingCategory` table editable from `/admin` — rejected as
+  more machinery (CRUD UI, handling a category being renamed/deleted out
+  from under existing rating rows) than a 3-item list that isn't expected to
+  grow member-by-member needs.
+- **Movies only, not fight scenes**: despite the established
+  mirror-the-shape-for-new-content-types convention (see Fight Scenes' own
+  entry above), category ratings were scoped to movies only per explicit
+  direction — `FightSceneRating`/`FightSceneAdminRating` are unchanged.
+- **Editors' Score gets category breakdowns too**, per explicit direction —
+  `SubcategoryAdminRating` mirrors `SubcategoryRating` the same way
+  `AdminRating` mirrors `Rating`. No per-category note field, though:
+  `AdminRating.note` already covers freeform editor commentary, and
+  duplicating a note box per category wasn't asked for and would have
+  bulked up the widget for little gain.
+- **One upsert per category, not a combined batch endpoint**: two new routes
+  (`POST /api/movies/[id]/rating/category`, `POST
+  /api/movies/[id]/admin-rating/category`) each take a single `{category,
+  score}` and upsert one row — mirroring the existing overall-score route's
+  immediate-save-on-click UX (`RatingWidget`/`AdminRatingWidget` already
+  save the instant a number button is clicked, no separate "Submit"). A
+  combined endpoint taking all categories at once was considered and
+  dropped — it would've forced a save-all-at-once UX inconsistent with how
+  the overall score already behaves on the same page.
+
 ### Movie/actor SEO metadata and actor-page TMDB bios
 **PR #53.** `/movies/[id]` and `/actors/[personId]` previously had no
 per-page `<title>`/description/Open Graph tags — every page fell back to
