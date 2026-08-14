@@ -33,6 +33,7 @@ import { FightSceneSection } from "@/components/fight-scene-section";
 import { EditorialReview } from "@/components/editorial-review";
 import { PosterOverrideControl } from "@/components/poster-override-control";
 import { RecommendationControl } from "@/components/recommendation-control";
+import { FightCountControl } from "@/components/fight-count-control";
 
 const getMovie = cache((id: string) =>
   prisma.movie.findUnique({
@@ -127,6 +128,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
     fightSceneTags,
     editorialReview,
     movieRecommenders,
+    recentFightCountEdits,
   ] = await Promise.all([
     getCommunityRatingSummary(movie.id),
     getEditorsRatingSummary(movie.id),
@@ -168,6 +170,12 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
       include: { author: { select: { username: true } } },
     }),
     getMovieRecommenders(movie.id),
+    prisma.fightCountEdit.findMany({
+      where: { movieId: movie.id },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+      include: { editedBy: { select: { username: true } } },
+    }),
   ]);
 
   const myMemberListItems = myMemberLists.map((list) => ({
@@ -272,6 +280,14 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
       }
     : null;
 
+  const serializedFightCountEdits = recentFightCountEdits.map((edit) => ({
+    id: edit.id,
+    previousValue: edit.previousValue,
+    newValue: edit.newValue,
+    createdAt: edit.createdAt.toISOString(),
+    editedBy: edit.editedBy,
+  }));
+
   const serializedPosts = discussionPage.posts.map((post) => ({
     ...post,
     createdAt: post.createdAt.toISOString(),
@@ -330,10 +346,17 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
             {movie.country && <span>{movie.country}</span>}
             {fightSceneCount > 0 && (
               <span>
-                {fightSceneCount} fight scene{fightSceneCount === 1 ? "" : "s"}
+                {fightSceneCount} fight scene{fightSceneCount === 1 ? "" : "s"} cataloged
               </span>
             )}
           </div>
+
+          <FightCountControl
+            movieId={movie.id}
+            initialCount={movie.trueFightCount}
+            recentEdits={serializedFightCountEdits}
+            signedIn={!!session?.user}
+          />
 
           {movie.genres.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-2">

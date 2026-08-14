@@ -8,6 +8,7 @@ An IMDB-style website for kung fu and martial arts films, built for martial arts
 - Search by movie title, actor, or director name, with filters (genre, director, actor, country, release-year range, minimum community rating, minimum editor rating), sorting (relevance, highest rated, newest, oldest), pagination, and a typo-tolerant "did you mean" fallback when nothing matches exactly — plus a dedicated fight-scene search at `/search/fight-scenes` (filter by tag, actor, member/editor rating) — see [Search](#search) below
 - Movie pages with cast, synopsis, a community rating, a separate admin-only "Editors' Score", an admin-authored editorial review, and a per-movie discussion thread (with spoiler tags, edit/delete on your own posts, and admin moderation). Members and admins can also rate a movie by category (Fight Choreography, Story, Acting) alongside the overall score, shown as a per-category average when at least one rating exists — see [Ratings](#ratings) below
 - **Fight Scenes**: members tag specific fight scenes within a movie — YouTube clip (with an optional start timestamp), the actors involved (picked from that movie's cast), and category tags (e.g. "Weapon Duel", "One vs. Many") — with their own member rating, a separate admin rating, admin verification, and a shareable permalink page (see [Fight Scenes](#fight-scenes) below)
+- **Fight Count**: a member-maintained "true" fight count on every movie page, separate from the count of cataloged Fight Scenes — see [Fight Count](#fight-count) below
 - Actor pages (`/actors/[personId]`) showing an actor's filmography and every fight scene they're tagged in, linked from a movie's cast list and a scene's "Featuring" line (see [Actor Pages](#actor-pages) below)
 - Member accounts via email/password (with email verification and self-service password recovery) or Google sign-in, identified publicly by a chosen username rather than their email or real name (see [Usernames](#usernames) and [Password Recovery](#password-recovery) below)
 - Member capabilities: rate movies and fight scenes, maintain a Favorites list and a Watchlist for movies (fight scenes get a Favorite only — see below), create their own public named lists on a profile page at `/members/[username]` and save both movies and fight scenes to them (see [Member Lists & Profiles](#member-lists--profiles) below), post/reply in movie discussions, submit fight scenes, and submit a movie missing from the catalog for admin review (see [Member Movie Submissions](#member-movie-submissions) below)
@@ -188,7 +189,20 @@ Below the cast list on every movie page, members can catalog individual fight sc
 - **Tags**: the tag list itself (e.g. "Weapon Duel", "One vs. Many") is admin-curated at `/admin/fight-scene-tags` — members choose from it but can't create new tags.
 - **Permalinks**: each fight scene has its own page at `/movies/[id]/fight-scenes/[fightSceneId]` with dynamic Open Graph metadata (title, rating summary, YouTube thumbnail) for clean link previews when shared.
 - **Saving to a list**: any member can save a fight scene to one of their own custom lists, or one-tap Favorite it — see [Member Lists & Profiles](#member-lists--profiles).
-- **Scene count**: a movie's detail page shows a "N fight scenes" stat alongside runtime/director/country once at least one scene exists (verified or not — it matches what's actually listed below, not just the verified ones).
+- **Scene count**: a movie's detail page shows a "N fight scenes cataloged" stat alongside runtime/director/country once at least one scene exists (verified or not — it matches what's actually listed below, not just the verified ones). This is distinct from Fight Count below — see that section for why.
+
+## Fight Count
+
+Every movie page also shows a **Fight Count** — a member-maintained "true" number of fights in the movie, separate from the "N fight scenes cataloged" stat above (which only counts scenes that have actually been clipped and tagged, almost always an undercount of the real thing).
+
+This is deliberately a single shared value, not an aggregate of individual member submissions like ratings are: any verified member can overwrite it directly, last edit wins, no consensus step. That simplicity trades away any built-in resistance to a bad-faith edit, so it's paired with guardrails rather than left unprotected:
+
+- **Verified email required** — same bar as fight scene submission and movie submission. Admins/reviewers are exempt from this specific check (trusted like every other admin action), not from the feature generally.
+- **Bounds-checked** (0–100) server-side, to block obviously-wrong values outright rather than relying on someone noticing later.
+- **Rate-limited** per user through the same Upstash limiter used for other content-mutation endpoints.
+- **Full edit history**, visible to everyone on the movie page (not just admins) — who changed it, from what value to what, and when. The value itself has no approval step, so this history is the only accountability trail; anyone can use it to spot and revert a bad edit, not just moderators.
+
+See `DECISIONS.md` for the fuller reasoning, including the aggregation-based alternative (à la ratings) that was considered and explicitly rejected in favor of this simpler model.
 
 ## Actor Pages
 

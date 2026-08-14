@@ -480,6 +480,51 @@ both self-contained enough not to need their own entry.
 
 ## Feature Decisions
 
+### Fight Count: single member-editable field, not an aggregate — with guardrails to compensate
+**PR #TBD.** Prompted by a real accuracy complaint about the "N fight
+scenes cataloged" stat (added just before this): it counts *tagged clips*,
+not actual fights in the movie, and for almost any film it undercounts
+badly, since tagging a scene requires a member to notice it, clip it, and
+submit a YouTube link. There's also no external source of truth for "how
+many fights does this movie have" — TMDB doesn't track it — so any fix has
+to be community-maintained.
+
+Two designs were discussed:
+
+- **Aggregate model** (what was recommended first): one row per
+  `(userId, movieId)` holding that member's own count estimate, matching
+  the exact shape `Rating`/`SubcategoryRating` already use, displayed as a
+  median across submissions. Same epistemic honesty as Community Score
+  (a labeled crowd estimate, not a claimed fact), and architecturally
+  free — it's a pattern this codebase has already built three times.
+- **Single mutable field** (what shipped): `Movie.trueFightCount`, one
+  value, any verified member can overwrite it directly, last edit wins.
+  Explicitly chosen over aggregation for simplicity — no median math, no
+  "3 members disagree" UX, no partial-submission states to design around.
+
+The single-field model was a deliberate, informed tradeoff, not a shortcut:
+it gives up consensus/outlier-resistance that the aggregate model would
+have had for free. Left completely unguarded, that combination (anyone can
+overwrite a bare number, no trail, no bounds) is arguably *worse* than the
+undercounting problem it replaces — a bad edit is invisible and
+unrecoverable, versus an honestly-undercounted number that's at least
+consistent. Four guardrails close that gap without reintroducing
+aggregation:
+
+- Editing requires a verified email (same bar as fight scene/movie
+  submission); ADMIN/REVIEWER are exempt from that specific check, same as
+  every other admin-gated action in this app trusts the account itself.
+- Value is bounds-checked (0–100) server-side.
+- Edits are rate-limited via the same Upstash limiter used for other
+  content-mutation endpoints (`fightCountEditLimiter`).
+- Every edit is logged to a new `FightCountEdit` table (movie, editor,
+  previous value, new value, timestamp) and the history is shown to
+  *everyone* on the movie page, not gated to admins — since the field has
+  no approval step, any member noticing a bad value is the moderation
+  mechanism, not just staff. This table exists purely as an accountability
+  trail; it is not a second source of truth and nothing reads from it to
+  compute the displayed count.
+
 ### Subcategory rating widget: progressive reveal + star picker, now on both member and admin widgets
 **PR #TBD.** Follow-up to the subcategory ratings feature below, before it
 shipped — the initial member widget (three stacked rows of ten number

@@ -42,6 +42,7 @@ model User {
   memberLists         MemberList[]
   memberListLikes     MemberListLike[]
   movieRecommendations MovieRecommendation[]
+  fightCountEdits     FightCountEdit[]
 }
 
 model Account {
@@ -114,6 +115,14 @@ model Movie {
   createdAt      DateTime @default(now())
   lastSyncedAt   DateTime @default(now())
 
+  // Member-maintained "true" fight count — a single shared value any
+  // verified member can overwrite, not an aggregate of individual member
+  // submissions (unlike Rating/SubcategoryRating). Deliberately simple:
+  // no consensus mechanism, no per-member row. FightCountEdit below exists
+  // purely as an accountability/undo trail for that lack of aggregation,
+  // not as a second source of truth.
+  trueFightCount Int?
+
   // "PENDING" | "APPROVED" — member-submitted movies (see submittedBy below)
   // start PENDING and are hidden from every public listing/search until an
   // admin approves them; admin imports (single-title, keyword, bulk CSV) go
@@ -134,10 +143,29 @@ model Movie {
   editorialReview EditorialReview?
   memberListEntries MemberListEntry[]
   recommendations MovieRecommendation[]
+  fightCountEdits FightCountEdit[]
   submittedBy     User?   @relation(fields: [submittedById], references: [id], onDelete: SetNull)
 
   @@index([title])
   @@index([status])
+}
+
+// Accountability trail for Movie.trueFightCount edits — the field itself has
+// no aggregation or approval step (any verified member can overwrite it
+// directly), so this is what makes a bad edit traceable and reversible
+// instead of just silently overwriting a previous value with no record.
+model FightCountEdit {
+  id            String   @id @default(cuid())
+  movieId       String
+  editedById    String
+  previousValue Int?
+  newValue      Int
+  createdAt     DateTime @default(now())
+
+  movie    Movie @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  editedBy User  @relation(fields: [editedById], references: [id], onDelete: Cascade)
+
+  @@index([movieId])
 }
 
 model Genre {
