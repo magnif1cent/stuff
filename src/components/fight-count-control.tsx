@@ -62,7 +62,7 @@ export function FightCountControl({
   }
 
   return (
-    <div className="mb-4 text-sm text-neutral-400">
+    <div id="fight-count" className="mb-4 scroll-mt-20 text-sm text-neutral-400">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <span>
           Fight Count: <span className="font-medium text-neutral-200">{count ?? "—"}</span>

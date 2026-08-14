@@ -343,6 +343,11 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
             {movie.runtime && <span>{movie.runtime} min</span>}
             {movie.director && <span>Dir. {movie.director}</span>}
             {movie.country && <span>{movie.country}</span>}
+            {movie.trueFightCount != null && (
+              <a href="#fight-count" className="hover:text-neutral-200 hover:underline">
+                {movie.trueFightCount} fight{movie.trueFightCount === 1 ? "" : "s"}
+              </a>
+            )}
           </div>
 
           {movie.genres.length > 0 && (
