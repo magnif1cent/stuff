@@ -1049,6 +1049,23 @@ time.
 
 ## Deferred & Backlog
 
+- **Per-admin Editors' Score note visibility, now that a second admin
+  exists** — checked whether `AdminRating` supports two independent
+  admins rating the same movie: it already does, with no code changes
+  needed. `AdminRating` is `@@unique([adminId, movieId])` (same shape as
+  member `Rating`), `getEditorsRatingSummary` already averages across
+  every admin's row for a movie, and `AdminRatingWidget` already scopes
+  to `session.user.id` so one admin's rating never overwrites another's —
+  the public Editors' Score already correctly reflects both admins once
+  both have rated. What's still open: each admin's individual score and
+  note are currently visible only to that admin (no public display, and
+  no way for a second admin to see the first admin's note before writing
+  their own) — considered showing both admins' scores+notes either
+  publicly (byline'd, like Recent Reviews by Editors) or admin-only, and
+  deferred both pending a decision on which. Confirmed the two options
+  are cheap to switch between later if built — same data fetch and
+  component either way, difference is just a role-check gate — so this
+  isn't a decision the "future flexibility" cost should be weighed on.
 - **About page copy: mission, About the Creators, Contact/feedback, and
   Community guidelines wording** (**PR #27**) — the mission section ("What
   this site is") and the new "About the Creators" section are both
