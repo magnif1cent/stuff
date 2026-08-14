@@ -33,6 +33,7 @@ import { FightSceneSection } from "@/components/fight-scene-section";
 import { EditorialReview } from "@/components/editorial-review";
 import { PosterOverrideControl } from "@/components/poster-override-control";
 import { RecommendationControl } from "@/components/recommendation-control";
+import { FightCountControl } from "@/components/fight-count-control";
 
 const getMovie = cache((id: string) =>
   prisma.movie.findUnique({
@@ -127,6 +128,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
     fightSceneTags,
     editorialReview,
     movieRecommenders,
+    recentFightCountEdits,
   ] = await Promise.all([
     getCommunityRatingSummary(movie.id),
     getEditorsRatingSummary(movie.id),
@@ -168,6 +170,12 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
       include: { author: { select: { username: true } } },
     }),
     getMovieRecommenders(movie.id),
+    prisma.fightCountEdit.findMany({
+      where: { movieId: movie.id },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+      include: { editedBy: { select: { username: true } } },
+    }),
   ]);
 
   const myMemberListItems = myMemberLists.map((list) => ({
@@ -271,6 +279,14 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
       }
     : null;
 
+  const serializedFightCountEdits = recentFightCountEdits.map((edit) => ({
+    id: edit.id,
+    previousValue: edit.previousValue,
+    newValue: edit.newValue,
+    createdAt: edit.createdAt.toISOString(),
+    editedBy: edit.editedBy,
+  }));
+
   const serializedPosts = discussionPage.posts.map((post) => ({
     ...post,
     createdAt: post.createdAt.toISOString(),
@@ -327,6 +343,15 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
             {movie.runtime && <span>{movie.runtime} min</span>}
             {movie.director && <span>Dir. {movie.director}</span>}
             {movie.country && <span>{movie.country}</span>}
+            {movie.trueFightCount != null && (
+              <a
+                href="#fight-count"
+                title="Number of fights in the movie, maintained by members — click to view or edit"
+                className="underline decoration-neutral-600 underline-offset-2 hover:text-neutral-200"
+              >
+                Fight Count: {movie.trueFightCount}
+              </a>
+            )}
           </div>
 
           {movie.genres.length > 0 && (
@@ -454,6 +479,13 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
           movieId={movie.id}
           initialReview={serializedEditorialReview}
           isAdmin={session?.user?.role === "ADMIN"}
+        />
+
+        <FightCountControl
+          movieId={movie.id}
+          initialCount={movie.trueFightCount}
+          recentEdits={serializedFightCountEdits}
+          signedIn={!!session?.user}
         />
 
         <FightSceneSection
