@@ -36,36 +36,46 @@ export function RatingWidget({
   async function handleRate(value: number) {
     setSaving(true);
     setError(null);
-    const res = await fetch(`/api/movies/${movieId}/rating`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ score: value }),
-    });
-    setSaving(false);
-    if (res.ok) {
-      setScore(value);
-      router.refresh();
-    } else {
-      const body = await res.json().catch(() => ({}));
-      setError(body.error ?? "Something went wrong.");
+    try {
+      const res = await fetch(`/api/movies/${movieId}/rating`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ score: value }),
+      });
+      if (res.ok) {
+        setScore(value);
+        router.refresh();
+      } else {
+        const body = await res.json().catch(() => ({}));
+        setError(body.error ?? "Something went wrong.");
+      }
+    } catch {
+      setError("Couldn't reach the server. Check your connection and try again.");
+    } finally {
+      setSaving(false);
     }
   }
 
   async function handleRateCategory(category: RatingCategoryKey, value: number) {
     setSavingCategory(category);
     setError(null);
-    const res = await fetch(`/api/movies/${movieId}/rating/category`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ category, score: value }),
-    });
-    setSavingCategory(null);
-    if (res.ok) {
-      setCategoryScores((prev) => ({ ...prev, [category]: value }));
-      router.refresh();
-    } else {
-      const body = await res.json().catch(() => ({}));
-      setError(body.error ?? "Something went wrong.");
+    try {
+      const res = await fetch(`/api/movies/${movieId}/rating/category`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ category, score: value }),
+      });
+      if (res.ok) {
+        setCategoryScores((prev) => ({ ...prev, [category]: value }));
+        router.refresh();
+      } else {
+        const body = await res.json().catch(() => ({}));
+        setError(body.error ?? "Something went wrong.");
+      }
+    } catch {
+      setError("Couldn't reach the server. Check your connection and try again.");
+    } finally {
+      setSavingCategory(null);
     }
   }
 
