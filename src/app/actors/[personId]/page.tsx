@@ -46,8 +46,8 @@ export async function generateMetadata({
     .map((c) => c.movie.title);
   const description =
     knownFor.length > 0
-      ? `${person.name}, known for ${knownFor.join(", ")}, on Kung Fu Movie DB.`
-      : `${person.name} on Kung Fu Movie DB.`;
+      ? `${person.name}, known for ${knownFor.join(", ")}, on Kung Fu Sauce.`
+      : `${person.name} on Kung Fu Sauce.`;
   const image = tmdbImageUrl(person.profilePath, "w500");
 
   return {

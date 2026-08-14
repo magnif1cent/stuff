@@ -19,8 +19,8 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXTAUTH_URL ?? "http://localhost:3000"),
   title: {
-    default: "Kung Fu Movie DB",
-    template: "%s | Kung Fu Movie DB",
+    default: "Kung Fu Sauce",
+    template: "%s | Kung Fu Sauce",
   },
   description: "An IMDB-style database for kung fu and martial arts films.",
 };

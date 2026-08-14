@@ -1,4 +1,4 @@
-# Kung Fu Movie Database
+# Kung Fu Sauce
 
 An IMDB-style website for kung fu and martial arts films, built for martial arts movie enthusiasts. Movie data is sourced from [TMDB](https://www.themoviedb.org/).
 

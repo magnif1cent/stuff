@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "About — Kung Fu Movie DB",
-  description: "What Kung Fu Movie DB is, how the catalog is curated, and how to reach an admin.",
+  title: "About — Kung Fu Sauce",
+  description: "What Kung Fu Sauce is, how the catalog is curated, and how to reach an admin.",
 };
 
 export default function AboutPage() {
