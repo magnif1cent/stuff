@@ -21,7 +21,7 @@ export async function Navbar() {
         <div className="order-3 w-full sm:order-2 sm:w-auto sm:flex-1">
           <SearchBar />
         </div>
-        <nav className="order-2 flex w-full flex-wrap items-center justify-end gap-x-4 gap-y-2 sm:order-3 sm:ml-auto sm:w-auto sm:flex-nowrap">
+        <nav className="order-2 flex w-full flex-wrap items-center justify-start gap-x-4 gap-y-2 sm:order-3 sm:ml-auto sm:w-auto sm:flex-nowrap">
           <Link href="/search" className="text-sm whitespace-nowrap text-neutral-300 hover:text-white">
             Movies
           </Link>
