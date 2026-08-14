@@ -188,6 +188,7 @@ Below the cast list on every movie page, members can catalog individual fight sc
 - **Tags**: the tag list itself (e.g. "Weapon Duel", "One vs. Many") is admin-curated at `/admin/fight-scene-tags` — members choose from it but can't create new tags.
 - **Permalinks**: each fight scene has its own page at `/movies/[id]/fight-scenes/[fightSceneId]` with dynamic Open Graph metadata (title, rating summary, YouTube thumbnail) for clean link previews when shared.
 - **Saving to a list**: any member can save a fight scene to one of their own custom lists, or one-tap Favorite it — see [Member Lists & Profiles](#member-lists--profiles).
+- **Scene count**: a movie's detail page shows a "N fight scenes" stat alongside runtime/director/country once at least one scene exists (verified or not — it matches what's actually listed below, not just the verified ones).
 
 ## Actor Pages
 
