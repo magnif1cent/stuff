@@ -4,6 +4,11 @@ import { NextRequest, NextResponse } from "next/server";
 // can't allow Next's own injected scripts without 'unsafe-inline', which
 // defeats the point of having one). 'unsafe-eval' is dev-only — Turbopack's
 // dev server/React Refresh needs it, production builds don't.
+//
+// connect-src's Sentry entry assumes a US-region Sentry org (the default for
+// a new account) — an EU-region org needs *.ingest.eu.sentry.io instead, or
+// client-side error reports are silently CSP-blocked. Harmless to leave
+// allowlisted if SENTRY_DSN is never set.
 export function proxy(request: NextRequest) {
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
   const isDev = process.env.NODE_ENV === "development";
@@ -14,7 +19,7 @@ export function proxy(request: NextRequest) {
     style-src 'self' 'unsafe-inline';
     img-src 'self' data: https://image.tmdb.org https://*.public.blob.vercel-storage.com https://img.youtube.com;
     font-src 'self';
-    connect-src 'self' https://challenges.cloudflare.com;
+    connect-src 'self' https://challenges.cloudflare.com https://*.ingest.us.sentry.io;
     frame-src https://www.youtube-nocookie.com https://challenges.cloudflare.com;
     object-src 'none';
     base-uri 'self';

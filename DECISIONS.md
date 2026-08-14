@@ -480,6 +480,89 @@ both self-contained enough not to need their own entry.
 
 ## Feature Decisions
 
+### Error monitoring added without wrapping next.config.ts in Sentry's build plugin
+**PR #TBD.** Closes a real gap: server errors were already visible via
+`console.error` (captured in Vercel's function logs), but a client-side
+crash — a React render error, an uncaught browser exception — had zero
+visibility beyond whoever happened to have their console open.
+
+- **Native Next.js instrumentation hooks over Sentry's setup wizard**:
+  `src/instrumentation-client.ts` and `src/instrumentation.ts`'s
+  `onRequestError` export are Next's own file-system conventions (stable
+  since Next 15.3/15.0 respectively, confirmed against this repo's actual
+  installed Next version's bundled docs rather than assumed from training
+  data — this Next.js version's own `CLAUDE.md`-injected warning exists
+  specifically because APIs like this have moved). Sentry's SDK plugs into
+  them (`Sentry.init()`, `Sentry.captureRequestError`,
+  `Sentry.captureRouterTransitionStart`) rather than needing its own
+  competing convention.
+- **`next.config.ts` deliberately not wrapped with `withSentryConfig`**:
+  that wrapper's main jobs are build-time source-map upload (needs a
+  `SENTRY_AUTH_TOKEN`) and some auto-instrumentation. Making the build
+  depend on that token would break `README.md`'s documented guarantee that
+  `npm run build` needs no secrets — true for every contributor and every
+  parallel PR today, not just this one. Verified directly, not assumed:
+  ran `npm run build` with no `SENTRY_DSN`/`NEXT_PUBLIC_SENTRY_DSN` set at
+  all (matching CI's actual environment) before considering this done.
+  Traded off: Sentry shows real stack traces, just against deployed
+  (minified) JS rather than original source, until someone decides
+  readable production stack traces are worth wiring `SENTRY_AUTH_TOKEN`
+  into CI as a real secret.
+- **Fails open, same pattern as every other optional integration**:
+  `Sentry.init()` only runs when `SENTRY_DSN`/`NEXT_PUBLIC_SENTRY_DSN` are
+  set; unset means the SDK never initializes and nothing about local
+  dev/CI/app behavior changes, matching Resend/Blob/Upstash/Turnstile.
+- **`src/app/error.tsx` added alongside, not left for a later pass**: a
+  route-level error boundary was the other half of "client errors are
+  invisible" — reporting a crash to Sentry doesn't help the member looking
+  at a broken page in front of them. Reports to Sentry (when configured)
+  on top of the existing `console.error`, not instead of it.
+- **CSP `connect-src` allowlists Sentry's US-region ingest domain
+  specifically** (`*.ingest.us.sentry.io`), not a wildcard — consistent
+  with how `img-src`/`frame-src` already allowlist specific known hosts
+  rather than broader patterns. An EU-region Sentry org needs this domain
+  swapped, documented in `README.md` rather than guessed at, since getting
+  it wrong silently CSP-blocks every client error report with no visible
+  symptom beyond errors just never arriving.
+
+### Search substring queries got their own trigram indexes, separate from the fuzzy-search ones
+**PR #TBD.** Found while auditing indexes ahead of catalog growth, not
+reported as a bug: every `contains`/`insensitive` search (navbar search,
+both search pages, the director/actor autocomplete endpoints) was running
+with no usable index at all, despite `Movie.title`/`Movie.director`
+already having trigram indexes from the earlier fuzzy-search migration.
+
+- **Root cause confirmed via Prisma's actual generated SQL, not assumed**:
+  captured it directly with query-event logging — `contains` +
+  `mode: "insensitive"` compiles to `column ILIKE ('%' || $1 || '%')` on
+  Postgres, not `lower(column) LIKE lower($1)`. The existing trigram
+  indexes were built on the `lower(...)` expression specifically for the
+  fuzzy fallback's `similarity(lower(...), ...)` calls — a different
+  expression, so Postgres can't substitute them for a plain `ILIKE` query.
+  Confirmed with `EXPLAIN` (`SET enable_seqscan = off` to force the
+  planner's hand): `Movie` fell back to a post-filter scan past the
+  `status` index, and `Person.name` — which had only a plain btree index,
+  useless for a leading-wildcard `ILIKE` — forced a full Seq Scan outright.
+- **New indexes are plain, not `lower()`-wrapped, and kept separate from
+  the existing ones rather than replacing them**: `pg_trgm`'s GIN opclass
+  supports the `~~*` (ILIKE) operator directly on an unwrapped column, no
+  expression needed. Added one each for `Movie.title`, `Movie.director`,
+  `Person.name`, `FightScene.title` — every column actually queried via
+  `contains` — without touching the original `lower(...)` ones, since
+  those still serve the fuzzy fallback's `similarity()` calls. Accepted
+  the modest write/storage overhead of two trigram indexes on the same
+  column over trying to force one index shape to cover both query
+  patterns.
+- **Verified the new indexes are real, not just declared**: same
+  `EXPLAIN`/`enable_seqscan = off` technique confirmed both `Movie.title`
+  and `FightScene.title` queries now hit `Bitmap Index Scan` on the new
+  indexes. At the catalog's current seed-data size the *unforced* planner
+  still picks a sequential scan anyway — correctly, since scanning a
+  handful of rows directly is cheaper than consulting an index — so this
+  doesn't change anything observable today. It's there for when the
+  catalog grows past the point where that's still true, which requires no
+  further action when it happens.
+
 ### Fight Count: single member-editable field, not an aggregate — with guardrails to compensate
 **PR #TBD.** Prompted by a real accuracy complaint about the "N fight
 scenes cataloged" stat (added just before this): it counts *tagged clips*,
