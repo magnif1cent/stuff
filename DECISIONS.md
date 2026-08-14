@@ -1118,3 +1118,13 @@ time.
   feature (secret generation/storage, an enrollment flow, backup/recovery
   codes, a recovery path for a lost authenticator), not a small hardening
   patch. Revisit as its own scoped piece of work.
+- **Historical timeline page** — a page visually plotting movies along a
+  timeline of Chinese historical periods/dynasties each movie is *set in*
+  (not its real-world release date, which `Movie.releaseDate` already
+  covers). The real gap: no source has this data. TMDB doesn't track a
+  film's in-story historical setting, so it'd need a new admin-curated
+  attribute — likely a fixed period/dynasty taxonomy (mirroring the
+  `Genre`/`FightSceneTag` pattern) rather than free text, to keep the
+  timeline groupable/orderable. The timeline visualization itself (not
+  just the data model) is also a real, non-trivial UI build, not a
+  reskin of an existing list/grid view.
