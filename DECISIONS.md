@@ -1128,3 +1128,22 @@ time.
   timeline groupable/orderable. The timeline visualization itself (not
   just the data model) is also a real, non-trivial UI build, not a
   reskin of an existing list/grid view.
+- **Meme generator** — a tool letting members caption/remix an image into
+  a meme, seeded from a fight scene or movie. Image-sourcing was already
+  scoped: `youtubeThumbnailUrl()` (`src/lib/youtube.ts`) gives a free,
+  ToS-safe still today, already proven via the fight-scene permalink
+  pages' Open Graph previews, but it's the *video's* thumbnail, not a
+  frame at that scene's `youtubeStartSeconds` — for a long/compilation
+  video the thumbnail may not show the tagged fight at all. Explicitly
+  ruled out: extracting a real frame at that timestamp server-side
+  (yt-dlp/ffmpeg or similar), since downloading YouTube video content
+  violates their ToS and adds a fragile dependency YouTube could break at
+  any time. Three options on the table, undecided: (1) use the
+  video-level thumbnail as-is, simple but sometimes inaccurate; (2) let
+  the fight-scene submitter/admin attach their own still per scene,
+  mirroring the existing admin poster-override pattern (manual upload to
+  Vercel Blob) — more accurate, more UI, needs someone to actually
+  screenshot it; (3) fall back to the movie's poster/backdrop if neither
+  of the above feels reliable enough. Also undecided: the
+  caption/text-overlay editor itself, and whether generated memes get
+  stored/shared or are download-only.
