@@ -28,6 +28,7 @@ An IMDB-style website for kung fu and martial arts films, built for martial arts
 - [Vercel Web Analytics](https://vercel.com/docs/analytics) for page-view tracking (see [Web Analytics](#web-analytics) below)
 - [Upstash Redis](https://upstash.com) for rate limiting (see [Security](#security) below)
 - [Cloudflare Turnstile](https://developers.cloudflare.com/turnstile/) for CAPTCHA (see [Security](#security) below)
+- [Sentry](https://sentry.io) for client/server error monitoring (see [Error Monitoring](#error-monitoring) below)
 
 ## Getting Set Up
 
@@ -68,7 +69,7 @@ Pick one:
 cp .env.example .env
 ```
 
-Fill in `DATABASE_URL`, `TMDB_API_KEY`, `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`, and generate an `AUTH_SECRET`. `RESEND_API_KEY`/`EMAIL_FROM` are optional — see [Email Verification](#email-verification) below. `BLOB_READ_WRITE_TOKEN` is optional too — see [Admin Poster Overrides](#admin-poster-overrides). `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` and `NEXT_PUBLIC_TURNSTILE_SITE_KEY`/`TURNSTILE_SECRET_KEY` are optional too — see [Security](#security).
+Fill in `DATABASE_URL`, `TMDB_API_KEY`, `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`, and generate an `AUTH_SECRET`. `RESEND_API_KEY`/`EMAIL_FROM` are optional — see [Email Verification](#email-verification) below. `BLOB_READ_WRITE_TOKEN` is optional too — see [Admin Poster Overrides](#admin-poster-overrides). `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` and `NEXT_PUBLIC_TURNSTILE_SITE_KEY`/`TURNSTILE_SECRET_KEY` are optional too — see [Security](#security). `SENTRY_DSN`/`NEXT_PUBLIC_SENTRY_DSN` are optional too — see [Error Monitoring](#error-monitoring).
 
 ```bash
 npx auth secret
@@ -142,6 +143,7 @@ Two dedicated search pages, both with a vertical sidebar of filters, pagination,
 - **`/search/fight-scenes`** — filters: category tag (multi-select, matches any selected), actor (autocomplete, scoped to people actually tagged in a fight scene — not just anyone in a movie's cast), minimum member rating, minimum editor rating. Sort by newest, highest member rated, highest editor rated, or most favorited.
 - The navbar's search box submits to `/search` in "browse" mode (no filters) when submitted empty, rather than doing nothing — both pages are also reachable directly via the "Browse" and "Fight Scenes" nav links.
 - **Quick links into filtered search**: a movie's genre badges and a fight scene's category-tag badges are clickable, deep-linking straight into the matching filtered search (`/search?genre=`, `/search/fight-scenes?tag=`) instead of requiring the filter to be set by hand.
+- **Indexing**: every title/director/actor-name substring search (navbar search, both search pages, the director/actor autocomplete endpoints) goes through Prisma's `contains` + `mode: "insensitive"`, which compiles to a plain `column ILIKE '%...%'` on Postgres — a different expression than the `lower(column)` trigram indexes the `pg_trgm` migration created for the "did you mean" fallback's `similarity()` calls, so those don't accelerate it. A separate migration adds plain (non-`lower()`-wrapped) trigram GIN indexes on `Movie.title`, `Movie.director`, `Person.name`, and `FightScene.title` to cover this — confirmed via `EXPLAIN` that Postgres can use them, not just assumed. At the catalog's current seed-data size the query planner still (correctly) prefers a sequential scan regardless — a handful of rows is cheaper to scan directly than to consult an index for — so this won't show up as a difference today; it's there for when the catalog grows large enough for it to matter, with nothing further to do when that happens.
 
 ## TMDB Import
 
@@ -275,7 +277,7 @@ Each slide prefers a fight scene clip over the static TMDB backdrop:
 
 ## Continuous Integration
 
-`.github/workflows/ci.yml` runs `npm run lint` and `npm run build` on every push and pull request. It needs no database or secrets — the app has no statically-generated pages that touch Prisma at build time, so `next build` succeeds without a live connection, and `npm ci` regenerates the Prisma client automatically via a `postinstall` hook.
+`.github/workflows/ci.yml` runs `npm run lint` and `npm run build` on every push and pull request. It needs no database or secrets — the app has no statically-generated pages that touch Prisma at build time, so `next build` succeeds without a live connection, and `npm ci` regenerates the Prisma client automatically via a `postinstall` hook. This is a real constraint, not an accident — see [Error Monitoring](#error-monitoring)'s note on why Sentry's `next.config.ts` build wrapper was deliberately skipped to preserve it.
 
 ## Deploying
 
@@ -325,6 +327,20 @@ shared-not-per-author model.
 [Vercel Web Analytics](https://vercel.com/docs/analytics) is wired up via the `<Analytics />` component from `@vercel/analytics/next` in the root layout — it tracks page views once deployed, no cookies/consent banner needed (Vercel's Web Analytics is cookieless).
 
 It needs to be turned on per-project after deploying: **Vercel dashboard → this project → Analytics tab → Enable**. Until enabled there, the component is a no-op — nothing to configure locally, and no `.env` variable involved.
+
+## Error Monitoring
+
+Server-side errors were always visible in Vercel's function logs (everything already goes through `console.error`), but a client-side crash — a React render error, an uncaught browser exception — had no visibility beyond whoever happened to have their browser console open. [Sentry](https://sentry.io) closes that gap:
+
+- **`src/instrumentation-client.ts`** initializes Sentry in the browser and reports uncaught client errors, gated on `NEXT_PUBLIC_SENTRY_DSN`.
+- **`src/instrumentation.ts`** does the server/edge equivalent via Next's native `onRequestError` hook, gated on `SENTRY_DSN`.
+- **`src/app/error.tsx`** is a route-level error boundary — instead of a broken page on a render crash, members see a friendly "Something went wrong" screen with a retry button, and the error is reported to Sentry (if configured) on top of the existing `console.error`.
+
+Like every other optional integration in this app, this fails open: without `SENTRY_DSN`/`NEXT_PUBLIC_SENTRY_DSN` set, Sentry is never initialized and nothing about local dev, CI, or the app's own behavior changes. To enable it, create a free project at [sentry.io](https://sentry.io) and put the same DSN in both env vars (Sentry DSNs aren't secret — safe to expose to the browser).
+
+**Known limitation**: `next.config.ts` is deliberately *not* wrapped with Sentry's `withSentryConfig` (which most Sentry setup guides lead with). That wrapper uploads source maps at build time and needs a `SENTRY_AUTH_TOKEN` — making it a build-time dependency would break the guarantee in [Continuous Integration](#continuous-integration) that `npm run build` needs no secrets, for every contributor and every parallel PR, not just this feature. The tradeoff: Sentry will show real stack traces, just against the deployed (minified/bundled) JavaScript rather than your original source. Revisit if/when readable production stack traces are worth wiring `SENTRY_AUTH_TOKEN` into CI as a real secret.
+
+**EU-region Sentry orgs**: `src/proxy.ts`'s CSP `connect-src` allowlists `*.ingest.us.sentry.io`. A Sentry org created in the EU region needs `*.ingest.eu.sentry.io` there instead, or client-side error reports are silently CSP-blocked.
 
 ## Project Structure
 
