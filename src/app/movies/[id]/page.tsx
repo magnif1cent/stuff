@@ -347,7 +347,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
               <a
                 href="#fight-count"
                 title="Number of fights in the movie, maintained by members — click to view or edit"
-                className="hover:text-neutral-200 hover:underline"
+                className="underline decoration-neutral-600 underline-offset-2 hover:text-neutral-200"
               >
                 Fight Count: {movie.trueFightCount}
               </a>
