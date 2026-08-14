@@ -11,7 +11,7 @@ export interface FightCountEditEntry {
   editedBy: { username: string };
 }
 
-const MAX_FIGHT_COUNT = 100;
+const MAX_FIGHT_COUNT = 20;
 
 export function FightCountControl({
   movieId,

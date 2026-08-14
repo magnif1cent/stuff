@@ -197,7 +197,7 @@ A **Fight Count** — a member-maintained "true" number of fights in the movie �
 This is deliberately a single shared value, not an aggregate of individual member submissions like ratings are: any verified member can overwrite it directly, last edit wins, no consensus step. That simplicity trades away any built-in resistance to a bad-faith edit, so it's paired with guardrails rather than left unprotected:
 
 - **Verified email required** — same bar as fight scene submission and movie submission. Admins/reviewers are exempt from this specific check (trusted like every other admin action), not from the feature generally.
-- **Bounds-checked** (0–100) server-side, to block obviously-wrong values outright rather than relying on someone noticing later.
+- **Bounds-checked** (0–20) server-side, to block obviously-wrong values outright rather than relying on someone noticing later.
 - **Rate-limited** per user through the same Upstash limiter used for other content-mutation endpoints.
 - **Full edit history**, visible to everyone on the movie page (not just admins) — who changed it, from what value to what, and when. The value itself has no approval step, so this history is the only accountability trail; anyone can use it to spot and revert a bad edit, not just moderators.
 
