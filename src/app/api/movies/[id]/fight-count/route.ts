@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { isEmailVerified } from "@/lib/verification";
 import { checkRateLimit, fightCountEditLimiter } from "@/lib/rate-limit";
 
-const MAX_FIGHT_COUNT = 100;
+const MAX_FIGHT_COUNT = 20;
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();

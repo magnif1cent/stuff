@@ -514,7 +514,7 @@ aggregation:
 - Editing requires a verified email (same bar as fight scene/movie
   submission); ADMIN/REVIEWER are exempt from that specific check, same as
   every other admin-gated action in this app trusts the account itself.
-- Value is bounds-checked (0–100) server-side.
+- Value is bounds-checked (0–20) server-side.
 - Edits are rate-limited via the same Upstash limiter used for other
   content-mutation endpoints (`fightCountEditLimiter`).
 - Every edit is logged to a new `FightCountEdit` table (movie, editor,
