@@ -79,7 +79,7 @@ export async function generateMetadata({
   const title = year ? `${movie.title} (${year})` : movie.title;
   const description = movie.overview
     ? truncate(movie.overview, 200)
-    : `${movie.title} on Kung Fu Movie DB.`;
+    : `${movie.title} on Kung Fu Sauce.`;
   const image = resolvePosterUrl(movie, "w500");
 
   return {

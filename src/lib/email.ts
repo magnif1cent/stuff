@@ -19,9 +19,9 @@ export async function sendVerificationEmail(email: string, verifyUrl: string) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      from: process.env.EMAIL_FROM ?? "Kung Fu Movie DB <onboarding@resend.dev>",
+      from: process.env.EMAIL_FROM ?? "Kung Fu Sauce <onboarding@resend.dev>",
       to: email,
-      subject: "Verify your email — Kung Fu Movie DB",
+      subject: "Verify your email — Kung Fu Sauce",
       html: `<p>Click <a href="${verifyUrl}">this link</a> to verify your email address. It expires in 24 hours.</p>`,
     }),
   });
@@ -46,9 +46,9 @@ export async function sendPasswordResetEmail(email: string, resetUrl: string) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      from: process.env.EMAIL_FROM ?? "Kung Fu Movie DB <onboarding@resend.dev>",
+      from: process.env.EMAIL_FROM ?? "Kung Fu Sauce <onboarding@resend.dev>",
       to: email,
-      subject: "Reset your password — Kung Fu Movie DB",
+      subject: "Reset your password — Kung Fu Sauce",
       html: `<p>Click <a href="${resetUrl}">this link</a> to set a new password. It expires in 1 hour. If you didn't request this, ignore this email — your password won't change.</p>`,
     }),
   });

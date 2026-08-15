@@ -1,6 +1,6 @@
 # Working on this repo
 
-This is a Next.js + Prisma + Auth.js app (Kung Fu Movie Database). Multiple
+This is a Next.js + Prisma + Auth.js app (Kung Fu Sauce). Multiple
 conversations work on this repo in parallel, each usually on its own feature
 branch and PR, so a few conventions keep things from drifting apart.
 

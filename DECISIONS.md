@@ -478,6 +478,40 @@ both self-contained enough not to need their own entry.
   works against the length/breach-check requirements added earlier in
   this same pass.
 
+### Site renamed from "Kung Fu Movie Database" to "Kung Fu Sauce"
+**PR #TBD.** Admin decision, not a technical judgment call — recorded here
+so the rename shows up in the same place every other foundational milestone
+does, and so a future conversation searching for why the brand name doesn't
+match an old screenshot/PR title finds the answer instead of assuming a
+docs typo.
+
+- Every user-visible and code-visible occurrence of the old name updated in
+  one pass rather than piecemeal: `README.md`, `CLAUDE.md`, `package.json`'s
+  `name` field, the root layout's `<title>` default/template, the About
+  page's metadata, verification/password-reset email subject and from-name,
+  and the OG description fallback text on movie and actor pages. Found via
+  a repo-wide grep for every old-name variant (`Kung Fu Movie Database`,
+  `Kung Fu Movie DB`, `Kung Fu DB`, `kung-fu-movie-database`) rather than
+  updating only the files that came to mind, since a partial rename (new
+  name on the homepage, old name still in a password-reset email subject
+  line) would be a worse, more confusing state than the rename not
+  happening yet.
+- **Resolved**: `src/components/logo.tsx`'s 師父 (Sifu — "master/teacher")
+  prefix on the navbar wordmark was flagged rather than silently kept or
+  dropped, since it read naturally next to "Kung Fu DB" but its fit
+  alongside "Sauce" was a real brand-tone question, not a mechanical part
+  of the rename. Admin call: drop it. The wordmark is now plain "Kung Fu
+  Sauce," inheriting the `<Link>`'s existing `text-red-600` directly rather
+  than leaving a now-pointless white-text `<span>` wrapper behind — without
+  a colored prefix to contrast against, the old two-tone split had nothing
+  left to split.
+- **Not touched, deliberately out of scope for a code-level rename**: the
+  actual Vercel project name/dashboard, the live domain, and the local dev
+  database name (`kungfu_dev` in `.env.example`'s example connection
+  string) — none of those are user-visible brand surfaces, and renaming
+  the local DB specifically would force every existing local setup to
+  recreate it for a purely cosmetic reason.
+
 ## Feature Decisions
 
 ### Error monitoring added without wrapping next.config.ts in Sentry's build plugin
