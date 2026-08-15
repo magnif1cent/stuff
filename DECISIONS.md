@@ -554,10 +554,11 @@ query recent rows across existing tables rather than introduce an
   or discussion tied to a movie still awaiting admin approval is excluded
   until the movie goes live, so the feed can't leak a pending submission
   through a side door.
-- Placed below the movie rails and above Recent Reviews by Editors —
-  grouped with the other community-generated homepage section rather than
-  above the fold, since it's a discovery/engagement feature, not a hero
-  element competing with the trending carousel for first-glance attention.
+- Placed at the very bottom of the homepage, below Recent Reviews by
+  Editors (moved there by explicit direction after initially sitting above
+  Recent Reviews) — the last section on the page rather than competing
+  with the movie rails or the trending carousel for above-the-fold
+  attention.
 
 **Reworked from one merged/sorted list to three grouped columns, in
 preview (same PR).** The first version merged all three event types by

@@ -325,8 +325,8 @@ shared-not-per-author model.
 
 ## Community Activity
 
-A "Community Activity" section on the homepage, below the movie rails and
-above Recent Reviews by Editors, surfaces recent member-generated events
+A "Community Activity" section at the very bottom of the homepage, below
+Recent Reviews by Editors, surfaces recent member-generated events
 from three existing tables with no new schema — a fight scene tagged, a
 custom list created, or a discussion thread started (top-level posts
 only — a reply doesn't count as starting a new one). Shown as three
