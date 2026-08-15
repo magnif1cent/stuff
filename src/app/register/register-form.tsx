@@ -72,14 +72,14 @@ export function RegisterForm({ nonce }: { nonce: string | null }) {
           required
           autoComplete="username"
           placeholder="Username"
-          pattern="[a-z0-9_]{3,20}"
-          title="3-20 characters: lowercase letters, numbers, and underscores"
+          pattern="[a-zA-Z0-9_]{3,20}"
+          title="3-20 characters: letters, numbers, and underscores"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           className="rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
         />
         <p className="-mt-2 text-xs text-neutral-500">
-          Shown publicly on your posts and ratings. 3-20 characters: lowercase letters, numbers, underscores.
+          Shown publicly on your posts and ratings. 3-20 characters: letters, numbers, underscores.
         </p>
         <input
           type="email"

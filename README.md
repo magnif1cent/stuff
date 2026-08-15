@@ -101,11 +101,12 @@ Visit `http://localhost:3000`. Sign in as the admin account and use `/admin/impo
 
 ## Usernames
 
-Members are identified publicly by a username, not their email or real name — it's what shows on discussion posts, fight scenes, and editorial reviews. Usernames are unique, 3-20 characters, lowercase letters/numbers/underscores only.
+Members are identified publicly by a username, not their email or real name — it's what shows on discussion posts, fight scenes, and editorial reviews. Usernames are 3-20 characters, letters/numbers/underscores only.
 
+- **Case-preserving, case-insensitive**: pick `NashPopoB` and it's stored and shown exactly that way, but `nashpopob` or `NASHPOPOB` can't be registered by someone else, and `/members/nashpopob` resolves to the same profile as `/members/NashPopoB`. `User.usernameLower` (always `username.toLowerCase()`, kept in sync on every write) is the actual uniqueness/lookup key — `username` itself is no longer a unique column.
 - **Credentials sign-up** requires picking a username on the registration form; taken or invalid usernames are rejected with a specific error.
-- **Google sign-up** has no form step of ours to ask for one, so a starting username is auto-generated from the email's local part (sanitized to the allowed charset, with a numeric suffix if it's taken). There's no self-service rename yet — a reasonable next step once profile editing exists.
-- Accounts created before this feature (on a live deployment with existing data) are backfilled the same way, by the `20260804190000_add_username` migration — no manual action needed beyond running the migration.
+- **Google sign-up** has no form step of ours to ask for one, so a starting username is auto-generated from the email's local part (sanitized to the allowed charset, with a numeric suffix if it's taken — checked case-insensitively, same as everywhere else). There's no self-service rename yet — a reasonable next step once profile editing exists.
+- Accounts created before either feature (on a live deployment with existing data) are backfilled the same way, by the `20260804190000_add_username` and `20260815213501_add_username_lower` migrations — no manual action needed beyond running them.
 
 ## Email Verification
 

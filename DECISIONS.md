@@ -611,6 +611,58 @@ code at all. Revisit if breach-checking is wanted again later; the
 original entry above still documents the k-anonymity approach that
 worked, should it come back.
 
+### Usernames allow mixed case, made case-insensitively unique via a new usernameLower column
+Trigger was a real, reproduced UX complaint: a member typed a mixed-case
+username (`NashPopoB`) at registration and hit the native browser
+validation error, since usernames were restricted to `[a-z0-9_]` only.
+Simply relaxing the regex to allow uppercase was considered and rejected
+on its own — usernames are public handles (profile URLs, discussion/fight
+scene/badge attribution), and the existing uniqueness check was case
+*sensitive*, so allowing mixed case without also fixing uniqueness would
+let someone register `Admin` alongside an existing `admin` — two distinct,
+nearly-identical-looking accounts, a classic impersonation vector on any
+platform with public handles.
+
+- **Case-preserving storage, case-insensitive uniqueness** — the standard
+  pattern (GitHub/Twitter handles work this way): `username` keeps
+  whatever case was chosen for display; a new `usernameLower` column
+  (always `username.toLowerCase()`, written alongside `username` on every
+  create) is the real uniqueness/lookup key. `username` itself dropped its
+  own `@unique` constraint — it's no longer needed once `usernameLower`
+  enforces case-insensitive uniqueness on its behalf.
+- **Not done via Postgres `citext`**: considered making the column itself
+  case-insensitive at the type level, which would need no application-code
+  changes to lookups. Rejected — Prisma has no native support for `citext`
+  (it would need `Unsupported("citext")`, which makes the field opaque to
+  Prisma Client's typed query API), a real risk to the several existing
+  `where: { username }` call sites for a "cleaner-looking" schema. The
+  explicit-second-column approach mirrors how this codebase already
+  handles the identical problem for email (`normalizedEmail`), so it's a
+  known, already-proven pattern here rather than a new one.
+- **Every case-sensitive lookup site found and converted, confirmed by an
+  exhaustive grep, not assumed**: only three call sites actually queried
+  by username rather than merely displaying it —
+  `/api/register`'s existing-username check, `/members/[username]`'s
+  profile lookup, and `generateUniqueUsername()`'s collision loop (used by
+  Google sign-up). All three now key off `usernameLower`.
+  `/members/[username]` resolving case-insensitively (`/members/nashpopob`
+  and `/members/NashPopoB` both reach the same profile) is a deliberate
+  consequence of this, not a separate feature — it falls directly out of
+  the same lookup key change.
+- **Migration mirrors the original `add_username` migration's backfill
+  style** but needs no de-duplication pass: every pre-existing username
+  was already restricted to `[a-z0-9_]`, so `lower(username) = username`
+  for every existing row, and backfilling `usernameLower` from already-unique
+  rows can't introduce a new collision the way the original migration's
+  email-derived backfill could.
+- **Verified end-to-end against a real registration, not just the schema**:
+  registered `NashPopoB`, confirmed a second registration attempt with
+  `nashpopob` and with `NASHPOPOB` both correctly rejected as "already
+  taken," confirmed all three casings resolve to the same `/members/`
+  profile and always display the original `NashPopoB` casing, and
+  confirmed `generateUniqueUsername("nashpopob")` correctly detects the
+  collision and suffixes to `nashpopob1`.
+
 ## Feature Decisions
 
 ### Community Activity feed merges three existing tables, no new schema
