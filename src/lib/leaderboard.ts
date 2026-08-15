@@ -5,7 +5,7 @@ const TOP_CURATORS_LIMIT = 10;
 
 export async function getMostLikedLists() {
   const lists = await prisma.memberList.findMany({
-    where: { entries: { some: {} } },
+    where: { isPublic: true, entries: { some: {} } },
     include: {
       user: { select: { username: true } },
       _count: { select: { likes: true, entries: true } },
@@ -25,13 +25,16 @@ export async function getMostLikedLists() {
 
 // No SQL-level aggregate for "total movies across a user's lists" (it spans
 // two joins), so this ranks in memory — fine at this app's scale, same
-// tradeoff already made for fight-scene search sorting.
+// tradeoff already made for fight-scene search sorting. Only public lists
+// count, both for who qualifies at all and for the movie total itself --
+// otherwise an admin's private lists would inflate a public ranking with
+// numbers nobody could actually browse to verify (see DECISIONS.md).
 export async function getTopCurators() {
   const users = await prisma.user.findMany({
-    where: { memberLists: { some: {} } },
+    where: { memberLists: { some: { isPublic: true } } },
     select: {
       username: true,
-      memberLists: { select: { _count: { select: { entries: true } } } },
+      memberLists: { where: { isPublic: true }, select: { _count: { select: { entries: true } } } },
     },
   });
 

@@ -67,8 +67,11 @@ export async function getRecentActivity(limit = PER_TYPE_LIMIT): Promise<RecentA
         movie: moviePosterSelect,
       },
     }),
-    // Lists are public by design from creation, so no extra filtering needed.
+    // Only ADMIN accounts can make a list private (see DECISIONS.md) --
+    // everyone else's lists are public by default, but this still needs the
+    // explicit filter now that private ones exist at all.
     prisma.memberList.findMany({
+      where: { isPublic: true },
       orderBy: { createdAt: "desc" },
       take: limit,
       select: {

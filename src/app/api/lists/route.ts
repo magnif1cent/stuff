@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const { name } = await request.json();
+  const { name, isPublic } = await request.json();
   if (typeof name !== "string" || name.trim().length === 0) {
     return NextResponse.json({ error: "A list name is required." }, { status: 400 });
   }
@@ -32,6 +32,12 @@ export async function POST(request: Request) {
       { error: `List name must be ${MEMBER_LIST_NAME_MAX_LENGTH} characters or fewer.` },
       { status: 400 },
     );
+  }
+
+  // Private lists are an ADMIN-only option -- everyone else's lists stay
+  // public, matching the original design (see DECISIONS.md).
+  if (isPublic === false && session.user.role !== "ADMIN") {
+    return NextResponse.json({ error: "Only admins can create a private list." }, { status: 403 });
   }
 
   const listCount = await prisma.memberList.count({ where: { userId: session.user.id } });
@@ -46,6 +52,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "You already have a list with that name." }, { status: 409 });
   }
 
-  const list = await prisma.memberList.create({ data: { userId: session.user.id, name: trimmedName } });
+  const list = await prisma.memberList.create({
+    data: { userId: session.user.id, name: trimmedName, isPublic: isPublic === false ? false : true },
+  });
   return NextResponse.json({ list });
 }

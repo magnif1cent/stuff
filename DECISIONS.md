@@ -530,6 +530,45 @@ other, not just with the general principle.
 
 ## Feature Decisions
 
+### Private lists: an ADMIN-only option, not a per-member toggle
+**PR #TBD.** Custom lists were public by explicit design from their
+introduction (see "Member identity and content model expanded" above) —
+deliberate groundwork for cross-member list browsing without another schema
+change. This adds a way to opt a list out of that, but scoped to `ADMIN`
+accounts only rather than every member.
+
+- Opening a private-list option to every member would have meant re-solving
+  visibility everywhere lists are assumed public today: the `/lists` browse
+  page, the list detail page (which had *no* access control at all before
+  this — any list ID was viewable by anyone, signed in or not), the
+  leaderboard's two rankings, the homepage activity feed (whose code
+  literally commented "lists are public by design... no extra filtering
+  needed"), and profile pages. Restricting who can go private doesn't
+  shrink that list of touch points — every one of them still needed the
+  `isPublic` filter added — but it does shrink the blast radius of getting
+  the access-control gate wrong, since only a small, trusted set of
+  accounts can create the content that gate protects.
+- **Top Curators excludes private-list movies from the ranking entirely**,
+  not just from what's displayed — the aggregate itself is computed only
+  over `isPublic: true` lists. Counting private movies toward a public rank
+  would let an admin dump hundreds of movies into a never-shared private
+  list purely to inflate their public standing, and would produce a number
+  nobody could verify by clicking through (the profile they'd land on would
+  show far fewer movies than the leaderboard claims). The ranking is
+  supposed to measure curation other people can actually browse; folding in
+  private counts would measure something else while calling it the same
+  name.
+- **No admin-bypass-viewing was added** for private lists — there's no
+  existing list-moderation feature this would plug into, and since only
+  `ADMIN` accounts can own a private list in the first place, there's no
+  scenario yet where one admin needs to see another's. Private means
+  private, including from other admins, until a real moderation need shows
+  up.
+- The visibility flag reuses the existing owner-only rename endpoint
+  (`PATCH /api/lists/[listId]`) rather than a new route — it already had
+  the auth/ownership check a visibility change needs, so it just gained an
+  optional `isPublic` field (ADMIN-only) alongside `name`.
+
 ### Community Activity feed merges three existing tables, no new schema
 **PR #65.** Backlog ask was for a homepage strip surfacing recent member
 activity to make the site "feel alive" — deliberately scoped to be cheap:

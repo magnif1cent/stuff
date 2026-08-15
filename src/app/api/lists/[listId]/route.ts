@@ -18,7 +18,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ li
     return NextResponse.json({ error: "You can only rename your own lists." }, { status: 403 });
   }
 
-  const { name } = await request.json();
+  const { name, isPublic } = await request.json();
   if (typeof name !== "string" || name.trim().length === 0) {
     return NextResponse.json({ error: "A list name is required." }, { status: 400 });
   }
@@ -30,6 +30,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ li
     );
   }
 
+  // Same ADMIN-only restriction as creating a private list -- flipping an
+  // existing list's visibility is no less privileged than setting it up
+  // front.
+  if (typeof isPublic === "boolean" && session.user.role !== "ADMIN") {
+    return NextResponse.json({ error: "Only admins can change a list's visibility." }, { status: 403 });
+  }
+
   const nameTaken = await prisma.memberList.findUnique({
     where: { userId_name: { userId: session.user.id, name: trimmedName } },
   });
@@ -37,7 +44,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ li
     return NextResponse.json({ error: "You already have a list with that name." }, { status: 409 });
   }
 
-  const list = await prisma.memberList.update({ where: { id: listId }, data: { name: trimmedName } });
+  const list = await prisma.memberList.update({
+    where: { id: listId },
+    data: { name: trimmedName, ...(typeof isPublic === "boolean" ? { isPublic } : {}) },
+  });
   return NextResponse.json({ list });
 }
 

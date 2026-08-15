@@ -122,7 +122,9 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
         })
       : [],
     prisma.memberList.findMany({
-      where: { userId: profileUser.id },
+      // Non-owners only ever see public lists -- private ones (admin-only,
+      // see DECISIONS.md) are invisible on anyone else's profile view.
+      where: { userId: profileUser.id, ...(isOwner ? {} : { isPublic: true }) },
       include: {
         entries: { include: { movie: true }, orderBy: { createdAt: "desc" } },
         fightSceneEntries: {
@@ -225,6 +227,7 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
   const memberListData = visibleMemberLists.map((list) => ({
     id: list.id,
     name: list.name,
+    isPublic: list.isPublic,
     movies: list.entries.map((entry) => withRatings(entry.movie)),
     fightScenes: list.fightSceneEntries.map((entry) => withSceneListState(entry.fightScene)),
   }));
@@ -246,7 +249,11 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
 
       <h2 className="mb-4 text-xl font-bold text-white">{isOwner ? "Your Lists" : "Lists"}</h2>
       {isOwner ? (
-        <MemberListManager initialLists={memberListData} viewerSignedIn={!!session?.user} />
+        <MemberListManager
+          initialLists={memberListData}
+          viewerSignedIn={!!session?.user}
+          isAdmin={session?.user?.role === "ADMIN"}
+        />
       ) : memberListData.length === 0 ? (
         <p className="text-sm text-neutral-500">No public lists yet.</p>
       ) : (

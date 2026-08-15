@@ -14,7 +14,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ lis
 
   const { listId } = await params;
   const list = await prisma.memberList.findUnique({ where: { id: listId } });
-  if (!list) {
+  if (!list || !list.isPublic) {
     return NextResponse.json({ error: "List not found." }, { status: 404 });
   }
   if (list.userId === session.user.id) {

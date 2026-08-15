@@ -37,6 +37,13 @@ export default async function PublicListPage({ params }: { params: Promise<{ lis
   }
 
   const isOwnList = session?.user?.id === list.userId;
+
+  // Private lists (admin-only, see DECISIONS.md) are invisible to everyone
+  // but their owner -- same 404 treatment as a nonexistent list, matching
+  // how pending movies are hidden from everyone but their submitter.
+  if (!list.isPublic && !isOwnList) {
+    notFound();
+  }
   const myLike = session?.user
     ? await prisma.memberListLike.findUnique({
         where: { userId_listId: { userId: session.user.id, listId } },
@@ -80,7 +87,14 @@ export default async function PublicListPage({ params }: { params: Promise<{ lis
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-10">
       <p className="mb-1 text-sm text-neutral-400">List by {list.user.username}</p>
-      <h1 className="mb-4 text-2xl font-bold text-white">{list.name}</h1>
+      <h1 className="mb-4 text-2xl font-bold text-white">
+        {list.name}
+        {!list.isPublic && (
+          <span className="ml-2 rounded-full border border-neutral-700 px-2 py-0.5 align-middle text-xs font-normal text-neutral-400">
+            Private
+          </span>
+        )}
+      </h1>
       {!isOwnList && (
         <div className="mb-6">
           <LikeListButton

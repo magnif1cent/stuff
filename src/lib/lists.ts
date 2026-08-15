@@ -6,7 +6,9 @@ export type ListsSort = "newest" | "liked";
 
 // Only lists with at least one item are worth browsing — an empty list is
 // still a private-in-practice draft until its owner adds something to it.
+// isPublic: true excludes admin-only private lists (see DECISIONS.md).
 const NON_EMPTY_WHERE = {
+  isPublic: true,
   OR: [{ entries: { some: {} } }, { fightSceneEntries: { some: {} } }],
 };
 

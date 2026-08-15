@@ -486,6 +486,10 @@ model MemberList {
   id        String   @id @default(cuid())
   userId    String
   name      String
+  // Lists are public by default (the original design). Only ADMIN accounts
+  // can flip this to false, at creation or later — see DECISIONS.md for why
+  // this wasn't opened up to every member.
+  isPublic  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
