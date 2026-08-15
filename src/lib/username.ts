@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 
 export const USERNAME_MIN_LENGTH = 3;
 export const USERNAME_MAX_LENGTH = 20;
-const USERNAME_PATTERN = /^[a-z0-9_]+$/;
+const USERNAME_PATTERN = /^[a-zA-Z0-9_]+$/;
 
 export function isValidUsername(username: string): boolean {
   return (
@@ -23,7 +23,10 @@ export async function generateUniqueUsername(seed: string): Promise<string> {
 
   let candidate = base;
   let suffix = 1;
-  while (await prisma.user.findUnique({ where: { username: candidate } })) {
+  // Candidates here are always already-lowercase (derived from an
+  // all-lowercase base), so checking against usernameLower directly is
+  // correct without an extra .toLowerCase() call.
+  while (await prisma.user.findUnique({ where: { usernameLower: candidate } })) {
     const suffixStr = String(suffix);
     candidate = `${base.slice(0, USERNAME_MAX_LENGTH - suffixStr.length)}${suffixStr}`;
     suffix += 1;

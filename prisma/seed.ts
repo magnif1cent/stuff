@@ -122,6 +122,7 @@ async function main() {
     update: { emailVerified: new Date() },
     create: {
       username: "admin",
+      usernameLower: "admin",
       email: "admin@example.com",
       role: "ADMIN",
       passwordHash: await bcrypt.hash("admin1234", 10),
@@ -136,6 +137,7 @@ async function main() {
     update: { emailVerified: new Date() },
     create: {
       username: "member",
+      usernameLower: "member",
       email: "member@example.com",
       role: "USER",
       passwordHash: await bcrypt.hash("member1234", 10),
@@ -148,6 +150,7 @@ async function main() {
     update: { emailVerified: new Date() },
     create: {
       username: "reviewer",
+      usernameLower: "reviewer",
       email: "reviewer@example.com",
       role: "REVIEWER",
       passwordHash: await bcrypt.hash("reviewer1234", 10),

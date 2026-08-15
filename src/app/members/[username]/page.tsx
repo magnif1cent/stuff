@@ -86,7 +86,9 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
   const { username } = await params;
   const session = await auth();
 
-  const profileUser = await prisma.user.findUnique({ where: { username } });
+  // Case-insensitive: /members/NashPopoB and /members/nashpopob resolve to
+  // the same profile, matching usernameLower being the real uniqueness key.
+  const profileUser = await prisma.user.findUnique({ where: { usernameLower: username.toLowerCase() } });
   if (!profileUser) {
     notFound();
   }
