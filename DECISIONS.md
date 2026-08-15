@@ -1325,3 +1325,37 @@ time.
   of the above feels reliable enough. Also undecided: the
   caption/text-overlay editor itself, and whether generated memes get
   stored/shared or are download-only.
+- **Fun facts / history section per movie** — admin-curated trivia or
+  historical context shown on the movie page, likely alongside (or as an
+  extension of) the existing Editorial Review. Real overlap with the
+  "Historical timeline page" item above worth resolving before either is
+  built: if "history" here means the film's *in-story* historical
+  setting (what dynasty/period it's set in), that's the same underlying
+  data gap the timeline page needs; if it means real-world trivia
+  (production history, behind-the-scenes facts), it's a simpler,
+  unrelated content field. Scope that distinction first.
+- **Expand member profile** — open-ended, not yet scoped. `/members/[username]`
+  currently shows a member's public lists, favorited movies/fight scenes,
+  and not much else. Needs a concrete list of what to add (bio? favorite
+  genres? stats like submission/verification counts? the member
+  contributor badges idea from the engagement discussion?) before this is
+  buildable — revisit with specifics.
+- **Lists expansion to drive community engagement** — explicitly flagged
+  as needing more ideas, not a scoped feature yet. Starter thoughts from
+  an earlier engagement discussion, none decided: collaborative lists
+  (multiple members contributing to one list, not just the owner),
+  reactions/comments on a list (distinct from the existing like), themed
+  admin-curated collections (e.g. "Essential Bruce Lee") separate from
+  member-created ones, or a "follow a member's lists" mechanic tied into
+  the notifications backlog item if that gets built. Needs a real
+  brainstorming pass before committing to any of these.
+- **Streamlined, swipeable fight scene viewing (YouTube Shorts-style)** —
+  replace or supplement the current card-grid presentation
+  (`FightSceneSection`, `/search/fight-scenes`) with a full-screen,
+  vertically-scrollable/swipeable viewer that autoplays the next clip —
+  same interaction pattern as YouTube Shorts/Instagram Reels/TikTok. A
+  real UI paradigm shift from the existing list-based layout, not a
+  reskin — needs its own scoping pass (autoplay/mute behavior, how
+  rating/favoriting works in a full-screen single-clip view, how it
+  interacts with the existing movie-scoped `FightSceneSection` vs. the
+  cross-movie `/search/fight-scenes` page) before it's buildable.
