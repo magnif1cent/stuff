@@ -148,6 +148,15 @@ model Movie {
 
   @@index([title])
   @@index([status])
+  // Plain (non-lower()-wrapped) trigram GIN index backing the ILIKE
+  // substring searches in /api/search and /search — see the migration
+  // 20260814143815_add_ilike_search_trigram_indexes and DECISIONS.md for
+  // why this is a separate index from the lower(title) one used by the
+  // fuzzy-search fallback, and why that one can't be declared here too
+  // (Prisma's schema DSL doesn't support expression/functional indexes,
+  // only plain-column ones with a custom operator class).
+  @@index([title(ops: raw("gin_trgm_ops"))], type: Gin, map: "Movie_title_ilike_trgm_idx")
+  @@index([director(ops: raw("gin_trgm_ops"))], type: Gin, map: "Movie_director_ilike_trgm_idx")
 }
 
 // Accountability trail for Movie.trueFightCount edits — the field itself has
@@ -185,6 +194,9 @@ model Person {
   fightSceneAppearances FightSceneCast[]
 
   @@index([name])
+  // See the matching comment on Movie above — backs the ILIKE actor-name
+  // searches in /api/search, /api/actors, /api/fight-scene-actors.
+  @@index([name(ops: raw("gin_trgm_ops"))], type: Gin, map: "Person_name_ilike_trgm_idx")
 }
 
 model CastCredit {
@@ -417,6 +429,9 @@ model FightScene {
   favorites FightSceneFavorite[]
 
   @@index([movieId])
+  // See the matching comment on Movie above — backs the ILIKE title
+  // search in /search/fight-scenes.
+  @@index([title(ops: raw("gin_trgm_ops"))], type: Gin, map: "FightScene_title_ilike_trgm_idx")
 }
 
 // Admin-curated vocabulary members pick from when tagging a fight scene's
