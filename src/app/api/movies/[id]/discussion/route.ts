@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getDiscussionPage, MAX_DISCUSSION_CONTENT_LENGTH } from "@/lib/discussion";
 import { isEmailVerified } from "@/lib/verification";
 import { checkRateLimit, discussionPostLimiter } from "@/lib/rate-limit";
+import { createNotification } from "@/lib/notifications";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id: movieId } = await params;
@@ -45,8 +46,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     );
   }
 
+  let parent: Awaited<ReturnType<typeof prisma.discussionPost.findUnique>> = null;
   if (parentId != null) {
-    const parent = await prisma.discussionPost.findUnique({ where: { id: parentId } });
+    parent = await prisma.discussionPost.findUnique({ where: { id: parentId } });
     if (!parent || parent.movieId !== movieId) {
       return NextResponse.json({ error: "Invalid parentId." }, { status: 400 });
     }
@@ -67,6 +69,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     },
     include: { user: { select: { username: true, image: true } } },
   });
+
+  if (parent && parent.userId !== session.user.id) {
+    const movie = await prisma.movie.findUnique({ where: { id: movieId }, select: { title: true } });
+    await createNotification({
+      recipientId: parent.userId,
+      type: "REPLY",
+      message: `${session.user.username} replied to your post on "${movie?.title ?? "a movie"}"`,
+      link: `/movies/${movieId}#discussion`,
+    });
+  }
 
   return NextResponse.json({ post });
 }

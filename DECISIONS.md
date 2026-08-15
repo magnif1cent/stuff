@@ -530,6 +530,15 @@ other, not just with the general principle.
 
 ## Feature Decisions
 
+### In-app notifications: four narrow triggers, page-load delivery, snapshot content over live relations
+**PR #TBD.** First notification system in the app — previously entirely pull-based, a member had no way to know someone replied to their post, liked their list, or that their submission was decided, short of checking back manually.
+
+- **Four triggers, deliberately narrow**: discussion replies (to a top-level post, not self-replies), list likes, and movie-submission approve/reject — the clearest, least-noisy cases. **Per-rating notifications were considered and explicitly left out**: ratings happen far more often than replies or likes, and a bell that fires on every rating would train members to ignore it, defeating the point of adding one at all. A reasonable next candidate once the four narrow triggers prove the mechanism is worth having.
+- **Page-load delivery, not push or email, matching an existing pattern rather than inventing one**: the navbar bell's unread count and recent list are fetched server-side once per page load — the exact same pattern `Navbar` already used for `needsVerification` (a fresh DB check, no polling, no client-side subscription). Real-time push (WebSocket/SSE) and an email digest were both considered and deferred, not rejected — they're a materially bigger lift (a persistent connection or a scheduled job, either of which is new infrastructure this app doesn't otherwise have) for a v1 whose main goal was closing "no notification system at all," not "notified within seconds."
+- **Notification content is a snapshot (`message` + optional `link`), not a live relation to the thing it's about** — no FK to `Movie`/`DiscussionPost`/`MemberList` on the `Notification` row. Found by working through what SUBMISSION_REJECTED actually does: `reject/route.ts` hard-deletes the rejected movie immediately (matches the existing "reject == permanently remove" behavior member submissions already had). A real FK with `onDelete: Cascade` — the pattern every other relation in this schema uses — would silently delete the notification the instant it's created, since the delete happens right after. Capturing the message text (and, where the target still exists afterward, a link) at creation time sidesteps the problem entirely and keeps one model shape covering all four trigger types instead of branching into per-type nullable FK columns.
+- **List-like notifies only on like, not unlike**: re-liking after unliking creates a new notification each time (no dedup) — acceptable for a first pass given how infrequently a member would toggle the same list's like more than once.
+- **Mark-as-read is click-through plus "mark all read," no per-notification-type preferences or opt-outs** — matches the task's stated v1 scope. A reasonable next step once there's more than four trigger types to want granular control over.
+
 ### Error monitoring added without wrapping next.config.ts in Sentry's build plugin
 **PR #TBD.** Closes a real gap: server errors were already visible via
 `console.error` (captured in Vercel's function logs), but a client-side

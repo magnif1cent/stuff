@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireReviewerSession } from "@/lib/require-admin";
 import { prisma } from "@/lib/prisma";
+import { createNotification } from "@/lib/notifications";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await requireReviewerSession();
@@ -15,5 +16,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
 
   const movie = await prisma.movie.update({ where: { id: movieId }, data: { status: "APPROVED" } });
+
+  if (movie.submittedById) {
+    await createNotification({
+      recipientId: movie.submittedById,
+      type: "SUBMISSION_APPROVED",
+      message: `Your submission "${movie.title}" was approved!`,
+      link: `/movies/${movie.id}`,
+    });
+  }
+
   return NextResponse.json({ movie });
 }

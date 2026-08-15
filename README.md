@@ -16,6 +16,7 @@ An IMDB-style website for kung fu and martial arts films, built for martial arts
 - Social sharing (native share sheet on mobile, copy-link/X/Facebook/Reddit fallback on desktop) on movie and fight scene pages
 - A public `/lists` page for browsing every member's public custom lists (sorted by newest-updated or most-liked, paginated), plus a `/leaderboard` page ranking the Most-Liked Lists (members can like each other's public custom lists) and Top Curators (members with the most movies across their own lists) — see [Member Lists & Profiles](#member-lists--profiles) below
 - Admin-published News & Updates posts: the latest one shown as a teaser banner on the homepage, with a full paginated archive at `/news` — see [News & Updates](#news--updates) below
+- In-app notifications: a navbar bell tells a member when someone replies to their discussion post, likes their list, or when their movie submission is approved or rejected — see [Notifications](#notifications) below
 - Security headers (CSP, HSTS, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`) on every response, plus rate limiting and CAPTCHA on login, registration, forgot-password, and content-creation endpoints — see [Security](#security) below
 
 ## Tech Stack
@@ -134,6 +135,19 @@ Alongside the existing overall 1–10 Community Score and admin-only Editors' Sc
 - Any signed-in member can post and reply (one level of replies) on a movie's discussion thread. Discussion is paginated (20 posts/page, "Load more") and content is capped at 5,000 characters.
 - Wrap text in `[spoiler]...[/spoiler]` to hide it behind a "click to reveal" toggle — useful for plot twists/endings discussed on the movie's own page. Note this is a client-side reveal (like most forum spoiler tags): the text is present in the page's data, just not shown until clicked, so it isn't a substitute for redacting genuinely secret data.
 - Authors can edit or delete their own posts; admins can delete anyone's post. Deletion is a soft-delete — the row and any replies underneath it are kept (so a thread doesn't fall apart when one comment in it is removed), but the content is blanked and the post renders as `[deleted]`.
+
+## Notifications
+
+A bell icon in the navbar tells a member when something happens to their content — currently four triggers, each firing at most one notification per event:
+
+- **Reply**: someone replies to your top-level discussion post (not your own replies to yourself).
+- **List like**: someone likes one of your public custom lists.
+- **Submission approved** / **Submission rejected**: an admin/reviewer decides on a movie you submitted.
+
+Per-rating notifications were considered and deliberately left out of this first pass — too noisy given how often ratings happen. There's no real-time push or email digest either; the bell's unread count and list are fetched once, server-side, on page load (same pattern as the email-verification banner), not polled or pushed live. See `DECISIONS.md` for the reasoning behind both of those scope cuts.
+
+- **Read state**: clicking a notification marks it read and navigates to its target (a movie's discussion section, a list permalink, or the approved movie's page — a rejected submission has nothing left to link to, since rejecting deletes the movie). "Mark all read" clears the whole list at once. There are no per-type preferences or opt-outs yet.
+- Notifications aren't a live view onto the thing they're about — the bell shows a message and link captured at the moment the notification was created, not a join back to a `Movie`/`DiscussionPost`/`MemberList` row that might not exist by the time it's read. This matters concretely for rejections: rejecting a submission deletes the movie outright, so the notification has to capture its title up front or lose it entirely.
 
 ## Search
 
@@ -346,10 +360,10 @@ Like every other optional integration in this app, this fails open: without `SEN
 
 - `src/app` — pages and API routes (App Router), including the `/admin` dashboard and its sub-pages (see [Admin Area & Roles](#admin-area--roles)), the fight scene permalink route (`/movies/[id]/fight-scenes/[fightSceneId]`), member movie submission (`/movies/submit`), member profiles (`/members/[username]`), public list permalinks (`/lists/[listId]`), and actor pages (`/actors/[personId]`)
 - `src/components` — UI components (`fight-scene-section.tsx`, `editorial-review.tsx`, `poster-override-control.tsx`, `share-button.tsx`, `member-list-manager.tsx`, `add-to-list-control.tsx`, etc.)
-- `src/lib` — Prisma client, Auth.js config, TMDB client, YouTube URL parsing, rating/weekly-featured/verification/fight-scene/username/member-list helpers, email sender
+- `src/lib` — Prisma client, Auth.js config, TMDB client, YouTube URL parsing, rating/weekly-featured/verification/fight-scene/username/member-list/notification helpers, email sender
 - `prisma/schema.prisma` — data model
 - `prisma/seed.ts` — sample/dev seed data, including a sample fight scene and editorial review
 
 ## Out of Scope (for now)
 
-Person/actor detail pages, catalog-wide pagination, reply notifications, a user-facing "report post" flow, "related movies" recommendations, and fight scene moderation beyond owner/admin delete are not yet implemented.
+Person/actor detail pages, catalog-wide pagination, real-time/push notifications, notification email digests, per-type notification preferences, a user-facing "report post" flow, "related movies" recommendations, and fight scene moderation beyond owner/admin delete are not yet implemented.

@@ -219,7 +219,7 @@ export function DiscussionThread({
   }
 
   return (
-    <section className="mt-10">
+    <section id="discussion" className="mt-10">
       <h2 className="mb-4 font-serif text-xl font-bold text-white">Discussion</h2>
 
       {signedIn ? (

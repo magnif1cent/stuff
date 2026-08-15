@@ -43,6 +43,7 @@ model User {
   memberListLikes     MemberListLike[]
   movieRecommendations MovieRecommendation[]
   fightCountEdits     FightCountEdit[]
+  notifications       Notification[]
 }
 
 model Account {
@@ -556,4 +557,30 @@ model WeeklyFeatured {
 
   @@unique([weekStart, rank])
   @@index([weekStart])
+}
+
+// --- Notifications ---
+//
+// "message"/"link" are a pre-rendered snapshot, not a live relation to the
+// thing the notification is about (no FK to Movie/DiscussionPost/MemberList
+// here) — SUBMISSION_REJECTED's target movie is hard-deleted the moment the
+// notification is created (see reject/route.ts), so a real FK with
+// onDelete: Cascade would silently delete the notification along with it,
+// defeating the one case that most needs to survive. Discussion posts and
+// lists don't have that problem, but one shape covering all four trigger
+// types (rather than per-type nullable FK columns) keeps this model from
+// branching by type.
+model Notification {
+  id          String   @id @default(cuid())
+  recipientId String
+  type        String // "REPLY" | "LIST_LIKE" | "SUBMISSION_APPROVED" | "SUBMISSION_REJECTED"
+  message     String
+  link        String?
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  recipient User @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@index([recipientId, isRead])
+  @@index([recipientId, createdAt])
 }

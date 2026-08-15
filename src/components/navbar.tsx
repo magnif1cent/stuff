@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { isEmailVerified } from "@/lib/verification";
+import { getNotificationsForNavbar } from "@/lib/notifications";
+import type { Notification } from "@/generated/prisma/client";
 import { Logo } from "@/components/logo";
 import { SearchBar } from "@/components/search-bar";
 import { SignOutButton } from "@/components/sign-out-button";
 import { VerifyEmailBanner } from "@/components/verify-email-banner";
+import { NotificationBell } from "@/components/notification-bell";
 
 export async function Navbar() {
   const session = await auth();
@@ -12,6 +15,9 @@ export async function Navbar() {
   // reflects the truth immediately after someone clicks their verification
   // link — a JWT-cached flag would stay stale until their next sign-in.
   const needsVerification = !!session?.user && !(await isEmailVerified(session.user.id));
+  // Same page-load-only pattern as needsVerification above — no polling, no
+  // real-time push (both out of scope for v1, see DECISIONS.md).
+  const notificationData = session?.user ? await getNotificationsForNavbar(session.user.id) : null;
 
   return (
     <header className="sticky top-0 z-20 border-b border-neutral-800 bg-neutral-950/95 backdrop-blur">
@@ -40,6 +46,19 @@ export async function Navbar() {
                 <Link href="/admin" className="text-sm whitespace-nowrap text-neutral-300 hover:text-white">
                   Admin
                 </Link>
+              )}
+              {notificationData && (
+                <NotificationBell
+                  initialNotifications={notificationData.notifications.map((n: Notification) => ({
+                    id: n.id,
+                    type: n.type,
+                    message: n.message,
+                    link: n.link,
+                    isRead: n.isRead,
+                    createdAt: n.createdAt.toISOString(),
+                  }))}
+                  initialUnreadCount={notificationData.unreadCount}
+                />
               )}
               <Link
                 href={`/members/${session.user.username}`}

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isEmailVerified } from "@/lib/verification";
+import { createNotification } from "@/lib/notifications";
 
 export async function POST(request: Request, { params }: { params: Promise<{ listId: string }> }) {
   const session = await auth();
@@ -29,6 +30,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ lis
     await prisma.memberListLike.delete({ where: { id: existing.id } });
   } else {
     await prisma.memberListLike.create({ data: { userId: session.user.id, listId } });
+    await createNotification({
+      recipientId: list.userId,
+      type: "LIST_LIKE",
+      message: `${session.user.username} liked your list "${list.name}"`,
+      link: `/lists/${listId}`,
+    });
   }
 
   const likeCount = await prisma.memberListLike.count({ where: { listId } });
