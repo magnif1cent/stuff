@@ -530,6 +530,36 @@ other, not just with the general principle.
 
 ## Feature Decisions
 
+### Community Activity feed merges three existing tables, no new schema
+**PR #65.** Backlog ask was for a homepage strip surfacing recent member
+activity to make the site "feel alive" — deliberately scoped to be cheap:
+query recent rows across existing tables rather than introduce an
+`ActivityLog`/event-sourcing table.
+
+- Three event types, chosen because each already has a natural "who did
+  what, when" shape with no extra state needed: a `FightScene` created, a
+  `MemberList` created, and a top-level `DiscussionPost` created (replies
+  excluded — a reply isn't "starting" a discussion). Ratings and likes
+  were considered and dropped: they're per-user upserts with no reliable
+  single "created" moment to point at (a rating can change), so they'd
+  need either a separate history table (violates the no-new-schema goal)
+  or showing a merely-updated rating as if it were new (misleading).
+- Each event type is queried independently (`take: 8` each) and merged by
+  `createdAt` in application code, rather than one UNION query — Prisma
+  doesn't support cross-model UNIONs without raw SQL, and three cheap
+  indexed queries (each already sorted by an indexed/default-ordered
+  `createdAt`) is simpler than hand-writing and maintaining raw SQL for
+  what's ultimately a lightweight homepage widget.
+- Reuses the exact pending-movie visibility rule already established
+  everywhere else (search, homepage rails, weekly-trending): a fight scene
+  or discussion tied to a movie still awaiting admin approval is excluded
+  until the movie goes live, so the feed can't leak a pending submission
+  through a side door.
+- Placed below the movie rails and above Recent Reviews by Editors —
+  grouped with the other community-generated homepage section rather than
+  above the fold, since it's a discovery/engagement feature, not a hero
+  element competing with the trending carousel for first-glance attention.
+
 ### Error monitoring added without wrapping next.config.ts in Sentry's build plugin
 **PR #TBD.** Closes a real gap: server errors were already visible via
 `console.error` (captured in Vercel's function logs), but a client-side

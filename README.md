@@ -16,6 +16,7 @@ An IMDB-style website for kung fu and martial arts films, built for martial arts
 - Social sharing (native share sheet on mobile, copy-link/X/Facebook/Reddit fallback on desktop) on movie and fight scene pages
 - A public `/lists` page for browsing every member's public custom lists (sorted by newest-updated or most-liked, paginated), plus a `/leaderboard` page ranking the Most-Liked Lists (members can like each other's public custom lists) and Top Curators (members with the most movies across their own lists) — see [Member Lists & Profiles](#member-lists--profiles) below
 - Admin-published News & Updates posts: the latest one shown as a teaser banner on the homepage, with a full paginated archive at `/news` — see [News & Updates](#news--updates) below
+- A "Community Activity" feed on the homepage surfacing the site's most recent fight scenes tagged, lists created, and discussions started, across all members — see [Community Activity](#community-activity) below
 - Security headers (CSP, HSTS, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`) on every response, plus rate limiting and CAPTCHA on login, registration, forgot-password, and content-creation endpoints — see [Security](#security) below
 
 ## Tech Stack
@@ -321,6 +322,18 @@ Recent Reviews by Editors feed already established.
 
 Any admin can edit or delete any post, mirroring Editorial Reviews'
 shared-not-per-author model.
+
+## Community Activity
+
+A "Community Activity" section on the homepage, below the movie rails and
+above Recent Reviews by Editors, surfaces the 8 most recent
+member-generated events across the site, merged from three existing
+tables with no new schema: a fight scene tagged, a custom list created, or
+a discussion thread started (top-level posts only — a reply doesn't count
+as starting a new one). Each row links through to the relevant movie,
+list, or discussion, plus the member's profile. Same visibility rule as
+every other public listing: an event tied to a still-pending (not yet
+admin-approved) movie stays out of the feed until the movie is approved.
 
 ## Web Analytics
 
