@@ -528,6 +528,75 @@ how `adminBadgeColor()` in the same feature already keys off id rather
 than username — the fix makes the two functions consistent with each
 other, not just with the general principle.
 
+### Production migration incident: Preview and Production shared one database
+**PR #TBD.** A real production incident, not a hypothetical risk. A different,
+unmerged conversation's branch (`claude/admin-private-lists`) triggered a
+preview deployment whose `prisma migrate deploy` ran against what turned out
+to be the *same* database as production — because Vercel's `DATABASE_URL`
+was scoped to "Production and Preview" together, one connection string for
+both. That branch's migration tried to `DROP INDEX` on the trigram indexes
+from the search-indexing fix above; the drop failed because those indexes
+didn't yet exist in that database, which left a failed migration record
+blocking every subsequent production deploy (Prisma refuses to apply new
+migrations while an unresolved failure exists) until it was manually cleared.
+
+- **Root cause was two-layered, not one bug**: the immediate trigger was that
+  branch's migration, but the *reason* it contained a `DROP INDEX` for
+  indexes it had never heard of is that those indexes were declared only via
+  raw SQL in a migration file, invisible to `schema.prisma` — so any other
+  conversation's ordinary `prisma migrate dev` would see them as
+  undeclared drift and auto-generate a statement to remove them. Not that
+  branch's mistake; a direct, foreseeable consequence of how the earlier fix
+  was built. See the next entry for the actual fix to that layer.
+- **Unblocking production**: the failed migration recorded zero actual
+  changes (it died on its very first statement), so the safe resolution was
+  deleting that one row from `_prisma_migrations` directly via Neon's SQL
+  Editor, then triggering a fresh deploy from `master`'s current HEAD —
+  no partial-state cleanup needed, confirmed by the fact the DROP was the
+  very first statement in the file.
+- **The actual fix — isolating Preview from Production**: installed Vercel's
+  Neon integration, scoped to auto-create a fresh, isolated database branch
+  per preview deployment, with Production's `DATABASE_URL` left completely
+  outside the integration's management (kept on the original, manually-set
+  variable, narrowed to the Production environment only). This was
+  deliberately the more conservative of two options — letting the
+  integration also manage Production's variable was available, but
+  minimizing what the integration can touch mattered more given this
+  specific integration had reportedly broken production once before, for
+  this same account, in an unrelated earlier attempt.
+- **Verified as real isolation, not just correct-looking configuration**:
+  triggered a genuine preview deployment (an empty commit on a throwaway
+  branch) after connecting the integration, and confirmed its live preview
+  URL showed a completely empty catalog — proof the preview environment was
+  reading from a fresh, dataless branch rather than production's real data —
+  then separately confirmed production's actual live site was untouched.
+  Config screenshots alone were treated as insufficient evidence, given the
+  account's prior bad experience with this exact integration.
+
+### Trigram indexes declared in schema.prisma, closing the drift-detection gap — partially
+Direct follow-up to the incident above, fixing the layer that made it
+possible in the first place. Confirmed via `prisma validate` that this
+Prisma version supports declaring a GIN index with a custom operator class
+on a plain column (`@@index([title(ops: raw("gin_trgm_ops"))], type: Gin)`),
+so the four plain-column trigram indexes added for ILIKE search
+(`Movie.title`, `Movie.director`, `Person.name`, `FightScene.title`) are now
+declared in `schema.prisma` with `map:` pinned to their existing index
+names — confirmed via `prisma migrate dev --create-only` that this produced
+a genuinely empty migration (deleted rather than committed, since it does
+nothing on any environment), proving the schema now matches the database
+exactly rather than describing a change that still needs applying.
+
+**This only closes half the gap, and that's a real, permanent limitation,
+not an oversight left for later**: tested declaring an *expression* index
+(the earlier fuzzy-search fallback's two indexes, on `lower(title)` and
+`lower(director)`) and confirmed Prisma's schema DSL rejects it outright —
+it has no syntax for indexing a functional expression, only plain columns
+with a chosen operator class. Those two indexes remain raw-SQL-only,
+undeclared, and theoretically exposed to the same drift-detection problem
+this fix closes for the other four. Revisit if Prisma ever adds expression-
+index support; until then, anyone touching `Movie`'s schema should know
+those two are still there and still invisible to `prisma migrate dev`.
+
 ## Feature Decisions
 
 ### Community Activity feed merges three existing tables, no new schema
