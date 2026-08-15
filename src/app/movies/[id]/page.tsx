@@ -504,14 +504,16 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
           myFavoriteSceneIds={myFavoriteFightSceneIds}
         />
 
-        <DiscussionThread
-          movieId={movie.id}
-          initialPosts={serializedPosts}
-          initialNextCursor={discussionPage.nextCursor}
-          signedIn={!!session?.user}
-          currentUserId={session?.user?.id ?? null}
-          isAdmin={session?.user?.role === "ADMIN"}
-        />
+        <div id="discussion">
+          <DiscussionThread
+            movieId={movie.id}
+            initialPosts={serializedPosts}
+            initialNextCursor={discussionPage.nextCursor}
+            signedIn={!!session?.user}
+            currentUserId={session?.user?.id ?? null}
+            isAdmin={session?.user?.role === "ADMIN"}
+          />
+        </div>
       </div>
     </div>
   );

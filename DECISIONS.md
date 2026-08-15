@@ -543,6 +543,51 @@ other, not just with the general principle.
 - **Deferred, per explicit scope**: thread search, upvotes/reactions, @mentions, and private messaging are noted in the forum's own README section as not built, not silently dropped.
 - **Migration note, unrelated to this feature but caught while generating it**: `prisma migrate dev`'s auto-generated diff for this change also wanted to `DROP` the four `*_ilike_trgm_idx` indexes from the `20260814143815` migration — those are raw-SQL GIN indexes with no `@@index` representation in `schema.prisma` (Prisma has no way to express `gin_trgm_ops` there), so any schema diff sees them as drift to reconcile, independent of what actually changed. Stripped out of this migration's SQL rather than silently shipped — dropping four performance indexes as a side effect of an unrelated feature migration would have been a real, easy-to-miss regression. Worth another PR to actually resolve the underlying drift (e.g. a `prisma db execute`-based follow-up migration workflow that doesn't fight the auto-diff), not fixed here since it's orthogonal to the forum.
 
+### Community Activity feed merges three existing tables, no new schema
+**PR #65.** Backlog ask was for a homepage strip surfacing recent member
+activity to make the site "feel alive" — deliberately scoped to be cheap:
+query recent rows across existing tables rather than introduce an
+`ActivityLog`/event-sourcing table.
+
+- Three event types, chosen because each already has a natural "who did
+  what, when" shape with no extra state needed: a `FightScene` created, a
+  `MemberList` created, and a top-level `DiscussionPost` created (replies
+  excluded — a reply isn't "starting" a discussion). Ratings and likes
+  were considered and dropped: they're per-user upserts with no reliable
+  single "created" moment to point at (a rating can change), so they'd
+  need either a separate history table (violates the no-new-schema goal)
+  or showing a merely-updated rating as if it were new (misleading).
+- Each event type is queried independently — Prisma doesn't support
+  cross-model UNIONs without raw SQL, and three cheap indexed queries (each
+  already sorted by an indexed/default-ordered `createdAt`) is simpler than
+  hand-writing and maintaining raw SQL for what's ultimately a lightweight
+  homepage widget.
+- Reuses the exact pending-movie visibility rule already established
+  everywhere else (search, homepage rails, weekly-trending): a fight scene
+  or discussion tied to a movie still awaiting admin approval is excluded
+  until the movie goes live, so the feed can't leak a pending submission
+  through a side door.
+- Placed at the very bottom of the homepage, below Recent Reviews by
+  Editors (moved there by explicit direction after initially sitting above
+  Recent Reviews) — the last section on the page rather than competing
+  with the movie rails or the trending carousel for above-the-fold
+  attention.
+
+**Reworked from one merged/sorted list to three grouped columns, in
+preview (same PR).** The first version merged all three event types by
+`createdAt` into a single flat top-8 list, styled as plain text sentences.
+Feedback on the preview was that this was both too plain (no visual weight
+beyond a line of text) and had the wrong content mix (a burst of one event
+type — e.g. several fight scenes tagged close together — could crowd the
+other two types out of the top 8 entirely, so "Community Activity" didn't
+reliably read as covering the whole community). Reworked to three
+independently-limited columns (`take: 3` each, not merged), one per event
+type, so every type is guaranteed visibility regardless of how bursty any
+one type's activity is. Each row became a bordered card reusing Recent
+Reviews by Editors' poster-thumbnail-plus-byline layout (for the two
+movie-linked types) rather than a plain sentence, for visual parity with
+the site's other homepage feed section.
+
 ### Error monitoring added without wrapping next.config.ts in Sentry's build plugin
 **PR #TBD.** Closes a real gap: server errors were already visible via
 `console.error` (captured in Vercel's function logs), but a client-side
