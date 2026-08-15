@@ -544,12 +544,11 @@ query recent rows across existing tables rather than introduce an
   single "created" moment to point at (a rating can change), so they'd
   need either a separate history table (violates the no-new-schema goal)
   or showing a merely-updated rating as if it were new (misleading).
-- Each event type is queried independently (`take: 8` each) and merged by
-  `createdAt` in application code, rather than one UNION query — Prisma
-  doesn't support cross-model UNIONs without raw SQL, and three cheap
-  indexed queries (each already sorted by an indexed/default-ordered
-  `createdAt`) is simpler than hand-writing and maintaining raw SQL for
-  what's ultimately a lightweight homepage widget.
+- Each event type is queried independently — Prisma doesn't support
+  cross-model UNIONs without raw SQL, and three cheap indexed queries (each
+  already sorted by an indexed/default-ordered `createdAt`) is simpler than
+  hand-writing and maintaining raw SQL for what's ultimately a lightweight
+  homepage widget.
 - Reuses the exact pending-movie visibility rule already established
   everywhere else (search, homepage rails, weekly-trending): a fight scene
   or discussion tied to a movie still awaiting admin approval is excluded
@@ -559,6 +558,21 @@ query recent rows across existing tables rather than introduce an
   grouped with the other community-generated homepage section rather than
   above the fold, since it's a discovery/engagement feature, not a hero
   element competing with the trending carousel for first-glance attention.
+
+**Reworked from one merged/sorted list to three grouped columns, in
+preview (same PR).** The first version merged all three event types by
+`createdAt` into a single flat top-8 list, styled as plain text sentences.
+Feedback on the preview was that this was both too plain (no visual weight
+beyond a line of text) and had the wrong content mix (a burst of one event
+type — e.g. several fight scenes tagged close together — could crowd the
+other two types out of the top 8 entirely, so "Community Activity" didn't
+reliably read as covering the whole community). Reworked to three
+independently-limited columns (`take: 3` each, not merged), one per event
+type, so every type is guaranteed visibility regardless of how bursty any
+one type's activity is. Each row became a bordered card reusing Recent
+Reviews by Editors' poster-thumbnail-plus-byline layout (for the two
+movie-linked types) rather than a plain sentence, for visual parity with
+the site's other homepage feed section.
 
 ### Error monitoring added without wrapping next.config.ts in Sentry's build plugin
 **PR #TBD.** Closes a real gap: server errors were already visible via

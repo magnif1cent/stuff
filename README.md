@@ -326,14 +326,18 @@ shared-not-per-author model.
 ## Community Activity
 
 A "Community Activity" section on the homepage, below the movie rails and
-above Recent Reviews by Editors, surfaces the 8 most recent
-member-generated events across the site, merged from three existing
-tables with no new schema: a fight scene tagged, a custom list created, or
-a discussion thread started (top-level posts only — a reply doesn't count
-as starting a new one). Each row links through to the relevant movie,
-list, or discussion, plus the member's profile. Same visibility rule as
-every other public listing: an event tied to a still-pending (not yet
-admin-approved) movie stays out of the feed until the movie is approved.
+above Recent Reviews by Editors, surfaces recent member-generated events
+from three existing tables with no new schema — a fight scene tagged, a
+custom list created, or a discussion thread started (top-level posts
+only — a reply doesn't count as starting a new one). Shown as three
+columns, one per event type (the 3 most recent of each), rather than one
+merged list, so a burst of activity in one type can't crowd the other two
+out of view. Movie-linked rows (fight scenes, discussions) show a poster
+thumbnail, matching Recent Reviews by Editors' card layout. Each row links
+through to the relevant movie, list, or discussion, plus the member's
+profile. Same visibility rule as every other public listing: an event tied
+to a still-pending (not yet admin-approved) movie stays out of the feed
+until the movie is approved.
 
 ## Web Analytics
 

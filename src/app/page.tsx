@@ -80,7 +80,7 @@ export default async function HomePage() {
         emptyMessage="No community ratings yet — be the first to rate a movie."
       />
 
-      <ActivityFeed items={recentActivity} />
+      <ActivityFeed activity={recentActivity} />
 
       <RecentReviewsFeed reviews={recentReviewItems} />
     </div>
