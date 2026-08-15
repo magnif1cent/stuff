@@ -597,6 +597,20 @@ this fix closes for the other four. Revisit if Prisma ever adds expression-
 index support; until then, anyone touching `Movie`'s schema should know
 those two are still there and still invisible to `prisma migrate dev`.
 
+### Breach-password (HaveIBeenPwned) check removed, per explicit request
+Reversal, not a new finding — the HaveIBeenPwned check added in
+"Password strength requirements" above was removed at the site owner's
+request, to reduce signup/password-change friction. The 12-character
+minimum and 72-byte maximum from that same change are unaffected and
+still enforced; only the breach-database lookup is gone.
+`isPwnedPassword()` and its `PWNED_PASSWORDS_RANGE_URL` were deleted
+outright from `src/lib/password.ts` rather than left disabled/unused —
+nothing else referenced them, and dead code that looks like it's still
+providing a security property it no longer provides is worse than no
+code at all. Revisit if breach-checking is wanted again later; the
+original entry above still documents the k-anonymity approach that
+worked, should it come back.
+
 ### Usernames allow mixed case, made case-insensitively unique via a new usernameLower column
 Trigger was a real, reproduced UX complaint: a member typed a mixed-case
 username (`NashPopoB`) at registration and hit the native browser
