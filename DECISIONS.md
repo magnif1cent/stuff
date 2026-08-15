@@ -496,12 +496,15 @@ docs typo.
   name on the homepage, old name still in a password-reset email subject
   line) would be a worse, more confusing state than the rename not
   happening yet.
-- **Left open**: `src/components/logo.tsx`'s 師父 (Sifu — "master/teacher")
-  prefix on the navbar wordmark was kept as-is rather than removed. It read
-  naturally next to "Kung Fu DB" but its fit alongside "Sauce" is a real
-  brand-tone question (respectful master-title vs. a more playful name)
-  that wasn't part of what was asked — flagged for a deliberate call
-  rather than silently dropped or silently kept.
+- **Resolved**: `src/components/logo.tsx`'s 師父 (Sifu — "master/teacher")
+  prefix on the navbar wordmark was flagged rather than silently kept or
+  dropped, since it read naturally next to "Kung Fu DB" but its fit
+  alongside "Sauce" was a real brand-tone question, not a mechanical part
+  of the rename. Admin call: drop it. The wordmark is now plain "Kung Fu
+  Sauce," inheriting the `<Link>`'s existing `text-red-600` directly rather
+  than leaving a now-pointless white-text `<span>` wrapper behind — without
+  a colored prefix to contrast against, the old two-tone split had nothing
+  left to split.
 - **Not touched, deliberately out of scope for a code-level rename**: the
   actual Vercel project name/dashboard, the live domain, and the local dev
   database name (`kungfu_dev` in `.env.example`'s example connection
