@@ -4,20 +4,23 @@ import { getRatingSummaries, getTopRatedMovies } from "@/lib/ratings";
 import { getMovieRecommendationsByMovieIds } from "@/lib/movie-recommendations";
 import { getRecentEditorialReviews } from "@/lib/editorial-reviews";
 import { getLatestNewsPost } from "@/lib/news";
+import { getRecentActivity } from "@/lib/activity";
 import { HeroCarousel } from "@/components/hero-carousel";
 import { MovieRail } from "@/components/movie-rail";
 import { RecentReviewsFeed, type RecentReviewItem } from "@/components/recent-reviews-feed";
 import { NewsTeaser } from "@/components/news-teaser";
+import { ActivityFeed } from "@/components/activity-feed";
 
 export const revalidate = 3600;
 
 export default async function HomePage() {
-  const [featured, recent, topRated, recentReviews, latestNewsPost] = await Promise.all([
+  const [featured, recent, topRated, recentReviews, latestNewsPost, recentActivity] = await Promise.all([
     getFeaturedMovies(),
     prisma.movie.findMany({ where: { status: "APPROVED" }, orderBy: { createdAt: "desc" }, take: 12 }),
     getTopRatedMovies(),
     getRecentEditorialReviews(),
     getLatestNewsPost(),
+    getRecentActivity(),
   ]);
 
   const recentReviewItems: RecentReviewItem[] = recentReviews.map((review) => ({
@@ -78,6 +81,8 @@ export default async function HomePage() {
       />
 
       <RecentReviewsFeed reviews={recentReviewItems} />
+
+      <ActivityFeed activity={recentActivity} />
     </div>
   );
 }
