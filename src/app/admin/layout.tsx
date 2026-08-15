@@ -8,16 +8,17 @@ export const metadata: Metadata = {
 };
 
 // REVIEWER only gets Movies (pending-submission review, not the full
-// catalog — see AdminMoviesPage) and Fight Scene Tags, plus the same
-// self-service Account page ADMIN gets. TMDB import and News & Updates stay
-// full-admin-only, so they're marked adminOnly rather than left off this
-// list entirely — omitting them here would mean re-declaring the same nav
-// shape twice instead of filtering one list.
+// catalog — see AdminMoviesPage), Fight Scene Tags, and Forum Boards, plus
+// the same self-service Account page ADMIN gets. TMDB import and News &
+// Updates stay full-admin-only, so they're marked adminOnly rather than left
+// off this list entirely — omitting them here would mean re-declaring the
+// same nav shape twice instead of filtering one list.
 const NAV_LINKS = [
   { href: "/admin", label: "Dashboard", adminOnly: false },
   { href: "/admin/movies", label: "Movies", adminOnly: false },
   { href: "/admin/import", label: "Import from TMDB", adminOnly: true },
   { href: "/admin/fight-scene-tags", label: "Fight Scene Tags", adminOnly: false },
+  { href: "/admin/forum-categories", label: "Forum Boards", adminOnly: false },
   { href: "/admin/news", label: "News & Updates", adminOnly: true },
   { href: "/admin/account", label: "Account", adminOnly: false },
 ];

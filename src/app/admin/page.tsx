@@ -21,6 +21,12 @@ const SECTIONS = [
     adminOnly: false,
   },
   {
+    href: "/admin/forum-categories",
+    title: "Forum Boards",
+    description: "Manage the community forum's boards.",
+    adminOnly: false,
+  },
+  {
     href: "/admin/news",
     title: "News & Updates",
     description: "Publish posts shown on /news and as a homepage teaser.",

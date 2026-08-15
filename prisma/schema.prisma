@@ -43,6 +43,8 @@ model User {
   memberListLikes     MemberListLike[]
   movieRecommendations MovieRecommendation[]
   fightCountEdits     FightCountEdit[]
+  forumThreads        ForumThread[]
+  forumPosts          ForumPost[]
 }
 
 model Account {
@@ -556,4 +558,65 @@ model WeeklyFeatured {
 
   @@unique([weekStart, rank])
   @@index([weekStart])
+}
+
+// --- Community forum ---
+//
+// A standalone general-discussion space, deliberately separate from
+// DiscussionPost above rather than a generalization of it — DiscussionPost is
+// always anchored to a movie (required movieId); the forum isn't anchored to
+// anything, so bolting an optional movieId/generic parent onto the existing
+// model would have meant relaxing a constraint every current call site
+// relies on. New models mirror DiscussionPost's own shape (one level of flat
+// replies, soft-delete) instead of inventing a different convention.
+
+// Admin-curated boards (e.g. "General Discussion", "Fan Theories", "Site
+// Feedback") — members choose from this list, they can't create their own
+// category, same curation pattern as FightSceneTag.
+model ForumCategory {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+
+  threads ForumThread[]
+}
+
+model ForumThread {
+  id         String   @id @default(cuid())
+  categoryId String
+  authorId   String
+  title      String
+  // Moderator-only flags: pinned threads sort first within their category,
+  // locked threads stop accepting new posts (existing ones stay visible).
+  isPinned   Boolean  @default(false)
+  isLocked   Boolean  @default(false)
+  isDeleted  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  category ForumCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  author   User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  posts    ForumPost[]
+
+  @@index([categoryId])
+}
+
+model ForumPost {
+  id        String   @id @default(cuid())
+  threadId  String
+  authorId  String
+  parentId  String?
+  content   String   @db.Text
+  isDeleted Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  thread  ForumThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  author  User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parent  ForumPost?  @relation("ForumReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies ForumPost[] @relation("ForumReplies")
+
+  @@index([threadId])
 }

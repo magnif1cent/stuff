@@ -15,6 +15,7 @@ An IMDB-style website for kung fu and martial arts films, built for martial arts
 - A unified `/admin` dashboard (Movies management incl. pending-submission review and permanent deletion, TMDB import incl. title search, keyword search, and bulk CSV upload, Fight Scene Tags, News & Updates, Account settings), shared by two roles &mdash; `ADMIN` (everything) and a narrower `REVIEWER` (movie-submission review, fight-scene-tag management, fight-scene verification) &mdash; plus admin actions that stay inline on regular pages (Editors' Score, editorial reviews, poster overrides, fight scene verification) &mdash; see [Admin Area & Roles](#admin-area--roles) below
 - Social sharing (native share sheet on mobile, copy-link/X/Facebook/Reddit fallback on desktop) on movie and fight scene pages
 - A public `/lists` page for browsing every member's public custom lists (sorted by newest-updated or most-liked, paginated), plus a `/leaderboard` page ranking the Most-Liked Lists (members can like each other's public custom lists) and Top Curators (members with the most movies across their own lists) — see [Member Lists & Profiles](#member-lists--profiles) below
+- A standalone **Community Forum** (`/forum`) — admin-curated boards (e.g. "General Discussion", "Fan Theories", "Site Feedback"), member-started threads, and one level of replies, separate from a movie's own discussion thread — see [Community Forum](#community-forum) below
 - Admin-published News & Updates posts: the latest one shown as a teaser banner on the homepage, with a full paginated archive at `/news` — see [News & Updates](#news--updates) below
 - Security headers (CSP, HSTS, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`) on every response, plus rate limiting and CAPTCHA on login, registration, forgot-password, and content-creation endpoints — see [Security](#security) below
 
@@ -135,6 +136,18 @@ Alongside the existing overall 1–10 Community Score and admin-only Editors' Sc
 - Wrap text in `[spoiler]...[/spoiler]` to hide it behind a "click to reveal" toggle — useful for plot twists/endings discussed on the movie's own page. Note this is a client-side reveal (like most forum spoiler tags): the text is present in the page's data, just not shown until clicked, so it isn't a substitute for redacting genuinely secret data.
 - Authors can edit or delete their own posts; admins can delete anyone's post. Deletion is a soft-delete — the row and any replies underneath it are kept (so a thread doesn't fall apart when one comment in it is removed), but the content is blanked and the post renders as `[deleted]`.
 
+## Community Forum
+
+`/forum` is a standalone general-discussion space, separate from a movie's own per-movie discussion thread above and built on its own models (`ForumCategory`/`ForumThread`/`ForumPost`) rather than extending `DiscussionPost` — nothing here touches movie pages or the existing discussion code.
+
+- **Boards** (`/forum`) are admin-curated (e.g. "General Discussion", "Fan Theories", "Site Feedback") — members pick from the list when starting a thread, they can't create their own board. Managed at `/admin/forum-categories`, open to `REVIEWER` too (same curation pattern as Fight Scene Tags).
+- **Threads** (`/forum/[category]`) are member-started (requires a verified email, same bar as discussion posts), sorted pinned-first then by most recent activity, 20 per page.
+- **Posts** (`/forum/[category]/[threadId]`) are one level of flat replies per thread, same convention as movie discussion — reply to the thread itself, or to a top-level post, but not to a reply. Supports `[spoiler]...[/spoiler]` tags (the same client-side reveal used in movie discussions) and is capped at 5,000 characters. A thread's own starting post is itself a `ForumPost` (its first, editable/deletable like any other).
+- **Editing/deleting**: authors can edit or delete their own posts; a thread can be deleted by its author or a moderator. Both are soft-deletes (content blanked, row kept) — matches `DiscussionPost`'s pattern so replies underneath aren't orphaned.
+- **Moderation**: `ADMIN`/`REVIEWER` can pin a thread (sorts first in its board), lock one (stops new posts, existing ones stay visible), or delete any thread/post — broader than movie discussion moderation, which is `ADMIN`-only.
+- **Rate-limited** the same way discussion posts are: `forumThreadCreateLimiter` (starting threads) and `forumPostLimiter` (replying), via the shared Upstash limiter in `src/lib/rate-limit.ts`.
+- **Not built yet** (explicitly out of scope for this pass): thread search, upvotes/reactions, @mentions, and private messaging.
+
 ## Search
 
 Two dedicated search pages, both with a vertical sidebar of filters, pagination, and sort options — split apart because a fight-scene result is the scene itself, not "a movie that happens to contain one."
@@ -240,10 +253,11 @@ Three roles exist: `USER` (the default member role), `REVIEWER`, and `ADMIN`. Si
 - **Movies** (`/admin/movies`) &mdash; a **Pending Submissions** section (see [Member Movie Submissions](#member-movie-submissions) above) to approve or reject member-submitted movies, open to `REVIEWER` too. The **Catalog** section below it (browse and permanently delete any movie, cascading through everything attached to it) is `ADMIN`-only — a reviewer's reject action only ever deletes a still-`PENDING` row via a separate endpoint, never an already-approved catalog entry.
 - **Import from TMDB** (`/admin/import`, `ADMIN`-only) &mdash; search-and-import by title or by keyword (see [TMDB Import](#tmdb-import) above), plus a bulk-upload section: a CSV with a `title` column (optionally `year` to disambiguate identically-titled results, or `tmdb_id` to skip the search entirely) imports up to 25 movies in one request. Each row is resolved and imported independently, so one bad row (no TMDB match, a transient TMDB error) doesn't fail the rest of the batch &mdash; the response reports created/updated/error per row. CSV parsing uses `papaparse` rather than the `xlsx` npm package, whose published version has known unpatched advisories (SheetJS fixed them only on their own CDN, not on the npm registry).
 - **Fight Scene Tags** (`/admin/fight-scene-tags`) &mdash; manage the category vocabulary members tag fight scenes with (see [Fight Scenes](#fight-scenes) above). Open to `REVIEWER`.
+- **Forum Boards** (`/admin/forum-categories`) &mdash; manage the community forum's boards (see [Community Forum](#community-forum) above). Open to `REVIEWER`. A board can't be deleted while it still has threads in it.
 - **News & Updates** (`/admin/news`, `ADMIN`-only) &mdash; publish, edit, or delete posts shown on the homepage and the `/news` archive (see [News & Updates](#news--updates) above).
 - **Account** (`/admin/account`) &mdash; change your own sign-in email or password (previously only possible via direct SQL), or sign out of every device on your account (including the current one) without changing anything, if you suspect someone else has access. Changing your email re-triggers the normal email-verification flow on the new address; changing your password requires your current one (unless you signed up via Google and have never set one, in which case you can set an initial password). Any of the three signs you out immediately, since the session is JWT-based and won't otherwise pick up the change until you sign back in. Open to `REVIEWER` too — self-managing your own credentials isn't a content-moderation power, so it follows the same "reach `/admin` at all" gate as the dashboard itself.
 
-Outside this dashboard, fight scene verification (the Verify/Unverify link on a fight scene card) is also open to `REVIEWER`, gated by its own `canVerify` prop on `FightSceneSection` — deliberately not the same prop as the component's `isAdmin`, which still gates a scene's Editors' rating/note, start-time adjustment, and delete-any-scene, none of which `REVIEWER` has. Editors' Score, editorial reviews, poster overrides, and discussion moderation are `ADMIN`-only actions that stay inline on the regular movie page.
+Outside this dashboard, fight scene verification (the Verify/Unverify link on a fight scene card) is also open to `REVIEWER`, gated by its own `canVerify` prop on `FightSceneSection` — deliberately not the same prop as the component's `isAdmin`, which still gates a scene's Editors' rating/note, start-time adjustment, and delete-any-scene, none of which `REVIEWER` has. Editors' Score, editorial reviews, poster overrides, and discussion moderation are `ADMIN`-only actions that stay inline on the regular movie page. Forum thread/post moderation (pin, lock, delete-any) is the one moderation action open to `REVIEWER` as well as `ADMIN` — see [Community Forum](#community-forum) above.
 
 There's no user-management UI for granting `REVIEWER`/`ADMIN` — promoting an account is a direct `UPDATE "User" SET role = 'REVIEWER' WHERE email = '...'` against the database, same as `ADMIN` always has been. A reasonable next step if the admin area grows further.
 
@@ -344,11 +358,11 @@ Like every other optional integration in this app, this fails open: without `SEN
 
 ## Project Structure
 
-- `src/app` — pages and API routes (App Router), including the `/admin` dashboard and its sub-pages (see [Admin Area & Roles](#admin-area--roles)), the fight scene permalink route (`/movies/[id]/fight-scenes/[fightSceneId]`), member movie submission (`/movies/submit`), member profiles (`/members/[username]`), public list permalinks (`/lists/[listId]`), and actor pages (`/actors/[personId]`)
+- `src/app` — pages and API routes (App Router), including the `/admin` dashboard and its sub-pages (see [Admin Area & Roles](#admin-area--roles)), the fight scene permalink route (`/movies/[id]/fight-scenes/[fightSceneId]`), member movie submission (`/movies/submit`), member profiles (`/members/[username]`), public list permalinks (`/lists/[listId]`), actor pages (`/actors/[personId]`), and the community forum (`/forum`, `/forum/[category]`, `/forum/[category]/[threadId]`)
 - `src/components` — UI components (`fight-scene-section.tsx`, `editorial-review.tsx`, `poster-override-control.tsx`, `share-button.tsx`, `member-list-manager.tsx`, `add-to-list-control.tsx`, etc.)
 - `src/lib` — Prisma client, Auth.js config, TMDB client, YouTube URL parsing, rating/weekly-featured/verification/fight-scene/username/member-list helpers, email sender
 - `prisma/schema.prisma` — data model
-- `prisma/seed.ts` — sample/dev seed data, including a sample fight scene and editorial review
+- `prisma/seed.ts` — sample/dev seed data, including a sample fight scene, editorial review, and forum boards/thread
 
 ## Out of Scope (for now)
 

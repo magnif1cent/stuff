@@ -250,6 +250,50 @@ async function main() {
     create: { userId: admin.id, listId: memberList.id },
   });
 
+  const FORUM_CATEGORIES = [
+    { slug: "general-discussion", name: "General Discussion", description: "Anything kung fu movie related." },
+    { slug: "fan-theories", name: "Fan Theories", description: "Share your wildest fan theories." },
+    { slug: "site-feedback", name: "Site Feedback", description: "Suggestions and bug reports for this site." },
+  ];
+  const categoryBySlug = new Map<string, { id: string }>();
+  for (const category of FORUM_CATEGORIES) {
+    const created = await prisma.forumCategory.upsert({
+      where: { slug: category.slug },
+      update: { name: category.name, description: category.description },
+      create: category,
+    });
+    categoryBySlug.set(category.slug, created);
+  }
+
+  const generalDiscussion = categoryBySlug.get("general-discussion")!;
+  const existingWelcomeThread = await prisma.forumThread.findFirst({
+    where: { categoryId: generalDiscussion.id, authorId: admin.id, title: "Welcome to the forum!" },
+  });
+  const welcomeThread =
+    existingWelcomeThread ??
+    (await prisma.forumThread.create({
+      data: {
+        categoryId: generalDiscussion.id,
+        authorId: admin.id,
+        title: "Welcome to the forum!",
+        isPinned: true,
+        posts: {
+          create: {
+            authorId: admin.id,
+            content: "Sample data: welcome! This board is for general chat, separate from a movie's own discussion thread.",
+          },
+        },
+      },
+    }));
+  const welcomeReply = await prisma.forumPost.findFirst({
+    where: { threadId: welcomeThread.id, authorId: member.id, parentId: null },
+  });
+  if (!welcomeReply) {
+    await prisma.forumPost.create({
+      data: { threadId: welcomeThread.id, authorId: member.id, content: "Sample data: glad to be here!" },
+    });
+  }
+
   console.log("Seed complete.", { admin: admin.email, member: member.email });
 }
 
