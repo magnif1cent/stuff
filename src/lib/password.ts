@@ -1,5 +1,4 @@
 import bcrypt from "bcryptjs";
-import crypto from "node:crypto";
 
 export const MIN_PASSWORD_LENGTH = 12;
 // bcrypt silently truncates its input past 72 bytes — anything beyond that
@@ -15,39 +14,6 @@ const BCRYPT_COST = 12;
 
 export function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, BCRYPT_COST);
-}
-
-const PWNED_PASSWORDS_RANGE_URL = "https://api.pwnedpasswords.com/range/";
-
-// Checks the HaveIBeenPwned Pwned Passwords API using its k-anonymity
-// model: only the first 5 hex characters of the password's SHA-1 hash ever
-// leave this server — never the password itself, and not even its full
-// hash — and the API returns every suffix sharing that prefix for a local
-// match. No API key needed; it's a free, keyless public API. Network
-// failures fail open (treated as "not known to be pwned") rather than
-// blocking registration/reset over a third-party outage — the same
-// fail-open posture as every other optional external service in this app,
-// just without an env var to gate it since there's no account to set up.
-export async function isPwnedPassword(password: string): Promise<boolean> {
-  try {
-    const sha1 = crypto.createHash("sha1").update(password, "utf8").digest("hex").toUpperCase();
-    const prefix = sha1.slice(0, 5);
-    const suffix = sha1.slice(5);
-
-    const res = await fetch(`${PWNED_PASSWORDS_RANGE_URL}${prefix}`, {
-      // Asks the API to mix in random padding entries, so a network
-      // observer watching response sizes can't infer whether a real match
-      // was found.
-      headers: { "Add-Padding": "true" },
-      signal: AbortSignal.timeout(3000),
-    });
-    if (!res.ok) return false;
-
-    const body = await res.text();
-    return body.split("\n").some((line) => line.split(":")[0].trim() === suffix);
-  } catch {
-    return false;
-  }
 }
 
 export interface PasswordValidationResult {
@@ -67,12 +33,6 @@ export async function validateNewPassword(password: unknown): Promise<PasswordVa
   }
   if (Buffer.byteLength(password, "utf8") > MAX_PASSWORD_LENGTH_BYTES) {
     return { valid: false, error: `Password must be ${MAX_PASSWORD_LENGTH_BYTES} characters or fewer.` };
-  }
-  if (await isPwnedPassword(password)) {
-    return {
-      valid: false,
-      error: "This password has appeared in a known data breach. Choose a different one.",
-    };
   }
   return { valid: true };
 }

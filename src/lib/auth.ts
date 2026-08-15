@@ -36,6 +36,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return {
           id: profile.sub,
           username,
+          // generateUniqueUsername() only ever produces lowercase
+          // candidates, so this always matches username — set explicitly
+          // rather than assumed, since the PrismaAdapter writes exactly
+          // the fields returned here straight to the User row, unlike the
+          // credentials registration route which sets this itself.
+          usernameLower: username,
           email,
           image: profile.picture,
           role: "USER",

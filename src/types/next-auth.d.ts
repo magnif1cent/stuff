@@ -12,6 +12,7 @@ declare module "next-auth" {
   interface User {
     role?: string;
     username?: string;
+    usernameLower?: string;
     emailVerified?: Date | null;
   }
 }

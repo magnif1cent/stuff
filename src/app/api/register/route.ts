@@ -34,7 +34,7 @@ export async function POST(request: Request) {
   if (typeof username !== "string" || !isValidUsername(username)) {
     return NextResponse.json(
       {
-        error: `Username must be ${USERNAME_MIN_LENGTH}-${USERNAME_MAX_LENGTH} characters, using only lowercase letters, numbers, and underscores.`,
+        error: `Username must be ${USERNAME_MIN_LENGTH}-${USERNAME_MAX_LENGTH} characters, using only letters, numbers, and underscores.`,
       },
       { status: 400 },
     );
@@ -43,13 +43,17 @@ export async function POST(request: Request) {
   // Normalize so "User@Example.com" and "user@example.com" are treated as
   // the same account — Postgres's default `=` comparison is case-sensitive.
   const normalizedEmail = email.trim().toLowerCase();
+  // Same idea for usernames: "NashPopoB" and "nashpopob" must be treated as
+  // the same handle, even though the original casing is preserved for
+  // display (username, below) — usernameLower is the real uniqueness key.
+  const usernameLower = username.toLowerCase();
 
   const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
   if (existing) {
     return NextResponse.json({ error: "An account with that email already exists." }, { status: 409 });
   }
 
-  const existingUsername = await prisma.user.findUnique({ where: { username } });
+  const existingUsername = await prisma.user.findUnique({ where: { usernameLower } });
   if (existingUsername) {
     return NextResponse.json({ error: "That username is already taken." }, { status: 409 });
   }
@@ -58,6 +62,7 @@ export async function POST(request: Request) {
   const user = await prisma.user.create({
     data: {
       username,
+      usernameLower,
       email: normalizedEmail,
       passwordHash,
       passwordChangedAt: new Date(),

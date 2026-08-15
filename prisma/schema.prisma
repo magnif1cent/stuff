@@ -11,7 +11,15 @@ datasource db {
 
 model User {
   id            String    @id @default(cuid())
-  username      String    @unique
+  // Case-preserving: stored exactly as chosen (e.g. "NashPopoB"), shown that
+  // way everywhere. Not itself unique — usernameLower below is the real
+  // uniqueness key, so "NashPopoB" and "nashpopob" can't both be registered.
+  username      String
+  // Always username.toLowerCase(), kept in sync on every write. The actual
+  // unique/lookup key — every "does this username exist" check and every
+  // /members/[username] lookup goes through this field, not username
+  // itself, the same way normalizedEmail is the real key for email lookups.
+  usernameLower String    @unique
   email         String?   @unique
   emailVerified DateTime?
   image         String?
