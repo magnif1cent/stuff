@@ -11,6 +11,7 @@ export function RegisterForm({ nonce }: { nonce: string | null }) {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
@@ -20,8 +21,14 @@ export function RegisterForm({ nonce }: { nonce: string | null }) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setLoading(true);
     setError(null);
+
+    if (password !== confirmPassword) {
+      setError("Passwords don't match.");
+      return;
+    }
+
+    setLoading(true);
 
     const res = await fetch("/api/register", {
       method: "POST",
@@ -97,6 +104,15 @@ export function RegisterForm({ nonce }: { nonce: string | null }) {
           placeholder="Password (min 12 characters)"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          className="rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
+        />
+        <input
+          type="password"
+          required
+          autoComplete="new-password"
+          placeholder="Confirm password"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
           className="rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
         />
         <Turnstile key={captchaResetKey} nonce={nonce} onVerify={setCaptchaToken} />
