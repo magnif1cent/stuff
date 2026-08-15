@@ -25,7 +25,7 @@ export function RecommendedBadges({
   return (
     <div className="flex items-center -space-x-1.5">
       {recommenders.map((recommender) => {
-        const icon = ADMIN_BADGE_ICONS[recommender.username];
+        const icon = ADMIN_BADGE_ICONS[recommender.id];
         if (icon) {
           return (
             <Image
