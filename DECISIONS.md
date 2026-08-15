@@ -512,6 +512,22 @@ docs typo.
   the local DB specifically would force every existing local setup to
   recreate it for a purely cosmetic reason.
 
+### Admin badge icons rekeyed by user id, not username
+**PR #TBD.** Found as a real, reproduced bug, not a theoretical one: an
+admin's custom recommendation-badge icon (`src/lib/admin-badge-icons.ts`)
+silently reverted to the generic colored-circle placeholder the moment
+that admin's username changed, because the lookup table was keyed by the
+username string itself. Usernames are a mutable, member-changeable field
+(currently only changeable via a direct database update, since there's no
+self-service username-change feature yet) — keying anything long-lived by
+one instead of a stable id is exactly the kind of drift this project's own
+`CLAUDE.md` conventions (derive from immutable relations, not
+hand-duplicated strings) exist to prevent, and this table was the one spot
+that didn't follow it. Rekeyed by the admin's `User.id` instead, matching
+how `adminBadgeColor()` in the same feature already keys off id rather
+than username — the fix makes the two functions consistent with each
+other, not just with the general principle.
+
 ## Feature Decisions
 
 ### Error monitoring added without wrapping next.config.ts in Sentry's build plugin

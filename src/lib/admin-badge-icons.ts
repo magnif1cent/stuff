@@ -6,6 +6,5 @@
 // admin has a real icon image (under public/badges/); admins without one
 // still fall back to the placeholder automatically.
 export const ADMIN_BADGE_ICONS: Record<string, string> = {
-  // TODO: replace with the real production user id (see chat/PR notes).
-  "REPLACE_WITH_PRODUCTION_USER_ID": "/badges/wang-seal.png",
+  cms87tzb7000fqstccf83d453: "/badges/wang-seal.png",
 };
