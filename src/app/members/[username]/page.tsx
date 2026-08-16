@@ -276,17 +276,21 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-10">
-      <h1 className="mb-2 text-2xl font-bold text-white">{profileUser.username}</h1>
+      <h1 className="mb-6 text-2xl font-bold text-white">{profileUser.username}</h1>
 
-      {isOwner ? (
-        <MemberBioEditor initialBio={profileUser.bio} />
-      ) : (
-        profileUser.bio && <p className="mb-6 max-w-xl text-sm whitespace-pre-wrap text-neutral-300">{profileUser.bio}</p>
-      )}
+      {!isOwner &&
+        profileUser.bio && (
+          <p className="mb-6 max-w-xl text-sm whitespace-pre-wrap text-neutral-300">{profileUser.bio}</p>
+        )}
 
       {isOwner ? (
         <ProfileTabs
           tabs={[
+            {
+              key: "profile",
+              label: "Profile",
+              content: <MemberBioEditor initialBio={profileUser.bio} />,
+            },
             {
               key: "favorites",
               label: `Favorites (${favorites.length})`,
