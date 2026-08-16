@@ -10,6 +10,8 @@ import type { AddToListItem } from "@/components/add-to-list-control";
 import { MemberListManager } from "@/components/member-list-manager";
 import { MemberBioEditor } from "@/components/member-bio-editor";
 import { ProfileTabs } from "@/components/profile-tabs";
+import { ActivityFeed, ListCard } from "@/components/activity-feed";
+import { getRecentActivity } from "@/lib/activity";
 import type { Movie } from "@/generated/prisma/client";
 
 const fightSceneCardInclude = {
@@ -106,41 +108,56 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
   // everyone except the list owner, same as every other public listing.
   const isOwner = session?.user?.id === profileUser.id;
 
-  const [entries, pendingSubmissions, fightSceneFavoriteEntries, memberLists] = await Promise.all([
-    isOwner
-      ? prisma.listEntry.findMany({
-          where: { userId: profileUser.id },
-          include: { movie: true },
-          orderBy: { createdAt: "desc" },
-        })
-      : [],
-    // Only the submitter (or an admin) can even load a pending movie's own
-    // page — same visibility rule as everywhere else a pending movie shows.
-    isOwner
-      ? prisma.movie.findMany({
-          where: { submittedById: profileUser.id, status: "PENDING" },
-          orderBy: { createdAt: "desc" },
-        })
-      : [],
-    isOwner
-      ? prisma.fightSceneFavorite.findMany({
-          where: { userId: profileUser.id },
-          include: { fightScene: { include: fightSceneCardInclude } },
-          orderBy: { createdAt: "desc" },
-        })
-      : [],
-    prisma.memberList.findMany({
-      where: { userId: profileUser.id },
-      include: {
-        entries: { include: { movie: true }, orderBy: { createdAt: "desc" } },
-        fightSceneEntries: {
-          include: { fightScene: { include: fightSceneCardInclude } },
-          orderBy: { createdAt: "desc" },
+  const [entries, pendingSubmissions, fightSceneFavoriteEntries, memberLists, likedListEntries, recentActivity] =
+    await Promise.all([
+      isOwner
+        ? prisma.listEntry.findMany({
+            where: { userId: profileUser.id },
+            include: { movie: true },
+            orderBy: { createdAt: "desc" },
+          })
+        : [],
+      // Only the submitter (or an admin) can even load a pending movie's own
+      // page — same visibility rule as everywhere else a pending movie shows.
+      isOwner
+        ? prisma.movie.findMany({
+            where: { submittedById: profileUser.id, status: "PENDING" },
+            orderBy: { createdAt: "desc" },
+          })
+        : [],
+      isOwner
+        ? prisma.fightSceneFavorite.findMany({
+            where: { userId: profileUser.id },
+            include: { fightScene: { include: fightSceneCardInclude } },
+            orderBy: { createdAt: "desc" },
+          })
+        : [],
+      prisma.memberList.findMany({
+        where: { userId: profileUser.id },
+        include: {
+          entries: { include: { movie: true }, orderBy: { createdAt: "desc" } },
+          fightSceneEntries: {
+            include: { fightScene: { include: fightSceneCardInclude } },
+            orderBy: { createdAt: "desc" },
+          },
         },
-      },
-      orderBy: { createdAt: "asc" },
-    }),
-  ]);
+        orderBy: { createdAt: "asc" },
+      }),
+      // Which lists this member has liked — unlike lists themselves, a like
+      // is never shown publicly anywhere else in the app (list permalinks
+      // only ever show an aggregate count), so this stays owner-only too.
+      isOwner
+        ? prisma.memberListLike.findMany({
+            where: { userId: profileUser.id },
+            include: { list: { include: { user: { select: { username: true } } } } },
+            orderBy: { createdAt: "desc" },
+          })
+        : [],
+      // Same feed as the homepage's Community Activity section, scoped to
+      // just this member — already fully public data (every visitor already
+      // sees it there), so this is shown on both owner and non-owner views.
+      getRecentActivity(5, profileUser.id),
+    ]);
 
   const favorites = entries.filter((e) => e.listType === "FAVORITE").map((e) => e.movie);
   const watchlist = entries.filter((e) => e.listType === "WATCHLIST").map((e) => e.movie);
@@ -239,6 +256,14 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
 
   const favoriteFightSceneData = favoriteFightScenes.map(withSceneListState);
 
+  const likedLists = likedListEntries.map((like) => ({
+    id: like.id,
+    createdAt: like.createdAt,
+    username: like.list.user.username,
+    listId: like.list.id,
+    listName: like.list.name,
+  }));
+
   const listsPanel =
     memberListData.length === 0 && !isOwner ? (
       <p className="text-sm text-neutral-500">No public lists yet.</p>
@@ -293,6 +318,11 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
               content: <MemberBioEditor initialBio={profileUser.bio} />,
             },
             {
+              key: "activity",
+              label: "Activity",
+              content: <ActivityFeed activity={recentActivity} title={null} />,
+            },
+            {
               key: "favorites",
               label: `Favorites (${favorites.length})`,
               content: <MovieRow movies={favorites} ratingSummaries={ratingSummaries} />,
@@ -317,13 +347,42 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
               label: `Lists (${memberListData.length})`,
               content: listsPanel,
             },
+            {
+              key: "liked-lists",
+              label: `Liked Lists (${likedLists.length})`,
+              content:
+                likedLists.length === 0 ? (
+                  <p className="text-sm text-neutral-400">Nothing here yet.</p>
+                ) : (
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    {likedLists.map((item) => (
+                      <ListCard key={item.id} item={item} />
+                    ))}
+                  </div>
+                ),
+            },
           ]}
         />
       ) : (
-        <>
-          <h2 className="mb-4 text-xl font-bold text-white">Lists</h2>
-          {listsPanel}
-        </>
+        <ProfileTabs
+          tabs={[
+            {
+              key: "lists",
+              label: "Lists",
+              content: (
+                <>
+                  <h2 className="mb-4 text-xl font-bold text-white">Lists</h2>
+                  {listsPanel}
+                </>
+              ),
+            },
+            {
+              key: "activity",
+              label: "Activity",
+              content: <ActivityFeed activity={recentActivity} title={null} />,
+            },
+          ]}
+        />
       )}
     </div>
   );

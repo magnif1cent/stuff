@@ -1562,6 +1562,46 @@ inline editor on the owner's own profile page.
   it's visible on a signed-out/other-member view of that profile while a
   bio-less profile (`admin`) shows nothing rather than an empty section.
 
+### Member profile: Activity and Liked Lists tabs
+Third piece of "Expand member profile" — two more tabs, chosen because
+both were mostly reuse of existing data/logic rather than new features.
+
+- **Activity tab reuses the homepage's `getRecentActivity()`/`ActivityFeed`
+  almost as-is** — added an optional `userId` param to scope the same
+  fight-scenes/lists/discussions query to one member, and an optional
+  `title` prop to `ActivityFeed` (`null` skips the heading and the
+  homepage's "hide the whole section when empty" behavior, showing
+  "Nothing here yet." instead — matching every other tab's empty state).
+  Shown on **both** the owner's and a visitor's view of a profile,
+  because this exact data (which fight scenes/lists/discussions belong to
+  which member) is already fully public on the homepage for every member —
+  scoping it to one profile adds no new exposure.
+- **Liked Lists is owner-only**, unlike Activity — checked first whether
+  likes are shown publicly anywhere else in the app (list permalink
+  pages) and found only an aggregate count is ever shown, never who
+  liked a list. Individual like attribution isn't public information
+  anywhere today, so a tab exposing "lists this member has liked" would
+  be a new privacy surface, not a reuse of an existing public fact —
+  kept private to match Favorites/Watchlist's existing precedent instead.
+- **Non-owner profiles gained a tab bar for the first time** (Lists,
+  Activity) — previously skipped there since Lists was the only section
+  and a one-tab bar would be noise. With two sections now, tabs are
+  worth it; Lists stays the default/first tab to match prior behavior
+  exactly (no change in what a visitor sees first).
+- **Owner's tab count is now 8** (Profile, Activity, Favorites,
+  Watchlist, Pending, Fight Scenes, Lists, Liked Lists) — `ProfileTabs`
+  already scrolls horizontally on overflow, so this doesn't break, but
+  it's worth flagging: if more tabs get added later, grouping some under
+  a secondary nav (e.g. folding Pending into Profile, or a "More" menu)
+  is worth considering rather than growing the flat tab bar indefinitely.
+- **Verified in a real browser**: seeded a like from `member` onto
+  another account's list, confirmed the Liked Lists tab shows it with
+  correct attribution and timestamp; confirmed the Activity tab shows
+  only `member`'s own fight scenes/lists/discussions, not the whole
+  community's; confirmed a visitor's view of a different (activity-less)
+  profile shows "Nothing here yet." rather than an empty tab; confirmed
+  the homepage's own Community Activity section is visually unchanged.
+
 ## Deferred & Backlog
 
 - **About page copy: mission, About the Creators, Contact/feedback, and
@@ -1626,14 +1666,17 @@ inline editor on the owner's own profile page.
   data gap the timeline page needs; if it means real-world trivia
   (production history, behind-the-scenes facts), it's a simpler,
   unrelated content field. Scope that distinction first.
-- **Expand member profile** — tabbed reorganization of the owner's own view
-  and a member-editable `bio` field have both shipped (see Feature
-  Decisions above), leaving the actual scaling problem solved and one
-  piece of the original wishlist done. Still open: a stats strip
+- **Expand member profile** — tabbed reorganization, a member-editable
+  `bio` field, an Activity tab, and a Liked Lists tab have all shipped
+  (see Feature Decisions above); the scaling problem is solved and most
+  of the original wishlist is done. Still open: a stats strip
   (submission/verification counts, all derivable from existing tables, no
   schema change), contributor badges (computed from the same stats, no new
   schema needed to start), and favorite genres (lower priority, more
   design questions — derived from rating history or a manual preference?).
+  Also worth a look given the owner's tab count is now at 8: whether the
+  flat tab bar still scales, or needs grouping/a secondary nav, before
+  adding any more.
 - **Lists expansion to drive community engagement** — explicitly flagged
   as needing more ideas, not a scoped feature yet. Starter thoughts from
   an earlier engagement discussion, none decided: collaborative lists

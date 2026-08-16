@@ -49,14 +49,19 @@ function excerpt(content: string) {
   return `${content.slice(0, DISCUSSION_EXCERPT_LENGTH).trimEnd()}…`;
 }
 
-export async function getRecentActivity(limit = PER_TYPE_LIMIT): Promise<RecentActivity> {
+// userId scopes the same feed to one member's own activity (used by their
+// profile page's Activity tab) instead of the whole community (the
+// homepage) — same visibility rules apply either way, since a member's own
+// fight-scene/discussion activity on a still-pending movie isn't shown to
+// them here any more than it is to anyone else on the homepage feed.
+export async function getRecentActivity(limit = PER_TYPE_LIMIT, userId?: string): Promise<RecentActivity> {
   const moviePosterSelect = { select: { id: true, title: true, posterPath: true, posterOverrideUrl: true } } as const;
 
   const [fightScenes, lists, discussions] = await Promise.all([
     // Same visibility rule as every other public listing: a fight scene on a
     // still-pending movie stays invisible until the movie is approved.
     prisma.fightScene.findMany({
-      where: { isDeleted: false, movie: { status: "APPROVED" } },
+      where: { isDeleted: false, movie: { status: "APPROVED" }, ...(userId ? { submittedById: userId } : {}) },
       orderBy: { createdAt: "desc" },
       take: limit,
       select: {
@@ -69,6 +74,7 @@ export async function getRecentActivity(limit = PER_TYPE_LIMIT): Promise<RecentA
     }),
     // Lists are public by design from creation, so no extra filtering needed.
     prisma.memberList.findMany({
+      where: userId ? { userId } : undefined,
       orderBy: { createdAt: "desc" },
       take: limit,
       select: {
@@ -81,7 +87,7 @@ export async function getRecentActivity(limit = PER_TYPE_LIMIT): Promise<RecentA
     // Top-level posts only ("started a discussion") — a reply isn't a new
     // discussion. Same pending-movie visibility rule as fight scenes above.
     prisma.discussionPost.findMany({
-      where: { isDeleted: false, parentId: null, movie: { status: "APPROVED" } },
+      where: { isDeleted: false, parentId: null, movie: { status: "APPROVED" }, ...(userId ? { userId } : {}) },
       orderBy: { createdAt: "desc" },
       take: limit,
       select: {
