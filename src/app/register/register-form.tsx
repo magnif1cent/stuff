@@ -2,12 +2,10 @@
 
 import { signIn } from "next-auth/react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Turnstile } from "@/components/turnstile";
 
 export function RegisterForm({ nonce }: { nonce: string | null }) {
-  const router = useRouter();
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -52,8 +50,14 @@ export function RegisterForm({ nonce }: { nonce: string | null }) {
       setError("Account created, but sign-in failed. Try signing in.");
       return;
     }
-    router.push("/");
-    router.refresh();
+    // A hard navigation, not router.push()+router.refresh(): those two are
+    // unawaited and can race — if "/" was already prefetched while signed
+    // out, push() can paint that stale cached page before refresh()'s
+    // background RSC re-fetch catches up, flashing the signed-out header
+    // for a moment. A full navigation re-renders "/" from scratch against
+    // the now-set session cookie, so there's nothing stale to flash.
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+    window.location.href = "/";
   }
 
   return (
