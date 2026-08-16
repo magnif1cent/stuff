@@ -160,7 +160,7 @@ Two dedicated search pages, both with a vertical sidebar of filters, pagination,
 
 ## Member Lists & Profiles
 
-Every member has a profile page at `/members/[username]`. Viewing your own shows Favorites, Watchlist, Favorite Fight Scenes, and your custom lists with full management controls (create/rename/delete); viewing someone else's shows only their public custom lists, read-only. `/my-lists` still works as a link — it just redirects to your own profile.
+Every member has a profile page at `/members/[username]`. Viewing your own shows a tabbed layout — Favorites, Watchlist, Pending Submissions, Favorite Fight Scenes, and your custom lists (with full management controls: create/rename/delete), each tab labeled with a live count; viewing someone else's shows only their public custom lists, read-only, with no tabs. `/my-lists` still works as a link — it just redirects to your own profile.
 
 Beyond the built-in Favorites and Watchlist, members can create any number of their own named lists (e.g. "Best One-vs-Many Fights") from the "+ Add to list" control on a movie page, and manage them from their own profile. Lists hold fight scenes as well as movies — every fight scene card, wherever it appears (a movie page, its own permalink, fight scene search results, or another member's list), has its own bookmark-icon "save to list" control alongside the share icon.
 
