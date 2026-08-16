@@ -162,6 +162,8 @@ Two dedicated search pages, both with a vertical sidebar of filters, pagination,
 
 Every member has a profile page at `/members/[username]`. Viewing your own shows a tabbed layout — Favorites, Watchlist, Pending Submissions, Favorite Fight Scenes, and your custom lists (with full management controls: create/rename/delete), each tab labeled with a live count; viewing someone else's shows only their public custom lists, read-only, with no tabs. `/my-lists` still works as a link — it just redirects to your own profile.
 
+Every profile also has an optional bio (up to 280 characters), editable only by its owner directly on their own profile page and shown publicly to anyone who visits it — same visibility as the username itself. An unset bio shows nothing on someone else's profile, and an "Add a bio" prompt on your own.
+
 Beyond the built-in Favorites and Watchlist, members can create any number of their own named lists (e.g. "Best One-vs-Many Fights") from the "+ Add to list" control on a movie page, and manage them from their own profile. Lists hold fight scenes as well as movies — every fight scene card, wherever it appears (a movie page, its own permalink, fight scene search results, or another member's list), has its own bookmark-icon "save to list" control alongside the share icon.
 
 - **Fight scenes get a one-tap Favorite, same red heart icon movies use, but no Watchlist** — a scene is a short clip you can watch right where it's linked, not something to queue up for later the way a full movie is. Every fight scene card has its own heart icon, independent of the movie it belongs to and independent of custom lists — you can favorite a scene without favoriting its movie, or vice versa.

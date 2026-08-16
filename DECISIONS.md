@@ -1507,6 +1507,38 @@ Stats, a bio field, and contributor badges — the other pieces discussed
 for this backlog item — are intentionally not part of this change; see the
 "Expand member profile" backlog entry below for what's still open.
 
+### Member profile bio field
+**Schema-touching.** Second step on "Expand member profile" — adds
+`User.bio` (nullable `String`, no DB-level length constraint) plus an
+inline editor on the owner's own profile page.
+
+- **280-character cap, enforced app-side only** (`BIO_MAX_LENGTH` in
+  `src/lib/profile.ts`), the same pattern already used for list names
+  (`MEMBER_LIST_NAME_MAX_LENGTH`) and usernames — no CHECK constraint in
+  the migration. Chose 280 specifically (the familiar Twitter-bio length)
+  over a longer free-text field: a profile bio is meant to be a short
+  self-description, not another content field, and a hard cap keeps the
+  profile page's layout predictable.
+- **Public, same visibility as username** — shown to any visitor on the
+  owner's profile, not just the owner. Consistent with the rest of the
+  profile page: usernames, public lists, and now bios are all visible to
+  everyone; only Favorites/Watchlist/Pending Submissions stay
+  owner-only.
+- **Empty string clears back to `null`, not stored as `""`** — the
+  profile page's placeholder logic ("No bio yet." / "Add a bio") checks
+  for a falsy value, so an explicitly-cleared bio and a never-set one look
+  identical rather than rendering an empty paragraph.
+- **New `PATCH /api/profile/bio` endpoint, not folded into an existing
+  route** — mirrors `PATCH /api/lists/[listId]`'s shape (auth check,
+  trim, length validation, single `prisma.user.update`) but needs no
+  ownership lookup first, since it always targets `session.user.id`
+  rather than a resource ID from the URL.
+- **Verified in a real browser, not just lint/build**: applied the new
+  migration against a local Postgres dev DB, added a bio as the `member`
+  seed account, confirmed it persists across a page reload, and confirmed
+  it's visible on a signed-out/other-member view of that profile while a
+  bio-less profile (`admin`) shows nothing rather than an empty section.
+
 ## Deferred & Backlog
 
 - **About page copy: mission, About the Creators, Contact/feedback, and
@@ -1572,11 +1604,12 @@ for this backlog item — are intentionally not part of this change; see the
   (production history, behind-the-scenes facts), it's a simpler,
   unrelated content field. Scope that distinction first.
 - **Expand member profile** — tabbed reorganization of the owner's own view
-  shipped (see Feature Decisions above), which was the actual scaling
-  problem. Still open: a stats strip (submission/verification counts, all
-  derivable from existing tables, no schema change), a `bio` field (needs
-  one new `User` column), contributor badges (computed from the same stats,
-  no new schema needed to start), and favorite genres (lower priority, more
+  and a member-editable `bio` field have both shipped (see Feature
+  Decisions above), leaving the actual scaling problem solved and one
+  piece of the original wishlist done. Still open: a stats strip
+  (submission/verification counts, all derivable from existing tables, no
+  schema change), contributor badges (computed from the same stats, no new
+  schema needed to start), and favorite genres (lower priority, more
   design questions — derived from rating history or a manual preference?).
 - **Lists expansion to drive community engagement** — explicitly flagged
   as needing more ideas, not a scoped feature yet. Starter thoughts from
