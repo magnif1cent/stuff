@@ -1468,6 +1468,45 @@ but can't invent new tags — same shape as the existing `Genre`–`Movie`
 relation, keeps the taxonomy from fragmenting into near-duplicate tags over
 time.
 
+### Member profile split into tabs, own-profile view only
+First step on the "Expand member profile" backlog item — the site owner
+flagged that the page's organization "doesn't scale well." It didn't:
+Favorites, Watchlist, Pending Submissions, and Favorite Fight Scenes each
+rendered their *entire* collection into an unpaginated flex-wrap grid,
+stacked one after another, then every one of a member's custom lists
+rendered *its* entire contents too, stacked below that — a member with a
+modest amount of activity turned this into one very long scroll with no
+way to jump to a specific section.
+
+- **Tabs (`ProfileTabs`, a small client component holding just the active
+  tab's key), not pagination or a redesigned dashboard** — the underlying
+  data was already fetched together server-side in one page load; tabs
+  just change how it's *presented*, which is the actual problem being
+  solved right now. Pagination/infinite-scroll within a tab and a curated
+  "Overview" summary tab are both reasonable follow-ups, deliberately left
+  out of this pass to keep it scoped to the reorganization itself.
+- **Only the owner's own view gets tabs.** Viewing someone else's profile
+  only ever showed their public custom lists — a single section — so a
+  tab bar around one tab would be pure UI noise. That view is untouched.
+- **Each tab label carries a live count** (e.g. "Favorites (2)") pulled
+  from the same data already being fetched — gives an at-a-glance sense of
+  how much is in each section without opening it, which the old stacked
+  layout couldn't offer since everything was already visible at once.
+- **`MovieRow`/`FightSceneRow`'s `title` prop made optional** rather than
+  adding a second variant of each — the tab label already names the
+  section, so the row's own heading is only rendered when a title is
+  passed (i.e., never from the tabbed owner view, still shown in the
+  untouched non-owner list rendering).
+- **Verified in a real browser, not just lint/build**: seeded a member
+  account with favorites, a watchlist entry, and an existing list,
+  confirmed each tab switches correctly with accurate counts, and
+  confirmed the non-owner view still renders the plain (non-tabbed) public
+  lists section unchanged.
+
+Stats, a bio field, and contributor badges — the other pieces discussed
+for this backlog item — are intentionally not part of this change; see the
+"Expand member profile" backlog entry below for what's still open.
+
 ## Deferred & Backlog
 
 - **About page copy: mission, About the Creators, Contact/feedback, and
@@ -1532,12 +1571,13 @@ time.
   data gap the timeline page needs; if it means real-world trivia
   (production history, behind-the-scenes facts), it's a simpler,
   unrelated content field. Scope that distinction first.
-- **Expand member profile** — open-ended, not yet scoped. `/members/[username]`
-  currently shows a member's public lists, favorited movies/fight scenes,
-  and not much else. Needs a concrete list of what to add (bio? favorite
-  genres? stats like submission/verification counts? the member
-  contributor badges idea from the engagement discussion?) before this is
-  buildable — revisit with specifics.
+- **Expand member profile** — tabbed reorganization of the owner's own view
+  shipped (see Feature Decisions above), which was the actual scaling
+  problem. Still open: a stats strip (submission/verification counts, all
+  derivable from existing tables, no schema change), a `bio` field (needs
+  one new `User` column), contributor badges (computed from the same stats,
+  no new schema needed to start), and favorite genres (lower priority, more
+  design questions — derived from rating history or a manual preference?).
 - **Lists expansion to drive community engagement** — explicitly flagged
   as needing more ideas, not a scoped feature yet. Starter thoughts from
   an earlier engagement discussion, none decided: collaborative lists

@@ -8,6 +8,7 @@ import { MovieCard } from "@/components/movie-card";
 import { FightSceneResultCard, type FightSceneResult } from "@/components/fight-scene-result-card";
 import type { AddToListItem } from "@/components/add-to-list-control";
 import { MemberListManager } from "@/components/member-list-manager";
+import { ProfileTabs } from "@/components/profile-tabs";
 import type { Movie } from "@/generated/prisma/client";
 
 const fightSceneCardInclude = {
@@ -21,13 +22,15 @@ async function MovieRow({
   movies,
   ratingSummaries,
 }: {
-  title: string;
+  // Omitted when rendered as a tab panel — the tab label already names the
+  // section, so repeating it as a heading inside the panel is redundant.
+  title?: string;
   movies: Pick<Movie, "id" | "title" | "releaseDate" | "posterPath" | "posterOverrideUrl" | "tmdbRating">[];
   ratingSummaries: Awaited<ReturnType<typeof getRatingSummaries>>;
 }) {
   return (
     <section className="mb-8">
-      <h2 className="mb-4 text-lg font-semibold text-white">{title}</h2>
+      {title && <h2 className="mb-4 text-lg font-semibold text-white">{title}</h2>}
       {movies.length === 0 ? (
         <p className="text-sm text-neutral-400">Nothing here yet.</p>
       ) : (
@@ -56,13 +59,14 @@ function FightSceneRow({
   scenes,
   signedIn,
 }: {
-  title: string;
+  // Omitted when rendered as a tab panel — see MovieRow's title comment.
+  title?: string;
   scenes: (FightSceneResult & { initialLists: AddToListItem[]; initialFavorite: boolean })[];
   signedIn: boolean;
 }) {
   return (
     <section className="mb-8">
-      <h2 className="mb-4 text-lg font-semibold text-white">{title}</h2>
+      {title && <h2 className="mb-4 text-lg font-semibold text-white">{title}</h2>}
       {scenes.length === 0 ? (
         <p className="text-sm text-neutral-400">Nothing here yet.</p>
       ) : (
@@ -233,53 +237,81 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
 
   const favoriteFightSceneData = favoriteFightScenes.map(withSceneListState);
 
+  const listsPanel =
+    memberListData.length === 0 && !isOwner ? (
+      <p className="text-sm text-neutral-500">No public lists yet.</p>
+    ) : isOwner ? (
+      <MemberListManager initialLists={memberListData} viewerSignedIn={!!session?.user} />
+    ) : (
+      memberListData.map((list) => (
+        <section key={list.id} className="mb-8">
+          <div className="mb-3 flex items-center gap-3">
+            <h3 className="text-lg font-semibold text-white">{list.name}</h3>
+            <Link href={`/lists/${list.id}`} className="text-xs text-neutral-400 underline hover:text-white">
+              Permalink
+            </Link>
+          </div>
+          {list.movies.length === 0 && list.fightScenes.length === 0 ? (
+            <p className="text-sm text-neutral-400">Nothing in this list yet.</p>
+          ) : (
+            <div className="flex flex-wrap gap-4">
+              {list.movies.map((movie) => (
+                <MovieCard key={movie.id} movie={movie} />
+              ))}
+              {list.fightScenes.map((scene) => (
+                <FightSceneResultCard
+                  key={scene.id}
+                  scene={scene}
+                  initialLists={scene.initialLists}
+                  signedIn={!!session?.user}
+                  initialFavorite={scene.initialFavorite}
+                />
+              ))}
+            </div>
+          )}
+        </section>
+      ))
+    );
+
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-10">
       <h1 className="mb-6 text-2xl font-bold text-white">{profileUser.username}</h1>
 
-      {isOwner && (
-        <>
-          <MovieRow title="Favorites" movies={favorites} ratingSummaries={ratingSummaries} />
-          <MovieRow title="Watchlist" movies={watchlist} ratingSummaries={ratingSummaries} />
-          <MovieRow title="Pending Submissions" movies={pendingSubmissions} ratingSummaries={ratingSummaries} />
-          <FightSceneRow title="Favorite Fight Scenes" scenes={favoriteFightSceneData} signedIn={!!session?.user} />
-        </>
-      )}
-
-      <h2 className="mb-4 text-xl font-bold text-white">{isOwner ? "Your Lists" : "Lists"}</h2>
       {isOwner ? (
-        <MemberListManager initialLists={memberListData} viewerSignedIn={!!session?.user} />
-      ) : memberListData.length === 0 ? (
-        <p className="text-sm text-neutral-500">No public lists yet.</p>
+        <ProfileTabs
+          tabs={[
+            {
+              key: "favorites",
+              label: `Favorites (${favorites.length})`,
+              content: <MovieRow movies={favorites} ratingSummaries={ratingSummaries} />,
+            },
+            {
+              key: "watchlist",
+              label: `Watchlist (${watchlist.length})`,
+              content: <MovieRow movies={watchlist} ratingSummaries={ratingSummaries} />,
+            },
+            {
+              key: "pending",
+              label: `Pending (${pendingSubmissions.length})`,
+              content: <MovieRow movies={pendingSubmissions} ratingSummaries={ratingSummaries} />,
+            },
+            {
+              key: "fight-scenes",
+              label: `Fight Scenes (${favoriteFightSceneData.length})`,
+              content: <FightSceneRow scenes={favoriteFightSceneData} signedIn={!!session?.user} />,
+            },
+            {
+              key: "lists",
+              label: `Lists (${memberListData.length})`,
+              content: listsPanel,
+            },
+          ]}
+        />
       ) : (
-        memberListData.map((list) => (
-          <section key={list.id} className="mb-8">
-            <div className="mb-3 flex items-center gap-3">
-              <h3 className="text-lg font-semibold text-white">{list.name}</h3>
-              <Link href={`/lists/${list.id}`} className="text-xs text-neutral-400 underline hover:text-white">
-                Permalink
-              </Link>
-            </div>
-            {list.movies.length === 0 && list.fightScenes.length === 0 ? (
-              <p className="text-sm text-neutral-400">Nothing in this list yet.</p>
-            ) : (
-              <div className="flex flex-wrap gap-4">
-                {list.movies.map((movie) => (
-                  <MovieCard key={movie.id} movie={movie} />
-                ))}
-                {list.fightScenes.map((scene) => (
-                  <FightSceneResultCard
-                    key={scene.id}
-                    scene={scene}
-                    initialLists={scene.initialLists}
-                    signedIn={!!session?.user}
-                    initialFavorite={scene.initialFavorite}
-                  />
-                ))}
-              </div>
-            )}
-          </section>
-        ))
+        <>
+          <h2 className="mb-4 text-xl font-bold text-white">Lists</h2>
+          {listsPanel}
+        </>
       )}
     </div>
   );
