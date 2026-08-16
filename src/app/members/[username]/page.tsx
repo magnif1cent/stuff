@@ -41,6 +41,7 @@ async function MovieRow({
             return (
               <MovieCard
                 key={movie.id}
+                size="compact"
                 movie={{
                   ...movie,
                   communityAverage: summary?.average ?? null,
@@ -257,7 +258,7 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
           ) : (
             <div className="flex flex-wrap gap-4">
               {list.movies.map((movie) => (
-                <MovieCard key={movie.id} movie={movie} />
+                <MovieCard key={movie.id} movie={movie} size="compact" />
               ))}
               {list.fightScenes.map((scene) => (
                 <FightSceneResultCard
