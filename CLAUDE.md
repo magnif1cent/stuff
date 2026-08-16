@@ -88,6 +88,20 @@ than discovering it as a merge conflict later. A quick scan of open PRs
 (titles/descriptions are usually enough) is worth doing at the start of a new
 task, alongside the `master` check above.
 
+## `master` branch protection
+
+`master` is protected by a GitHub ruleset: pushes must go through a pull
+request, force-pushes and branch deletion are blocked, and the
+`build-and-lint` CI check must pass before a PR is mergeable. This is
+enforced by GitHub itself now, not just convention — a direct push to
+`master` will be rejected outright.
+
+There is deliberately **no required-approval review** — a passing
+`build-and-lint` is enough to merge. This is unchanged from how every PR in
+this repo has already been merged: open a PR, wait for `build-and-lint` to
+go green, merge it via the GitHub API once it does. No human needs to click
+approve first.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 # This is NOT the Next.js you know

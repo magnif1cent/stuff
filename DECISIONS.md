@@ -707,6 +707,25 @@ round trips instead of one browser-orchestrated request.
   `signIn("google", ...)`, a redirect-based flow) was untouched — this
   only reworked the credentials path.
 
+### `master` protected by a GitHub ruleset, no required review
+GitHub itself flagged `master` as unprotected (force-push/deletion
+possible, no required status checks). Site owner set up a branch ruleset
+via the repo's Settings → Rulesets UI: PRs required to reach `master`,
+force-pushes and deletion blocked, `build-and-lint` required to pass
+before merge.
+
+Deliberately **no required-approval review** — every PR in this repo is
+already opened, CI-checked, and merged by Claude sessions working
+autonomously in parallel, with no human approval step today. Requiring
+reviews would block that entirely (including this session's own merges),
+and the site owner explicitly confirmed no human-review gate is wanted.
+"Require branches to be up to date before merging" was also left off —
+with several PRs merging into `master` independently, that setting would
+force a rebase/CI re-run on every PR each time another one lands first,
+fighting the very workflow this repo runs on. Documented in `CLAUDE.md` so
+future sessions know a direct push to `master` will now be rejected
+outright, not just discouraged by convention.
+
 ## Feature Decisions
 
 ### Community Activity feed merges three existing tables, no new schema
