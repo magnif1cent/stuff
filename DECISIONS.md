@@ -1638,6 +1638,36 @@ separate, since those are built-in collections, not `MemberList` rows).
   liked list with correct attribution, and confirmed both sub-toggle
   states keep their own counts in sync with the pill labels.
 
+### Member profile stats strip
+Last piece of the original "Expand member profile" wishlist besides
+contributor badges and favorite genres. Built via the `dataviz` skill's
+stat-tile contract (sentence-case label, semibold value, optional muted
+secondary line — no delta/sparkline, since these are cumulative counts,
+not a time series). Public on both owner and visitor views, placed above
+the tabs alongside the bio.
+
+- **First draft included a "Lists created" tile — caught in review as a
+  literal duplicate of the already-visible "Lists (N)" tab count**,
+  dropped. The other original two (movies/fight scenes submitted) aren't
+  duplicated anywhere: "Pending" only counts movies still awaiting
+  approval, not the submitted total, and the "Fight Scenes" tab is
+  favorited scenes, not submitted ones — worth checking each candidate
+  stat against the tabs individually rather than assuming the whole
+  category is redundant just because one tile was.
+- **Three more tiles added on request**: movies rated, fight scenes
+  rated, and discussion posts (posts and replies combined, unlike the
+  Activity tab which only ever shows the 5 most recent top-level posts,
+  not a total). None of these individually expose anything new — ratings
+  already aggregate anonymously into a movie's community score (no
+  individual score is shown here, just a count of how many exist), and
+  discussion posts are already public with attribution — so a count is a
+  smaller step than the submission counts, not a new category of
+  disclosure.
+- **Verified in a real browser**: confirmed all six tiles render with
+  real counts pulled from the seed/test data, confirmed the redundant
+  Lists tile is gone, confirmed lint/build stay clean with the final
+  seven-field component signature.
+
 ## Deferred & Backlog
 
 - **About page copy: mission, About the Creators, Contact/feedback, and
@@ -1703,16 +1733,20 @@ separate, since those are built-in collections, not `MemberList` rows).
   (production history, behind-the-scenes facts), it's a simpler,
   unrelated content field. Scope that distinction first.
 - **Expand member profile** — tabbed reorganization, a member-editable
-  `bio` field, an Activity tab, and a Liked Lists tab have all shipped
-  (see Feature Decisions above); the scaling problem is solved and most
-  of the original wishlist is done. Still open: a stats strip
-  (submission/verification counts, all derivable from existing tables, no
-  schema change), contributor badges (computed from the same stats, no new
-  schema needed to start), and favorite genres (lower priority, more
-  design questions — derived from rating history or a manual preference?).
-  Also worth a look given the owner's tab count is now at 8: whether the
-  flat tab bar still scales, or needs grouping/a secondary nav, before
-  adding any more.
+  `bio` field, an Activity tab, a Liked Lists tab (merged into the Lists
+  tab's "My Lists" / "Liked" toggle), and a stats strip have all shipped
+  (see Feature Decisions above); the scaling problem is solved and the
+  original wishlist is essentially done. Owner's top-level tab count is 7
+  (Profile, Activity, Favorites, Watchlist, Pending, Fight Scenes, Lists).
+  Still open: contributor badges (computed from the stats strip's same
+  counts, no new schema needed to start) and favorite genres (lower
+  priority, more design questions — derived from rating history or a
+  manual preference?). Also still open, discussed but deliberately not
+  built: a profile picture upload (a real cost/scaling tradeoff, unlike
+  everything else here — revisit once current Vercel Blob pricing is
+  checked and a size cap is settled) and a ratings history tab (a
+  member's own `Rating` rows aren't individually browsable anywhere on
+  their profile today, even though the stats strip now shows a count).
 - **Lists expansion to drive community engagement** — explicitly flagged
   as needing more ideas, not a scoped feature yet. Starter thoughts from
   an earlier engagement discussion, none decided: collaborative lists

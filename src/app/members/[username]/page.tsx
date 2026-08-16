@@ -164,13 +164,23 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
   // Public contribution counts, shown to any visitor — same reasoning as the
   // Activity tab: this is a summary of already-public activity (submitted
   // movies/fight scenes are visible on the site once approved/verified),
-  // not new exposure of anything private.
-  const [moviesSubmitted, moviesApproved, fightScenesSubmitted, fightScenesVerified] = await Promise.all([
-    prisma.movie.count({ where: { submittedById: profileUser.id } }),
-    prisma.movie.count({ where: { submittedById: profileUser.id, status: "APPROVED" } }),
-    prisma.fightScene.count({ where: { submittedById: profileUser.id, isDeleted: false } }),
-    prisma.fightScene.count({ where: { submittedById: profileUser.id, isDeleted: false, isVerified: true } }),
-  ]);
+  // not new exposure of anything private. Ratings/discussion counts are a
+  // smaller step further: no individual rating or post is newly exposed by
+  // this (ratings already aggregate anonymously into a movie's community
+  // score, and discussion posts are already public with attribution), just
+  // an aggregate "how much" number, same spirit as the submission counts.
+  const [moviesSubmitted, moviesApproved, fightScenesSubmitted, fightScenesVerified, moviesRated, fightScenesRated, discussionPosts] =
+    await Promise.all([
+      prisma.movie.count({ where: { submittedById: profileUser.id } }),
+      prisma.movie.count({ where: { submittedById: profileUser.id, status: "APPROVED" } }),
+      prisma.fightScene.count({ where: { submittedById: profileUser.id, isDeleted: false } }),
+      prisma.fightScene.count({ where: { submittedById: profileUser.id, isDeleted: false, isVerified: true } }),
+      prisma.rating.count({ where: { userId: profileUser.id } }),
+      prisma.fightSceneRating.count({ where: { userId: profileUser.id } }),
+      // Posts and replies both count — distinct from the Activity tab, which
+      // only ever shows the 5 most recent top-level posts, not a total.
+      prisma.discussionPost.count({ where: { userId: profileUser.id, isDeleted: false } }),
+    ]);
 
   const favorites = entries.filter((e) => e.listType === "FAVORITE").map((e) => e.movie);
   const watchlist = entries.filter((e) => e.listType === "WATCHLIST").map((e) => e.movie);
@@ -328,6 +338,9 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
         moviesApproved={moviesApproved}
         fightScenesSubmitted={fightScenesSubmitted}
         fightScenesVerified={fightScenesVerified}
+        moviesRated={moviesRated}
+        fightScenesRated={fightScenesRated}
+        discussionPosts={discussionPosts}
       />
 
       {isOwner ? (

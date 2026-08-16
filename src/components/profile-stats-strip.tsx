@@ -14,12 +14,18 @@ export function ProfileStatsStrip({
   moviesApproved,
   fightScenesSubmitted,
   fightScenesVerified,
+  moviesRated,
+  fightScenesRated,
+  discussionPosts,
 }: {
   memberSince: Date;
   moviesSubmitted: number;
   moviesApproved: number;
   fightScenesSubmitted: number;
   fightScenesVerified: number;
+  moviesRated: number;
+  fightScenesRated: number;
+  discussionPosts: number;
 }) {
   return (
     <div className="mb-6 flex flex-wrap gap-3">
@@ -37,6 +43,9 @@ export function ProfileStatsStrip({
         value={String(fightScenesSubmitted)}
         secondary={fightScenesSubmitted > 0 ? `${fightScenesVerified} verified` : undefined}
       />
+      <StatTile label="Movies rated" value={String(moviesRated)} />
+      <StatTile label="Fight scenes rated" value={String(fightScenesRated)} />
+      <StatTile label="Discussion posts" value={String(discussionPosts)} />
     </div>
   );
 }
