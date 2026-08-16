@@ -14,22 +14,29 @@ export type MovieCardData = Pick<
   recommendedBy?: MovieRecommender[];
 };
 
-export function MovieCard({ movie }: { movie: MovieCardData }) {
+// "compact" is used on the member profile page, where several sections of
+// (potentially long) movie grids sit behind tabs — smaller cards fit more
+// per row and per screen, which matters more there than on a page showing
+// one curated section at a time. Every other caller keeps the original size.
+const SIZE_CLASSES = {
+  default: { link: "w-40 sm:w-48", sizes: "(max-width: 640px) 160px, 192px" },
+  compact: { link: "w-28 sm:w-32", sizes: "(max-width: 640px) 112px, 128px" },
+} as const;
+
+export function MovieCard({ movie, size = "default" }: { movie: MovieCardData; size?: keyof typeof SIZE_CLASSES }) {
   const posterUrl = resolvePosterUrl(movie, "w342");
   const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : null;
+  const { link, sizes } = SIZE_CLASSES[size];
 
   return (
-    <Link
-      href={`/movies/${movie.id}`}
-      className="group flex w-40 shrink-0 flex-col gap-2 sm:w-48"
-    >
+    <Link href={`/movies/${movie.id}`} className={`group flex shrink-0 flex-col gap-2 ${link}`}>
       <div className="relative aspect-2/3 w-full overflow-hidden rounded-md bg-neutral-800">
         {posterUrl ? (
           <Image
             src={posterUrl}
             alt={movie.title}
             fill
-            sizes="(max-width: 640px) 160px, 192px"
+            sizes={sizes}
             className="object-cover transition group-hover:scale-105"
           />
         ) : (
