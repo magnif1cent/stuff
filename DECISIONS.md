@@ -1703,16 +1703,23 @@ separate, since those are built-in collections, not `MemberList` rows).
   (production history, behind-the-scenes facts), it's a simpler,
   unrelated content field. Scope that distinction first.
 - **Expand member profile** — tabbed reorganization, a member-editable
-  `bio` field, an Activity tab, and a Liked Lists tab have all shipped
-  (see Feature Decisions above); the scaling problem is solved and most
-  of the original wishlist is done. Still open: a stats strip
+  `bio` field, an Activity tab, and a Liked Lists tab (merged into the
+  Lists tab's "My Lists" / "Liked" toggle rather than staying a separate
+  top-level tab) have all shipped (see Feature Decisions above); the
+  scaling problem is solved and most of the original wishlist is done.
+  Owner's top-level tab count is 7 (Profile, Activity, Favorites,
+  Watchlist, Pending, Fight Scenes, Lists). Still open: a stats strip
   (submission/verification counts, all derivable from existing tables, no
   schema change), contributor badges (computed from the same stats, no new
   schema needed to start), and favorite genres (lower priority, more
   design questions — derived from rating history or a manual preference?).
-  Also worth a look given the owner's tab count is now at 8: whether the
-  flat tab bar still scales, or needs grouping/a secondary nav, before
-  adding any more.
+  Also discussed and deliberately not built yet: a profile picture upload
+  (a real cost/scaling tradeoff, unlike everything else here, since it's
+  the first profile feature that scales with member count rather than
+  being free once shipped — revisit once current Vercel Blob pricing is
+  checked and a size cap is settled) and a ratings history tab (a
+  member's own `Rating` rows aren't surfaced anywhere on their profile
+  today, straightforward addition, not yet prioritized).
 - **Lists expansion to drive community engagement** — explicitly flagged
   as needing more ideas, not a scoped feature yet. Starter thoughts from
   an earlier engagement discussion, none decided: collaborative lists
