@@ -8,6 +8,7 @@ import { MovieCard } from "@/components/movie-card";
 import { FightSceneResultCard, type FightSceneResult } from "@/components/fight-scene-result-card";
 import type { AddToListItem } from "@/components/add-to-list-control";
 import { MemberListManager } from "@/components/member-list-manager";
+import { MemberBioEditor } from "@/components/member-bio-editor";
 import { ProfileTabs } from "@/components/profile-tabs";
 import type { Movie } from "@/generated/prisma/client";
 
@@ -275,7 +276,13 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-10">
-      <h1 className="mb-6 text-2xl font-bold text-white">{profileUser.username}</h1>
+      <h1 className="mb-2 text-2xl font-bold text-white">{profileUser.username}</h1>
+
+      {isOwner ? (
+        <MemberBioEditor initialBio={profileUser.bio} />
+      ) : (
+        profileUser.bio && <p className="mb-6 max-w-xl text-sm whitespace-pre-wrap text-neutral-300">{profileUser.bio}</p>
+      )}
 
       {isOwner ? (
         <ProfileTabs

@@ -23,6 +23,13 @@ model User {
   email         String?   @unique
   emailVerified DateTime?
   image         String?
+  // Free text, member-editable from their own profile page, shown publicly
+  // on it (same visibility as username). Null/empty means no bio set — the
+  // profile page shows a placeholder for the owner and nothing for anyone
+  // else, rather than an empty section. Length capped app-side only
+  // (BIO_MAX_LENGTH in src/lib/profile.ts), matching how username length is
+  // enforced — no DB-level constraint.
+  bio           String?
   passwordHash  String?
   // Set whenever passwordHash is (re)written — registration, admin password
   // change, or a forgot-password reset — so a JWT session issued before the
