@@ -1594,6 +1594,18 @@ both were mostly reuse of existing data/logic rather than new features.
   it's worth flagging: if more tabs get added later, grouping some under
   a secondary nav (e.g. folding Pending into Profile, or a "More" menu)
   is worth considering rather than growing the flat tab bar indefinitely.
+- **Added composite indexes for the new per-user query pattern**, caught
+  during review, not written proactively: `getRecentActivity()`'s
+  `userId`-scoped mode is the *first* thing in the codebase to query
+  `FightScene`/`DiscussionPost` by submitter/author rather than by movie —
+  neither `FightScene.submittedById` nor `DiscussionPost.userId` had an
+  index (only `movieId` did on both), so those queries would fall back to
+  a full scan as either table grows, with nothing to catch it in
+  development at today's small data volume. Added
+  `@@index([submittedById, createdAt])` and `@@index([userId, createdAt])`
+  respectively — a composite on the exact (filter, sort) pair the query
+  uses, not just the filter column, so Postgres can satisfy both the
+  `WHERE` and the `ORDER BY` from the index directly.
 - **Verified in a real browser**: seeded a like from `member` onto
   another account's list, confirmed the Liked Lists tab shows it with
   correct attribution and timestamp; confirmed the Activity tab shows
