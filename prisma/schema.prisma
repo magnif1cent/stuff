@@ -411,6 +411,10 @@ model DiscussionPost {
   replies DiscussionPost[] @relation("Replies")
 
   @@index([movieId])
+  // Backs the member profile Activity tab's per-user feed query (filter by
+  // userId, ordered by createdAt) — without this, that query has no index
+  // to use at all and falls back to a full scan as posts grow.
+  @@index([userId, createdAt])
 }
 
 // --- Fight scenes ---
@@ -447,6 +451,9 @@ model FightScene {
   // See the matching comment on Movie above — backs the ILIKE title
   // search in /search/fight-scenes.
   @@index([title(ops: raw("gin_trgm_ops"))], type: Gin, map: "FightScene_title_ilike_trgm_idx")
+  // Same reasoning as DiscussionPost.@@index([userId, createdAt]) above —
+  // backs the Activity tab's per-user fight-scene feed query.
+  @@index([submittedById, createdAt])
 }
 
 // Admin-curated vocabulary members pick from when tagging a fight scene's

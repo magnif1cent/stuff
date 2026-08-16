@@ -56,7 +56,7 @@ function FightSceneCard({ item }: { item: FightSceneActivityItem }) {
   );
 }
 
-function ListCard({ item }: { item: ListActivityItem }) {
+export function ListCard({ item }: { item: ListActivityItem }) {
   return (
     <article className="rounded-md border border-neutral-800 bg-neutral-900 p-3">
       <Link href={`/lists/${item.listId}`} className="block truncate text-sm font-bold text-white hover:text-red-400">
@@ -91,36 +91,51 @@ function ActivityColumn({ label, children }: { label: string; children: React.Re
   );
 }
 
-export function ActivityFeed({ activity }: { activity: RecentActivity }) {
+export function ActivityFeed({
+  activity,
+  title = "Community Activity",
+}: {
+  activity: RecentActivity;
+  // Omitted when rendered as a profile tab panel — the tab label already
+  // names the section, and unlike the homepage (which hides the whole
+  // section when there's nothing to show), an empty tab panel still shows
+  // an explicit "nothing yet" message, matching every other tab on that page.
+  title?: string | null;
+}) {
   const { fightScenes, lists, discussions } = activity;
-  if (fightScenes.length === 0 && lists.length === 0 && discussions.length === 0) return null;
+  const isEmpty = fightScenes.length === 0 && lists.length === 0 && discussions.length === 0;
+  if (isEmpty && title) return null;
 
   return (
-    <section className="mx-auto w-full max-w-6xl px-4 py-8">
-      <h2 className="mb-4 font-serif text-xl font-bold text-white">Community Activity</h2>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        {fightScenes.length > 0 && (
-          <ActivityColumn label="Fight Scenes">
-            {fightScenes.map((item) => (
-              <FightSceneCard key={item.id} item={item} />
-            ))}
-          </ActivityColumn>
-        )}
-        {lists.length > 0 && (
-          <ActivityColumn label="New Lists">
-            {lists.map((item) => (
-              <ListCard key={item.id} item={item} />
-            ))}
-          </ActivityColumn>
-        )}
-        {discussions.length > 0 && (
-          <ActivityColumn label="Discussions">
-            {discussions.map((item) => (
-              <DiscussionCard key={item.id} item={item} />
-            ))}
-          </ActivityColumn>
-        )}
-      </div>
+    <section className={title ? "mx-auto w-full max-w-6xl px-4 py-8" : undefined}>
+      {title && <h2 className="mb-4 font-serif text-xl font-bold text-white">{title}</h2>}
+      {isEmpty ? (
+        <p className="text-sm text-neutral-400">Nothing here yet.</p>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          {fightScenes.length > 0 && (
+            <ActivityColumn label="Fight Scenes">
+              {fightScenes.map((item) => (
+                <FightSceneCard key={item.id} item={item} />
+              ))}
+            </ActivityColumn>
+          )}
+          {lists.length > 0 && (
+            <ActivityColumn label="New Lists">
+              {lists.map((item) => (
+                <ListCard key={item.id} item={item} />
+              ))}
+            </ActivityColumn>
+          )}
+          {discussions.length > 0 && (
+            <ActivityColumn label="Discussions">
+              {discussions.map((item) => (
+                <DiscussionCard key={item.id} item={item} />
+              ))}
+            </ActivityColumn>
+          )}
+        </div>
+      )}
     </section>
   );
 }
