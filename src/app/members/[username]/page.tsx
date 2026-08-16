@@ -328,7 +328,6 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
         moviesApproved={moviesApproved}
         fightScenesSubmitted={fightScenesSubmitted}
         fightScenesVerified={fightScenesVerified}
-        listsCreated={memberListData.length}
       />
 
       {isOwner ? (
