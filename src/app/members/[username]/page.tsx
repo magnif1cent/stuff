@@ -10,6 +10,7 @@ import type { AddToListItem } from "@/components/add-to-list-control";
 import { MemberListManager } from "@/components/member-list-manager";
 import { MemberBioEditor } from "@/components/member-bio-editor";
 import { ProfileTabs } from "@/components/profile-tabs";
+import { ListsPanel } from "@/components/lists-panel";
 import { ActivityFeed, ListCard } from "@/components/activity-feed";
 import { getRecentActivity } from "@/lib/activity";
 import type { Movie } from "@/generated/prisma/client";
@@ -345,21 +346,24 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
             {
               key: "lists",
               label: `Lists (${memberListData.length})`,
-              content: listsPanel,
-            },
-            {
-              key: "liked-lists",
-              label: `Liked Lists (${likedLists.length})`,
-              content:
-                likedLists.length === 0 ? (
-                  <p className="text-sm text-neutral-400">Nothing here yet.</p>
-                ) : (
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                    {likedLists.map((item) => (
-                      <ListCard key={item.id} item={item} />
-                    ))}
-                  </div>
-                ),
+              content: (
+                <ListsPanel
+                  mineLabel={`My Lists (${memberListData.length})`}
+                  mineContent={listsPanel}
+                  likedLabel={`Liked (${likedLists.length})`}
+                  likedContent={
+                    likedLists.length === 0 ? (
+                      <p className="text-sm text-neutral-400">Nothing here yet.</p>
+                    ) : (
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                        {likedLists.map((item) => (
+                          <ListCard key={item.id} item={item} />
+                        ))}
+                      </div>
+                    )
+                  }
+                />
+              ),
             },
           ]}
         />
