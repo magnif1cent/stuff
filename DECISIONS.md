@@ -663,6 +663,50 @@ platform with public handles.
   confirmed `generateUniqueUsername("nashpopob")` correctly detects the
   collision and suffixes to `nashpopob1`.
 
+### Login switched from fetch-based signIn() to a Server Action with a native form
+Two real, reported bugs shared one root cause: `/login` called
+`next-auth/react`'s `signIn()` from a `fetch()`-driven `onSubmit` handler
+(`preventDefault()`, POST via `fetch`, then a separate JS-triggered
+navigation). Browsers only reliably offer to save credentials for a
+genuine `<form>` POST that completes with a navigation — a
+`fetch()`-intercepted submit doesn't look like a real form submission to
+the password manager, so Chrome/Firefox never prompted to save. The same
+split also caused a visible ~1s lag before the header reflected being
+signed in, since the fetch and the follow-up navigation were two separate
+round trips instead of one browser-orchestrated request.
+
+- **Rebuilt `/login` as a Server Component (`page.tsx`) + Client Component
+  (`login-form.tsx`) + Server Action (`actions.ts`)**, following the
+  pattern Next.js's own App Router auth guide recommends
+  (`<form action={serverAction}>` + `useActionState`) rather than
+  hand-rolling CSRF token plumbing for a raw POST to Auth.js's
+  `/api/auth/callback/credentials` endpoint — Server Actions get Next's
+  built-in same-origin protection for free, and Auth.js v5's server-side
+  `signIn()` (imported from `@/lib/auth`, not `next-auth/react`) is
+  designed to be called directly from one.
+- **Error handling**: `signIn()` throws `NEXT_REDIRECT` internally on
+  success (Next's own mechanism for a Server Action to trigger a
+  navigation) and throws `AuthError`/`CredentialsSignin` on failure. The
+  action catches only `AuthError` and returns a message for
+  `useActionState` to render inline; anything else is rethrown so the
+  success redirect isn't accidentally swallowed.
+- **`/register`'s post-signup navigation got a smaller, related fix**:
+  it stayed fetch-based (registration also needs the JSON `/api/register`
+  call and captcha token, not just a sign-in), but its post-success
+  `router.push("/")` immediately followed by an unawaited `router.refresh()`
+  had the same race as the login lag — if `/` was already prefetched while
+  signed out, `push()` could paint that stale cached page before
+  `refresh()`'s background re-fetch caught up. Swapped both for a single
+  hard `window.location.href = "/"`, matching what login effectively does
+  via its Server Action redirect.
+- **Verified against a real dev server, not just lint/build**: Playwright
+  against a local Postgres — wrong password stays on `/login` and shows
+  the existing generic error; correct password redirects to `/` in ~500ms
+  with the header immediately reflecting signed-in state; registration
+  redirects to `/` the same way. Google OAuth sign-in (`next-auth/react`'s
+  `signIn("google", ...)`, a redirect-based flow) was untouched — this
+  only reworked the credentials path.
+
 ## Feature Decisions
 
 ### Community Activity feed merges three existing tables, no new schema
