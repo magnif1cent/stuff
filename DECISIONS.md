@@ -1614,6 +1614,30 @@ both were mostly reuse of existing data/logic rather than new features.
   profile shows "Nothing here yet." rather than an empty tab; confirmed
   the homepage's own Community Activity section is visually unchanged.
 
+### Lists and Liked Lists merged into one tab with an inner toggle
+Immediate follow-up to the entry above, which had already flagged the
+owner's flat tab count (8) as worth watching. The site owner agreed and
+asked specifically for Lists + Liked Lists to merge — not the broader
+"combine every list-shaped tab" option (Favorites/Watchlist stayed
+separate, since those are built-in collections, not `MemberList` rows).
+
+- **New `ListsPanel` component, not a nested `ProfileTabs`** — reusing
+  `ProfileTabs` recursively would visually stack two identical
+  full-width underlined tab bars, reading as two peer levels of
+  navigation rather than one level nested inside the other. `ListsPanel`
+  is deliberately a lighter pill/segmented-control toggle instead, so
+  "My Lists" vs. "Liked" reads as sub-navigation within the Lists tab,
+  not another row of top-level tabs.
+- Owner's top-level tab count drops from 8 to 7 (Profile, Activity,
+  Favorites, Watchlist, Pending, Fight Scenes, Lists). Non-owner
+  profiles are unaffected — they never had a Liked Lists tab to begin
+  with (owner-only, per the entry above), so their Lists tab is
+  unchanged.
+- **Verified in a real browser**: confirmed the Lists tab defaults to
+  "My Lists," confirmed switching to "Liked" shows the previously-seeded
+  liked list with correct attribution, and confirmed both sub-toggle
+  states keep their own counts in sync with the pill labels.
+
 ## Deferred & Backlog
 
 - **About page copy: mission, About the Creators, Contact/feedback, and
