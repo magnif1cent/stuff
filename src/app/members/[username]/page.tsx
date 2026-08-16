@@ -11,6 +11,7 @@ import { MemberListManager } from "@/components/member-list-manager";
 import { MemberBioEditor } from "@/components/member-bio-editor";
 import { ProfileTabs } from "@/components/profile-tabs";
 import { ListsPanel } from "@/components/lists-panel";
+import { ProfileStatsStrip } from "@/components/profile-stats-strip";
 import { ActivityFeed, ListCard } from "@/components/activity-feed";
 import { getRecentActivity } from "@/lib/activity";
 import type { Movie } from "@/generated/prisma/client";
@@ -159,6 +160,17 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
       // sees it there), so this is shown on both owner and non-owner views.
       getRecentActivity(5, profileUser.id),
     ]);
+
+  // Public contribution counts, shown to any visitor — same reasoning as the
+  // Activity tab: this is a summary of already-public activity (submitted
+  // movies/fight scenes are visible on the site once approved/verified),
+  // not new exposure of anything private.
+  const [moviesSubmitted, moviesApproved, fightScenesSubmitted, fightScenesVerified] = await Promise.all([
+    prisma.movie.count({ where: { submittedById: profileUser.id } }),
+    prisma.movie.count({ where: { submittedById: profileUser.id, status: "APPROVED" } }),
+    prisma.fightScene.count({ where: { submittedById: profileUser.id, isDeleted: false } }),
+    prisma.fightScene.count({ where: { submittedById: profileUser.id, isDeleted: false, isVerified: true } }),
+  ]);
 
   const favorites = entries.filter((e) => e.listType === "FAVORITE").map((e) => e.movie);
   const watchlist = entries.filter((e) => e.listType === "WATCHLIST").map((e) => e.movie);
@@ -309,6 +321,15 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
         profileUser.bio && (
           <p className="mb-6 max-w-xl text-sm whitespace-pre-wrap text-neutral-300">{profileUser.bio}</p>
         )}
+
+      <ProfileStatsStrip
+        memberSince={profileUser.createdAt}
+        moviesSubmitted={moviesSubmitted}
+        moviesApproved={moviesApproved}
+        fightScenesSubmitted={fightScenesSubmitted}
+        fightScenesVerified={fightScenesVerified}
+        listsCreated={memberListData.length}
+      />
 
       {isOwner ? (
         <ProfileTabs
