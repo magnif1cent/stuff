@@ -726,6 +726,29 @@ fighting the very workflow this repo runs on. Documented in `CLAUDE.md` so
 future sessions know a direct push to `master` will now be rejected
 outright, not just discouraged by convention.
 
+### Reversed: Claude sessions no longer self-merge on green CI
+Partial reversal of the entry above. The GitHub ruleset itself is
+unchanged — no required-approval review at the GitHub level, PRs still
+required, `build-and-lint` still required to pass. What changed is a
+`CLAUDE.md` convention layered on top of it: an AI session working this
+repo now opens a PR and **stops once CI is green**, rather than merging
+immediately via the GitHub API.
+
+Reason for the reversal: the original "no review needed" call assumed
+CI passing was a sufficient merge gate. In practice the site owner wants
+to preview the Vercel deployment and request adjustments before a change
+lands on `master` — something a green `build-and-lint` run can't catch
+(it verifies the code builds and lints, not that the feature looks or
+behaves the way it's supposed to). A merge now requires the site owner
+explicitly saying so in the conversation, not just a passing check.
+
+Deliberately *not* re-enabling GitHub's own "require approvals" ruleset
+setting to enforce this — that would mean clicking Approve in GitHub's
+review UI for every PR, real friction for a workflow where "merge" typed
+in chat is enough. This is a chat-convention gate, not a technical one;
+if it turns out sessions need a stronger backstop later (e.g. one
+forgets to wait), revisit adding the GitHub-side requirement too.
+
 ## Feature Decisions
 
 ### Community Activity feed merges three existing tables, no new schema
