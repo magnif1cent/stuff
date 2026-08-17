@@ -46,6 +46,11 @@ those, and a decisions log that logs everything stops being useful for
 finding the decisions that matter. Reference the PR number so the entry
 stays traceable back to the diff.
 
+`DECISIONS.md` is long and only getting longer — don't read the whole file
+to add an entry. Use its `## Contents` section (or grep `^### ` / `^## `) to
+find the right spot, then read only that entry and its neighbors before
+appending.
+
 ## Code integrity across parallel conversations
 
 - Keep Prisma schema changes, migrations, seed data, and any TypeScript types
@@ -114,13 +119,3 @@ This reverses the earlier convention (see `DECISIONS.md`'s "`master`
 protected by a GitHub ruleset, no required review" entry) — that entry's
 GitHub-ruleset reasoning still holds, but the auto-merge-on-green-CI part of
 it doesn't apply anymore.
-
-<!-- BEGIN:nextjs-agent-rules -->
-
-# This is NOT the Next.js you know
-
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
-
-This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
-
-<!-- END:nextjs-agent-rules -->
