@@ -30,6 +30,12 @@ model User {
   // (BIO_MAX_LENGTH in src/lib/profile.ts), matching how username length is
   // enforced — no DB-level constraint.
   bio           String?
+  // Free text, e.g. "Hong Kong" — same visibility/editing rules as bio
+  // (member-editable, shown publicly, capped app-side only).
+  location      String?
+  // A single external link (Letterboxd, YouTube, personal site, etc.),
+  // stored as an absolute http(s) URL. Same visibility/editing rules as bio.
+  websiteUrl    String?
   passwordHash  String?
   // Set whenever passwordHash is (re)written — registration, admin password
   // change, or a forgot-password reset — so a JWT session issued before the

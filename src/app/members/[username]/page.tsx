@@ -8,7 +8,8 @@ import { MovieCard } from "@/components/movie-card";
 import { FightSceneResultCard, type FightSceneResult } from "@/components/fight-scene-result-card";
 import type { AddToListItem } from "@/components/add-to-list-control";
 import { MemberListManager } from "@/components/member-list-manager";
-import { MemberBioEditor } from "@/components/member-bio-editor";
+import { MemberProfileDetailsEditor } from "@/components/member-profile-details-editor";
+import { MemberPasswordEditor } from "@/components/member-password-editor";
 import { ProfileTabs } from "@/components/profile-tabs";
 import { ListsPanel } from "@/components/lists-panel";
 import { ProfileStatsStrip } from "@/components/profile-stats-strip";
@@ -327,10 +328,24 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
     <div className="mx-auto w-full max-w-6xl px-4 py-10">
       <h1 className="mb-6 text-2xl font-bold text-white">{profileUser.username}</h1>
 
-      {!isOwner &&
-        profileUser.bio && (
-          <p className="mb-6 max-w-xl text-sm whitespace-pre-wrap text-neutral-300">{profileUser.bio}</p>
-        )}
+      {!isOwner && (profileUser.bio || profileUser.location || profileUser.websiteUrl) && (
+        <div className="mb-6 flex flex-col gap-1">
+          {profileUser.bio && (
+            <p className="max-w-xl text-sm whitespace-pre-wrap text-neutral-300">{profileUser.bio}</p>
+          )}
+          {profileUser.location && <p className="text-xs text-neutral-500">{profileUser.location}</p>}
+          {profileUser.websiteUrl && (
+            <a
+              href={profileUser.websiteUrl}
+              target="_blank"
+              rel="noopener noreferrer nofollow"
+              className="text-xs text-red-500 hover:underline"
+            >
+              {profileUser.websiteUrl}
+            </a>
+          )}
+        </div>
+      )}
 
       <ProfileStatsStrip
         memberSince={profileUser.createdAt}
@@ -349,7 +364,16 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
             {
               key: "profile",
               label: "Profile",
-              content: <MemberBioEditor initialBio={profileUser.bio} />,
+              content: (
+                <>
+                  <MemberProfileDetailsEditor
+                    initialBio={profileUser.bio}
+                    initialLocation={profileUser.location}
+                    initialWebsiteUrl={profileUser.websiteUrl}
+                  />
+                  <MemberPasswordEditor hasPassword={!!profileUser.passwordHash} />
+                </>
+              ),
             },
             {
               key: "activity",
