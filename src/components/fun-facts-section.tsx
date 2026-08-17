@@ -56,6 +56,10 @@ export function FunFactsSection({
   const [error, setError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
+  // Tracked by id rather than array index, since voting re-sorts `facts` by
+  // net score -- an index would silently jump the spotlight to a different
+  // fact the moment the current one's score changes.
+  const [spotlightId, setSpotlightId] = useState<string | null>(initialFacts[0]?.id ?? null);
 
   function updateFact(id: string, updater: (item: FunFactItem) => FunFactItem) {
     setFacts((prev) => prev.map((f) => (f.id === id ? updater(f) : f)).sort(byNetScore));
@@ -77,7 +81,9 @@ export function FunFactsSection({
       return;
     }
     const { fact } = await res.json();
-    setFacts((prev) => [{ ...fact, up: 0, down: 0, myVote: null }, ...prev].sort(byNetScore));
+    const newFact = { ...fact, up: 0, down: 0, myVote: null };
+    setFacts((prev) => [newFact, ...prev].sort(byNetScore));
+    if (facts.length === 0) setSpotlightId(newFact.id);
     setNewContent("");
   }
 
@@ -125,7 +131,9 @@ export function FunFactsSection({
     // replies), and the server already excludes soft-deleted ones on
     // reload -- so just drop it from the list rather than showing a
     // "[deleted]" placeholder that would only ever appear pre-refresh.
-    setFacts((prev) => prev.filter((f) => f.id !== id));
+    const remaining = facts.filter((f) => f.id !== id);
+    setFacts(remaining);
+    if (spotlightId === id) setSpotlightId(remaining[0]?.id ?? null);
   }
 
   async function vote(id: string, value: 1 | -1) {
@@ -144,11 +152,25 @@ export function FunFactsSection({
     updateFact(id, (item) => ({ ...item, myVote, up, down }));
   }
 
+  function shiftSpotlight(direction: 1 | -1) {
+    if (facts.length === 0) return;
+    const currentIndex = facts.findIndex((f) => f.id === spotlightId);
+    const base = currentIndex === -1 ? 0 : currentIndex;
+    const nextIndex = (base + direction + facts.length) % facts.length;
+    setSpotlightId(facts[nextIndex].id);
+  }
+
+  const spotlightIndex = Math.max(
+    0,
+    facts.findIndex((f) => f.id === spotlightId),
+  );
+  const spotlightFact = facts[spotlightIndex] ?? null;
+
   return (
     <section className="mt-10 max-w-2xl">
       <h2 className="mb-4 font-serif text-xl font-bold text-white">Fun Facts</h2>
 
-      <div className="rounded-md border border-neutral-800 bg-neutral-900">
+      <div className="overflow-hidden rounded-md border border-neutral-800 bg-neutral-900">
         {signedIn ? (
           <div className="flex flex-col gap-2 border-b border-neutral-800 p-3">
             <textarea
@@ -182,67 +204,17 @@ export function FunFactsSection({
           </p>
         )}
 
-        <ul className="divide-y divide-neutral-800">
-          {facts.map((fact) => {
+        {spotlightFact ? (
+          (() => {
+            const fact = spotlightFact;
             const canEdit = currentUserId === fact.submittedById;
             const canDelete = canEdit || isAdmin;
             const canVote = signedIn && !canEdit;
 
             return (
-              <li key={fact.id} className="flex gap-3 p-3">
-                <div className="flex shrink-0 flex-col items-center gap-0.5 pt-0.5">
-                <button
-                  onClick={() => (canVote ? vote(fact.id, 1) : undefined)}
-                  disabled={!canVote}
-                  title={canEdit ? "You can't vote on your own fun fact" : undefined}
-                  className={`rounded px-1.5 py-0.5 text-sm leading-none transition disabled:cursor-not-allowed disabled:opacity-40 ${
-                    fact.myVote === 1 ? "text-green-500" : "text-neutral-500 hover:text-neutral-300"
-                  }`}
-                >
-                  👍
-                </button>
-                <span className="text-xs text-neutral-400">{fact.up - fact.down}</span>
-                <button
-                  onClick={() => (canVote ? vote(fact.id, -1) : undefined)}
-                  disabled={!canVote}
-                  title={canEdit ? "You can't vote on your own fun fact" : undefined}
-                  className={`rounded px-1.5 py-0.5 text-sm leading-none transition disabled:cursor-not-allowed disabled:opacity-40 ${
-                    fact.myVote === -1 ? "text-red-500" : "text-neutral-500 hover:text-neutral-300"
-                  }`}
-                >
-                  👎
-                </button>
-              </div>
-
-              <div className="min-w-0 flex-1">
-                <div className="mb-1 flex items-center gap-2 text-sm">
-                  <span className="font-medium text-neutral-100">{fact.submittedBy.username}</span>
-                  <span className="text-neutral-500">{timeAgo(fact.createdAt)}</span>
-                  {wasEdited(fact) && <span className="text-xs text-neutral-600">(edited)</span>}
-                  {(canEdit || canDelete) && (
-                    <span className="inline-flex gap-2">
-                      {canEdit && (
-                        <button
-                          onClick={() => startEdit(fact)}
-                          className="text-xs text-neutral-400 hover:text-white"
-                        >
-                          Edit
-                        </button>
-                      )}
-                      {canDelete && (
-                        <button
-                          onClick={() => deleteFact(fact.id)}
-                          className="text-xs text-neutral-400 hover:text-red-400"
-                        >
-                          Delete
-                        </button>
-                      )}
-                    </span>
-                  )}
-                </div>
-
+              <div className="border-b border-neutral-800 bg-gradient-to-b from-red-950/20 to-transparent p-5 text-center">
                 {editingId === fact.id ? (
-                  <div className="flex flex-col gap-2">
+                  <div className="mx-auto flex max-w-md flex-col gap-2 text-left">
                     <textarea
                       value={editContent}
                       onChange={(e) => setEditContent(e.target.value)}
@@ -267,16 +239,111 @@ export function FunFactsSection({
                     </div>
                   </div>
                 ) : (
-                  <p className="text-sm text-neutral-300">{fact.content}</p>
+                  <p className="text-lg text-neutral-100">&ldquo;{fact.content}&rdquo;</p>
+                )}
+
+                <p className="mt-2 text-xs text-neutral-500">
+                  — {fact.submittedBy.username}
+                  {spotlightIndex === 0 && ", highest voted"} · {timeAgo(fact.createdAt)}
+                  {wasEdited(fact) && " (edited)"}
+                </p>
+
+                <div className="mt-3 flex items-center justify-center gap-4">
+                  {facts.length > 1 && (
+                    <button
+                      onClick={() => shiftSpotlight(-1)}
+                      className="text-sm text-neutral-500 hover:text-neutral-300"
+                    >
+                      ‹ prev
+                    </button>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => (canVote ? vote(fact.id, 1) : undefined)}
+                      disabled={!canVote}
+                      title={canEdit ? "You can't vote on your own fun fact" : undefined}
+                      className={`rounded px-1.5 py-0.5 text-base leading-none transition disabled:cursor-not-allowed disabled:opacity-40 ${
+                        fact.myVote === 1 ? "text-green-500" : "text-neutral-500 hover:text-neutral-300"
+                      }`}
+                    >
+                      👍
+                    </button>
+                    <span className="text-sm text-neutral-400">{fact.up - fact.down}</span>
+                    <button
+                      onClick={() => (canVote ? vote(fact.id, -1) : undefined)}
+                      disabled={!canVote}
+                      title={canEdit ? "You can't vote on your own fun fact" : undefined}
+                      className={`rounded px-1.5 py-0.5 text-base leading-none transition disabled:cursor-not-allowed disabled:opacity-40 ${
+                        fact.myVote === -1 ? "text-red-500" : "text-neutral-500 hover:text-neutral-300"
+                      }`}
+                    >
+                      👎
+                    </button>
+                  </div>
+                  {facts.length > 1 && (
+                    <button
+                      onClick={() => shiftSpotlight(1)}
+                      className="text-sm text-neutral-500 hover:text-neutral-300"
+                    >
+                      next ›
+                    </button>
+                  )}
+                </div>
+
+                {(canEdit || canDelete) && editingId !== fact.id && (
+                  <div className="mt-2 flex items-center justify-center gap-2">
+                    {canEdit && (
+                      <button
+                        onClick={() => startEdit(fact)}
+                        className="text-xs text-neutral-400 hover:text-white"
+                      >
+                        Edit
+                      </button>
+                    )}
+                    {canDelete && (
+                      <button
+                        onClick={() => deleteFact(fact.id)}
+                        className="text-xs text-neutral-400 hover:text-red-400"
+                      >
+                        Delete
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
-              </li>
             );
-          })}
-          {facts.length === 0 && (
-            <li className="p-3 text-sm text-neutral-500">No fun facts yet. Be the first to add one.</li>
-          )}
-        </ul>
+          })()
+        ) : (
+          <p className="border-b border-neutral-800 p-5 text-center text-sm text-neutral-500">
+            No fun facts yet. Be the first to add one.
+          </p>
+        )}
+
+        {facts.length > 0 && (
+          <ul className="divide-y divide-neutral-800">
+            {facts.map((fact, i) => (
+              <li key={fact.id}>
+                <button
+                  onClick={() => setSpotlightId(fact.id)}
+                  className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition hover:bg-neutral-800/50 ${
+                    i === spotlightIndex ? "bg-neutral-800/40" : ""
+                  }`}
+                >
+                  <span
+                    className={
+                      fact.myVote === 1 ? "text-green-500" : fact.myVote === -1 ? "text-red-500" : "text-neutral-600"
+                    }
+                  >
+                    {fact.myVote === -1 ? "👎" : "👍"}
+                  </span>
+                  <span className="w-5 shrink-0 text-center text-xs text-neutral-500">{fact.up - fact.down}</span>
+                  <span className="shrink-0 font-medium text-neutral-100">{fact.submittedBy.username}</span>
+                  <span className="min-w-0 flex-1 truncate text-neutral-400">{fact.content}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </section>
   );
