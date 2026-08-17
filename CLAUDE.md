@@ -106,11 +106,6 @@ request, force-pushes and branch deletion are blocked, and the
 enforced by GitHub itself now, not just convention — a direct push to
 `master` will be rejected outright.
 
-There is deliberately **no GitHub-enforced required-approval review** — the
-ruleset itself doesn't block a merge on a human clicking Approve. That's a
-separate thing from whether *you* (the AI session working this repo) should
-merge on your own:
-
 ## Wait for explicit "merge" before merging a PR
 
 Open the PR once `build-and-lint` is green, then **stop and wait** — don't
@@ -119,8 +114,3 @@ deployment and request adjustments before a PR lands on `master`. Only merge
 once they've explicitly said so in the conversation (e.g. "merge",
 "merge it," "go ahead and merge") — a green CI check alone is not
 authorization to merge.
-
-This reverses the earlier convention (see `DECISIONS.md`'s "`master`
-protected by a GitHub ruleset, no required review" entry) — that entry's
-GitHub-ruleset reasoning still holds, but the auto-merge-on-green-CI part of
-it doesn't apply anymore.
