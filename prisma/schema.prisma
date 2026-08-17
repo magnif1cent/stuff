@@ -64,6 +64,8 @@ model User {
   memberListLikes     MemberListLike[]
   movieRecommendations MovieRecommendation[]
   fightCountEdits     FightCountEdit[]
+  funFacts            FunFact[]
+  funFactVotes        FunFactVote[]
 }
 
 model Account {
@@ -165,6 +167,7 @@ model Movie {
   memberListEntries MemberListEntry[]
   recommendations MovieRecommendation[]
   fightCountEdits FightCountEdit[]
+  funFacts        FunFact[]
   submittedBy     User?   @relation(fields: [submittedById], references: [id], onDelete: SetNull)
 
   @@index([title])
@@ -421,6 +424,47 @@ model DiscussionPost {
   // userId, ordered by createdAt) — without this, that query has no index
   // to use at all and falls back to a full scan as posts grow.
   @@index([userId, createdAt])
+}
+
+// --- Fun Facts ("Did you know") ---
+//
+// Flat member-submitted trivia entries, ranked by thumbs up/down rather than
+// chronologically like discussion posts -- content shape (text + soft
+// delete) mirrors DiscussionPost, but with no threading and a vote model
+// instead of replies.
+
+model FunFact {
+  id            String   @id @default(cuid())
+  movieId       String
+  submittedById String
+  content       String   @db.Text
+  isDeleted     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  movie       Movie         @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  submittedBy User          @relation(fields: [submittedById], references: [id], onDelete: Cascade)
+  votes       FunFactVote[]
+
+  @@index([movieId])
+}
+
+// One vote per member per fact, value +1 (up) or -1 (down) -- voting again
+// with the same value retracts it, the opposite value switches it, mirroring
+// the toggle behavior already established for MemberListLike (a simpler
+// one-directional version of the same idea).
+model FunFactVote {
+  id        String   @id @default(cuid())
+  factId    String
+  userId    String
+  value     Int
+  createdAt DateTime @default(now())
+
+  fact FunFact @relation(fields: [factId], references: [id], onDelete: Cascade)
+  user User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, factId])
+  @@index([factId])
 }
 
 // --- Fight scenes ---
