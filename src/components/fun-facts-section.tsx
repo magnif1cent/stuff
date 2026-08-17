@@ -8,7 +8,6 @@ export interface FunFactItem {
   id: string;
   content: string;
   submittedById: string;
-  isDeleted: boolean;
   createdAt: string;
   updatedAt: string;
   submittedBy: { username: string };
@@ -122,7 +121,11 @@ export function FunFactsSection({
       setError(body.error ?? "Something went wrong.");
       return;
     }
-    updateFact(id, (item) => ({ ...item, isDeleted: true, content: "" }));
+    // Unlike discussion posts, nothing else references a fun fact (no
+    // replies), and the server already excludes soft-deleted ones on
+    // reload -- so just drop it from the list rather than showing a
+    // "[deleted]" placeholder that would only ever appear pre-refresh.
+    setFacts((prev) => prev.filter((f) => f.id !== id));
   }
 
   async function vote(id: string, value: 1 | -1) {
@@ -214,10 +217,8 @@ export function FunFactsSection({
                 <div className="mb-1 flex items-center gap-2 text-sm">
                   <span className="font-medium text-neutral-100">{fact.submittedBy.username}</span>
                   <span className="text-neutral-500">{timeAgo(fact.createdAt)}</span>
-                  {!fact.isDeleted && wasEdited(fact) && (
-                    <span className="text-xs text-neutral-600">(edited)</span>
-                  )}
-                  {!fact.isDeleted && (canEdit || canDelete) && (
+                  {wasEdited(fact) && <span className="text-xs text-neutral-600">(edited)</span>}
+                  {(canEdit || canDelete) && (
                     <span className="inline-flex gap-2">
                       {canEdit && (
                         <button
@@ -239,9 +240,7 @@ export function FunFactsSection({
                   )}
                 </div>
 
-                {fact.isDeleted ? (
-                  <p className="text-sm italic text-neutral-500">[deleted]</p>
-                ) : editingId === fact.id ? (
+                {editingId === fact.id ? (
                   <div className="flex flex-col gap-2">
                     <textarea
                       value={editContent}

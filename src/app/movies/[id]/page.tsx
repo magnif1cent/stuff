@@ -308,7 +308,6 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
         id: fact.id,
         content: fact.content,
         submittedById: fact.submittedById,
-        isDeleted: fact.isDeleted,
         createdAt: fact.createdAt.toISOString(),
         updatedAt: fact.updatedAt.toISOString(),
         submittedBy: fact.submittedBy,

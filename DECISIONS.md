@@ -842,6 +842,37 @@ forgets to wait), revisit adding the GitHub-side requirement too.
 
 ## Feature Decisions
 
+### Fun Facts: flat content shape from Discussion, first bidirectional vote in the app
+**PR #TBD.** An IMDB "Did you know"-style trivia section above the Discussion
+thread — members add short entries, other members vote them up or down.
+
+- Content shape (`content` + `isDeleted` soft delete) mirrors `DiscussionPost`
+  directly, minus the `parentId`/`replies` threading — a fun fact is a flat
+  list, there's no concept of replying to one.
+- **Voting is the first bidirectional (up/down) pattern in the codebase.**
+  Every existing vote-like mechanic is one-directional: `MemberListLike` is a
+  toggle-on/toggle-off like with no dislike, and `Rating`/`FightSceneRating`
+  are 1–10 scores, not votes. `FunFactVote.value` (+1/-1) with a
+  `@@unique([userId, factId])` constraint reuses `MemberListLike`'s
+  toggle-to-retract behavior in both directions: voting the same way twice
+  retracts it, voting the other way switches it.
+- **Ranked by net score, computed in memory** — same tradeoff already made
+  for Top Curators and fuzzy-search ranking: `groupBy(["factId", "value"])`
+  gives per-fact up/down counts, and the up-minus-down sort happens
+  server-side after that, not as a single SQL aggregate.
+- **Self-voting blocked**, matching `MemberListLike`'s self-like block, for
+  the same reason — stops a submitter inflating their own fact's score.
+- **Soft-deleted facts are excluded server-side** (`isDeleted: false` in the
+  query), unlike discussion posts, which stay visible as "[deleted]"
+  indefinitely because replies can hang off a deleted parent and need
+  somewhere to render. A fun fact has no replies, so once it's gone there's
+  nothing depending on the row staying visible — it's simply excluded on
+  reload, and the client removes it from the list immediately on delete
+  rather than showing a placeholder that would only ever appear pre-refresh.
+- **500-character cap**, well below `MAX_DISCUSSION_CONTENT_LENGTH` (5000)
+  — a fun fact is meant to be a short, scannable trivia snippet, not a full
+  post.
+
 ### Community Activity feed merges three existing tables, no new schema
 **PR #65.** Backlog ask was for a homepage strip surfacing recent member
 activity to make the site "feel alive" — deliberately scoped to be cheap:
