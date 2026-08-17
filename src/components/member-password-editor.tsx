@@ -7,7 +7,6 @@ const inputClasses =
   "w-full max-w-xs rounded-md border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none";
 
 export function MemberPasswordEditor({ hasPassword }: { hasPassword: boolean }) {
-  const [editing, setEditing] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -40,17 +39,6 @@ export function MemberPasswordEditor({ hasPassword }: { hasPassword: boolean }) 
 
   if (done) {
     return <p className="text-sm text-neutral-300">Password updated &mdash; signing you out&hellip;</p>;
-  }
-
-  if (!editing) {
-    return (
-      <div className="mb-6">
-        <h2 className="mb-1 text-sm font-semibold text-white">Password</h2>
-        <button onClick={() => setEditing(true)} className="text-xs text-neutral-400 hover:text-white">
-          {hasPassword ? "Change password" : "Set a password"}
-        </button>
-      </div>
-    );
   }
 
   return (
@@ -86,28 +74,13 @@ export function MemberPasswordEditor({ hasPassword }: { hasPassword: boolean }) 
         className={inputClasses}
       />
       {error && <p className="text-sm text-red-500">{error}</p>}
-      <div className="flex items-center gap-3">
-        <button
-          type="submit"
-          disabled={saving || !newPassword}
-          className="self-start rounded-md bg-red-700 px-4 py-1.5 text-sm font-medium text-white hover:bg-red-600 disabled:opacity-50"
-        >
-          {saving ? "Saving…" : hasPassword ? "Update password" : "Set password"}
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setEditing(false);
-            setError(null);
-            setCurrentPassword("");
-            setNewPassword("");
-            setConfirmPassword("");
-          }}
-          className="text-sm text-neutral-400 hover:text-white"
-        >
-          Cancel
-        </button>
-      </div>
+      <button
+        type="submit"
+        disabled={saving || !newPassword}
+        className="self-start rounded-md bg-red-700 px-4 py-1.5 text-sm font-medium text-white hover:bg-red-600 disabled:opacity-50"
+      >
+        {saving ? "Saving…" : hasPassword ? "Update password" : "Set password"}
+      </button>
     </form>
   );
 }
