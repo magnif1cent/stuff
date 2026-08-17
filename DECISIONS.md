@@ -17,6 +17,97 @@ Not every PR needs an entry — only ones with a real judgment call (alternative
 considered, an explicit reversal, a deferred scope) belong here. A pure bug fix
 or a mechanical refactor doesn't.
 
+Before adding an entry: don't read this whole file. Use the Contents below (or
+grep `^### ` / `^## `) to find the right section, then read only that entry
+and its neighbors to match tone and confirm you're not duplicating an existing
+one.
+
+## Contents
+
+**Foundational Changes**
+
+- [MVP stack established](#mvp-stack-established)
+- [Fight Scenes introduced as a core feature](#fight-scenes-introduced-as-a-core-feature)
+- [Cross-conversation process conventions established](#cross-conversation-process-conventions-established)
+- [Poster House visual identity adopted](#poster-house-visual-identity-adopted)
+- [Admin area consolidated under one guard](#admin-area-consolidated-under-one-guard)
+- [Typo-tolerant search added via Postgres trigram extension](#typo-tolerant-search-added-via-postgres-trigram-extension)
+- ["Stay in sync with master" convention added](#stay-in-sync-with-master-convention-added)
+- [Member identity and content model expanded](#member-identity-and-content-model-expanded)
+- [REVIEWER introduced as a role narrower than ADMIN](#reviewer-introduced-as-a-role-narrower-than-admin)
+- [Security headers and a nonce-based CSP added](#security-headers-and-a-nonce-based-csp-added)
+- [Rate limiting added via Upstash Redis](#rate-limiting-added-via-upstash-redis)
+- [Medium-risk security findings: two fixed, two deferred](#medium-risk-security-findings-two-fixed-two-deferred)
+- [Forgot-password added, CAPTCHA added, registration enumeration closed as "not doing"](#forgot-password-added-captcha-added-registration-enumeration-closed-as-not-doing)
+- [Poster upload MIME sniffing, and JWT sessions invalidated on password change](#poster-upload-mime-sniffing-and-jwt-sessions-invalidated-on-password-change)
+- [Password strength requirements: length over composition, plus a breach check](#password-strength-requirements-length-over-composition-plus-a-breach-check)
+- [Login timing side-channel closed with a dummy bcrypt comparison](#login-timing-side-channel-closed-with-a-dummy-bcrypt-comparison)
+- [Manual "sign out everywhere" reuses the password-change invalidation, doesn't duplicate it](#manual-sign-out-everywhere-reuses-the-password-change-invalidation-doesnt-duplicate-it)
+- [Site renamed from "Kung Fu Movie Database" to "Kung Fu Sauce"](#site-renamed-from-kung-fu-movie-database-to-kung-fu-sauce)
+- [Admin badge icons rekeyed by user id, not username](#admin-badge-icons-rekeyed-by-user-id-not-username)
+- [Production migration incident: Preview and Production shared one database](#production-migration-incident-preview-and-production-shared-one-database)
+- [Trigram indexes declared in schema.prisma, closing the drift-detection gap — partially](#trigram-indexes-declared-in-schemaprisma-closing-the-drift-detection-gap-partially)
+- [Breach-password (HaveIBeenPwned) check removed, per explicit request](#breach-password-haveibeenpwned-check-removed-per-explicit-request)
+- [Usernames allow mixed case, made case-insensitively unique via a new usernameLower column](#usernames-allow-mixed-case-made-case-insensitively-unique-via-a-new-usernamelower-column)
+- [Login switched from fetch-based signIn() to a Server Action with a native form](#login-switched-from-fetch-based-signin-to-a-server-action-with-a-native-form)
+- [`master` protected by a GitHub ruleset, no required review](#master-protected-by-a-github-ruleset-no-required-review)
+- [Reversed: Claude sessions no longer self-merge on green CI](#reversed-claude-sessions-no-longer-self-merge-on-green-ci)
+
+**Feature Decisions**
+
+- [Community Activity feed merges three existing tables, no new schema](#community-activity-feed-merges-three-existing-tables-no-new-schema)
+- [Error monitoring added without wrapping next.config.ts in Sentry's build plugin](#error-monitoring-added-without-wrapping-nextconfigts-in-sentrys-build-plugin)
+- [Search substring queries got their own trigram indexes, separate from the fuzzy-search ones](#search-substring-queries-got-their-own-trigram-indexes-separate-from-the-fuzzy-search-ones)
+- [Fight Count: single member-editable field, not an aggregate — with guardrails to compensate](#fight-count-single-member-editable-field-not-an-aggregate-with-guardrails-to-compensate)
+- [Subcategory rating widget: progressive reveal + star picker, now on both member and admin widgets](#subcategory-rating-widget-progressive-reveal-star-picker-now-on-both-member-and-admin-widgets)
+- [Subcategory ratings: supplement the overall score, fixed category list, movies only](#subcategory-ratings-supplement-the-overall-score-fixed-category-list-movies-only)
+- [Movie/actor SEO metadata and actor-page TMDB bios](#movieactor-seo-metadata-and-actor-page-tmdb-bios)
+- [Admin Recommendations: per-admin badges, not a single shared flag](#admin-recommendations-per-admin-badges-not-a-single-shared-flag)
+- [Cross-member list browsing at `/lists`, separate from the leaderboard](#cross-member-list-browsing-at-lists-separate-from-the-leaderboard)
+- [News & Updates: flat homepage preview + separate paginated archive](#news-updates-flat-homepage-preview-separate-paginated-archive)
+- [Fight scene card UI cleanup: cast on the read-only card, admin tools collapsed by default](#fight-scene-card-ui-cleanup-cast-on-the-read-only-card-admin-tools-collapsed-by-default)
+- [Browse-by-tag/genre quick links reuse existing badges rather than adding a new pill strip](#browse-by-taggenre-quick-links-reuse-existing-badges-rather-than-adding-a-new-pill-strip)
+- [Submission follow-through: a "View submission" link and a member-facing Pending Submissions section](#submission-follow-through-a-view-submission-link-and-a-member-facing-pending-submissions-section)
+- [Standalone "Add Movie" nav link, always visible rather than gated on sign-in](#standalone-add-movie-nav-link-always-visible-rather-than-gated-on-sign-in)
+- [Actor pages browse-only for now, not wired into the search actor filter](#actor-pages-browse-only-for-now-not-wired-into-the-search-actor-filter)
+- [Per-movie fight scene pagination is a client-side "Show more," not URL-based paging](#per-movie-fight-scene-pagination-is-a-client-side-show-more-not-url-based-paging)
+- [Fight scenes get a one-tap Favorite, deliberately no Watchlist](#fight-scenes-get-a-one-tap-favorite-deliberately-no-watchlist)
+- [Saved fight scenes get their own MemberListFightSceneEntry model, not a nullable column on MemberListEntry](#saved-fight-scenes-get-their-own-memberlistfightsceneentry-model-not-a-nullable-column-on-memberlistentry)
+- [Recent Reviews by Editors shows full review text, clamped, not a short excerpt](#recent-reviews-by-editors-shows-full-review-text-clamped-not-a-short-excerpt)
+- [Build version footer: commit SHA, not semantic versioning](#build-version-footer-commit-sha-not-semantic-versioning)
+- [About page's footer link gets its own shared Footer component, not a second `<footer>`](#about-pages-footer-link-gets-its-own-shared-footer-component-not-a-second-footer)
+- [Fight scene start time is admin-only, decoupled from submitter edits](#fight-scene-start-time-is-admin-only-decoupled-from-submitter-edits)
+- [Movie rail scrollbar: themed, not hidden](#movie-rail-scrollbar-themed-not-hidden)
+- [Rating filters: star-click picker over stepper or number input](#rating-filters-star-click-picker-over-stepper-or-number-input)
+- [Director/actor filters: autocomplete over a full dropdown](#directoractor-filters-autocomplete-over-a-full-dropdown)
+- [Fight scenes get their own search page, not folded into movie search](#fight-scenes-get-their-own-search-page-not-folded-into-movie-search)
+- [Filter layout: vertical sidebar over horizontal bar](#filter-layout-vertical-sidebar-over-horizontal-bar)
+- [One canonical Vercel project, two duplicates deleted](#one-canonical-vercel-project-two-duplicates-deleted)
+- [Reverted a migration rename rather than "fixing" ordering on a live database](#reverted-a-migration-rename-rather-than-fixing-ordering-on-a-live-database)
+- [Hero carousel clip previews reuse the scene's existing start time](#hero-carousel-clip-previews-reuse-the-scenes-existing-start-time)
+- [Public Leaderboard replaces the redundant "My Lists" nav tab](#public-leaderboard-replaces-the-redundant-my-lists-nav-tab)
+- [Bulk TMDB import reuses the single-movie endpoint via a client-side queue](#bulk-tmdb-import-reuses-the-single-movie-endpoint-via-a-client-side-queue)
+- [Movie rail scroll affordances only render when there's real overflow](#movie-rail-scroll-affordances-only-render-when-theres-real-overflow)
+- [One bulk-import path in the codebase, not two](#one-bulk-import-path-in-the-codebase-not-two)
+- [One admin guard for the whole /admin tree; papaparse over xlsx](#one-admin-guard-for-the-whole-admin-tree-papaparse-over-xlsx)
+- [Poster uploads use a plain server route, not Blob's client-direct-upload pattern](#poster-uploads-use-a-plain-server-route-not-blobs-client-direct-upload-pattern)
+- [Fight Ticket card deliberately breaks from the site's dark theme](#fight-ticket-card-deliberately-breaks-from-the-sites-dark-theme)
+- [Editorial Review is one shared review per movie, not per-admin](#editorial-review-is-one-shared-review-per-movie-not-per-admin)
+- [Fight scene tags are an admin-curated vocabulary, not member-created](#fight-scene-tags-are-an-admin-curated-vocabulary-not-member-created)
+- [Member profile split into tabs, own-profile view only](#member-profile-split-into-tabs-own-profile-view-only)
+- [Member profile bio field](#member-profile-bio-field)
+- [Member profile: Activity and Liked Lists tabs](#member-profile-activity-and-liked-lists-tabs)
+- [Lists and Liked Lists merged into one tab with an inner toggle](#lists-and-liked-lists-merged-into-one-tab-with-an-inner-toggle)
+- [Member profile stats strip](#member-profile-stats-strip)
+- [Member-facing password change added to the Profile tab](#member-facing-password-change-added-to-the-profile-tab)
+- [Member profile: location and website/social link fields](#member-profile-location-and-websitesocial-link-fields)
+- [Profile tab fields made directly editable, no click-to-expand](#profile-tab-fields-made-directly-editable-no-click-to-expand)
+- [Social platform icons for the website/social link field](#social-platform-icons-for-the-websitesocial-link-field)
+
+**Deferred & Backlog**
+
+Flat bullet list, not headers — grep `^- \*\*` in this section for titles.
+
 ## Foundational Changes
 
 ### MVP stack established
