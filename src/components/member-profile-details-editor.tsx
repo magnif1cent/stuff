@@ -6,6 +6,7 @@ import { SocialIcon } from "@/components/social-icon";
 
 const inputClasses =
   "w-full max-w-xs rounded-md border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none";
+const labelClasses = "mb-1 block text-xs font-medium text-neutral-400";
 
 export function MemberProfileDetailsEditor({
   initialBio,
@@ -58,7 +59,11 @@ export function MemberProfileDetailsEditor({
   return (
     <div className="mb-6 flex flex-col gap-3">
       <div>
+        <label htmlFor="profile-bio" className={labelClasses}>
+          Bio <span className="text-neutral-600">(optional)</span>
+        </label>
         <textarea
+          id="profile-bio"
           value={bio}
           onChange={(e) => setBio(e.target.value)}
           rows={3}
@@ -69,31 +74,43 @@ export function MemberProfileDetailsEditor({
           {bio.trim().length}/{BIO_MAX_LENGTH}
         </span>
       </div>
-      <input
-        type="text"
-        value={location}
-        onChange={(e) => setLocation(e.target.value)}
-        placeholder="Location (optional)"
-        maxLength={LOCATION_MAX_LENGTH}
-        className={inputClasses}
-      />
-      <div className="flex items-center gap-2">
+      <div>
+        <label htmlFor="profile-location" className={labelClasses}>
+          Location <span className="text-neutral-600">(optional)</span>
+        </label>
         <input
-          type="url"
-          value={websiteUrl}
-          onChange={(e) => setWebsiteUrl(e.target.value)}
-          placeholder="Website or social link (optional)"
+          id="profile-location"
+          type="text"
+          value={location}
+          onChange={(e) => setLocation(e.target.value)}
+          placeholder="e.g. Hong Kong"
+          maxLength={LOCATION_MAX_LENGTH}
           className={inputClasses}
         />
-        {detectedPlatform && (
-          <span
-            title={detectedPlatform.label}
-            className="flex items-center gap-1 text-xs text-neutral-500"
-          >
-            <SocialIcon id={detectedPlatform.id} className="h-3.5 w-3.5" />
-            {detectedPlatform.label}
-          </span>
-        )}
+      </div>
+      <div>
+        <label htmlFor="profile-website" className={labelClasses}>
+          Website or social link <span className="text-neutral-600">(optional)</span>
+        </label>
+        <div className="flex items-center gap-2">
+          <input
+            id="profile-website"
+            type="url"
+            value={websiteUrl}
+            onChange={(e) => setWebsiteUrl(e.target.value)}
+            placeholder="https://instagram.com/you"
+            className={inputClasses}
+          />
+          {detectedPlatform && (
+            <span
+              title={detectedPlatform.label}
+              className="flex items-center gap-1 text-xs text-neutral-500"
+            >
+              <SocialIcon id={detectedPlatform.id} className="h-3.5 w-3.5" />
+              {detectedPlatform.label}
+            </span>
+          )}
+        </div>
       </div>
       <div className="flex items-center gap-3">
         <button

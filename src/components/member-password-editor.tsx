@@ -5,6 +5,7 @@ import { signOut } from "next-auth/react";
 
 const inputClasses =
   "w-full max-w-xs rounded-md border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none";
+const labelClasses = "mb-1 block text-xs font-medium text-neutral-400";
 
 export function MemberPasswordEditor({ hasPassword }: { hasPassword: boolean }) {
   const [currentPassword, setCurrentPassword] = useState("");
@@ -45,34 +46,49 @@ export function MemberPasswordEditor({ hasPassword }: { hasPassword: boolean }) 
     <form onSubmit={handleSubmit} className="mb-6 flex flex-col gap-3">
       <h2 className="text-sm font-semibold text-white">{hasPassword ? "Change password" : "Set a password"}</h2>
       {hasPassword && (
+        <div>
+          <label htmlFor="current-password" className={labelClasses}>
+            Current password
+          </label>
+          <input
+            id="current-password"
+            type="password"
+            required
+            autoComplete="current-password"
+            value={currentPassword}
+            onChange={(e) => setCurrentPassword(e.target.value)}
+            className={inputClasses}
+          />
+        </div>
+      )}
+      <div>
+        <label htmlFor="new-password" className={labelClasses}>
+          New password
+        </label>
         <input
+          id="new-password"
           type="password"
           required
-          autoComplete="current-password"
-          placeholder="Current password"
-          value={currentPassword}
-          onChange={(e) => setCurrentPassword(e.target.value)}
+          autoComplete="new-password"
+          value={newPassword}
+          onChange={(e) => setNewPassword(e.target.value)}
           className={inputClasses}
         />
-      )}
-      <input
-        type="password"
-        required
-        autoComplete="new-password"
-        placeholder="New password"
-        value={newPassword}
-        onChange={(e) => setNewPassword(e.target.value)}
-        className={inputClasses}
-      />
-      <input
-        type="password"
-        required
-        autoComplete="new-password"
-        placeholder="Confirm new password"
-        value={confirmPassword}
-        onChange={(e) => setConfirmPassword(e.target.value)}
-        className={inputClasses}
-      />
+      </div>
+      <div>
+        <label htmlFor="confirm-password" className={labelClasses}>
+          Confirm new password
+        </label>
+        <input
+          id="confirm-password"
+          type="password"
+          required
+          autoComplete="new-password"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          className={inputClasses}
+        />
+      </div>
       {error && <p className="text-sm text-red-500">{error}</p>}
       <button
         type="submit"
