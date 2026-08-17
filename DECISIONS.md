@@ -1668,6 +1668,113 @@ the tabs alongside the bio.
   Lists tile is gone, confirmed lint/build stay clean with the final
   seven-field component signature.
 
+### Member-facing password change added to the Profile tab
+**Schema-touching.** Members previously had no way to change their own
+password short of the forgot-password email flow (or, for admin/reviewer
+accounts, `AdminAccountSettings`). Added a self-service version to the
+owner's Profile tab, reusing the admin one's server-side logic and UI
+pattern almost verbatim rather than designing a new flow.
+
+- **New `PATCH /api/profile/password` endpoint mirrors `PATCH
+  /api/admin/account/password`'s logic exactly** (bcrypt-compare the
+  current password when one exists, `validateNewPassword`, hash, write
+  `passwordChangedAt`) but swaps `requireReviewerSession()` for a plain
+  `auth()` check — any signed-in member, not just admin/reviewer.
+- **`hasPassword` (derived from `!!user.passwordHash`) drives whether
+  "current password" is required**, both client-side (`MemberPasswordEditor`
+  hides/skips the field) and server-side (the route itself only compares
+  against a hash when one exists) — same reasoning as the admin version:
+  a Google-only account has no password yet, so this doubles as "set a
+  password" for those members instead of "change password".
+- **Signs the member out on success**, same as the admin flow — a
+  password change writes `passwordChangedAt`, which invalidates every
+  session's JWT on next check (see "Poster upload MIME sniffing, and JWT
+  sessions invalidated on password change"), including the one making the
+  request, so signing out immediately avoids a confusing stale-session
+  state instead of waiting for the next request to bounce them.
+- **Verified in a real browser**: wrong current password shows an inline
+  error and doesn't sign out; correct current password updates the hash,
+  signs the member out, and the new password successfully logs back in.
+
+### Member profile: location and website/social link fields
+**Schema-touching.** Two more optional profile fields alongside bio,
+added together in the same PR as the password-change feature above since
+both touch the Profile tab's editor. Adds `User.location` (nullable
+`String`, capped at 100 chars app-side, same pattern as bio) and
+`User.websiteUrl` (nullable `String`, capped at 200 chars, validated as an
+absolute `http(s)` URL server-side via `isValidProfileUrl`).
+
+- **Folded into the existing bio editor rather than three separate
+  mini-editors** — `MemberBioEditor` became `MemberProfileDetailsEditor`,
+  editing and saving all three fields (bio, location, website) together
+  through one new `PATCH /api/profile/details` endpoint, replacing the
+  old `PATCH /api/profile/bio` route rather than keeping both. A member
+  editing their profile is already looking at one section, not three
+  independent widgets, and the fields share the same visibility/validation
+  shape (optional, capped length, clears to `null` on empty).
+  Same public/owner-only visibility as bio: shown under the username on a
+  visitor's view, editable inline on the owner's own Profile tab.
+- **Single link field, not a typed multi-link list** — chose one generic
+  `websiteUrl` (labeled "Website or social link") over per-platform fields
+  (Letterboxd, YouTube, etc.) or a link array, since a typed/repeatable
+  link model is a bigger schema shape for a feature nobody's asked to use
+  more than one link yet; easy to revisit if that changes.
+- **Verified in a real browser**: set bio/location/website as the seed
+  `member` account, confirmed all three persist and render on reload, and
+  confirmed the website renders as a clickable link with
+  `rel="noopener noreferrer nofollow"`.
+
+### Profile tab fields made directly editable, no click-to-expand
+Both `MemberProfileDetailsEditor` and `MemberPasswordEditor` originally
+opened in a read-only/collapsed state with an "Edit" or "Change password"
+button gating the actual form — mirroring the admin settings page's
+pattern. Caught on review as an unnecessary extra step on a tab a member
+is already visiting specifically to edit their profile: removed the
+gate on both, so every field renders as its final editable input
+immediately.
+
+- `MemberProfileDetailsEditor` dropped its `editing` boolean entirely —
+  the bio textarea and location/website inputs are always live, with
+  Save disabled until a value actually differs from what's saved (avoids
+  a no-op request on an unmodified page).
+- `MemberPasswordEditor` dropped its `editing` boolean the same way — the
+  password fields render immediately rather than behind a "Change
+  password" click; the submit button's label (`Change password` / `Set a
+  password`) still carries the same `hasPassword`-driven distinction.
+- No API change — this was UI-only, verified by re-running the existing
+  browser checks for both flows (dirty-tracking on the Save button,
+  wrong/right current password) against the new always-open layout.
+
+### Social platform icons for the website/social link field
+Follow-up to the single-`websiteUrl`-field decision above, from explicit
+feedback: rather than adding dedicated per-platform columns (rejected —
+same reasoning as before, a schema-shape jump for a field nobody's
+asked to fill with more than one link) or a generic multi-link table
+(more flexible but the biggest lift), kept the one field and instead
+**detect the platform from the URL's hostname and render a matching
+icon + label** in place of raw URL text.
+
+- `detectSocialPlatform()` (`src/lib/profile.ts`) matches a small fixed
+  hostname table (`x.com`/`twitter.com`, `instagram.com`, `youtube.com`/
+  `youtu.be`, `tiktok.com`, `facebook.com`/`fb.com`, `reddit.com`,
+  `letterboxd.com`) and falls back to a generic "Website" id for
+  anything else — including a URL that fails to parse — so a link
+  always renders as something rather than erroring.
+- Icons are simplified monochrome line-art (`src/components/social-icon.tsx`),
+  matching the existing `ShareButton`/`FavoriteButton` icon style
+  (`stroke="currentColor"`, no fill, feather-icon proportions) rather
+  than full-color brand logos — keeps the icon set visually consistent
+  with the rest of the site's dark theme instead of introducing
+  platform brand colors.
+- The same detection renders in two places: the live preview next to
+  the input on the owner's own Profile tab (immediate feedback that a
+  link was recognized), and the actual clickable icon+label on a
+  visitor's view of the profile.
+- **Verified in a real browser**: confirmed all seven recognized
+  hostnames render their correct icon/label on both the owner's live
+  preview and the visitor-facing link, and confirmed an unrecognized
+  domain falls back to the generic "Website" icon rather than breaking.
+
 ## Deferred & Backlog
 
 - **About page copy: mission, About the Creators, Contact/feedback, and

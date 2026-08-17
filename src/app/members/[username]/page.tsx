@@ -8,12 +8,15 @@ import { MovieCard } from "@/components/movie-card";
 import { FightSceneResultCard, type FightSceneResult } from "@/components/fight-scene-result-card";
 import type { AddToListItem } from "@/components/add-to-list-control";
 import { MemberListManager } from "@/components/member-list-manager";
-import { MemberBioEditor } from "@/components/member-bio-editor";
+import { MemberProfileDetailsEditor } from "@/components/member-profile-details-editor";
+import { MemberPasswordEditor } from "@/components/member-password-editor";
 import { ProfileTabs } from "@/components/profile-tabs";
 import { ListsPanel } from "@/components/lists-panel";
 import { ProfileStatsStrip } from "@/components/profile-stats-strip";
 import { ActivityFeed, ListCard } from "@/components/activity-feed";
 import { getRecentActivity } from "@/lib/activity";
+import { detectSocialPlatform } from "@/lib/profile";
+import { SocialIcon } from "@/components/social-icon";
 import type { Movie } from "@/generated/prisma/client";
 
 const fightSceneCardInclude = {
@@ -323,14 +326,31 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
       ))
     );
 
+  const socialPlatform = profileUser.websiteUrl ? detectSocialPlatform(profileUser.websiteUrl) : null;
+
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-10">
       <h1 className="mb-6 text-2xl font-bold text-white">{profileUser.username}</h1>
 
-      {!isOwner &&
-        profileUser.bio && (
-          <p className="mb-6 max-w-xl text-sm whitespace-pre-wrap text-neutral-300">{profileUser.bio}</p>
-        )}
+      {!isOwner && (profileUser.bio || profileUser.location || profileUser.websiteUrl) && (
+        <div className="mb-6 flex flex-col gap-1">
+          {profileUser.bio && (
+            <p className="max-w-xl text-sm whitespace-pre-wrap text-neutral-300">{profileUser.bio}</p>
+          )}
+          {profileUser.location && <p className="text-xs text-neutral-500">{profileUser.location}</p>}
+          {profileUser.websiteUrl && socialPlatform && (
+            <a
+              href={profileUser.websiteUrl}
+              target="_blank"
+              rel="noopener noreferrer nofollow"
+              className="inline-flex w-fit items-center gap-1.5 text-xs text-red-500 hover:underline"
+            >
+              <SocialIcon id={socialPlatform.id} className="h-3.5 w-3.5" />
+              {socialPlatform.label}
+            </a>
+          )}
+        </div>
+      )}
 
       <ProfileStatsStrip
         memberSince={profileUser.createdAt}
@@ -349,7 +369,16 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
             {
               key: "profile",
               label: "Profile",
-              content: <MemberBioEditor initialBio={profileUser.bio} />,
+              content: (
+                <>
+                  <MemberProfileDetailsEditor
+                    initialBio={profileUser.bio}
+                    initialLocation={profileUser.location}
+                    initialWebsiteUrl={profileUser.websiteUrl}
+                  />
+                  <MemberPasswordEditor hasPassword={!!profileUser.passwordHash} />
+                </>
+              ),
             },
             {
               key: "activity",
