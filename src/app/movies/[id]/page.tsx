@@ -24,12 +24,14 @@ import {
   getFightSceneTags,
   getFightSceneRoundNumbers,
 } from "@/lib/fight-scenes";
+import { getFunFactsForMovie, getFunFactVoteSummaries } from "@/lib/fun-facts";
 import { RatingWidget } from "@/components/rating-widget";
 import { AdminRatingWidget } from "@/components/admin-rating-widget";
 import { ListButtons } from "@/components/list-buttons";
 import { AddToListControl } from "@/components/add-to-list-control";
 import { DiscussionThread } from "@/components/discussion-thread";
 import { FightSceneSection } from "@/components/fight-scene-section";
+import { FunFactsSection } from "@/components/fun-facts-section";
 import { EditorialReview } from "@/components/editorial-review";
 import { PosterOverrideControl } from "@/components/poster-override-control";
 import { RecommendationControl } from "@/components/recommendation-control";
@@ -129,6 +131,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
     editorialReview,
     movieRecommenders,
     recentFightCountEdits,
+    funFacts,
   ] = await Promise.all([
     getCommunityRatingSummary(movie.id),
     getEditorsRatingSummary(movie.id),
@@ -176,6 +179,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
       take: 5,
       include: { editedBy: { select: { username: true } } },
     }),
+    getFunFactsForMovie(movie.id),
   ]);
 
   const myMemberListItems = myMemberLists.map((list) => ({
@@ -213,12 +217,15 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
   );
 
   const fightSceneIds = fightScenes.map((s) => s.id);
+  const funFactIds = funFacts.map((f) => f.id);
   const [
     fightSceneRatingSummaries,
     fightSceneAdminRatingSummaries,
     myFightSceneRatings,
     myFightSceneAdminRatings,
     fightSceneRoundNumbers,
+    funFactVoteSummaries,
+    myFunFactVotes,
   ] = await Promise.all([
     getFightSceneRatingSummaries(fightSceneIds),
     getFightSceneAdminRatingSummaries(fightSceneIds),
@@ -233,6 +240,12 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
         })
       : [],
     getFightSceneRoundNumbers(movie.id),
+    getFunFactVoteSummaries(funFactIds),
+    session?.user
+      ? prisma.funFactVote.findMany({
+          where: { userId: session.user.id, factId: { in: funFactIds } },
+        })
+      : [],
   ]);
 
   const backdropUrl = tmdbImageUrl(movie.backdropPath, "original");
@@ -286,6 +299,24 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
     createdAt: edit.createdAt.toISOString(),
     editedBy: edit.editedBy,
   }));
+
+  const myFunFactVoteMap = new Map(myFunFactVotes.map((v) => [v.factId, v.value as 1 | -1]));
+  const serializedFunFacts = funFacts
+    .map((fact) => {
+      const summary = funFactVoteSummaries.get(fact.id);
+      return {
+        id: fact.id,
+        content: fact.content,
+        submittedById: fact.submittedById,
+        createdAt: fact.createdAt.toISOString(),
+        updatedAt: fact.updatedAt.toISOString(),
+        submittedBy: fact.submittedBy,
+        up: summary?.up ?? 0,
+        down: summary?.down ?? 0,
+        myVote: myFunFactVoteMap.get(fact.id) ?? null,
+      };
+    })
+    .sort((a, b) => b.up - b.down - (a.up - a.down));
 
   const serializedPosts = discussionPage.posts.map((post) => ({
     ...post,
@@ -502,6 +533,14 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
           myMemberLists={myMemberLists.map((list) => ({ id: list.id, name: list.name }))}
           mySavedListIdsByScene={mySavedFightSceneListIds}
           myFavoriteSceneIds={myFavoriteFightSceneIds}
+        />
+
+        <FunFactsSection
+          movieId={movie.id}
+          initialFacts={serializedFunFacts}
+          signedIn={!!session?.user}
+          currentUserId={session?.user?.id ?? null}
+          isAdmin={session?.user?.role === "ADMIN"}
         />
 
         <div id="discussion">

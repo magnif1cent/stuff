@@ -25,6 +25,7 @@ An IMDB-style website for kung fu and martial arts films, built for martial arts
 - [Member Movie Submissions](#member-movie-submissions)
 - [Fight Scenes](#fight-scenes)
 - [Fight Count](#fight-count)
+- [Fun Facts](#fun-facts)
 - [Actor Pages](#actor-pages)
 - [Editorial Reviews](#editorial-reviews)
 - [Admin Recommendations](#admin-recommendations)
@@ -50,6 +51,7 @@ An IMDB-style website for kung fu and martial arts films, built for martial arts
 - Movie pages with cast, synopsis, a community rating, a separate admin-only "Editors' Score", an admin-authored editorial review, and a per-movie discussion thread (with spoiler tags, edit/delete on your own posts, and admin moderation). Members and admins can also rate a movie by category (Fight Choreography, Story, Acting) alongside the overall score, shown as a per-category average when at least one rating exists — see [Ratings](#ratings) below
 - **Fight Scenes**: members tag specific fight scenes within a movie — YouTube clip (with an optional start timestamp), the actors involved (picked from that movie's cast), and category tags (e.g. "Weapon Duel", "One vs. Many") — with their own member rating, a separate admin rating, admin verification, and a shareable permalink page (see [Fight Scenes](#fight-scenes) below)
 - **Fight Count**: a member-maintained "true" fight count on every movie page, separate from the count of cataloged Fight Scenes — see [Fight Count](#fight-count) below
+- **Fun Facts**: an IMDB "Did you know"-style trivia section above the Discussion thread — members add individual entries, and other members thumbs-up/down each one, ranked by net vote score — see [Fun Facts](#fun-facts) below
 - Actor pages (`/actors/[personId]`) showing an actor's filmography and every fight scene they're tagged in, linked from a movie's cast list and a scene's "Featuring" line (see [Actor Pages](#actor-pages) below)
 - Member accounts via email/password (with email verification and self-service password recovery) or Google sign-in, identified publicly by a chosen username rather than their email or real name (see [Usernames](#usernames) and [Password Recovery](#password-recovery) below)
 - Member capabilities: rate movies and fight scenes, maintain a Favorites list and a Watchlist for movies (fight scenes get a Favorite only — see below), create their own public named lists on a profile page at `/members/[username]` and save both movies and fight scenes to them (see [Member Lists & Profiles](#member-lists--profiles) below), post/reply in movie discussions, submit fight scenes, and submit a movie missing from the catalog for admin review (see [Member Movie Submissions](#member-movie-submissions) below)
@@ -257,6 +259,15 @@ This is deliberately a single shared value, not an aggregate of individual membe
 - **Full edit history**, visible to everyone on the movie page (not just admins) — who changed it, from what value to what, and when. The value itself has no approval step, so this history is the only accountability trail; anyone can use it to spot and revert a bad edit, not just moderators.
 
 See `DECISIONS.md` for the fuller reasoning, including the aggregation-based alternative (à la ratings) that was considered and explicitly rejected in favor of this simpler model.
+
+## Fun Facts
+
+Above the Discussion thread on every movie page: an IMDB "Did you know"-style trivia section. Any verified member can add a short fun fact (500 characters max — a trivia snippet, not a full discussion post), and any other verified member can vote it up or down.
+
+- **Voting is thumbs up/down, not a 1–10 score** — the first bidirectional vote in the app (`MemberList` likes are one-directional). Voting the same direction again retracts your vote; voting the other direction switches it. You can't vote on your own fun fact.
+- **Ranked by net score** (upvotes minus downvotes), not chronologically — the highest-voted facts rise to the top, same idea as IMDB's own trivia section.
+- **Editing/deleting**: the submitter can edit or delete their own fact; admins can delete anyone's. Deletion is a soft-delete (keeps vote history intact) and the fact simply disappears from the list — unlike discussion posts, nothing else (no replies) depends on the row staying visible.
+- Requires a verified email to submit or vote, same bar as fight scenes and discussion posts.
 
 ## Actor Pages
 
