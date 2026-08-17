@@ -2,6 +2,47 @@
 
 An IMDB-style website for kung fu and martial arts films, built for martial arts movie enthusiasts. Movie data is sourced from [TMDB](https://www.themoviedb.org/).
 
+## Contents
+
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Getting Set Up](#getting-set-up)
+  - [1. Install dependencies](#1-install-dependencies)
+  - [2. Get a PostgreSQL database](#2-get-a-postgresql-database)
+  - [3. Get a TMDB API key](#3-get-a-tmdb-api-key)
+  - [4. Set up Google OAuth (optional, for "Sign in with Google")](#4-set-up-google-oauth-optional-for-sign-in-with-google)
+  - [5. Configure environment variables](#5-configure-environment-variables)
+  - [6. Apply the database schema and seed sample data](#6-apply-the-database-schema-and-seed-sample-data)
+  - [7. Run the app](#7-run-the-app)
+- [Usernames](#usernames)
+- [Email Verification](#email-verification)
+- [Password Recovery](#password-recovery)
+- [Ratings](#ratings)
+- [Discussion & Moderation](#discussion-moderation)
+- [Search](#search)
+- [TMDB Import](#tmdb-import)
+- [Member Lists & Profiles](#member-lists-profiles)
+- [Member Movie Submissions](#member-movie-submissions)
+- [Fight Scenes](#fight-scenes)
+- [Fight Count](#fight-count)
+- [Actor Pages](#actor-pages)
+- [Editorial Reviews](#editorial-reviews)
+- [Admin Recommendations](#admin-recommendations)
+- [Admin Poster Overrides](#admin-poster-overrides)
+- [Visual Theme](#visual-theme)
+- [Admin Area & Roles](#admin-area-roles)
+- [Weekly Trending Carousel](#weekly-trending-carousel)
+- [Security](#security)
+- [Continuous Integration](#continuous-integration)
+- [Deploying](#deploying)
+- [Footer & About Page](#footer-about-page)
+- [News & Updates](#news-updates)
+- [Community Activity](#community-activity)
+- [Web Analytics](#web-analytics)
+- [Error Monitoring](#error-monitoring)
+- [Project Structure](#project-structure)
+- [Out of Scope (for now)](#out-of-scope-for-now)
+
 ## Features
 
 - Landing page with a weekly-rotating "trending" carousel (top 5 most-active movies over the last 7 days) and a recently-added grid — each slide plays a short preview of the movie's best verified fight scene when one exists, falling back to the static backdrop otherwise (see [Weekly Trending Carousel](#weekly-trending-carousel) below)
