@@ -145,51 +145,52 @@ export function FunFactsSection({
   }
 
   return (
-    <section className="mt-10">
+    <section className="mt-10 max-w-2xl">
       <h2 className="mb-4 font-serif text-xl font-bold text-white">Fun Facts</h2>
 
-      {signedIn ? (
-        <div className="mb-6 flex flex-col gap-2">
-          <textarea
-            value={newContent}
-            onChange={(e) => setNewContent(e.target.value)}
-            placeholder="Did you know…?"
-            rows={2}
-            maxLength={MAX_CONTENT_LENGTH}
-            className="w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
-          />
-          <div className="flex items-center gap-3">
-            <button
-              onClick={submit}
-              disabled={submitting || !newContent.trim()}
-              className="w-fit rounded-md bg-red-700 px-4 py-1.5 text-sm font-medium text-white hover:bg-red-600 disabled:opacity-50"
-            >
-              Add fun fact
-            </button>
-            <span className="text-xs text-neutral-500">
-              {newContent.length}/{MAX_CONTENT_LENGTH}
-            </span>
+      <div className="rounded-md border border-neutral-800 bg-neutral-900">
+        {signedIn ? (
+          <div className="flex flex-col gap-2 border-b border-neutral-800 p-3">
+            <textarea
+              value={newContent}
+              onChange={(e) => setNewContent(e.target.value)}
+              placeholder="Did you know…?"
+              rows={2}
+              maxLength={MAX_CONTENT_LENGTH}
+              className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
+            />
+            <div className="flex items-center gap-3">
+              <button
+                onClick={submit}
+                disabled={submitting || !newContent.trim()}
+                className="w-fit rounded-md bg-red-700 px-4 py-1.5 text-sm font-medium text-white hover:bg-red-600 disabled:opacity-50"
+              >
+                Add fun fact
+              </button>
+              <span className="text-xs text-neutral-500">
+                {newContent.length}/{MAX_CONTENT_LENGTH}
+              </span>
+            </div>
+            {error && <p className="text-sm text-red-500">{error}</p>}
           </div>
-          {error && <p className="text-sm text-red-500">{error}</p>}
-        </div>
-      ) : (
-        <p className="mb-6 text-sm text-neutral-400">
-          <a href="/login" className="text-red-500 hover:underline">
-            Sign in
-          </a>{" "}
-          to add a fun fact.
-        </p>
-      )}
+        ) : (
+          <p className="border-b border-neutral-800 p-3 text-sm text-neutral-400">
+            <a href="/login" className="text-red-500 hover:underline">
+              Sign in
+            </a>{" "}
+            to add a fun fact.
+          </p>
+        )}
 
-      <ul className="flex flex-col gap-3">
-        {facts.map((fact) => {
-          const canEdit = currentUserId === fact.submittedById;
-          const canDelete = canEdit || isAdmin;
-          const canVote = signedIn && !canEdit;
+        <ul className="divide-y divide-neutral-800">
+          {facts.map((fact) => {
+            const canEdit = currentUserId === fact.submittedById;
+            const canDelete = canEdit || isAdmin;
+            const canVote = signedIn && !canEdit;
 
-          return (
-            <li key={fact.id} className="flex gap-3 rounded-md border border-neutral-800 bg-neutral-900 p-3">
-              <div className="flex shrink-0 flex-col items-center gap-0.5 pt-0.5">
+            return (
+              <li key={fact.id} className="flex gap-3 p-3">
+                <div className="flex shrink-0 flex-col items-center gap-0.5 pt-0.5">
                 <button
                   onClick={() => (canVote ? vote(fact.id, 1) : undefined)}
                   disabled={!canVote}
@@ -269,13 +270,14 @@ export function FunFactsSection({
                   <p className="text-sm text-neutral-300">{fact.content}</p>
                 )}
               </div>
-            </li>
-          );
-        })}
-        {facts.length === 0 && (
-          <p className="text-sm text-neutral-500">No fun facts yet. Be the first to add one.</p>
-        )}
-      </ul>
+              </li>
+            );
+          })}
+          {facts.length === 0 && (
+            <li className="p-3 text-sm text-neutral-500">No fun facts yet. Be the first to add one.</li>
+          )}
+        </ul>
+      </div>
     </section>
   );
 }
