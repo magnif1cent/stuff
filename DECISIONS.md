@@ -1724,6 +1724,57 @@ absolute `http(s)` URL server-side via `isValidProfileUrl`).
   confirmed the website renders as a clickable link with
   `rel="noopener noreferrer nofollow"`.
 
+### Profile tab fields made directly editable, no click-to-expand
+Both `MemberProfileDetailsEditor` and `MemberPasswordEditor` originally
+opened in a read-only/collapsed state with an "Edit" or "Change password"
+button gating the actual form — mirroring the admin settings page's
+pattern. Caught on review as an unnecessary extra step on a tab a member
+is already visiting specifically to edit their profile: removed the
+gate on both, so every field renders as its final editable input
+immediately.
+
+- `MemberProfileDetailsEditor` dropped its `editing` boolean entirely —
+  the bio textarea and location/website inputs are always live, with
+  Save disabled until a value actually differs from what's saved (avoids
+  a no-op request on an unmodified page).
+- `MemberPasswordEditor` dropped its `editing` boolean the same way — the
+  password fields render immediately rather than behind a "Change
+  password" click; the submit button's label (`Change password` / `Set a
+  password`) still carries the same `hasPassword`-driven distinction.
+- No API change — this was UI-only, verified by re-running the existing
+  browser checks for both flows (dirty-tracking on the Save button,
+  wrong/right current password) against the new always-open layout.
+
+### Social platform icons for the website/social link field
+Follow-up to the single-`websiteUrl`-field decision above, from explicit
+feedback: rather than adding dedicated per-platform columns (rejected —
+same reasoning as before, a schema-shape jump for a field nobody's
+asked to fill with more than one link) or a generic multi-link table
+(more flexible but the biggest lift), kept the one field and instead
+**detect the platform from the URL's hostname and render a matching
+icon + label** in place of raw URL text.
+
+- `detectSocialPlatform()` (`src/lib/profile.ts`) matches a small fixed
+  hostname table (`x.com`/`twitter.com`, `instagram.com`, `youtube.com`/
+  `youtu.be`, `tiktok.com`, `facebook.com`/`fb.com`, `reddit.com`,
+  `letterboxd.com`) and falls back to a generic "Website" id for
+  anything else — including a URL that fails to parse — so a link
+  always renders as something rather than erroring.
+- Icons are simplified monochrome line-art (`src/components/social-icon.tsx`),
+  matching the existing `ShareButton`/`FavoriteButton` icon style
+  (`stroke="currentColor"`, no fill, feather-icon proportions) rather
+  than full-color brand logos — keeps the icon set visually consistent
+  with the rest of the site's dark theme instead of introducing
+  platform brand colors.
+- The same detection renders in two places: the live preview next to
+  the input on the owner's own Profile tab (immediate feedback that a
+  link was recognized), and the actual clickable icon+label on a
+  visitor's view of the profile.
+- **Verified in a real browser**: confirmed all seven recognized
+  hostnames render their correct icon/label on both the owner's live
+  preview and the visitor-facing link, and confirmed an unrecognized
+  domain falls back to the generic "Website" icon rather than breaking.
+
 ## Deferred & Backlog
 
 - **About page copy: mission, About the Creators, Contact/feedback, and

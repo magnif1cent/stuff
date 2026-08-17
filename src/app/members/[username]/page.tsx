@@ -15,6 +15,8 @@ import { ListsPanel } from "@/components/lists-panel";
 import { ProfileStatsStrip } from "@/components/profile-stats-strip";
 import { ActivityFeed, ListCard } from "@/components/activity-feed";
 import { getRecentActivity } from "@/lib/activity";
+import { detectSocialPlatform } from "@/lib/profile";
+import { SocialIcon } from "@/components/social-icon";
 import type { Movie } from "@/generated/prisma/client";
 
 const fightSceneCardInclude = {
@@ -324,6 +326,8 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
       ))
     );
 
+  const socialPlatform = profileUser.websiteUrl ? detectSocialPlatform(profileUser.websiteUrl) : null;
+
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-10">
       <h1 className="mb-6 text-2xl font-bold text-white">{profileUser.username}</h1>
@@ -334,14 +338,15 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
             <p className="max-w-xl text-sm whitespace-pre-wrap text-neutral-300">{profileUser.bio}</p>
           )}
           {profileUser.location && <p className="text-xs text-neutral-500">{profileUser.location}</p>}
-          {profileUser.websiteUrl && (
+          {profileUser.websiteUrl && socialPlatform && (
             <a
               href={profileUser.websiteUrl}
               target="_blank"
               rel="noopener noreferrer nofollow"
-              className="text-xs text-red-500 hover:underline"
+              className="inline-flex w-fit items-center gap-1.5 text-xs text-red-500 hover:underline"
             >
-              {profileUser.websiteUrl}
+              <SocialIcon id={socialPlatform.id} className="h-3.5 w-3.5" />
+              {socialPlatform.label}
             </a>
           )}
         </div>

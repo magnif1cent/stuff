@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { BIO_MAX_LENGTH, LOCATION_MAX_LENGTH } from "@/lib/profile";
+import { BIO_MAX_LENGTH, LOCATION_MAX_LENGTH, detectSocialPlatform, isValidProfileUrl } from "@/lib/profile";
+import { SocialIcon } from "@/components/social-icon";
 
 const inputClasses =
   "w-full max-w-xs rounded-md border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none";
@@ -29,6 +30,8 @@ export function MemberProfileDetailsEditor({
   const dirty = bio !== saved.bio || location !== saved.location || websiteUrl !== saved.websiteUrl;
   const bioTooLong = bio.trim().length > BIO_MAX_LENGTH;
   const locationTooLong = location.trim().length > LOCATION_MAX_LENGTH;
+  const detectedPlatform =
+    websiteUrl.trim() && isValidProfileUrl(websiteUrl.trim()) ? detectSocialPlatform(websiteUrl.trim()) : null;
 
   async function save() {
     if (bioTooLong || locationTooLong) return;
@@ -74,13 +77,24 @@ export function MemberProfileDetailsEditor({
         maxLength={LOCATION_MAX_LENGTH}
         className={inputClasses}
       />
-      <input
-        type="url"
-        value={websiteUrl}
-        onChange={(e) => setWebsiteUrl(e.target.value)}
-        placeholder="Website or social link (optional)"
-        className={inputClasses}
-      />
+      <div className="flex items-center gap-2">
+        <input
+          type="url"
+          value={websiteUrl}
+          onChange={(e) => setWebsiteUrl(e.target.value)}
+          placeholder="Website or social link (optional)"
+          className={inputClasses}
+        />
+        {detectedPlatform && (
+          <span
+            title={detectedPlatform.label}
+            className="flex items-center gap-1 text-xs text-neutral-500"
+          >
+            <SocialIcon id={detectedPlatform.id} className="h-3.5 w-3.5" />
+            {detectedPlatform.label}
+          </span>
+        )}
+      </div>
       <div className="flex items-center gap-3">
         <button
           onClick={save}
