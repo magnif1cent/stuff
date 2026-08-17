@@ -25,6 +25,11 @@ When updating README.md, verify your description against the actual code you
 just wrote (or read), not just your intent for it — this keeps the docs
 accurate rather than aspirational.
 
+`README.md` is edited far more often than `DECISIONS.md` — most user-facing
+changes touch it. Don't read the whole file to find where a sentence belongs;
+use its `## Contents` section (or grep `^## ` / `^### `) to jump to the
+relevant section first.
+
 ## Keep DECISIONS.md in sync
 
 `README.md` documents *what* the app does; `DECISIONS.md` documents *why* it
