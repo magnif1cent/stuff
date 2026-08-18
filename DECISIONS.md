@@ -103,6 +103,7 @@ one.
 - [Member profile: location and website/social link fields](#member-profile-location-and-websitesocial-link-fields)
 - [Profile tab fields made directly editable, no click-to-expand](#profile-tab-fields-made-directly-editable-no-click-to-expand)
 - [Social platform icons for the website/social link field](#social-platform-icons-for-the-websitesocial-link-field)
+- [Trending carousel clip autoplay bounded to one lap, paused when the tab is hidden](#trending-carousel-clip-autoplay-bounded-to-one-lap-paused-when-the-tab-is-hidden)
 
 **Deferred & Backlog**
 
@@ -1896,6 +1897,38 @@ icon + label** in place of raw URL text.
   hostnames render their correct icon/label on both the owner's live
   preview and the visitor-facing link, and confirmed an unrecognized
   domain falls back to the generic "Website" icon rather than breaking.
+
+### Trending carousel clip autoplay bounded to one lap, paused when the tab is hidden
+**PR #TBD.** Reported bug: real visitors were sometimes seeing YouTube's
+"Sign in to confirm you're not a bot" interstitial render inside a hero
+carousel clip instead of the preview playing.
+
+- **Root cause, by elimination rather than a YouTube-side error message
+  pointing at it directly**: the carousel (`src/components/hero-carousel.tsx`)
+  mounted a brand-new autoplaying, muted `youtube-nocookie.com/embed` iframe
+  on every rotation (every 15s), indefinitely, for as long as the tab stayed
+  open — an idle tab left open for hours generated an unbounded stream of
+  unattended autoplay embed requests. That's the same repeated-automated-
+  playback shape YouTube's anti-bot heuristics are described as targeting,
+  and it was the only thing about this feature that looked bot-like — a
+  single manually-loaded autoplay embed doesn't trigger this on its own.
+- **Fix: cap it to one lap, not remove autoplay** — `autoRotations` counts
+  timer-driven advances only (not manual arrow/dot clicks, since a human
+  actually clicking through is itself evidence this isn't unattended
+  playback) and clips stop autoplaying once every movie's has played once,
+  reverting to the static backdrop for the rest of the session. Keeps the
+  "highlight reel on load" effect the feature was built for while bounding
+  total embed requests per page visit to a fixed, small number instead of
+  unbounded.
+- **Also pause on `visibilitychange`**: neither the rotation timer nor clip
+  playback runs while `document.hidden` is true, so a backgrounded tab
+  doesn't keep autoplaying (or counting against the one-lap cap) with nobody
+  watching.
+- Considered removing autoplay entirely (wait for a user gesture before ever
+  loading the first clip) — rejected as a bigger UX regression than the bug
+  warranted, since the reported failures were intermittent, not universal,
+  and the "Trending this week" hero specifically wants to show its clip
+  without requiring an interaction first.
 
 ## Deferred & Backlog
 
