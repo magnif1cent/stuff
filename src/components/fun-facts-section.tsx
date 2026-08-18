@@ -16,25 +16,19 @@ export interface FunFactItem {
   myVote: 1 | -1 | null;
 }
 
-function timeAgo(iso: string) {
-  const seconds = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
-  if (seconds < 60) return "just now";
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
 function wasEdited(item: FunFactItem) {
   return new Date(item.updatedAt).getTime() - new Date(item.createdAt).getTime() > 1000;
 }
 
-// Highest net score (up - down) first; stable otherwise, so ties keep
-// whatever order they arrived in (newest-submitted first, from the server).
+// Highest net score (up - down) first; ties broken by newest first.
 function byNetScore(a: FunFactItem, b: FunFactItem) {
-  return b.up - b.down - (a.up - a.down);
+  const scoreDiff = b.up - b.down - (a.up - a.down);
+  if (scoreDiff !== 0) return scoreDiff;
+  return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
 }
 
 export function FunFactsSection({
@@ -166,6 +160,15 @@ export function FunFactsSection({
   );
   const spotlightFact = facts[spotlightIndex] ?? null;
 
+  // Entry numbers reflect submission order (oldest = #1), independent of the
+  // net-score order `facts` is displayed in, so a fact's number doesn't
+  // change as votes come in.
+  const entryNumbers = new Map(
+    [...facts]
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+      .map((f, i) => [f.id, i + 1]),
+  );
+
   return (
     <section className="mt-10 max-w-2xl">
       <h2 className="mb-4 font-serif text-xl font-bold text-white">Fun Facts</h2>
@@ -243,8 +246,8 @@ export function FunFactsSection({
                 )}
 
                 <p className="mt-2 text-xs text-neutral-500">
-                  — {fact.submittedBy.username}
-                  {spotlightIndex === 0 && ", highest voted"} · {timeAgo(fact.createdAt)}
+                  Fun Fact #{entryNumbers.get(fact.id)} — {fact.submittedBy.username}
+                  {spotlightIndex === 0 && ", highest voted"} · {formatDate(fact.createdAt)}
                   {wasEdited(fact) && " (edited)"}
                 </p>
 
@@ -329,6 +332,9 @@ export function FunFactsSection({
                     i === spotlightIndex ? "bg-neutral-800/40" : ""
                   }`}
                 >
+                  <span className="w-6 shrink-0 text-center text-xs text-neutral-600">
+                    #{entryNumbers.get(fact.id)}
+                  </span>
                   <span
                     className={
                       fact.myVote === 1 ? "text-green-500" : fact.myVote === -1 ? "text-red-500" : "text-neutral-600"
@@ -339,6 +345,7 @@ export function FunFactsSection({
                   <span className="w-5 shrink-0 text-center text-xs text-neutral-500">{fact.up - fact.down}</span>
                   <span className="shrink-0 font-medium text-neutral-100">{fact.submittedBy.username}</span>
                   <span className="min-w-0 flex-1 truncate text-neutral-400">{fact.content}</span>
+                  <span className="shrink-0 text-xs text-neutral-600">{formatDate(fact.createdAt)}</span>
                 </button>
               </li>
             ))}
