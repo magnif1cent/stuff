@@ -316,7 +316,11 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
         myVote: myFunFactVoteMap.get(fact.id) ?? null,
       };
     })
-    .sort((a, b) => b.up - b.down - (a.up - a.down));
+    .sort((a, b) => {
+      const scoreDiff = b.up - b.down - (a.up - a.down);
+      if (scoreDiff !== 0) return scoreDiff;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
 
   const serializedPosts = discussionPage.posts.map((post) => ({
     ...post,
