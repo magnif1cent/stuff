@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 const MAX_CONTENT_LENGTH = 500;
+const PAGE_SIZE = 5;
 
 export interface FunFactItem {
   id: string;
@@ -54,6 +55,7 @@ export function FunFactsSection({
   // net score -- an index would silently jump the spotlight to a different
   // fact the moment the current one's score changes.
   const [spotlightId, setSpotlightId] = useState<string | null>(initialFacts[0]?.id ?? null);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   function updateFact(id: string, updater: (item: FunFactItem) => FunFactItem) {
     setFacts((prev) => prev.map((f) => (f.id === id ? updater(f) : f)).sort(byNetScore));
@@ -76,8 +78,13 @@ export function FunFactsSection({
     }
     const { fact } = await res.json();
     const newFact = { ...fact, up: 0, down: 0, myVote: null };
-    setFacts((prev) => [newFact, ...prev].sort(byNetScore));
+    const next = [newFact, ...facts].sort(byNetScore);
+    setFacts(next);
     if (facts.length === 0) setSpotlightId(newFact.id);
+    // Keep the fact you just posted visible in the list even if it landed
+    // past the current page (a brand-new, unvoted fact can sort anywhere
+    // among other 0-net-score facts).
+    setVisibleCount((v) => Math.max(v, next.findIndex((f) => f.id === newFact.id) + 1));
     setNewContent("");
   }
 
@@ -152,6 +159,9 @@ export function FunFactsSection({
     const base = currentIndex === -1 ? 0 : currentIndex;
     const nextIndex = (base + direction + facts.length) % facts.length;
     setSpotlightId(facts[nextIndex].id);
+    // Expand the visible page so the newly-spotlighted fact's list row is
+    // still shown and highlighted, rather than paginated out of view.
+    setVisibleCount((v) => Math.max(v, nextIndex + 1));
   }
 
   const spotlightIndex = Math.max(
@@ -324,32 +334,53 @@ export function FunFactsSection({
 
         {facts.length > 0 && (
           <ul className="divide-y divide-neutral-800">
-            {facts.map((fact, i) => (
+            {facts.slice(0, visibleCount).map((fact) => (
               <li key={fact.id}>
                 <button
                   onClick={() => setSpotlightId(fact.id)}
-                  className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition hover:bg-neutral-800/50 ${
-                    i === spotlightIndex ? "bg-neutral-800/40" : ""
+                  className={`flex w-full flex-col gap-1 px-3 py-2 text-left text-sm transition hover:bg-neutral-800/50 ${
+                    fact.id === spotlightId ? "bg-neutral-800/40" : ""
                   }`}
                 >
-                  <span className="w-6 shrink-0 text-center text-xs text-neutral-600">
-                    #{entryNumbers.get(fact.id)}
-                  </span>
-                  <span
-                    className={
-                      fact.myVote === 1 ? "text-green-500" : fact.myVote === -1 ? "text-red-500" : "text-neutral-600"
-                    }
-                  >
-                    {fact.myVote === -1 ? "👎" : "👍"}
-                  </span>
-                  <span className="w-5 shrink-0 text-center text-xs text-neutral-500">{fact.up - fact.down}</span>
-                  <span className="shrink-0 font-medium text-neutral-100">{fact.submittedBy.username}</span>
-                  <span className="min-w-0 flex-1 truncate text-neutral-400">{fact.content}</span>
-                  <span className="shrink-0 text-xs text-neutral-600">{formatDate(fact.createdAt)}</span>
+                  <div className="flex items-center gap-2 text-xs text-neutral-500">
+                    <span className="shrink-0 text-neutral-600">#{entryNumbers.get(fact.id)}</span>
+                    <span
+                      className={
+                        fact.myVote === 1
+                          ? "text-green-500"
+                          : fact.myVote === -1
+                            ? "text-red-500"
+                            : "text-neutral-600"
+                      }
+                    >
+                      {fact.myVote === -1 ? "👎" : "👍"}
+                    </span>
+                    <span className="w-4 shrink-0 text-center">{fact.up - fact.down}</span>
+                    <span className="shrink-0 font-medium text-neutral-100">{fact.submittedBy.username}</span>
+                    <span className="ml-auto shrink-0 text-neutral-600">{formatDate(fact.createdAt)}</span>
+                  </div>
+                  <p className="text-neutral-300">{fact.content}</p>
                 </button>
               </li>
             ))}
           </ul>
+        )}
+
+        {visibleCount < facts.length && (
+          <button
+            onClick={() => setVisibleCount((v) => v + PAGE_SIZE)}
+            className="w-full border-t border-neutral-800 py-2 text-center text-xs text-neutral-400 hover:bg-neutral-800/50 hover:text-neutral-200"
+          >
+            Show {Math.min(PAGE_SIZE, facts.length - visibleCount)} more
+          </button>
+        )}
+        {visibleCount > PAGE_SIZE && visibleCount >= facts.length && (
+          <button
+            onClick={() => setVisibleCount(PAGE_SIZE)}
+            className="w-full border-t border-neutral-800 py-2 text-center text-xs text-neutral-400 hover:bg-neutral-800/50 hover:text-neutral-200"
+          >
+            Show less
+          </button>
         )}
       </div>
     </section>
