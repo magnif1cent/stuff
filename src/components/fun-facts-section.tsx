@@ -260,8 +260,7 @@ export function FunFactsSection({
                 )}
 
                 <p className="mt-2 text-xs text-neutral-500">
-                  Fun Fact #{entryNumbers.get(fact.id)} — {fact.submittedBy.username}
-                  {spotlightIndex === 0 && ", highest voted"} · {formatDate(fact.createdAt)}
+                  — {fact.submittedBy.username} · {formatDate(fact.createdAt)}
                   {wasEdited(fact) && " (edited)"}
                 </p>
 
