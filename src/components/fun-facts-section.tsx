@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 const MAX_CONTENT_LENGTH = 500;
+const PAGE_SIZE = 5;
 
 export interface FunFactItem {
   id: string;
@@ -54,6 +55,7 @@ export function FunFactsSection({
   // net score -- an index would silently jump the spotlight to a different
   // fact the moment the current one's score changes.
   const [spotlightId, setSpotlightId] = useState<string | null>(initialFacts[0]?.id ?? null);
+  const [page, setPage] = useState(1);
 
   function updateFact(id: string, updater: (item: FunFactItem) => FunFactItem) {
     setFacts((prev) => prev.map((f) => (f.id === id ? updater(f) : f)).sort(byNetScore));
@@ -76,8 +78,13 @@ export function FunFactsSection({
     }
     const { fact } = await res.json();
     const newFact = { ...fact, up: 0, down: 0, myVote: null };
-    setFacts((prev) => [newFact, ...prev].sort(byNetScore));
+    const next = [newFact, ...facts].sort(byNetScore);
+    setFacts(next);
     if (facts.length === 0) setSpotlightId(newFact.id);
+    // Jump to whichever page the fact you just posted landed on (a
+    // brand-new, unvoted fact can sort anywhere among other 0-net-score
+    // facts, not necessarily page 1).
+    setPage(Math.floor(next.findIndex((f) => f.id === newFact.id) / PAGE_SIZE) + 1);
     setNewContent("");
   }
 
@@ -152,6 +159,9 @@ export function FunFactsSection({
     const base = currentIndex === -1 ? 0 : currentIndex;
     const nextIndex = (base + direction + facts.length) % facts.length;
     setSpotlightId(facts[nextIndex].id);
+    // Jump to whichever page the newly-spotlighted fact's list row is on,
+    // rather than leaving it paginated out of view.
+    setPage(Math.floor(nextIndex / PAGE_SIZE) + 1);
   }
 
   const spotlightIndex = Math.max(
@@ -168,6 +178,10 @@ export function FunFactsSection({
       .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
       .map((f, i) => [f.id, i + 1]),
   );
+
+  const totalPages = Math.max(1, Math.ceil(facts.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pageFacts = facts.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   return (
     <section className="mt-10 max-w-2xl">
@@ -246,8 +260,7 @@ export function FunFactsSection({
                 )}
 
                 <p className="mt-2 text-xs text-neutral-500">
-                  Fun Fact #{entryNumbers.get(fact.id)} — {fact.submittedBy.username}
-                  {spotlightIndex === 0 && ", highest voted"} · {formatDate(fact.createdAt)}
+                  — {fact.submittedBy.username} · {formatDate(fact.createdAt)}
                   {wasEdited(fact) && " (edited)"}
                 </p>
 
@@ -260,27 +273,26 @@ export function FunFactsSection({
                       ‹ prev
                     </button>
                   )}
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-3">
                     <button
                       onClick={() => (canVote ? vote(fact.id, 1) : undefined)}
                       disabled={!canVote}
                       title={canEdit ? "You can't vote on your own fun fact" : undefined}
-                      className={`rounded px-1.5 py-0.5 text-base leading-none transition disabled:cursor-not-allowed disabled:opacity-40 ${
+                      className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-base leading-none transition disabled:cursor-not-allowed disabled:opacity-40 ${
                         fact.myVote === 1 ? "text-green-500" : "text-neutral-500 hover:text-neutral-300"
                       }`}
                     >
-                      👍
+                      👍 <span className="text-sm">{fact.up}</span>
                     </button>
-                    <span className="text-sm text-neutral-400">{fact.up - fact.down}</span>
                     <button
                       onClick={() => (canVote ? vote(fact.id, -1) : undefined)}
                       disabled={!canVote}
                       title={canEdit ? "You can't vote on your own fun fact" : undefined}
-                      className={`rounded px-1.5 py-0.5 text-base leading-none transition disabled:cursor-not-allowed disabled:opacity-40 ${
+                      className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-base leading-none transition disabled:cursor-not-allowed disabled:opacity-40 ${
                         fact.myVote === -1 ? "text-red-500" : "text-neutral-500 hover:text-neutral-300"
                       }`}
                     >
-                      👎
+                      👎 <span className="text-sm">{fact.down}</span>
                     </button>
                   </div>
                   {facts.length > 1 && (
@@ -324,32 +336,64 @@ export function FunFactsSection({
 
         {facts.length > 0 && (
           <ul className="divide-y divide-neutral-800">
-            {facts.map((fact, i) => (
+            {pageFacts.map((fact) => (
               <li key={fact.id}>
                 <button
                   onClick={() => setSpotlightId(fact.id)}
-                  className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition hover:bg-neutral-800/50 ${
-                    i === spotlightIndex ? "bg-neutral-800/40" : ""
+                  className={`flex w-full flex-col gap-1 px-3 py-2 text-left text-sm transition hover:bg-neutral-800/50 ${
+                    fact.id === spotlightId ? "bg-neutral-800/40" : ""
                   }`}
                 >
-                  <span className="w-6 shrink-0 text-center text-xs text-neutral-600">
-                    #{entryNumbers.get(fact.id)}
-                  </span>
-                  <span
-                    className={
-                      fact.myVote === 1 ? "text-green-500" : fact.myVote === -1 ? "text-red-500" : "text-neutral-600"
-                    }
-                  >
-                    {fact.myVote === -1 ? "👎" : "👍"}
-                  </span>
-                  <span className="w-5 shrink-0 text-center text-xs text-neutral-500">{fact.up - fact.down}</span>
-                  <span className="shrink-0 font-medium text-neutral-100">{fact.submittedBy.username}</span>
-                  <span className="min-w-0 flex-1 truncate text-neutral-400">{fact.content}</span>
-                  <span className="shrink-0 text-xs text-neutral-600">{formatDate(fact.createdAt)}</span>
+                  <div className="flex items-center gap-2 text-xs text-neutral-500">
+                    <span className="shrink-0 text-neutral-600">#{entryNumbers.get(fact.id)}</span>
+                    <span className={fact.myVote === 1 ? "text-green-500" : "text-neutral-600"}>
+                      👍 {fact.up}
+                    </span>
+                    <span className={fact.myVote === -1 ? "text-red-500" : "text-neutral-600"}>
+                      👎 {fact.down}
+                    </span>
+                    <span className="shrink-0 font-medium text-neutral-100">{fact.submittedBy.username}</span>
+                    <span className="ml-auto shrink-0 text-neutral-600">{formatDate(fact.createdAt)}</span>
+                  </div>
+                  <p className="text-neutral-300">{fact.content}</p>
                 </button>
               </li>
             ))}
           </ul>
+        )}
+
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-4 border-t border-neutral-800 py-2 text-sm">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="rounded border border-neutral-700 px-2 py-0.5 text-neutral-300 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              ‹
+            </button>
+            <div className="flex items-center gap-1">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
+                <button
+                  key={n}
+                  onClick={() => setPage(n)}
+                  className={`rounded border px-2 py-0.5 ${
+                    n === currentPage
+                      ? "border-red-700 bg-red-700 text-white"
+                      : "border-neutral-700 text-neutral-300 hover:bg-neutral-800"
+                  }`}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="rounded border border-neutral-700 px-2 py-0.5 text-neutral-300 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              ›
+            </button>
+          </div>
         )}
       </div>
     </section>
