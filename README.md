@@ -322,6 +322,7 @@ Each slide prefers a fight scene clip over the static TMDB backdrop:
 - **Playback**: muted, looping, no player controls, starts immediately when its slide becomes active.
 - **Accessibility**: never plays for visitors with `prefers-reduced-motion` set — they always see the static backdrop.
 - **Fallback**: a movie with no verified fight scene keeps the static backdrop unchanged.
+- **Bounded autoplay**: clips only autoplay for one lap through the carousel (each movie's clip shown once) and pause entirely while the browser tab is hidden. An idle tab left open would otherwise keep mounting a fresh autoplaying YouTube embed every rotation indefinitely, an unattended-playback pattern that can get a visitor's session shown YouTube's "Sign in to confirm you're not a bot" interstitial in place of the clip. Manually clicking through slides doesn't count against the one-lap cap.
 
 ## Security
 
@@ -342,6 +343,8 @@ Each slide prefers a fight scene clip over the static TMDB backdrop:
 ## Continuous Integration
 
 `.github/workflows/ci.yml` runs `npm run lint` and `npm run build` on every push and pull request. It needs no database or secrets — the app has no statically-generated pages that touch Prisma at build time, so `next build` succeeds without a live connection, and `npm ci` regenerates the Prisma client automatically via a `postinstall` hook. This is a real constraint, not an accident — see [Error Monitoring](#error-monitoring)'s note on why Sentry's `next.config.ts` build wrapper was deliberately skipped to preserve it.
+
+`.github/workflows/vercel-preview-cleanup.yml` deletes a PR's Vercel preview deployment(s) as soon as the PR closes (merged or not). This matters because of how Vercel's Neon integration works: a preview database branch is only deleted when its *last associated Vercel deployment* is deleted, not when the PR closes or the git branch is removed — left alone, Vercel's own deployment retention policy eventually does this automatically, but only after up to ~180 days by default. With many parallel PRs landing regularly (see [Stay in sync with master before building](#keep-readmemd-in-sync) workflow in `CLAUDE.md`), that's long enough for Neon's Free-plan 10-branch-per-project cap to be hit well before natural cleanup catches up, failing new preview deployments outright until branches are freed manually. This workflow closes that gap immediately instead. Needs `VERCEL_TOKEN`, `VERCEL_PROJECT_ID`, and (if the Vercel project is under a team, not a personal account) `VERCEL_ORG_ID` as repo secrets — find/generate a token at Vercel's [Account Settings → Tokens](https://vercel.com/account/tokens), and the project/org IDs on the Vercel project's Settings → General page. Without `VERCEL_TOKEN`/`VERCEL_PROJECT_ID` configured, the workflow no-ops with a warning rather than failing the PR.
 
 ## Deploying
 

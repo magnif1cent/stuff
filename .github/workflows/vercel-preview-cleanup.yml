@@ -1,0 +1,53 @@
+name: Vercel Preview Cleanup
+
+# Deletes this PR's Vercel preview deployment(s) when the PR closes (merged
+# or not). Vercel's Neon integration only deletes a preview database branch
+# when its last associated Vercel deployment is deleted — not when the PR
+# closes or the git branch is removed — so without this, preview branches
+# pile up until Vercel's own deployment retention policy eventually catches
+# them (up to ~180 days by default). See DECISIONS.md for the full story.
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  delete-preview-deployments:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete Vercel deployments for this PR's branch
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          GIT_BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          set -e
+
+          if [ -z "$VERCEL_TOKEN" ] || [ -z "$VERCEL_PROJECT_ID" ]; then
+            echo "::warning::VERCEL_TOKEN/VERCEL_PROJECT_ID not configured — skipping preview deployment cleanup. See README.md's Continuous Integration section for setup."
+            exit 0
+          fi
+
+          QUERY="projectId=${VERCEL_PROJECT_ID}&gitBranch=${GIT_BRANCH}&limit=100"
+          if [ -n "$VERCEL_ORG_ID" ]; then
+            QUERY="${QUERY}&teamId=${VERCEL_ORG_ID}"
+          fi
+
+          DEPLOYMENT_IDS=$(curl -sf -H "Authorization: Bearer ${VERCEL_TOKEN}" \
+            "https://api.vercel.com/v6/deployments?${QUERY}" \
+            | jq -r '.deployments[].uid')
+
+          if [ -z "$DEPLOYMENT_IDS" ]; then
+            echo "No Vercel deployments found for branch ${GIT_BRANCH}."
+            exit 0
+          fi
+
+          for id in $DEPLOYMENT_IDS; do
+            echo "Deleting deployment ${id}"
+            DELETE_QUERY=""
+            if [ -n "$VERCEL_ORG_ID" ]; then
+              DELETE_QUERY="?teamId=${VERCEL_ORG_ID}"
+            fi
+            curl -sf -X DELETE -H "Authorization: Bearer ${VERCEL_TOKEN}" \
+              "https://api.vercel.com/v13/deployments/${id}${DELETE_QUERY}"
+          done

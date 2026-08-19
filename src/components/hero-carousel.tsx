@@ -94,6 +94,17 @@ export function HeroCarousel({ movies }: { movies: FeaturedMovie[] }) {
   const [index, setIndex] = useState(0);
   const [prevIndex, setPrevIndex] = useState<number | null>(null);
   const [paused, setPaused] = useState(false);
+  const [tabHidden, setTabHidden] = useState(false);
+  // Each automatic rotation mounts a fresh autoplaying YouTube iframe. Left
+  // unbounded, a tab idling on the homepage for hours generates an
+  // indefinite stream of unattended autoplay embed requests — exactly the
+  // repeated-automated-playback pattern that gets an anonymous visitor's
+  // session challenged with YouTube's "Sign in to confirm you're not a bot"
+  // interstitial. Capping it to one lap (every movie's clip shown once) still
+  // delivers the highlight reel without looping forever unattended; manual
+  // navigation doesn't count against the cap since a human clicking through
+  // is proof this isn't unattended playback.
+  const [autoRotations, setAutoRotations] = useState(0);
   const [reducedMotion, setReducedMotion] = useState(
     () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches,
   );
@@ -111,6 +122,13 @@ export function HeroCarousel({ movies }: { movies: FeaturedMovie[] }) {
     return () => query.removeEventListener("change", onChange);
   }, []);
 
+  useEffect(() => {
+    const onVisibilityChange = () => setTabHidden(document.hidden);
+    onVisibilityChange();
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", onVisibilityChange);
+  }, []);
+
   // Briefly keep the outgoing slide mounted (fading out) so switching slides
   // crossfades instead of hard-cutting, without pre-loading every backdrop.
   useEffect(() => {
@@ -122,13 +140,16 @@ export function HeroCarousel({ movies }: { movies: FeaturedMovie[] }) {
     return () => clearTimeout(timer);
   }, [index]);
 
-  const playClip = !reducedMotion;
+  const playClip = !reducedMotion && !tabHidden && autoRotations < movies.length;
 
   useEffect(() => {
-    if (movies.length <= 1 || paused) return;
-    const timer = setInterval(() => goTo(index + 1), ROTATE_MS);
+    if (movies.length <= 1 || paused || tabHidden) return;
+    const timer = setInterval(() => {
+      goTo(index + 1);
+      setAutoRotations((count) => count + 1);
+    }, ROTATE_MS);
     return () => clearInterval(timer);
-  }, [movies.length, paused, index, goTo]);
+  }, [movies.length, paused, tabHidden, index, goTo]);
 
   if (movies.length === 0) return null;
 

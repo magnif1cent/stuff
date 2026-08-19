@@ -52,6 +52,7 @@ one.
 - [Login switched from fetch-based signIn() to a Server Action with a native form](#login-switched-from-fetch-based-signin-to-a-server-action-with-a-native-form)
 - [`master` protected by a GitHub ruleset, no required review](#master-protected-by-a-github-ruleset-no-required-review)
 - [Reversed: Claude sessions no longer self-merge on green CI](#reversed-claude-sessions-no-longer-self-merge-on-green-ci)
+- [Vercel preview deployments deleted on PR close, to stop Neon preview-branch pileup](#vercel-preview-deployments-deleted-on-pr-close-to-stop-neon-preview-branch-pileup)
 
 **Feature Decisions**
 
@@ -103,6 +104,7 @@ one.
 - [Member profile: location and website/social link fields](#member-profile-location-and-websitesocial-link-fields)
 - [Profile tab fields made directly editable, no click-to-expand](#profile-tab-fields-made-directly-editable-no-click-to-expand)
 - [Social platform icons for the website/social link field](#social-platform-icons-for-the-websitesocial-link-field)
+- [Trending carousel clip autoplay bounded to one lap, paused when the tab is hidden](#trending-carousel-clip-autoplay-bounded-to-one-lap-paused-when-the-tab-is-hidden)
 
 **Deferred & Backlog**
 
@@ -839,6 +841,43 @@ review UI for every PR, real friction for a workflow where "merge" typed
 in chat is enough. This is a chat-convention gate, not a technical one;
 if it turns out sessions need a stronger backstop later (e.g. one
 forgets to wait), revisit adding the GitHub-side requirement too.
+
+### Vercel preview deployments deleted on PR close, to stop Neon preview-branch pileup
+**PR #TBD.** Found while debugging a build failure ("Branch limit reached")
+on an unrelated PR: Vercel's Neon integration only deletes a preview
+database branch when its *last associated Vercel deployment* is deleted —
+not when the PR closes or the git branch is removed. Left to Vercel's own
+deployment retention policy, that can take up to ~180 days by default (the
+clock starts at deployment creation, not PR close). Checking the actual
+Neon project confirmed the mechanism: all 10 of the Free plan's
+per-project branch slots were consumed by `preview/claude/*` branches for
+PRs merged days ago, blocking a new PR's deployment from provisioning at
+all.
+
+- **Added `.github/workflows/vercel-preview-cleanup.yml`**, triggered on
+  `pull_request: closed` (merged or not) — calls Vercel's API to list and
+  delete deployments for that PR's branch, which triggers Neon's cleanup
+  webhook immediately rather than waiting on retention. No-ops with a
+  warning (doesn't fail the PR) if `VERCEL_TOKEN`/`VERCEL_PROJECT_ID`
+  aren't configured as repo secrets, since those have to be added manually
+  via the Vercel/GitHub dashboards — not something a PR merge should block
+  on if they're ever unset.
+- **Also shortening Vercel's Pre-Production Deployment retention** (Project
+  Settings → Security → Deployment Retention Policy) as a backstop for
+  branches that never get a closing PR — but deliberately not down to
+  Vercel's own minimum (1 day). This repo's own `CLAUDE.md` convention
+  ("Wait for explicit 'merge' before merging a PR") has the site owner
+  reviewing a live preview before merging, which can span more than a day;
+  a 1-day retention would delete that preview out from under an
+  in-progress review. Since the GitHub Action above already
+  handles the common case (deletion the moment a PR actually closes),
+  retention only needs to catch abandoned branches — a week-plus window
+  keeps that safety net without racing the review workflow itself.
+- **Hand-rolled `curl`/`jq` against Vercel's API rather than a marketplace
+  GitHub Action** — avoids handing a third-party action's code access to
+  `VERCEL_TOKEN` (a credential that can delete deployments) for something
+  this small; the whole call is a handful of transparent lines in the
+  workflow file itself.
 
 ## Feature Decisions
 
@@ -1896,6 +1935,38 @@ icon + label** in place of raw URL text.
   hostnames render their correct icon/label on both the owner's live
   preview and the visitor-facing link, and confirmed an unrecognized
   domain falls back to the generic "Website" icon rather than breaking.
+
+### Trending carousel clip autoplay bounded to one lap, paused when the tab is hidden
+**PR #TBD.** Reported bug: real visitors were sometimes seeing YouTube's
+"Sign in to confirm you're not a bot" interstitial render inside a hero
+carousel clip instead of the preview playing.
+
+- **Root cause, by elimination rather than a YouTube-side error message
+  pointing at it directly**: the carousel (`src/components/hero-carousel.tsx`)
+  mounted a brand-new autoplaying, muted `youtube-nocookie.com/embed` iframe
+  on every rotation (every 15s), indefinitely, for as long as the tab stayed
+  open — an idle tab left open for hours generated an unbounded stream of
+  unattended autoplay embed requests. That's the same repeated-automated-
+  playback shape YouTube's anti-bot heuristics are described as targeting,
+  and it was the only thing about this feature that looked bot-like — a
+  single manually-loaded autoplay embed doesn't trigger this on its own.
+- **Fix: cap it to one lap, not remove autoplay** — `autoRotations` counts
+  timer-driven advances only (not manual arrow/dot clicks, since a human
+  actually clicking through is itself evidence this isn't unattended
+  playback) and clips stop autoplaying once every movie's has played once,
+  reverting to the static backdrop for the rest of the session. Keeps the
+  "highlight reel on load" effect the feature was built for while bounding
+  total embed requests per page visit to a fixed, small number instead of
+  unbounded.
+- **Also pause on `visibilitychange`**: neither the rotation timer nor clip
+  playback runs while `document.hidden` is true, so a backgrounded tab
+  doesn't keep autoplaying (or counting against the one-lap cap) with nobody
+  watching.
+- Considered removing autoplay entirely (wait for a user gesture before ever
+  loading the first clip) — rejected as a bigger UX regression than the bug
+  warranted, since the reported failures were intermittent, not universal,
+  and the "Trending this week" hero specifically wants to show its clip
+  without requiring an interaction first.
 
 ## Deferred & Backlog
 
