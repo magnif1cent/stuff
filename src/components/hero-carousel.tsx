@@ -16,6 +16,12 @@ const FADE_MS = 700;
 // above so a slide's clip gets to finish once before the carousel advances,
 // instead of always being cut off mid-loop.
 const CLIP_SECONDS = 15;
+// How many full laps through the carousel autoplay clips before settling on
+// static backdrops for the rest of the visit. Not a measured-safe number —
+// YouTube doesn't publish a threshold for how much unattended autoplay
+// triggers its bot-check interstitial, so this is a judgment call trading
+// off "more highlight reel" against "more unattended autoplay requests."
+const MAX_AUTOPLAY_LAPS = 5;
 
 function clipEmbedUrl(videoId: string, startSeconds: number | null) {
   const start = startSeconds ?? 0;
@@ -100,10 +106,10 @@ export function HeroCarousel({ movies }: { movies: FeaturedMovie[] }) {
   // indefinite stream of unattended autoplay embed requests — exactly the
   // repeated-automated-playback pattern that gets an anonymous visitor's
   // session challenged with YouTube's "Sign in to confirm you're not a bot"
-  // interstitial. Capping it to one lap (every movie's clip shown once) still
-  // delivers the highlight reel without looping forever unattended; manual
-  // navigation doesn't count against the cap since a human clicking through
-  // is proof this isn't unattended playback.
+  // interstitial. Capping it to MAX_AUTOPLAY_LAPS laps still delivers the
+  // highlight reel without looping forever unattended; manual navigation
+  // doesn't count against the cap since a human clicking through is proof
+  // this isn't unattended playback.
   const [autoRotations, setAutoRotations] = useState(0);
   const [reducedMotion, setReducedMotion] = useState(
     () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches,
@@ -140,7 +146,7 @@ export function HeroCarousel({ movies }: { movies: FeaturedMovie[] }) {
     return () => clearTimeout(timer);
   }, [index]);
 
-  const playClip = !reducedMotion && !tabHidden && autoRotations < movies.length;
+  const playClip = !reducedMotion && !tabHidden && autoRotations < movies.length * MAX_AUTOPLAY_LAPS;
 
   useEffect(() => {
     if (movies.length <= 1 || paused || tabHidden) return;

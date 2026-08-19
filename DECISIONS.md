@@ -105,6 +105,7 @@ one.
 - [Profile tab fields made directly editable, no click-to-expand](#profile-tab-fields-made-directly-editable-no-click-to-expand)
 - [Social platform icons for the website/social link field](#social-platform-icons-for-the-websitesocial-link-field)
 - [Trending carousel clip autoplay bounded to one lap, paused when the tab is hidden](#trending-carousel-clip-autoplay-bounded-to-one-lap-paused-when-the-tab-is-hidden)
+- [Trending carousel autoplay cap raised from 1 lap to 5](#trending-carousel-autoplay-cap-raised-from-1-lap-to-5)
 
 **Deferred & Backlog**
 
@@ -1937,7 +1938,7 @@ icon + label** in place of raw URL text.
   domain falls back to the generic "Website" icon rather than breaking.
 
 ### Trending carousel clip autoplay bounded to one lap, paused when the tab is hidden
-**PR #TBD.** Reported bug: real visitors were sometimes seeing YouTube's
+**PR #88.** Reported bug: real visitors were sometimes seeing YouTube's
 "Sign in to confirm you're not a bot" interstitial render inside a hero
 carousel clip instead of the preview playing.
 
@@ -1967,6 +1968,30 @@ carousel clip instead of the preview playing.
   warranted, since the reported failures were intermittent, not universal,
   and the "Trending this week" hero specifically wants to show its clip
   without requiring an interaction first.
+
+### Trending carousel autoplay cap raised from 1 lap to 5
+**PR #TBD.** Follow-up to the one-lap cap above, after a report that clips
+stopped playing (reverting to static backdrops) after the first cycle
+through the carousel — the one-lap cap working exactly as designed, not a
+regression, but tighter than wanted.
+
+- **No measured "safe" number exists to raise it to** — asked directly
+  whether there's a maximum lap count that stays under YouTube's bot-check
+  threshold, and there isn't one to find: YouTube doesn't publish that
+  threshold, it isn't a flat per-app counter (visitor IP reputation,
+  request timing, and per-session browser signals all plausibly factor in,
+  none of which this app controls or can observe), and the original fix's
+  root-cause attribution was already an inference by elimination, not a
+  confirmed mechanism — extending it into a precise number would be
+  fabricating false confidence. **5** is a judgment call (explicit
+  instruction, "set it to 5"), not a validated bound.
+- Implemented as `MAX_AUTOPLAY_LAPS` (`src/components/hero-carousel.tsx`)
+  multiplying `movies.length` in the `autoRotations` comparison, rather
+  than hardcoding the multiplier inline — makes the traded-off value a
+  named, single place to revisit if it needs adjusting again.
+- Everything else about the original fix is unchanged: manual navigation
+  still doesn't count against the cap, and playback still pauses entirely
+  while the tab is hidden.
 
 ## Deferred & Backlog
 
