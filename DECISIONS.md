@@ -54,6 +54,7 @@ one.
 - [Reversed: Claude sessions no longer self-merge on green CI](#reversed-claude-sessions-no-longer-self-merge-on-green-ci)
 - [Vercel preview deployments deleted on PR close, to stop Neon preview-branch pileup](#vercel-preview-deployments-deleted-on-pr-close-to-stop-neon-preview-branch-pileup)
 - [Weekly Trending Carousel's cron had never run — `CRON_SECRET` was never configured in Production](#weekly-trending-carousels-cron-had-never-run-cron_secret-was-never-configured-in-production)
+- [Preview database made static across PRs, trading back the migration-collision risk to stop re-seeding every branch](#preview-database-made-static-across-prs-trading-back-the-migration-collision-risk-to-stop-re-seeding-every-branch)
 
 **Feature Decisions**
 
@@ -928,6 +929,39 @@ and nothing surfaced that failure anywhere a person would see it.
   deployment-environment secret, invisible because the endpoint fails
   silently (a 401 with no alerting) rather than surfacing anywhere an
   operator would notice a launch-day misconfiguration.
+
+### Preview database made static across PRs, trading back the migration-collision risk to stop re-seeding every branch
+**Infra-only change — no PR, no code diff.** Decided while staging a
+throwaway preview for the swipeable-fight-scenes backlog item: the
+per-branch Neon isolation from "Production migration incident" above means
+every new PR starts from a completely empty database, so getting an admin
+login and any real content into a preview meant re-running `prisma db seed`
+(or a manual SQL `UPDATE` for the account, plus manual data entry) on every
+single new branch. Decided that cost was worse than the risk it was
+protecting against for this project's actual pace of parallel work.
+
+- **What changes**: the Neon integration's per-git-branch auto-provisioning
+  is turned off for the Preview environment. One dedicated, long-lived Neon
+  branch (seeded once) is used for every preview deployment from here on,
+  via a static `DATABASE_URL` scoped to the Preview environment only —
+  the same pattern Production's own `DATABASE_URL` already uses (a
+  manually-set variable, narrowed to one environment), just applied to
+  Preview too.
+- **Production stays fully isolated** — this only merges Preview with
+  itself across PRs, not with Production. The original incident (one
+  connection string doing double duty for *both*) is not being
+  reintroduced.
+- **The tradeoff, explicitly accepted, not overlooked**: concurrent
+  unmerged PRs with different pending schema migrations now race against
+  the same shared tables again — the exact mechanism the per-branch
+  isolation was built to prevent. Mitigation is leaning harder on this
+  file's own "Stay in sync with master" and schema-touching-PR conventions
+  in `CLAUDE.md`, since Preview no longer absorbs that collision silently.
+- **`vercel-preview-cleanup.yml` still applies, just for a narrower job**:
+  it keeps deleting stale Vercel deployments on PR close (so the Neon
+  Free-plan branch-count limit from that same incident doesn't get
+  re-triggered by deployment pileup), but no longer cascades into deleting
+  a Neon branch, since no single deployment owns the shared one anymore.
 
 ## Feature Decisions
 
