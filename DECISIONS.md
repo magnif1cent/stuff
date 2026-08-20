@@ -53,6 +53,7 @@ one.
 - [`master` protected by a GitHub ruleset, no required review](#master-protected-by-a-github-ruleset-no-required-review)
 - [Reversed: Claude sessions no longer self-merge on green CI](#reversed-claude-sessions-no-longer-self-merge-on-green-ci)
 - [Vercel preview deployments deleted on PR close, to stop Neon preview-branch pileup](#vercel-preview-deployments-deleted-on-pr-close-to-stop-neon-preview-branch-pileup)
+- [Weekly Trending Carousel's cron had never run — `CRON_SECRET` was never configured in Production](#weekly-trending-carousels-cron-had-never-run-cron_secret-was-never-configured-in-production)
 
 **Feature Decisions**
 
@@ -844,7 +845,7 @@ if it turns out sessions need a stronger backstop later (e.g. one
 forgets to wait), revisit adding the GitHub-side requirement too.
 
 ### Vercel preview deployments deleted on PR close, to stop Neon preview-branch pileup
-**PR #TBD.** Found while debugging a build failure ("Branch limit reached")
+**PR #88.** Found while debugging a build failure ("Branch limit reached")
 on an unrelated PR: Vercel's Neon integration only deletes a preview
 database branch when its *last associated Vercel deployment* is deleted —
 not when the PR closes or the git branch is removed. Left to Vercel's own
@@ -879,6 +880,54 @@ all.
   `VERCEL_TOKEN` (a credential that can delete deployments) for something
   this small; the whole call is a handful of transparent lines in the
   workflow file itself.
+
+### Weekly Trending Carousel's cron had never run — `CRON_SECRET` was never configured in Production
+**Not a code bug.** Reported: the homepage's Weekly Trending Carousel (see
+`README.md`) had shown the same movies since launch. `getFeaturedMovies()`
+(`src/lib/weekly-featured.ts`) falls back to a static `ORDER BY
+tmdbPopularity DESC` list whenever the `WeeklyFeatured` table is empty, and
+that table is only ever written by `/api/cron/weekly-featured` — which
+`isAuthorized()` gates behind `CRON_SECRET`, returning a plain 401 with no
+alerting if that env var isn't set. It never had been: the Vercel project
+had no `CRON_SECRET` configured in Production at all, so every scheduled
+Monday cron invocation (and any manual one) had silently 401'd since launch,
+and nothing surfaced that failure anywhere a person would see it.
+
+- **Fix was operational, not a code change**: generated separate random
+  values for `CRON_SECRET` in Production and Preview (deliberately
+  different — Vercel's scheduled cron only ever invokes Production, and
+  each preview deployment already has its own isolated Neon database
+  branch, so a leaked Preview value can't touch production data anyway;
+  no reason to share the value regardless). Configured both in Vercel's
+  Environment Variables, then manually triggered
+  `/api/cron/weekly-featured` once via `curl` to backfill `WeeklyFeatured`
+  immediately instead of waiting for the next scheduled Monday run.
+- **The debugging dead-end that cost the most time**: repeated
+  `{"error":"Unauthorized"}` responses even after setting the secret and
+  clicking "Redeploy," which looked like a value mismatch (copy-paste
+  whitespace, wrong environment scope, stale deployment) and was
+  extensively ruled out as each of those individually — scope was
+  confirmed correct in the dashboard, a hand-typed trivial value
+  (`test123`) on both sides still failed, and Vercel's Logs panel
+  confirmed the failing requests really were hitting the current
+  Production deployment (`Environment: production`, `Branch: master`) and
+  executing cleanly, not being intercepted by a proxy or hitting a stale
+  deployment. **The actual cause was simpler and easy to miss**: each
+  "Redeploy" click was checked against the *previous* curl attempt before
+  that specific redeploy had actually gone `Ready` — comparing Vercel's
+  Logs panel Deployment ID against a fresh redeploy's own Deployment ID
+  (not just eyeballing "I clicked redeploy already") is what finally
+  confirmed a genuinely-new deployment, and only *that* one had the
+  secret live.
+- **Verified end-to-end, not just "no more 401"**: the successful curl
+  response (`{"weekStart":"2026-08-17T00:00:00.000Z","movieIds":[...]}`)
+  confirms `computeWeeklyFeatured()` actually ran and wrote real ranked
+  data, not just that auth passed.
+- Nothing about `computeWeeklyFeatured()`, `vercel.json`'s cron schedule,
+  or `isAuthorized()` needed to change — this was purely a missing
+  deployment-environment secret, invisible because the endpoint fails
+  silently (a 401 with no alerting) rather than surfacing anywhere an
+  operator would notice a launch-day misconfiguration.
 
 ## Feature Decisions
 
