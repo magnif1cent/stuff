@@ -53,6 +53,7 @@ one.
 - [`master` protected by a GitHub ruleset, no required review](#master-protected-by-a-github-ruleset-no-required-review)
 - [Reversed: Claude sessions no longer self-merge on green CI](#reversed-claude-sessions-no-longer-self-merge-on-green-ci)
 - [Vercel preview deployments deleted on PR close, to stop Neon preview-branch pileup](#vercel-preview-deployments-deleted-on-pr-close-to-stop-neon-preview-branch-pileup)
+- [Weekly Trending Carousel's cron had never run — `CRON_SECRET` was never configured in Production](#weekly-trending-carousels-cron-had-never-run-cron_secret-was-never-configured-in-production)
 
 **Feature Decisions**
 
@@ -105,6 +106,7 @@ one.
 - [Profile tab fields made directly editable, no click-to-expand](#profile-tab-fields-made-directly-editable-no-click-to-expand)
 - [Social platform icons for the website/social link field](#social-platform-icons-for-the-websitesocial-link-field)
 - [Trending carousel clip autoplay bounded to one lap, paused when the tab is hidden](#trending-carousel-clip-autoplay-bounded-to-one-lap-paused-when-the-tab-is-hidden)
+- [Trending carousel autoplay cap raised from 1 lap to 5](#trending-carousel-autoplay-cap-raised-from-1-lap-to-5)
 
 **Deferred & Backlog**
 
@@ -843,7 +845,7 @@ if it turns out sessions need a stronger backstop later (e.g. one
 forgets to wait), revisit adding the GitHub-side requirement too.
 
 ### Vercel preview deployments deleted on PR close, to stop Neon preview-branch pileup
-**PR #TBD.** Found while debugging a build failure ("Branch limit reached")
+**PR #88.** Found while debugging a build failure ("Branch limit reached")
 on an unrelated PR: Vercel's Neon integration only deletes a preview
 database branch when its *last associated Vercel deployment* is deleted —
 not when the PR closes or the git branch is removed. Left to Vercel's own
@@ -878,6 +880,54 @@ all.
   `VERCEL_TOKEN` (a credential that can delete deployments) for something
   this small; the whole call is a handful of transparent lines in the
   workflow file itself.
+
+### Weekly Trending Carousel's cron had never run — `CRON_SECRET` was never configured in Production
+**Not a code bug.** Reported: the homepage's Weekly Trending Carousel (see
+`README.md`) had shown the same movies since launch. `getFeaturedMovies()`
+(`src/lib/weekly-featured.ts`) falls back to a static `ORDER BY
+tmdbPopularity DESC` list whenever the `WeeklyFeatured` table is empty, and
+that table is only ever written by `/api/cron/weekly-featured` — which
+`isAuthorized()` gates behind `CRON_SECRET`, returning a plain 401 with no
+alerting if that env var isn't set. It never had been: the Vercel project
+had no `CRON_SECRET` configured in Production at all, so every scheduled
+Monday cron invocation (and any manual one) had silently 401'd since launch,
+and nothing surfaced that failure anywhere a person would see it.
+
+- **Fix was operational, not a code change**: generated separate random
+  values for `CRON_SECRET` in Production and Preview (deliberately
+  different — Vercel's scheduled cron only ever invokes Production, and
+  each preview deployment already has its own isolated Neon database
+  branch, so a leaked Preview value can't touch production data anyway;
+  no reason to share the value regardless). Configured both in Vercel's
+  Environment Variables, then manually triggered
+  `/api/cron/weekly-featured` once via `curl` to backfill `WeeklyFeatured`
+  immediately instead of waiting for the next scheduled Monday run.
+- **The debugging dead-end that cost the most time**: repeated
+  `{"error":"Unauthorized"}` responses even after setting the secret and
+  clicking "Redeploy," which looked like a value mismatch (copy-paste
+  whitespace, wrong environment scope, stale deployment) and was
+  extensively ruled out as each of those individually — scope was
+  confirmed correct in the dashboard, a hand-typed trivial value
+  (`test123`) on both sides still failed, and Vercel's Logs panel
+  confirmed the failing requests really were hitting the current
+  Production deployment (`Environment: production`, `Branch: master`) and
+  executing cleanly, not being intercepted by a proxy or hitting a stale
+  deployment. **The actual cause was simpler and easy to miss**: each
+  "Redeploy" click was checked against the *previous* curl attempt before
+  that specific redeploy had actually gone `Ready` — comparing Vercel's
+  Logs panel Deployment ID against a fresh redeploy's own Deployment ID
+  (not just eyeballing "I clicked redeploy already") is what finally
+  confirmed a genuinely-new deployment, and only *that* one had the
+  secret live.
+- **Verified end-to-end, not just "no more 401"**: the successful curl
+  response (`{"weekStart":"2026-08-17T00:00:00.000Z","movieIds":[...]}`)
+  confirms `computeWeeklyFeatured()` actually ran and wrote real ranked
+  data, not just that auth passed.
+- Nothing about `computeWeeklyFeatured()`, `vercel.json`'s cron schedule,
+  or `isAuthorized()` needed to change — this was purely a missing
+  deployment-environment secret, invisible because the endpoint fails
+  silently (a 401 with no alerting) rather than surfacing anywhere an
+  operator would notice a launch-day misconfiguration.
 
 ## Feature Decisions
 
@@ -1937,7 +1987,7 @@ icon + label** in place of raw URL text.
   domain falls back to the generic "Website" icon rather than breaking.
 
 ### Trending carousel clip autoplay bounded to one lap, paused when the tab is hidden
-**PR #TBD.** Reported bug: real visitors were sometimes seeing YouTube's
+**PR #88.** Reported bug: real visitors were sometimes seeing YouTube's
 "Sign in to confirm you're not a bot" interstitial render inside a hero
 carousel clip instead of the preview playing.
 
@@ -1967,6 +2017,30 @@ carousel clip instead of the preview playing.
   warranted, since the reported failures were intermittent, not universal,
   and the "Trending this week" hero specifically wants to show its clip
   without requiring an interaction first.
+
+### Trending carousel autoplay cap raised from 1 lap to 5
+**PR #TBD.** Follow-up to the one-lap cap above, after a report that clips
+stopped playing (reverting to static backdrops) after the first cycle
+through the carousel — the one-lap cap working exactly as designed, not a
+regression, but tighter than wanted.
+
+- **No measured "safe" number exists to raise it to** — asked directly
+  whether there's a maximum lap count that stays under YouTube's bot-check
+  threshold, and there isn't one to find: YouTube doesn't publish that
+  threshold, it isn't a flat per-app counter (visitor IP reputation,
+  request timing, and per-session browser signals all plausibly factor in,
+  none of which this app controls or can observe), and the original fix's
+  root-cause attribution was already an inference by elimination, not a
+  confirmed mechanism — extending it into a precise number would be
+  fabricating false confidence. **5** is a judgment call (explicit
+  instruction, "set it to 5"), not a validated bound.
+- Implemented as `MAX_AUTOPLAY_LAPS` (`src/components/hero-carousel.tsx`)
+  multiplying `movies.length` in the `autoRotations` comparison, rather
+  than hardcoding the multiplier inline — makes the traded-off value a
+  named, single place to revisit if it needs adjusting again.
+- Everything else about the original fix is unchanged: manual navigation
+  still doesn't count against the cap, and playback still pauses entirely
+  while the tab is hidden.
 
 ## Deferred & Backlog
 

@@ -322,7 +322,7 @@ Each slide prefers a fight scene clip over the static TMDB backdrop:
 - **Playback**: muted, looping, no player controls, starts immediately when its slide becomes active.
 - **Accessibility**: never plays for visitors with `prefers-reduced-motion` set — they always see the static backdrop.
 - **Fallback**: a movie with no verified fight scene keeps the static backdrop unchanged.
-- **Bounded autoplay**: clips only autoplay for one lap through the carousel (each movie's clip shown once) and pause entirely while the browser tab is hidden. An idle tab left open would otherwise keep mounting a fresh autoplaying YouTube embed every rotation indefinitely, an unattended-playback pattern that can get a visitor's session shown YouTube's "Sign in to confirm you're not a bot" interstitial in place of the clip. Manually clicking through slides doesn't count against the one-lap cap.
+- **Bounded autoplay**: clips only autoplay for up to 5 laps through the carousel (`MAX_AUTOPLAY_LAPS` in `hero-carousel.tsx`) and pause entirely while the browser tab is hidden. An idle tab left open would otherwise keep mounting a fresh autoplaying YouTube embed every rotation indefinitely, an unattended-playback pattern that can get a visitor's session shown YouTube's "Sign in to confirm you're not a bot" interstitial in place of the clip. Manually clicking through slides doesn't count against the lap cap. The lap count is a judgment call, not a measured-safe number — YouTube doesn't publish a threshold for this.
 
 ## Security
 
