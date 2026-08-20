@@ -155,14 +155,14 @@ export function FightSceneFeedPreview({ scenes }: { scenes: FeedScene[] }) {
 
   if (scenes.length === 0) {
     return (
-      <div className="flex h-dvh w-full items-center justify-center bg-neutral-950 text-neutral-400">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-950 text-neutral-400">
         No verified fight scenes to preview yet.
       </div>
     );
   }
 
   return (
-    <div className="relative">
+    <div className="fixed inset-0 z-50 bg-black">
       <Link
         href="/search/fight-scenes"
         className="fixed left-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white"
