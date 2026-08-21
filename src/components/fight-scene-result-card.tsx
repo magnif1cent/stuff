@@ -54,9 +54,15 @@ export function FightSceneResultCard({
     >
       <Link
         href={`/movies/${scene.movieId}`}
-        className="block truncate text-sm font-bold tracking-wide uppercase hover:opacity-70"
+        title={`${scene.movie.title}${year ? ` (${year})` : ""}`}
+        className="flex items-baseline gap-1 text-sm font-bold tracking-wide uppercase hover:opacity-70"
       >
-        {scene.movie.title} {year && <span className="font-normal" style={{ color: TICKET_MUTED }}>({year})</span>}
+        <span className="min-w-0 truncate">{scene.movie.title}</span>
+        {year && (
+          <span className="shrink-0 font-normal" style={{ color: TICKET_MUTED }}>
+            ({year})
+          </span>
+        )}
       </Link>
 
       <div className="mt-3 border-t-2 border-dashed pt-3" style={{ borderColor: "#b8ab8c" }}>
