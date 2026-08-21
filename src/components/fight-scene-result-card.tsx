@@ -46,9 +46,12 @@ export function FightSceneResultCard({
           "polygon(0 10px, 10px 0, calc(100% - 10px) 0, 100% 10px, 100% calc(100% - 10px), calc(100% - 10px) 100%, 10px 100%, 0 calc(100% - 10px))",
       }}
     >
-      <div className="flex items-center justify-between gap-2 text-[10px] tracking-wider uppercase" style={{ color: TICKET_MUTED }}>
-        <Link href={`/movies/${scene.movieId}`} className="truncate hover:opacity-70">
-          {scene.movie.title} {year && `(${year})`}
+      <div className="flex items-center justify-between gap-2">
+        <Link
+          href={`/movies/${scene.movieId}`}
+          className="truncate text-sm font-bold tracking-wide uppercase hover:opacity-70"
+        >
+          {scene.movie.title} {year && <span className="font-normal" style={{ color: TICKET_MUTED }}>({year})</span>}
         </Link>
         <div className="flex shrink-0 items-center gap-1.5">
           <FavoriteButton
@@ -113,29 +116,21 @@ export function FightSceneResultCard({
         )}
       </div>
 
-      <div className="mt-4 flex justify-end gap-3">
-        <div className="text-center">
-          <div
-            className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border-2 text-base font-bold"
-            style={{ borderColor: TICKET_STAMP, color: TICKET_STAMP, transform: "rotate(-8deg)" }}
-          >
-            {memberLabel}
-          </div>
-          <p className="text-[8.5px] tracking-wide uppercase" style={{ color: TICKET_MUTED }}>
-            Member ({scene.memberRatingCount})
-          </p>
+      <div className="mt-3 flex items-center justify-end gap-2">
+        <div
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 text-xs font-bold"
+          style={{ borderColor: TICKET_STAMP, color: TICKET_STAMP, transform: "rotate(-8deg)" }}
+          title={`Member rating: ${memberLabel} (${scene.memberRatingCount})`}
+        >
+          {memberLabel}
         </div>
         {scene.editorRatingCount > 0 && (
-          <div className="text-center">
-            <div
-              className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border-2 text-base font-bold"
-              style={{ borderColor: TICKET_STAMP, color: TICKET_STAMP, transform: "rotate(6deg)" }}
-            >
-              {scene.editorRatingAverage?.toFixed(1)}
-            </div>
-            <p className="text-[8.5px] tracking-wide uppercase" style={{ color: TICKET_MUTED }}>
-              Editors&rsquo;
-            </p>
+          <div
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 text-xs font-bold"
+            style={{ borderColor: TICKET_STAMP, color: TICKET_STAMP, transform: "rotate(6deg)" }}
+            title={`Editors' rating: ${scene.editorRatingAverage?.toFixed(1)}`}
+          >
+            {scene.editorRatingAverage?.toFixed(1)}
           </div>
         )}
       </div>
