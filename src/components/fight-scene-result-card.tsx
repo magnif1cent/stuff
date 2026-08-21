@@ -2,6 +2,12 @@ import Link from "next/link";
 import type { FightScene, FightSceneTag, Movie, Person } from "@/generated/prisma/client";
 import { AddToListControl, type AddToListItem } from "@/components/add-to-list-control";
 import { FavoriteButton } from "@/components/favorite-button";
+import { FightSceneThumbnail } from "@/components/fight-scene-thumbnail";
+
+// How many cast names to spell out before collapsing the rest into "& N
+// more" — keeps the "Featuring" line (and so the card's height) consistent
+// across scenes with wildly different cast-tag counts.
+const MAX_FEATURED_CAST = 2;
 
 // Same "Fight Ticket" palette as fight-scene-section.tsx — kept in sync
 // manually since this is a read-only result card, not the interactive one.
@@ -46,38 +52,19 @@ export function FightSceneResultCard({
           "polygon(0 10px, 10px 0, calc(100% - 10px) 0, 100% 10px, 100% calc(100% - 10px), calc(100% - 10px) 100%, 10px 100%, 0 calc(100% - 10px))",
       }}
     >
-      <div className="flex flex-col gap-1.5">
-        <Link
-          href={`/movies/${scene.movieId}`}
-          className="truncate text-sm font-bold tracking-wide uppercase hover:opacity-70"
-        >
-          {scene.movie.title} {year && <span className="font-normal" style={{ color: TICKET_MUTED }}>({year})</span>}
-        </Link>
-        <div className="flex items-center justify-end gap-1.5">
-          <FavoriteButton
-            movieId={scene.movieId}
-            fightSceneId={scene.id}
-            initialFavorite={initialFavorite}
-            signedIn={signedIn}
-          />
-          <AddToListControl
-            target={{ type: "fightScene", id: scene.id }}
-            initialLists={initialLists}
-            signedIn={signedIn}
-            variant="icon"
-          />
-        </div>
-      </div>
+      <Link
+        href={`/movies/${scene.movieId}`}
+        className="block truncate text-sm font-bold tracking-wide uppercase hover:opacity-70"
+      >
+        {scene.movie.title} {year && <span className="font-normal" style={{ color: TICKET_MUTED }}>({year})</span>}
+      </Link>
 
       <div className="mt-3 border-t-2 border-dashed pt-3" style={{ borderColor: "#b8ab8c" }}>
-        <Link
+        <FightSceneThumbnail
           href={permalink}
-          className="mx-auto block aspect-video w-2/3 max-w-[180px] overflow-hidden border-[3px] bg-cover bg-center"
-          style={{
-            borderColor: TICKET_INK,
-            backgroundColor: TICKET_INK,
-            backgroundImage: `url(https://img.youtube.com/vi/${scene.youtubeVideoId}/hqdefault.jpg)`,
-          }}
+          videoId={scene.youtubeVideoId}
+          title={scene.title}
+          inkColor={TICKET_INK}
         />
       </div>
 
@@ -87,7 +74,7 @@ export function FightSceneResultCard({
       {scene.cast.length > 0 && (
         <p className="mt-0.5 truncate text-[11px] tracking-wide uppercase" style={{ color: TICKET_MUTED }}>
           Featuring{" "}
-          {scene.cast.map((c, i) => (
+          {scene.cast.slice(0, MAX_FEATURED_CAST).map((c, i) => (
             <span key={c.person.id}>
               {i > 0 && ", "}
               <Link href={`/actors/${c.person.id}`} className="hover:underline">
@@ -95,6 +82,7 @@ export function FightSceneResultCard({
               </Link>
             </span>
           ))}
+          {scene.cast.length > MAX_FEATURED_CAST && ` & ${scene.cast.length - MAX_FEATURED_CAST} more`}
         </p>
       )}
 
@@ -116,23 +104,29 @@ export function FightSceneResultCard({
         )}
       </div>
 
-      <div className="mt-3 flex items-center justify-end gap-2">
-        <div
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 text-xs font-bold"
-          style={{ borderColor: TICKET_STAMP, color: TICKET_STAMP, transform: "rotate(-8deg)" }}
-          title={`Member rating: ${memberLabel} (${scene.memberRatingCount})`}
-        >
-          {memberLabel}
+      <div className="mt-3 flex items-center justify-between gap-2 border-t pt-3" style={{ borderColor: "#b8ab8c" }}>
+        <p className="text-sm">
+          <span className="font-bold" style={{ color: TICKET_STAMP }}>
+            ★ {memberLabel}
+          </span>{" "}
+          <span className="text-xs" style={{ color: TICKET_MUTED }}>
+            ({scene.memberRatingCount})
+          </span>
+        </p>
+        <div className="flex shrink-0 items-center gap-3">
+          <FavoriteButton
+            movieId={scene.movieId}
+            fightSceneId={scene.id}
+            initialFavorite={initialFavorite}
+            signedIn={signedIn}
+          />
+          <AddToListControl
+            target={{ type: "fightScene", id: scene.id }}
+            initialLists={initialLists}
+            signedIn={signedIn}
+            variant="icon"
+          />
         </div>
-        {scene.editorRatingCount > 0 && (
-          <div
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 text-xs font-bold"
-            style={{ borderColor: TICKET_STAMP, color: TICKET_STAMP, transform: "rotate(6deg)" }}
-            title={`Editors' rating: ${scene.editorRatingAverage?.toFixed(1)}`}
-          >
-            {scene.editorRatingAverage?.toFixed(1)}
-          </div>
-        )}
       </div>
     </div>
   );
