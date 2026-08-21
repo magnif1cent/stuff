@@ -965,6 +965,27 @@ protecting against for this project's actual pace of parallel work.
 
 ## Feature Decisions
 
+### Fight scene search browses by default instead of requiring input first
+**PR #TBD.** `/search/fight-scenes` previously showed nothing — just "Enter a
+scene or movie title, or set a filter, to browse fight scenes" — until a
+query or filter was set, exactly mirroring `/search` (movies)'s gated
+behavior. Landing on a page titled "Browse fight scenes" via the nav and
+seeing an empty form instead of anything to browse was the actual complaint.
+
+- Fixed by removing the `if (searched)` gate on the query — it now always
+  fetches (`isDeleted: false`, no other filters applied when none are set),
+  sorted Newest by default, same pagination as before.
+- **Deliberately not applied to `/search` (movies) too** — this was scoped to
+  the specific complaint about the fight-scenes page, not a "fix both"
+  pass. The two pages diverging here (fight scenes browses by default,
+  movies still requires input) is a known, accepted asymmetry, not an
+  oversight — revisit if `/search` gets the same complaint.
+- The empty-result copy now distinguishes the two states: "No fight scenes
+  have been added yet" (true empty catalog, no query/filters) vs. "No fight
+  scenes matched your search" (a query or filter narrowed it to zero) —
+  previously only the latter message existed, since the unfiltered case
+  never reached the results branch at all.
+
 ### Fun Facts: flat content shape from Discussion, first bidirectional vote in the app
 **PR #TBD.** An IMDB "Did you know"-style trivia section above the Discussion
 thread — members add short entries, other members vote them up or down.

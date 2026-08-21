@@ -83,14 +83,14 @@ export default async function FightSceneSearchPage({
     cast: { orderBy: { order: "asc" as const }, include: { person: true } },
   } as const;
 
-  let scenes: Prisma.FightSceneGetPayload<{ include: typeof sceneInclude }>[] = [];
-  if (searched) {
-    scenes = await prisma.fightScene.findMany({
-      where,
-      include: sceneInclude,
-      orderBy: { createdAt: "desc" },
-    });
-  }
+  // Unlike the old behavior (nothing shown until a query/filter was set),
+  // this always fetches — "Browse fight scenes" is the page's default state,
+  // not just its title, matching how the movie catalog's homepage rails work.
+  let scenes = await prisma.fightScene.findMany({
+    where,
+    include: sceneInclude,
+    orderBy: { createdAt: "desc" },
+  });
 
   const [memberSummaries, editorSummaries, favoriteCounts] = await Promise.all([
     getFightSceneRatingSummaries(scenes.map((s) => s.id)),
@@ -241,10 +241,10 @@ export default async function FightSceneSearchPage({
           {query ? <>Fight scene results for &ldquo;{query}&rdquo;</> : "Browse fight scenes"}
         </h1>
 
-        {!searched ? (
-          <p className="text-neutral-400">Enter a scene or movie title, or set a filter, to browse fight scenes.</p>
-        ) : totalResults === 0 ? (
-          <p className="text-neutral-400">No fight scenes matched your search.</p>
+        {totalResults === 0 ? (
+          <p className="text-neutral-400">
+            {searched ? "No fight scenes matched your search." : "No fight scenes have been added yet."}
+          </p>
         ) : (
           <>
             <div className="flex flex-wrap gap-4">
