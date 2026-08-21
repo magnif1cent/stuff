@@ -46,14 +46,14 @@ export function FightSceneResultCard({
           "polygon(0 10px, 10px 0, calc(100% - 10px) 0, 100% 10px, 100% calc(100% - 10px), calc(100% - 10px) 100%, 10px 100%, 0 calc(100% - 10px))",
       }}
     >
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-col gap-1.5">
         <Link
           href={`/movies/${scene.movieId}`}
           className="truncate text-sm font-bold tracking-wide uppercase hover:opacity-70"
         >
           {scene.movie.title} {year && <span className="font-normal" style={{ color: TICKET_MUTED }}>({year})</span>}
         </Link>
-        <div className="flex shrink-0 items-center gap-1.5">
+        <div className="flex items-center justify-end gap-1.5">
           <FavoriteButton
             movieId={scene.movieId}
             fightSceneId={scene.id}
