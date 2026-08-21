@@ -2170,7 +2170,26 @@ regression, but tighter than wanted.
   vertically-scrollable/swipeable viewer that autoplays the next clip —
   same interaction pattern as YouTube Shorts/Instagram Reels/TikTok. A
   real UI paradigm shift from the existing list-based layout, not a
-  reskin — needs its own scoping pass (autoplay/mute behavior, how
-  rating/favoriting works in a full-screen single-clip view, how it
-  interacts with the existing movie-scoped `FightSceneSection` vs. the
-  cross-movie `/search/fight-scenes` page) before it's buildable.
+  reskin. Explored further (design review + a throwaway preview build on
+  PR #90, not merged), still deferred — not enough conviction yet to
+  commit to building the real feature:
+  - Three chrome-treatment concepts were mocked up (rail-and-caption,
+    ticket-stub overlay, minimal-chrome-tap-to-reveal); leaning toward the
+    ticket-stub overlay since it's the only one that carries the site's
+    existing "Fight Ticket" visual identity into full-screen rather than
+    reading as a generic short-video clone.
+  - A throwaway route (`/preview/fight-scene-feed` + `fight-scene-feed-preview.tsx`
+    on PR #90) confirmed the mechanics: native CSS scroll-snap +
+    `IntersectionObserver` for the active card, no new dependency needed;
+    `HeroCarousel`'s muted-autoplay/reduced-motion/tab-hidden pattern
+    reused directly. One real gotcha hit while building it: a full-bleed
+    route still renders inside the root layout's shared navbar/footer
+    unless it explicitly escapes with `fixed inset-0`.
+  - Still unscoped before this is buildable for real: a compact
+    rating/favorite overlay (the existing 10-button `RatingRow` and full
+    ticket card don't fit over video — porting `StarRatingPicker` is the
+    likely fix), a cursor-paginated fight-scene API (today's card-grid and
+    search page both slice an already-fetched array, which doesn't work
+    for a feed that must prefetch ahead of scroll position), and real
+    entry points from `FightSceneSection`/`/search/fight-scenes` (the
+    preview route is direct-navigate only, not linked from anywhere).
