@@ -18,6 +18,8 @@ interface FightSceneSearchParams {
   actor?: string;
   memberRating?: string;
   editorRating?: string;
+  yearFrom?: string;
+  yearTo?: string;
   sort?: string;
   page?: string;
 }
@@ -48,6 +50,8 @@ function pageHref(params: FightSceneSearchParams, page: number) {
   if (params.actor) search.set("actor", params.actor);
   if (params.memberRating) search.set("memberRating", params.memberRating);
   if (params.editorRating) search.set("editorRating", params.editorRating);
+  if (params.yearFrom) search.set("yearFrom", params.yearFrom);
+  if (params.yearTo) search.set("yearTo", params.yearTo);
   if (params.sort) search.set("sort", params.sort);
   if (page > 1) search.set("page", String(page));
   const qs = search.toString();
@@ -66,11 +70,19 @@ export default async function FightSceneSearchPage({
   const actor = params.actor?.trim() ?? "";
   const memberRating = parseRatingFilter(params.memberRating);
   const editorRating = parseRatingFilter(params.editorRating);
+  const yearFrom = params.yearFrom ? Number(params.yearFrom) : undefined;
+  const yearTo = params.yearTo ? Number(params.yearTo) : undefined;
   const sort = SORT_OPTIONS.some((o) => o.value === params.sort) ? params.sort! : "newest";
 
   const tags = await prisma.fightSceneTag.findMany({ orderBy: { name: "asc" } });
 
-  const hasFilters = selectedTags.length > 0 || actor.length > 0 || memberRating !== undefined || editorRating !== undefined;
+  const hasFilters =
+    selectedTags.length > 0 ||
+    actor.length > 0 ||
+    memberRating !== undefined ||
+    editorRating !== undefined ||
+    yearFrom !== undefined ||
+    yearTo !== undefined;
   const searched = query.length > 0 || hasFilters;
 
   const where: Prisma.FightSceneWhereInput = { isDeleted: false };
@@ -78,6 +90,17 @@ export default async function FightSceneSearchPage({
   // the standard convention for multi-select within a single filter facet.
   if (selectedTags.length > 0) where.tags = { some: { name: { in: selectedTags } } };
   if (actor) where.cast = { some: { person: { name: { contains: actor, mode: "insensitive" } } } };
+  // Filters by the *movie's* release year, not the scene's own createdAt —
+  // "year of the fight" means when the film came out, same field /search
+  // (movies) already filters on.
+  if (yearFrom || yearTo) {
+    where.movie = {
+      releaseDate: {
+        ...(yearFrom ? { gte: new Date(Date.UTC(yearFrom, 0, 1)) } : {}),
+        ...(yearTo ? { lt: new Date(Date.UTC(yearTo + 1, 0, 1)) } : {}),
+      },
+    };
+  }
   if (query) {
     where.OR = [
       { title: { contains: query, mode: "insensitive" } },
@@ -212,6 +235,28 @@ export default async function FightSceneSearchPage({
         <div className="flex flex-col gap-1">
           <p className="text-xs text-neutral-400">Editor rating (min.)</p>
           <RatingStarInput name="editorRating" initialValue={params.editorRating ?? ""} />
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <p className="text-xs text-neutral-400">Movie year range</p>
+          <div className="flex gap-2">
+            <input
+              name="yearFrom"
+              type="number"
+              aria-label="Year from"
+              defaultValue={params.yearFrom ?? ""}
+              placeholder="1970"
+              className="w-1/2 min-w-0 rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
+            />
+            <input
+              name="yearTo"
+              type="number"
+              aria-label="Year to"
+              defaultValue={params.yearTo ?? ""}
+              placeholder="2025"
+              className="w-1/2 min-w-0 rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
+            />
+          </div>
         </div>
 
         <div className="flex flex-col gap-1">
