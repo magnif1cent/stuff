@@ -284,6 +284,10 @@ export function FightSceneSection({
   myFavoriteSceneIds = [],
   heading = "Fight Scenes",
   allowAdd = true,
+  detail = false,
+  totalRounds,
+  prevScenePath,
+  nextScenePath,
 }: {
   movieId: string;
   initialFightScenes: FightSceneItem[];
@@ -309,6 +313,13 @@ export function FightSceneSection({
   myFavoriteSceneIds?: string[];
   heading?: string | null;
   allowAdd?: boolean;
+  // Permalink-page mode: grows the video to full card width (it's the
+  // destination, not a grid item) and turns the round label into a
+  // "Round N of totalRounds" stepper. Only meaningful with a single scene.
+  detail?: boolean;
+  totalRounds?: number;
+  prevScenePath?: string | null;
+  nextScenePath?: string | null;
 }) {
   const router = useRouter();
   const [scenes, setScenes] = useState(initialFightScenes);
@@ -590,7 +601,43 @@ export function FightSceneSection({
               }}
             >
               <div className="flex items-center justify-between text-[10px] tracking-wider uppercase" style={{ color: TICKET_MUTED }}>
-                <span>Round {scene.roundNumber}</span>
+                {detail && totalRounds ? (
+                  <div className="flex items-center gap-1.5">
+                    {prevScenePath ? (
+                      <Link
+                        href={prevScenePath}
+                        aria-label="Previous round"
+                        className="flex h-[18px] w-[18px] items-center justify-center rounded border hover:opacity-70"
+                        style={{ borderColor: TICKET_MUTED }}
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="h-2.5 w-2.5">
+                          <path d="M15 18l-6-6 6-6" />
+                        </svg>
+                      </Link>
+                    ) : (
+                      <span className="h-[18px] w-[18px]" />
+                    )}
+                    <span>
+                      Round {scene.roundNumber} of {totalRounds}
+                    </span>
+                    {nextScenePath ? (
+                      <Link
+                        href={nextScenePath}
+                        aria-label="Next round"
+                        className="flex h-[18px] w-[18px] items-center justify-center rounded border hover:opacity-70"
+                        style={{ borderColor: TICKET_MUTED }}
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="h-2.5 w-2.5">
+                          <path d="M9 18l6-6-6-6" />
+                        </svg>
+                      </Link>
+                    ) : (
+                      <span className="h-[18px] w-[18px]" />
+                    )}
+                  </div>
+                ) : (
+                  <span>Round {scene.roundNumber}</span>
+                )}
                 <div className="flex items-center gap-1.5">
                   <FavoriteButton
                     movieId={movieId}
@@ -604,13 +651,26 @@ export function FightSceneSection({
                     signedIn={signedIn}
                     variant="icon"
                   />
-                  <ShareButton path={permalinkPath} title={scene.title} variant="icon" />
+                  <ShareButton
+                    path={permalinkPath}
+                    title={scene.title}
+                    variant="icon"
+                    youtubeUrl={detail ? youtubeWatchUrl(scene.youtubeVideoId, scene.youtubeStartSeconds) : undefined}
+                  />
                 </div>
               </div>
 
               <div className="mt-3 border-t-2 border-dashed pt-3" style={{ borderColor: "#b8ab8c" }}>
-                {/* Smaller inset "photo" rather than a full-width player, to read as a ticket detail. */}
-                <div className="relative mx-auto aspect-video w-2/3 max-w-[180px] overflow-hidden border-[3px]" style={{ borderColor: TICKET_INK, background: TICKET_INK }}>
+                {/* Smaller inset "photo" on the grid card, to read as a ticket detail — but full
+                    width in detail mode, where watching the clip is the reason someone's here. */}
+                <div
+                  className={
+                    detail
+                      ? "relative aspect-video w-full overflow-hidden border-[3px]"
+                      : "relative mx-auto aspect-video w-2/3 max-w-[180px] overflow-hidden border-[3px]"
+                  }
+                  style={{ borderColor: TICKET_INK, background: TICKET_INK }}
+                >
                   <iframe
                     src={embedUrl(scene.youtubeVideoId, scene.youtubeStartSeconds)}
                     title={scene.title}
