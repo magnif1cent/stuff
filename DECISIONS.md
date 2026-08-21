@@ -965,6 +965,40 @@ protecting against for this project's actual pace of parallel work.
 
 ## Feature Decisions
 
+### Fight scene permalink page redesigned as a standalone destination, not the movie-page card lifted out
+**PR #TBD.** `/movies/[id]/fight-scenes/[fightSceneId]` used to just wrap the same
+`FightSceneSection` card shown in a movie's fight-scene grid, plus a back-link and OG
+metadata — fine for link-preview purposes, but nothing about the page itself
+distinguished "you clicked through from a list" from "you landed here directly from a
+shared link or `/search/fight-scenes`."
+
+- **`FightSceneSection` gained a `detail` prop rather than a parallel component.**
+  Rating, favoriting, admin tools, editing, verification, and start-time control are
+  all interactive state already owned by that one component; forking a second
+  component to get a different layout would have meant keeping two copies of that
+  logic in sync. `detail` only changes three things inline — the video grows to full
+  card width instead of the small inset, the round label becomes "Round N of (total)"
+  with prev/next links, and `ShareButton` gets a `youtubeUrl` prop — everything else
+  (rating row, admin tools, edit/delete) renders unchanged. Grid usage (the movie page)
+  passes no `detail` prop and is pixel-identical to before.
+- **Cast pills and the "more fights" rail are demoted, not equal-weight sections.**
+  Early drafts gave both their own full headline and card-sized entries, which pulled
+  focus back toward "browse the catalog" — working against the reason someone lands on
+  a permalink in the first place (watch *this* fight). Settled on small muted labels,
+  single-row scrolling strips, and a hairline divider separating them from the scene
+  above, so they read as an available exit, not a second act.
+- **Share menu gained "Copy YouTube link," not a second "copy link with timestamp."**
+  The app's own permalink already opens at the clip's stored start time (the embed
+  always uses `youtubeStartSeconds`), so a second copy option pointing at the same URL
+  plus a redundant `t=` param would have added a confusing near-duplicate. The real gap
+  was no way to share the *source* YouTube link directly — added via
+  `youtubeWatchUrl(videoId, startSeconds)`, only shown when `ShareButton` is given a
+  `youtubeUrl` (i.e., only in `detail` mode).
+- **`FightSceneThumbnail`'s image+fallback logic split into `YoutubeThumbnailImage`**
+  so the "more fights" rail could reuse the same 404-fallback behavior at a much
+  smaller size than the card-sized thumbnail `FightSceneThumbnail` and
+  `FightSceneResultCard` need — without duplicating the `onError` state logic.
+
 ### Fight scene search browses by default instead of requiring input first
 **PR #TBD.** `/search/fight-scenes` previously showed nothing — just "Enter a
 scene or movie title, or set a filter, to browse fight scenes" — until a

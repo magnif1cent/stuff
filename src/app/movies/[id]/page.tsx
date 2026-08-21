@@ -523,21 +523,23 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
           signedIn={!!session?.user}
         />
 
-        <FightSceneSection
-          movieId={movie.id}
-          initialFightScenes={serializedFightScenes}
-          castOptions={castOptions}
-          tagOptions={fightSceneTags}
-          signedIn={!!session?.user}
-          currentUserId={session?.user?.id ?? null}
-          isAdmin={session?.user?.role === "ADMIN"}
-          canVerify={session?.user?.role === "ADMIN" || session?.user?.role === "REVIEWER"}
-          myRatings={myFightSceneRatingMap}
-          myAdminRatings={myFightSceneAdminRatingMap}
-          myMemberLists={myMemberLists.map((list) => ({ id: list.id, name: list.name }))}
-          mySavedListIdsByScene={mySavedFightSceneListIds}
-          myFavoriteSceneIds={myFavoriteFightSceneIds}
-        />
+        <div id="fight-scenes">
+          <FightSceneSection
+            movieId={movie.id}
+            initialFightScenes={serializedFightScenes}
+            castOptions={castOptions}
+            tagOptions={fightSceneTags}
+            signedIn={!!session?.user}
+            currentUserId={session?.user?.id ?? null}
+            isAdmin={session?.user?.role === "ADMIN"}
+            canVerify={session?.user?.role === "ADMIN" || session?.user?.role === "REVIEWER"}
+            myRatings={myFightSceneRatingMap}
+            myAdminRatings={myFightSceneAdminRatingMap}
+            myMemberLists={myMemberLists.map((list) => ({ id: list.id, name: list.name }))}
+            mySavedListIdsByScene={mySavedFightSceneListIds}
+            myFavoriteSceneIds={myFavoriteFightSceneIds}
+          />
+        </div>
 
         <FunFactsSection
           movieId={movie.id}

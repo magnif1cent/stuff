@@ -6,13 +6,19 @@ export function ShareButton({
   path,
   title,
   variant = "button",
+  youtubeUrl,
 }: {
   path: string;
   title: string;
   variant?: "button" | "icon";
+  // When provided, adds a second copy option for the underlying YouTube
+  // link (already carrying the clip's start time via youtubeWatchUrl) —
+  // for sharing the source video directly instead of this site's permalink.
+  youtubeUrl?: string;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [youtubeCopied, setYoutubeCopied] = useState(false);
 
   function absoluteUrl() {
     return `${window.location.origin}${path}`;
@@ -35,6 +41,13 @@ export function ShareButton({
     await navigator.clipboard.writeText(absoluteUrl());
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
+  }
+
+  async function copyYoutubeLink() {
+    if (!youtubeUrl) return;
+    await navigator.clipboard.writeText(youtubeUrl);
+    setYoutubeCopied(true);
+    setTimeout(() => setYoutubeCopied(false), 1500);
   }
 
   function shareIntent(platform: "x" | "facebook" | "reddit") {
@@ -83,6 +96,14 @@ export function ShareButton({
           >
             {copied ? "Copied!" : "Copy link"}
           </button>
+          {youtubeUrl && (
+            <button
+              onClick={copyYoutubeLink}
+              className="w-full rounded px-3 py-1.5 text-left text-sm text-neutral-100 hover:bg-neutral-700"
+            >
+              {youtubeCopied ? "Copied!" : "Copy YouTube link"}
+            </button>
+          )}
           <div className="my-1 h-px bg-neutral-700" />
           <button
             onClick={() => shareIntent("x")}
