@@ -16,8 +16,14 @@ interface FightSceneSearchParams {
   q?: string;
   tag?: string | string[];
   actor?: string;
+  genre?: string;
+  country?: string;
   memberRating?: string;
   editorRating?: string;
+  yearFrom?: string;
+  yearTo?: string;
+  verified?: string;
+  favorites?: string;
   sort?: string;
   page?: string;
 }
@@ -31,6 +37,14 @@ const SORT_OPTIONS = [
 
 const PAGE_SIZE = 24;
 
+function bubbleClass(active: boolean) {
+  return `rounded-full border px-3 py-1 text-xs font-medium whitespace-nowrap ${
+    active
+      ? "border-red-600 bg-red-950/40 text-red-300"
+      : "border-neutral-700 text-neutral-300 hover:border-neutral-500 hover:text-white"
+  }`;
+}
+
 function pageHref(params: FightSceneSearchParams, page: number) {
   const search = new URLSearchParams();
   if (params.q) search.set("q", params.q);
@@ -38,8 +52,14 @@ function pageHref(params: FightSceneSearchParams, page: number) {
     search.append("tag", t);
   }
   if (params.actor) search.set("actor", params.actor);
+  if (params.genre) search.set("genre", params.genre);
+  if (params.country) search.set("country", params.country);
   if (params.memberRating) search.set("memberRating", params.memberRating);
   if (params.editorRating) search.set("editorRating", params.editorRating);
+  if (params.yearFrom) search.set("yearFrom", params.yearFrom);
+  if (params.yearTo) search.set("yearTo", params.yearTo);
+  if (params.verified) search.set("verified", params.verified);
+  if (params.favorites) search.set("favorites", params.favorites);
   if (params.sort) search.set("sort", params.sort);
   if (page > 1) search.set("page", String(page));
   const qs = search.toString();
@@ -56,13 +76,40 @@ export default async function FightSceneSearchPage({
   const query = params.q?.trim() ?? "";
   const selectedTags = Array.isArray(params.tag) ? params.tag : params.tag ? [params.tag] : [];
   const actor = params.actor?.trim() ?? "";
+  const genre = params.genre?.trim() ?? "";
+  const country = params.country?.trim() ?? "";
   const memberRating = parseRatingFilter(params.memberRating);
   const editorRating = parseRatingFilter(params.editorRating);
+  const yearFrom = params.yearFrom ? Number(params.yearFrom) : undefined;
+  const yearTo = params.yearTo ? Number(params.yearTo) : undefined;
+  const verifiedOnly = params.verified === "1";
+  const userId = session?.user?.id;
+  const favoritesOnly = params.favorites === "1" && !!userId;
   const sort = SORT_OPTIONS.some((o) => o.value === params.sort) ? params.sort! : "newest";
 
-  const tags = await prisma.fightSceneTag.findMany({ orderBy: { name: "asc" } });
+  const [tags, genres, countryRows] = await Promise.all([
+    prisma.fightSceneTag.findMany({ orderBy: { name: "asc" } }),
+    prisma.genre.findMany({ orderBy: { name: "asc" } }),
+    prisma.movie.findMany({
+      where: { country: { not: null }, status: "APPROVED" },
+      distinct: ["country"],
+      orderBy: { country: "asc" },
+      select: { country: true },
+    }),
+  ]);
+  const countries = countryRows.map((m) => m.country!).filter(Boolean);
 
-  const hasFilters = selectedTags.length > 0 || actor.length > 0 || memberRating !== undefined || editorRating !== undefined;
+  const hasFilters =
+    selectedTags.length > 0 ||
+    actor.length > 0 ||
+    genre.length > 0 ||
+    country.length > 0 ||
+    memberRating !== undefined ||
+    editorRating !== undefined ||
+    yearFrom !== undefined ||
+    yearTo !== undefined ||
+    verifiedOnly ||
+    favoritesOnly;
   const searched = query.length > 0 || hasFilters;
 
   const where: Prisma.FightSceneWhereInput = { isDeleted: false };
@@ -70,6 +117,25 @@ export default async function FightSceneSearchPage({
   // the standard convention for multi-select within a single filter facet.
   if (selectedTags.length > 0) where.tags = { some: { name: { in: selectedTags } } };
   if (actor) where.cast = { some: { person: { name: { contains: actor, mode: "insensitive" } } } };
+  // Filters by the *movie's* release year/genre/country, not the scene's own
+  // fields — these are all facets of the film the fight happened in, same as
+  // /search (movies) already filters on, so they share a single `where.movie`.
+  if (genre || country || yearFrom || yearTo) {
+    where.movie = {
+      ...(genre ? { genres: { some: { name: genre } } } : {}),
+      ...(country ? { country } : {}),
+      ...(yearFrom || yearTo
+        ? {
+            releaseDate: {
+              ...(yearFrom ? { gte: new Date(Date.UTC(yearFrom, 0, 1)) } : {}),
+              ...(yearTo ? { lt: new Date(Date.UTC(yearTo + 1, 0, 1)) } : {}),
+            },
+          }
+        : {}),
+    };
+  }
+  if (verifiedOnly) where.isVerified = true;
+  if (favoritesOnly && userId) where.favorites = { some: { userId } };
   if (query) {
     where.OR = [
       { title: { contains: query, mode: "insensitive" } },
@@ -83,14 +149,14 @@ export default async function FightSceneSearchPage({
     cast: { orderBy: { order: "asc" as const }, include: { person: true } },
   } as const;
 
-  let scenes: Prisma.FightSceneGetPayload<{ include: typeof sceneInclude }>[] = [];
-  if (searched) {
-    scenes = await prisma.fightScene.findMany({
-      where,
-      include: sceneInclude,
-      orderBy: { createdAt: "desc" },
-    });
-  }
+  // Unlike the old behavior (nothing shown until a query/filter was set),
+  // this always fetches — "Browse fight scenes" is the page's default state,
+  // not just its title, matching how the movie catalog's homepage rails work.
+  let scenes = await prisma.fightScene.findMany({
+    where,
+    include: sceneInclude,
+    orderBy: { createdAt: "desc" },
+  });
 
   const [memberSummaries, editorSummaries, favoriteCounts] = await Promise.all([
     getFightSceneRatingSummaries(scenes.map((s) => s.id)),
@@ -207,6 +273,66 @@ export default async function FightSceneSearchPage({
         </div>
 
         <div className="flex flex-col gap-1">
+          <label htmlFor="genre" className="text-xs text-neutral-400">
+            Movie genre
+          </label>
+          <select
+            id="genre"
+            name="genre"
+            defaultValue={genre}
+            className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
+          >
+            <option value="">All genres</option>
+            {genres.map((g) => (
+              <option key={g.id} value={g.name}>
+                {g.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <label htmlFor="country" className="text-xs text-neutral-400">
+            Movie country
+          </label>
+          <select
+            id="country"
+            name="country"
+            defaultValue={country}
+            className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
+          >
+            <option value="">All countries</option>
+            {countries.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <p className="text-xs text-neutral-400">Movie year range</p>
+          <div className="flex gap-2">
+            <input
+              name="yearFrom"
+              type="number"
+              aria-label="Year from"
+              defaultValue={params.yearFrom ?? ""}
+              placeholder="1970"
+              className="w-1/2 min-w-0 rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
+            />
+            <input
+              name="yearTo"
+              type="number"
+              aria-label="Year to"
+              defaultValue={params.yearTo ?? ""}
+              placeholder="2025"
+              className="w-1/2 min-w-0 rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
+            />
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-1">
           <label htmlFor="sort" className="text-xs text-neutral-400">
             Sort by
           </label>
@@ -237,14 +363,45 @@ export default async function FightSceneSearchPage({
       </form>
 
       <div className="min-w-0 flex-1">
-        <h1 className="mb-6 font-serif text-xl font-bold text-white">
+        <h1 className="mb-4 font-serif text-xl font-bold text-white">
           {query ? <>Fight scene results for &ldquo;{query}&rdquo;</> : "Browse fight scenes"}
         </h1>
 
-        {!searched ? (
-          <p className="text-neutral-400">Enter a scene or movie title, or set a filter, to browse fight scenes.</p>
-        ) : totalResults === 0 ? (
-          <p className="text-neutral-400">No fight scenes matched your search.</p>
+        {/* Quick-access shortcuts into a filtered/sorted view — a faster
+            path than the sidebar form for the handful of values (a sort
+            order, a single tag) that don't need free-text input. The
+            actor filter stays sidebar-only since it's open-ended text,
+            not a fixed set of values a bubble row can represent. */}
+        <div className="mb-6 flex flex-wrap gap-2">
+          <a href="/search/fight-scenes?sort=memberRating" className={bubbleClass(sort === "memberRating")}>
+            ★ Top Rated
+          </a>
+          <a href="/search/fight-scenes?sort=mostFavorited" className={bubbleClass(sort === "mostFavorited")}>
+            ♥ Most Favorited
+          </a>
+          <a href="/search/fight-scenes?verified=1" className={bubbleClass(verifiedOnly)}>
+            ✓ Verified only
+          </a>
+          {session?.user && (
+            <a href="/search/fight-scenes?favorites=1" className={bubbleClass(favoritesOnly)}>
+              ♥ My Favorites
+            </a>
+          )}
+          {tags.map((t) => (
+            <a
+              key={t.id}
+              href={`/search/fight-scenes?tag=${encodeURIComponent(t.name)}`}
+              className={bubbleClass(selectedTags.includes(t.name))}
+            >
+              {t.name}
+            </a>
+          ))}
+        </div>
+
+        {totalResults === 0 ? (
+          <p className="text-neutral-400">
+            {searched ? "No fight scenes matched your search." : "No fight scenes have been added yet."}
+          </p>
         ) : (
           <>
             <div className="flex flex-wrap gap-4">

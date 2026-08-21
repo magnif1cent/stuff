@@ -965,6 +965,50 @@ protecting against for this project's actual pace of parallel work.
 
 ## Feature Decisions
 
+### Fight scene search browses by default instead of requiring input first
+**PR #TBD.** `/search/fight-scenes` previously showed nothing — just "Enter a
+scene or movie title, or set a filter, to browse fight scenes" — until a
+query or filter was set, exactly mirroring `/search` (movies)'s gated
+behavior. Landing on a page titled "Browse fight scenes" via the nav and
+seeing an empty form instead of anything to browse was the actual complaint.
+
+- Fixed by removing the `if (searched)` gate on the query — it now always
+  fetches (`isDeleted: false`, no other filters applied when none are set),
+  sorted Newest by default, same pagination as before.
+- **Deliberately not applied to `/search` (movies) too** — this was scoped to
+  the specific complaint about the fight-scenes page, not a "fix both"
+  pass. The two pages diverging here (fight scenes browses by default,
+  movies still requires input) is a known, accepted asymmetry, not an
+  oversight — revisit if `/search` gets the same complaint.
+- The empty-result copy now distinguishes the two states: "No fight scenes
+  have been added yet" (true empty catalog, no query/filters) vs. "No fight
+  scenes matched your search" (a query or filter narrowed it to zero) —
+  previously only the latter message existed, since the unfiltered case
+  never reached the results branch at all.
+
+### Fight scene search gets quick-filter bubbles, scoped to fixed-value filters only
+**PR #TBD.** A one-click bubble row above the results, for jumping straight
+into a filtered/sorted view without opening the sidebar form.
+
+- **Which filters got a bubble, and why the actor filter didn't**: bubbles
+  cover every category tag plus two sort shortcuts (Top Rated → highest
+  member rating, Most Favorited) — all fixed, enumerable value sets. The
+  actor filter stayed sidebar-only (its existing `AutocompleteFilterInput`)
+  since it's open-ended text; a bubble row can represent "pick one of these
+  N things" but not "type anything." Editor rating didn't get its own sort
+  bubble to keep the row from getting crowded — member rating ("Top Rated")
+  is the more general-audience reading of that phrase; editor rating stays
+  reachable via the sidebar's sort dropdown.
+- **Clicking a bubble replaces the current filters rather than adding to
+  them** — same one-click-to-a-specific-view behavior as the existing
+  genre/tag quick-links elsewhere in the app (`/search?genre=`,
+  `/search/fight-scenes?tag=`), not a toggle that combines with whatever
+  else is currently selected.
+- Active-state highlighting reads the same `selectedTags`/`sort` values the
+  sidebar form already computes, so a bubble and its sidebar counterpart
+  (the matching tag checkbox, the matching sort option) always agree on
+  what's currently active — no separate state to keep in sync.
+
 ### Fun Facts: flat content shape from Discussion, first bidirectional vote in the app
 **PR #TBD.** An IMDB "Did you know"-style trivia section above the Discussion
 thread — members add short entries, other members vote them up or down.
