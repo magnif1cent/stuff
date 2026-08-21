@@ -31,6 +31,14 @@ const SORT_OPTIONS = [
 
 const PAGE_SIZE = 24;
 
+function bubbleClass(active: boolean) {
+  return `rounded-full border px-3 py-1 text-xs font-medium whitespace-nowrap ${
+    active
+      ? "border-red-600 bg-red-950/40 text-red-300"
+      : "border-neutral-700 text-neutral-300 hover:border-neutral-500 hover:text-white"
+  }`;
+}
+
 function pageHref(params: FightSceneSearchParams, page: number) {
   const search = new URLSearchParams();
   if (params.q) search.set("q", params.q);
@@ -237,9 +245,32 @@ export default async function FightSceneSearchPage({
       </form>
 
       <div className="min-w-0 flex-1">
-        <h1 className="mb-6 font-serif text-xl font-bold text-white">
+        <h1 className="mb-4 font-serif text-xl font-bold text-white">
           {query ? <>Fight scene results for &ldquo;{query}&rdquo;</> : "Browse fight scenes"}
         </h1>
+
+        {/* Quick-access shortcuts into a filtered/sorted view — a faster
+            path than the sidebar form for the handful of values (a sort
+            order, a single tag) that don't need free-text input. The
+            actor filter stays sidebar-only since it's open-ended text,
+            not a fixed set of values a bubble row can represent. */}
+        <div className="mb-6 flex flex-wrap gap-2">
+          <a href="/search/fight-scenes?sort=memberRating" className={bubbleClass(sort === "memberRating")}>
+            ★ Top Rated
+          </a>
+          <a href="/search/fight-scenes?sort=mostFavorited" className={bubbleClass(sort === "mostFavorited")}>
+            ♥ Most Favorited
+          </a>
+          {tags.map((t) => (
+            <a
+              key={t.id}
+              href={`/search/fight-scenes?tag=${encodeURIComponent(t.name)}`}
+              className={bubbleClass(selectedTags.includes(t.name))}
+            >
+              {t.name}
+            </a>
+          ))}
+        </div>
 
         {totalResults === 0 ? (
           <p className="text-neutral-400">
