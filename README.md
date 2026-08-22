@@ -273,6 +273,7 @@ Below Fight Scenes on every movie page: an IMDB "Did you know"-style trivia sect
 - **Ranked by net score** (upvotes minus downvotes), ties broken by newest first — the highest-voted facts rise to the top, same idea as IMDB's own trivia section.
 - **Editing/deleting**: the submitter can edit or delete their own fact; admins can delete anyone's. Deletion is a soft-delete (keeps vote history intact) and the fact simply disappears from the list — unlike discussion posts, nothing else (no replies) depends on the row staying visible.
 - Requires a verified email to submit or vote, same bar as fight scenes and discussion posts.
+- **Mentions of this movie's own cast or franchise siblings auto-link**, no `@mention` syntax to type — writing "Bruce Lee" in a fact about *Enter the Dragon* links straight to his actor page, and mentioning another movie in the same collection links to it. Only matched against this movie's own cast list and its `collectionTmdbId` siblings (not the whole site's actor/movie tables), keeping false-positive risk low without needing an autocomplete input.
 
 ## Actor Pages
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 
 const MAX_CONTENT_LENGTH = 500;
 const PAGE_SIZE = 5;
@@ -15,6 +16,50 @@ export interface FunFactItem {
   up: number;
   down: number;
   myVote: 1 | -1 | null;
+}
+
+export interface FunFactMentionable {
+  name: string;
+  href: string;
+}
+
+// Auto-links mentions of this movie's own cast or franchise siblings inside a
+// fact's plain text -- no special @mention syntax to type, since matching
+// against a small, bounded, per-movie pool (not the whole site's actor/movie
+// tables) keeps false-positive risk low without needing an autocomplete UI.
+function linkifyContent(content: string, mentionables: FunFactMentionable[]): React.ReactNode {
+  if (mentionables.length === 0) return content;
+
+  // Longest names first, so e.g. "Bruce Lee" matches whole rather than a
+  // shorter substring like "Lee" greedily consuming part of it.
+  const sorted = [...mentionables].sort((a, b) => b.name.length - a.name.length);
+  const pattern = sorted.map((m) => m.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+  const regex = new RegExp(`\\b(${pattern})\\b`, "g");
+
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  let key = 0;
+  while ((match = regex.exec(content)) !== null) {
+    if (match.index > lastIndex) parts.push(content.slice(lastIndex, match.index));
+    const mentionable = sorted.find((m) => m.name === match![0]);
+    parts.push(
+      mentionable ? (
+        <Link
+          key={`mention-${key++}`}
+          href={mentionable.href}
+          className="text-red-500 underline decoration-red-800 underline-offset-2 hover:text-red-400"
+        >
+          {match[0]}
+        </Link>
+      ) : (
+        match[0]
+      ),
+    );
+    lastIndex = match.index + match[0].length;
+  }
+  if (lastIndex < content.length) parts.push(content.slice(lastIndex));
+  return parts;
 }
 
 function formatDate(iso: string) {
@@ -38,12 +83,14 @@ export function FunFactsSection({
   signedIn,
   currentUserId,
   isAdmin,
+  mentionables = [],
 }: {
   movieId: string;
   initialFacts: FunFactItem[];
   signedIn: boolean;
   currentUserId: string | null;
   isAdmin: boolean;
+  mentionables?: FunFactMentionable[];
 }) {
   const [facts, setFacts] = useState(initialFacts);
   const [newContent, setNewContent] = useState("");
@@ -259,7 +306,7 @@ export function FunFactsSection({
                       </div>
                     </div>
                   ) : (
-                    <p className="text-lg text-neutral-100">{fact.content}</p>
+                    <p className="text-lg text-neutral-100">{linkifyContent(fact.content, mentionables)}</p>
                   )}
 
                   <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
@@ -352,9 +399,23 @@ export function FunFactsSection({
             <ul className="divide-y divide-neutral-800 border-t border-neutral-800">
               {pageFacts.map((fact) => (
                 <li key={fact.id}>
-                  <button
-                    onClick={() => setSpotlightId(fact.id)}
-                    className={`flex w-full flex-col gap-1 px-3 py-2 text-left text-sm transition hover:bg-neutral-800/50 ${
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={(e) => {
+                      // Let a mention link's own navigation happen instead of
+                      // also spotlighting this row -- clicking a link inside
+                      // a clickable row should go to the link, not both.
+                      if ((e.target as HTMLElement).closest("a")) return;
+                      setSpotlightId(fact.id);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setSpotlightId(fact.id);
+                      }
+                    }}
+                    className={`flex w-full cursor-pointer flex-col gap-1 px-3 py-2 text-left text-sm transition hover:bg-neutral-800/50 ${
                       fact.id === spotlightId ? "bg-neutral-800/40" : ""
                     }`}
                   >
@@ -369,8 +430,8 @@ export function FunFactsSection({
                       <span className="shrink-0 font-medium text-neutral-100">{fact.submittedBy.username}</span>
                       <span className="ml-auto shrink-0 text-neutral-600">{formatDate(fact.createdAt)}</span>
                     </div>
-                    <p className="text-neutral-300">{fact.content}</p>
-                  </button>
+                    <p className="text-neutral-300">{linkifyContent(fact.content, mentionables)}</p>
+                  </div>
                 </li>
               ))}
             </ul>
