@@ -990,12 +990,22 @@ and let verified members add their own, alongside the existing admin-only review
   an actual review, without matching the admin review's ceiling.
 - **Admin review always renders first, in its own bordered box labeled "Admin Review"**
   (amber-accented, same family as `AdminRatingWidget`'s existing amber styling elsewhere
-  on the page) — member reviews sort newest-first below it, in a plain list with no such
-  box, so the one "official" review is visually unambiguous at a glance.
+  on the page) — member reviews sort newest-first below it, so the one "official" review
+  is visually unambiguous at a glance.
 - **An admin can also write their own `MemberReview`**, separate from the shared admin
   review they edit — not specifically requested, but nothing in the spec excluded it, and
   restricting admins from having a personal take in addition to the official one would
   have needed extra gating logic for no clear benefit.
+- **Member reviews display as a horizontal scroll rail of cards, not a vertical list** —
+  requested as a follow-up once a vertical stack of several reviews showed the same
+  unbounded-page-growth problem already solved for Fun Facts, but a "show more" toggle
+  didn't fit card-shaped review content as well as it fit a flat trivia list. Reused the
+  existing `rail-scrollbar` utility (already backing Cast and You Might Also Like) instead
+  of inventing new overflow handling, with each card a fixed `w-72` and its own
+  `MemberReviewCard` sub-component holding local expand state. Long card text clamps at
+  `CARD_CLAMP_THRESHOLD = 160` chars (vs. `RecentReviewsFeed`'s `ReviewText` clamp at 220),
+  scaled down to fit the narrower card width, reusing that component's clamp/"Show
+  more"-"Show less" pattern rather than a new one.
 
 ### Fun Fact mentions auto-link against a per-movie pool, not an @mention input
 **PR #TBD.** Wanted fun facts to be able to reference the movie's cast (or other movies

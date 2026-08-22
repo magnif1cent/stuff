@@ -26,6 +26,105 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
 }
 
+// Below this length a review reads fine in full within the card without a
+// toggle -- same reasoning as RecentReviewsFeed's CLAMP_THRESHOLD, scaled
+// down further since these cards (w-72) are narrower than that feed's grid.
+const CARD_CLAMP_THRESHOLD = 160;
+
+function MemberReviewCard({
+  review,
+  canEdit,
+  canDelete,
+  isEditing,
+  editContent,
+  submitting,
+  onStartEdit,
+  onEditContentChange,
+  onSaveEdit,
+  onCancelEdit,
+  onDelete,
+}: {
+  review: MemberReviewData;
+  canEdit: boolean;
+  canDelete: boolean;
+  isEditing: boolean;
+  editContent: string;
+  submitting: boolean;
+  onStartEdit: () => void;
+  onEditContentChange: (value: string) => void;
+  onSaveEdit: () => void;
+  onCancelEdit: () => void;
+  onDelete: () => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const isLong = review.content.length > CARD_CLAMP_THRESHOLD;
+
+  return (
+    <div className="w-72 shrink-0 rounded-md border border-neutral-800 bg-neutral-900 p-3">
+      {isEditing ? (
+        <div className="flex flex-col gap-2">
+          <textarea
+            value={editContent}
+            onChange={(e) => onEditContentChange(e.target.value)}
+            rows={6}
+            maxLength={MAX_MEMBER_LENGTH}
+            className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
+          />
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onSaveEdit}
+              disabled={submitting || !editContent.trim()}
+              className="w-fit rounded-md bg-red-700 px-3 py-1 text-xs font-medium text-white hover:bg-red-600 disabled:opacity-50"
+            >
+              Save
+            </button>
+            <button
+              onClick={onCancelEdit}
+              className="w-fit rounded-md border border-neutral-700 px-3 py-1 text-xs text-neutral-300 hover:bg-neutral-800"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div>
+          <p className={`whitespace-pre-wrap text-sm text-neutral-300 ${!expanded && isLong ? "line-clamp-4" : ""}`}>
+            {review.content}
+          </p>
+          {isLong && (
+            <button
+              onClick={() => setExpanded((e) => !e)}
+              className="mt-1 text-xs font-medium text-red-500 hover:underline"
+            >
+              {expanded ? "Show less" : "Show more"}
+            </button>
+          )}
+        </div>
+      )}
+
+      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-neutral-500">
+        <span>
+          {review.author.username} &middot; {formatDate(review.createdAt)}
+        </span>
+        {(canEdit || canDelete) && !isEditing && (
+          <span className="inline-flex gap-2">
+            {canEdit && (
+              <button onClick={onStartEdit} className="text-neutral-400 hover:text-white">
+                Edit
+              </button>
+            )}
+            {canDelete && (
+              <button onClick={onDelete} className="text-neutral-400 hover:text-red-400">
+                Delete
+              </button>
+            )}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function ReviewsSection({
   movieId,
   initialAdminReview,
@@ -264,65 +363,24 @@ export function ReviewsSection({
       {memberError && <p className="mb-4 text-sm text-red-500">{memberError}</p>}
 
       {memberReviews.length > 0 ? (
-        <ul className="flex flex-col gap-4">
-          {memberReviews.map((review) => {
-            const canEdit = currentUserId === review.authorId;
-            const canDelete = canEdit || isAdmin;
-
-            return (
-              <li key={review.id} className="border-t border-neutral-800 pt-4">
-                {editingReviewId === review.id ? (
-                  <div className="flex flex-col gap-2">
-                    <textarea
-                      value={editContent}
-                      onChange={(e) => setEditContent(e.target.value)}
-                      rows={6}
-                      maxLength={MAX_MEMBER_LENGTH}
-                      className="w-full max-w-2xl rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
-                    />
-                    <div className="flex items-center gap-3">
-                      <button
-                        onClick={() => saveEdit(review.id)}
-                        disabled={memberSubmitting || !editContent.trim()}
-                        className="w-fit rounded-md bg-red-700 px-3 py-1 text-xs font-medium text-white hover:bg-red-600 disabled:opacity-50"
-                      >
-                        Save
-                      </button>
-                      <button
-                        onClick={cancelEdit}
-                        className="w-fit rounded-md border border-neutral-700 px-3 py-1 text-xs text-neutral-300 hover:bg-neutral-800"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="max-w-2xl whitespace-pre-wrap text-neutral-300">{review.content}</p>
-                )}
-
-                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-neutral-500">
-                  <span>
-                    {review.author.username} &middot; {formatDate(review.createdAt)}
-                  </span>
-                  {(canEdit || canDelete) && editingReviewId !== review.id && (
-                    <span className="inline-flex gap-2">
-                      {canEdit && (
-                        <button onClick={() => startEdit(review)} className="text-neutral-400 hover:text-white">
-                          Edit
-                        </button>
-                      )}
-                      {canDelete && (
-                        <button onClick={() => deleteReview(review.id)} className="text-neutral-400 hover:text-red-400">
-                          Delete
-                        </button>
-                      )}
-                    </span>
-                  )}
-                </div>
-              </li>
-            );
-          })}
-        </ul>
+        <div className="rail-scrollbar flex gap-4 overflow-x-auto pb-2">
+          {memberReviews.map((review) => (
+            <MemberReviewCard
+              key={review.id}
+              review={review}
+              canEdit={currentUserId === review.authorId}
+              canDelete={currentUserId === review.authorId || isAdmin}
+              isEditing={editingReviewId === review.id}
+              editContent={editContent}
+              submitting={memberSubmitting}
+              onStartEdit={() => startEdit(review)}
+              onEditContentChange={setEditContent}
+              onSaveEdit={() => saveEdit(review.id)}
+              onCancelEdit={cancelEdit}
+              onDelete={() => deleteReview(review.id)}
+            />
+          ))}
+        </div>
       ) : (
         !adminReview && <p className="text-sm text-neutral-500">No reviews yet.</p>
       )}
