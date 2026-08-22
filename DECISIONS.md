@@ -2409,6 +2409,19 @@ originally scoped into this same PR but cut before merge — see Deferred & Back
   scene cards never display a live favorite count next to the button, so they never needed
   one; the actor page does (next to the heart toggle), so the response carries it rather
   than requiring a second round-trip.
+- **Cutting Editor's Spotlight after this PR's migration had already deployed once
+  repeated the exact mistake "Reverted a migration rename" (above) already warned
+  about.** The first commit's migration (`..._add_person_favorites_and_spotlights`)
+  had already run against the shared preview database via Vercel's `prisma migrate
+  deploy` build step; renaming its folder and rewriting its contents to drop
+  `PersonSpotlight` (to match the trimmed schema) made Vercel's next deploy fail —
+  `migrate deploy` saw a "new," never-applied migration by that new name and tried to
+  recreate `PersonFavorite`, which already existed. Fixed the same way PR #18 did:
+  reverted the rename/edit so the applied migration's name and contents exactly match
+  what already ran, and added a separate follow-up migration
+  (`..._drop_person_spotlight`) to actually remove the table. Migration history only
+  grows forward from what's live; it doesn't get rewritten to look like the feature
+  was never there.
 - **`getMostBelovedActors()` added directly to `lib/leaderboard.ts`**, alongside
   `getMostLikedLists`/`getTopCurators`, rather than into `lib/person-favorites.ts` —
   matches how `getMostLikedLists` queries `MemberList` directly rather than living in a
