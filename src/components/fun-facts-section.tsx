@@ -230,102 +230,105 @@ export function FunFactsSection({
             const canVote = signedIn && !canEdit;
 
             return (
-              <div className="border-b border-neutral-800 bg-gradient-to-b from-red-950/20 to-transparent p-5 text-center">
-                {editingId === fact.id ? (
-                  <div className="mx-auto flex max-w-md flex-col gap-2 text-left">
-                    <textarea
-                      value={editContent}
-                      onChange={(e) => setEditContent(e.target.value)}
-                      rows={2}
-                      maxLength={MAX_CONTENT_LENGTH}
-                      className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
-                    />
-                    <div className="flex gap-2">
+              <div className="flex gap-3 border-b border-l-4 border-neutral-800 border-l-red-700 p-4">
+                <span className="font-serif text-4xl leading-[0.6] text-red-700/70">&ldquo;</span>
+                <div className="min-w-0 flex-1">
+                  {editingId === fact.id ? (
+                    <div className="flex flex-col gap-2">
+                      <textarea
+                        value={editContent}
+                        onChange={(e) => setEditContent(e.target.value)}
+                        rows={2}
+                        maxLength={MAX_CONTENT_LENGTH}
+                        className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => saveEdit(fact.id)}
+                          disabled={submitting || !editContent.trim()}
+                          className="w-fit rounded-md bg-red-700 px-3 py-1 text-xs font-medium text-white hover:bg-red-600 disabled:opacity-50"
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={cancelEdit}
+                          className="w-fit rounded-md border border-neutral-700 px-3 py-1 text-xs text-neutral-300 hover:bg-neutral-800"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-lg text-neutral-100">{fact.content}</p>
+                  )}
+
+                  <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-xs text-neutral-500">
+                      — {fact.submittedBy.username} · {formatDate(fact.createdAt)}
+                      {wasEdited(fact) && " (edited)"}
+                    </p>
+
+                    <div className="flex items-center gap-3 text-sm">
+                      {facts.length > 1 && (
+                        <button
+                          onClick={() => shiftSpotlight(-1)}
+                          className="text-neutral-500 hover:text-neutral-300"
+                        >
+                          ‹
+                        </button>
+                      )}
                       <button
-                        onClick={() => saveEdit(fact.id)}
-                        disabled={submitting || !editContent.trim()}
-                        className="w-fit rounded-md bg-red-700 px-3 py-1 text-xs font-medium text-white hover:bg-red-600 disabled:opacity-50"
+                        onClick={() => (canVote ? vote(fact.id, 1) : undefined)}
+                        disabled={!canVote}
+                        title={canEdit ? "You can't vote on your own fun fact" : undefined}
+                        className={`flex items-center gap-1 rounded px-1 leading-none transition disabled:cursor-not-allowed disabled:opacity-40 ${
+                          fact.myVote === 1 ? "text-green-500" : "text-neutral-500 hover:text-neutral-300"
+                        }`}
                       >
-                        Save
+                        👍 {fact.up}
                       </button>
                       <button
-                        onClick={cancelEdit}
-                        className="w-fit rounded-md border border-neutral-700 px-3 py-1 text-xs text-neutral-300 hover:bg-neutral-800"
+                        onClick={() => (canVote ? vote(fact.id, -1) : undefined)}
+                        disabled={!canVote}
+                        title={canEdit ? "You can't vote on your own fun fact" : undefined}
+                        className={`flex items-center gap-1 rounded px-1 leading-none transition disabled:cursor-not-allowed disabled:opacity-40 ${
+                          fact.myVote === -1 ? "text-red-500" : "text-neutral-500 hover:text-neutral-300"
+                        }`}
                       >
-                        Cancel
+                        👎 {fact.down}
                       </button>
+                      {facts.length > 1 && (
+                        <button
+                          onClick={() => shiftSpotlight(1)}
+                          className="text-neutral-500 hover:text-neutral-300"
+                        >
+                          ›
+                        </button>
+                      )}
                     </div>
                   </div>
-                ) : (
-                  <p className="text-lg text-neutral-100">&ldquo;{fact.content}&rdquo;</p>
-                )}
 
-                <p className="mt-2 text-xs text-neutral-500">
-                  — {fact.submittedBy.username} · {formatDate(fact.createdAt)}
-                  {wasEdited(fact) && " (edited)"}
-                </p>
-
-                <div className="mt-3 flex items-center justify-center gap-4">
-                  {facts.length > 1 && (
-                    <button
-                      onClick={() => shiftSpotlight(-1)}
-                      className="text-sm text-neutral-500 hover:text-neutral-300"
-                    >
-                      ‹ prev
-                    </button>
-                  )}
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => (canVote ? vote(fact.id, 1) : undefined)}
-                      disabled={!canVote}
-                      title={canEdit ? "You can't vote on your own fun fact" : undefined}
-                      className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-base leading-none transition disabled:cursor-not-allowed disabled:opacity-40 ${
-                        fact.myVote === 1 ? "text-green-500" : "text-neutral-500 hover:text-neutral-300"
-                      }`}
-                    >
-                      👍 <span className="text-sm">{fact.up}</span>
-                    </button>
-                    <button
-                      onClick={() => (canVote ? vote(fact.id, -1) : undefined)}
-                      disabled={!canVote}
-                      title={canEdit ? "You can't vote on your own fun fact" : undefined}
-                      className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-base leading-none transition disabled:cursor-not-allowed disabled:opacity-40 ${
-                        fact.myVote === -1 ? "text-red-500" : "text-neutral-500 hover:text-neutral-300"
-                      }`}
-                    >
-                      👎 <span className="text-sm">{fact.down}</span>
-                    </button>
-                  </div>
-                  {facts.length > 1 && (
-                    <button
-                      onClick={() => shiftSpotlight(1)}
-                      className="text-sm text-neutral-500 hover:text-neutral-300"
-                    >
-                      next ›
-                    </button>
+                  {(canEdit || canDelete) && editingId !== fact.id && (
+                    <div className="mt-1.5 flex items-center gap-2">
+                      {canEdit && (
+                        <button
+                          onClick={() => startEdit(fact)}
+                          className="text-xs text-neutral-400 hover:text-white"
+                        >
+                          Edit
+                        </button>
+                      )}
+                      {canDelete && (
+                        <button
+                          onClick={() => deleteFact(fact.id)}
+                          className="text-xs text-neutral-400 hover:text-red-400"
+                        >
+                          Delete
+                        </button>
+                      )}
+                    </div>
                   )}
                 </div>
-
-                {(canEdit || canDelete) && editingId !== fact.id && (
-                  <div className="mt-2 flex items-center justify-center gap-2">
-                    {canEdit && (
-                      <button
-                        onClick={() => startEdit(fact)}
-                        className="text-xs text-neutral-400 hover:text-white"
-                      >
-                        Edit
-                      </button>
-                    )}
-                    {canDelete && (
-                      <button
-                        onClick={() => deleteFact(fact.id)}
-                        className="text-xs text-neutral-400 hover:text-red-400"
-                      >
-                        Delete
-                      </button>
-                    )}
-                  </div>
-                )}
               </div>
             );
           })()
