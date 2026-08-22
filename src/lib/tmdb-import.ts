@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
-import { getTmdbMovieDetails } from "@/lib/tmdb";
+import { getTmdbMovieDetails, extractUsCertification, extractOriginalLanguageName } from "@/lib/tmdb";
 
-const MAX_CAST = 15;
+const MAX_CAST = 30;
 
 export interface ImportMovieOptions {
   // Admin imports (single-title, keyword, bulk CSV) go straight to APPROVED
@@ -18,6 +18,13 @@ export async function importMovieFromTmdb(tmdbId: number, options: ImportMovieOp
   const details = await getTmdbMovieDetails(tmdbId);
   const director = details.credits.crew.find((c) => c.job === "Director")?.name ?? null;
   const country = details.production_countries[0]?.name ?? null;
+  const studio = details.production_companies[0]?.name ?? null;
+  const certification = extractUsCertification(details);
+  const originalLanguage = extractOriginalLanguageName(details);
+  const tagline = details.tagline || null;
+  const revenue = details.revenue || null;
+  const collectionName = details.belongs_to_collection?.name ?? null;
+  const collectionTmdbId = details.belongs_to_collection?.id ?? null;
   const topCast = [...details.credits.cast].sort((a, b) => a.order - b.order).slice(0, MAX_CAST);
   const status = options.status ?? "APPROVED";
 
@@ -35,6 +42,13 @@ export async function importMovieFromTmdb(tmdbId: number, options: ImportMovieOp
       country,
       tmdbPopularity: details.popularity,
       tmdbRating: details.vote_average,
+      tagline,
+      originalLanguage,
+      studio,
+      certification,
+      revenue,
+      collectionName,
+      collectionTmdbId,
       lastSyncedAt: new Date(),
       status,
       genres: {
@@ -57,6 +71,13 @@ export async function importMovieFromTmdb(tmdbId: number, options: ImportMovieOp
       country,
       tmdbPopularity: details.popularity,
       tmdbRating: details.vote_average,
+      tagline,
+      originalLanguage,
+      studio,
+      certification,
+      revenue,
+      collectionName,
+      collectionTmdbId,
       status,
       submittedById: options.submittedById,
       genres: {

@@ -61,24 +61,53 @@ export interface TmdbMovieDetails {
   title: string;
   original_title: string;
   overview: string;
+  tagline: string;
   release_date: string | null;
   poster_path: string | null;
   backdrop_path: string | null;
   runtime: number | null;
   vote_average: number;
   popularity: number;
+  revenue: number;
+  original_language: string;
+  spoken_languages: { iso_639_1: string; english_name: string; name: string }[];
   production_countries: { iso_3166_1: string; name: string }[];
+  production_companies: { id: number; name: string }[];
+  belongs_to_collection: { id: number; name: string } | null;
   genres: { id: number; name: string }[];
   credits: {
     cast: { id: number; name: string; character: string; order: number; profile_path: string | null }[];
     crew: { id: number; name: string; job: string }[];
   };
+  release_dates: {
+    results: { iso_3166_1: string; release_dates: { certification: string }[] }[];
+  };
 }
 
 export async function getTmdbMovieDetails(tmdbId: number) {
   return tmdbFetch<TmdbMovieDetails>(`/movie/${tmdbId}`, {
-    append_to_response: "credits",
+    append_to_response: "credits,release_dates",
   });
+}
+
+// Only US certifications are surfaced -- this site's audience and existing
+// conventions (English titles, US-style genre/rating expectations) are
+// US-centric, and TMDB's release_dates data is inconsistent enough across
+// other regions that picking one authoritative source beats trying to merge
+// them.
+export function extractUsCertification(details: TmdbMovieDetails): string | null {
+  const us = details.release_dates.results.find((r) => r.iso_3166_1 === "US");
+  const certification = us?.release_dates.find((rd) => rd.certification)?.certification;
+  return certification || null;
+}
+
+// TMDB's original_language is a bare ISO 639-1 code (e.g. "cn"), not
+// meaningful to a site visitor on its own -- resolve it to the matching
+// spoken_languages entry's english_name ("Cantonese"), falling back to the
+// raw code on the rare movie where TMDB's own language lists disagree.
+export function extractOriginalLanguageName(details: TmdbMovieDetails): string | null {
+  const match = details.spoken_languages.find((l) => l.iso_639_1 === details.original_language);
+  return match?.english_name || details.original_language || null;
 }
 
 export interface TmdbKeyword {

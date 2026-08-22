@@ -25,7 +25,9 @@ import {
   getFightSceneRoundNumbers,
 } from "@/lib/fight-scenes";
 import { getFunFactsForMovie, getFunFactVoteSummaries } from "@/lib/fun-facts";
+import { getSimilarMovies } from "@/lib/similar-movies";
 import { RatingWidget } from "@/components/rating-widget";
+import { MovieRail } from "@/components/movie-rail";
 import { AdminRatingWidget } from "@/components/admin-rating-widget";
 import { ListButtons } from "@/components/list-buttons";
 import { AddToListControl } from "@/components/add-to-list-control";
@@ -132,6 +134,8 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
     movieRecommenders,
     recentFightCountEdits,
     funFacts,
+    collectionSiblings,
+    similarMovies,
   ] = await Promise.all([
     getCommunityRatingSummary(movie.id),
     getEditorsRatingSummary(movie.id),
@@ -180,6 +184,14 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
       include: { editedBy: { select: { username: true } } },
     }),
     getFunFactsForMovie(movie.id),
+    movie.collectionTmdbId
+      ? prisma.movie.findMany({
+          where: { collectionTmdbId: movie.collectionTmdbId, id: { not: movie.id }, status: "APPROVED" },
+          select: { id: true, title: true },
+          orderBy: { releaseDate: "asc" },
+        })
+      : [],
+    getSimilarMovies(movie),
   ]);
 
   const myMemberListItems = myMemberLists.map((list) => ({
@@ -358,12 +370,73 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
           {session?.user?.role === "ADMIN" && (
             <PosterOverrideControl movieId={movie.id} hasOverride={!!movie.posterOverrideUrl} />
           )}
+
+          {(movie.studio || movie.country || movie.originalLanguage || !!movie.revenue ||
+            (movie.collectionName && collectionSiblings.length > 0)) && (
+            <div className="mt-4 rounded-md border border-neutral-800 bg-neutral-900 p-3">
+              <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-neutral-500">
+                Details
+              </h3>
+              <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-sm">
+                {movie.studio && (
+                  <>
+                    <dt className="text-neutral-500">Studio</dt>
+                    <dd className="text-neutral-300">{movie.studio}</dd>
+                  </>
+                )}
+                {movie.country && (
+                  <>
+                    <dt className="text-neutral-500">Country</dt>
+                    <dd className="text-neutral-300">{movie.country}</dd>
+                  </>
+                )}
+                {movie.originalLanguage && (
+                  <>
+                    <dt className="text-neutral-500">Language</dt>
+                    <dd className="text-neutral-300">{movie.originalLanguage}</dd>
+                  </>
+                )}
+                {!!movie.revenue && (
+                  <>
+                    <dt className="text-neutral-500">Box Office</dt>
+                    <dd className="text-neutral-300">
+                      {new Intl.NumberFormat("en-US", {
+                        style: "currency",
+                        currency: "USD",
+                        maximumFractionDigits: 0,
+                      }).format(movie.revenue)}
+                    </dd>
+                  </>
+                )}
+                {movie.collectionName && collectionSiblings.length > 0 && (
+                  <>
+                    <dt className="text-neutral-500">Collection</dt>
+                    <dd>
+                      {collectionSiblings.map((sibling, i) => (
+                        <span key={sibling.id}>
+                          <Link
+                            href={`/movies/${sibling.id}`}
+                            className="text-red-500 underline decoration-red-800 underline-offset-2 hover:text-red-400"
+                          >
+                            {sibling.title}
+                          </Link>
+                          {i < collectionSiblings.length - 1 ? ", " : ""}
+                        </span>
+                      ))}
+                    </dd>
+                  </>
+                )}
+              </dl>
+            </div>
+          )}
         </div>
 
         <div className="flex-1 pt-6 sm:pt-24">
           <h1 className="font-serif text-3xl font-bold text-white">
             {movie.title} {year && <span className="text-neutral-400">({year})</span>}
           </h1>
+
+          {movie.tagline && <p className="mt-1 italic text-neutral-500">&ldquo;{movie.tagline}&rdquo;</p>}
 
           <div className="mt-2">
             <RecommendationControl
@@ -377,7 +450,11 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
           <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-neutral-400">
             {movie.runtime && <span>{movie.runtime} min</span>}
             {movie.director && <span>Dir. {movie.director}</span>}
-            {movie.country && <span>{movie.country}</span>}
+            {movie.certification && (
+              <span className="rounded border border-neutral-600 px-1.5 text-xs font-semibold text-neutral-300">
+                {movie.certification}
+              </span>
+            )}
             {movie.trueFightCount != null && (
               <a
                 href="#fight-count"
@@ -548,7 +625,13 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
           currentUserId={session?.user?.id ?? null}
           isAdmin={session?.user?.role === "ADMIN"}
         />
+      </div>
 
+      {similarMovies.length > 0 && (
+        <MovieRail title="You Might Also Like" movies={similarMovies} cardSize="compact" />
+      )}
+
+      <div className="mx-auto w-full max-w-6xl px-4 py-8">
         <div id="discussion">
           <DiscussionThread
             movieId={movie.id}

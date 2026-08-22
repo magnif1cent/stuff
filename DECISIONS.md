@@ -965,6 +965,79 @@ protecting against for this project's actual pace of parallel work.
 
 ## Feature Decisions
 
+### "You Might Also Like" built from our own data, not TMDB's recommendations endpoint
+**PR #TBD.** TMDB offers `/movie/{id}/recommendations` and `/movie/{id}/similar` for free,
+but both reflect TMDB's general-audience similarity model, not this catalog's data or its
+genre focus — a real risk on a niche single-genre site, where "similar" by TMDB's
+standards could easily mean "action movie from the same decade" rather than "another kung
+fu film." Built `getSimilarMovies` (`src/lib/similar-movies.ts`) instead, scoring every
+other `APPROVED` movie by three signals already in the catalog and summing weighted
+matches: shared genres (+2 each), shared cast or director (+3 each), and same
+`collectionTmdbId` (+10). Top 8 by score, ties unresolved (no secondary sort — acceptable
+for a rail, not a ranked list).
+
+- **Collection weighted heaviest, genre lightest.** Two movies in the same franchise are
+  the strongest possible same-movie-again signal; shared genre is the weakest, since this
+  catalog is genre-homogeneous by design (nearly everything in it is Action + Martial
+  Arts), so almost every pair of movies already shares at least one genre and it
+  shouldn't dominate the ranking on its own.
+- **In-memory scoring over a single-query composite ranking** — same tradeoff already
+  established for Top Curators and fuzzy-search ranking: fetch the candidate pool (movies
+  matching *any* of the three signals via one `OR` query) then score/sort in JS, rather
+  than one large SQL expression. Fine at this catalog's size; would need revisiting if the
+  catalog grew by orders of magnitude.
+- **A movie with zero shared signals against the rest of the catalog gets no rail at all**,
+  not an empty section or a "nothing similar yet" placeholder — the homepage's `MovieRail`
+  supports an `emptyMessage` for exactly that case, but it wasn't used here since an empty
+  "You Might Also Like" on a movie page reads as a bug, not a legitimate empty state the
+  way "no community ratings yet" does on the homepage.
+
+### Five more TMDB fields captured: tagline, studio, US certification, revenue, and collection
+**PR #TBD.** Added to every import (`importMovieFromTmdb`, shared by all three admin
+import paths and member submissions): `tagline`, primary `studio`, `certification`,
+`revenue`, and franchise `collectionName`/`collectionTmdbId`. Also raised the top-billed
+cast cap from 15 to 30.
+
+- **Studio and collection are plain scalar fields, not relations** — same
+  not-a-relation tradeoff already made for `director`/`country`: nothing needs to query
+  "movies by studio" yet, and `collectionTmdbId` alone is enough to look up sibling
+  movies already in the catalog (`@@index([collectionTmdbId])`) without a join table. If
+  a `Studio` or `Collection` model with its own page ever becomes worth building, this is
+  cheap to migrate off of.
+- **Revenue stored as `Int`, not `BigInt`.** TMDB reports revenue in whole USD, and a
+  handful of best-known martial arts films — Crouching Tiger, Hidden Dragon topped out
+  around $213M — are nowhere close to `Int`'s ~2.147B ceiling. `BigInt` would have meant
+  handling its non-JSON-serializable-by-default quirk at every server/client boundary
+  (same category of problem `Date` already needs `.toISOString()` for) for a genre where
+  it'll never matter.
+- **Only US certification is surfaced**, via `extractUsCertification` in `src/lib/tmdb.ts`
+  picking the first non-empty `certification` from TMDB's `release_dates.results` entry
+  for `iso_3166_1 === "US"`. TMDB's per-country certification data is inconsistent enough
+  across regions that merging multiple systems (PG-13 vs 15 vs IIB, etc.) wasn't worth it
+  for a site whose existing conventions (English titles, US-style rating expectations)
+  are already US-centric.
+- **`revenue: 0` and `tagline: ""` are normalized to `null` at import time.** TMDB uses
+  `0`/`""` to mean "no data" far more often than "actually zero" for the older and
+  non-US-major titles this catalog cares about, so displaying a literal "$0" or an empty
+  quote line would read as wrong more often than it'd read as true.
+- **Studio, country, language, revenue, and collection moved into a sidebar "Details"
+  card under the poster, out of the header's flowing meta line/paragraphs.** Compared
+  three layouts head to head (a details grid below the overview, this sidebar card, and
+  an icon-glyph strip folded into the meta line) once actual page content — recommend
+  badges, Fight Count, Community/Editors scores, subcategory ratings — was mocked in
+  alongside each, not just the new fields in isolation. The grid-below-overview option
+  read cleanest under that full weight; the icon strip degraded the most (Fight Count
+  alone pushed it to wrapping two lines). Went with the sidebar card anyway, since it
+  keeps the main column's narrative flow (title → tagline → meta → genres → scores →
+  overview) completely uninterrupted — the accepted tradeoff is that the sidebar card
+  can end up shorter than the main column on a movie with a longer overview or more
+  rating data, leaving visible empty space under it; not fixed, since there was nothing
+  else waiting to fill that space.
+- **Not retroactive.** Existing movies keep `null` for all five fields until their next
+  re-import — same limitation `lastSyncedAt` already implies for any field added after a
+  movie was first imported. No backfill script was written; re-importing is already a
+  supported action from `/admin/import`.
+
 ### Fight scene permalink page redesigned as a standalone destination, not the movie-page card lifted out
 **PR #TBD.** `/movies/[id]/fight-scenes/[fightSceneId]` used to just wrap the same
 `FightSceneSection` card shown in a movie's fight-scene grid, plus a back-link and OG

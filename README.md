@@ -28,6 +28,7 @@ An IMDB-style website for kung fu and martial arts films, built for martial arts
 - [Fun Facts](#fun-facts)
 - [Actor Pages](#actor-pages)
 - [Editorial Reviews](#editorial-reviews)
+- [You Might Also Like](#you-might-also-like)
 - [Admin Recommendations](#admin-recommendations)
 - [Admin Poster Overrides](#admin-poster-overrides)
 - [Visual Theme](#visual-theme)
@@ -202,6 +203,8 @@ Two dedicated search pages, both with a vertical sidebar of filters, pagination,
   - `with_origin_country` isn't in TMDB's official (outdated) API docs, though it's confirmed working and referenced by TMDB's own support — worth knowing if it ever needs debugging.
 - **Bulk CSV upload** — for when you already have a list of titles in hand rather than needing to discover them; see [Admin Area & Roles](#admin-area--roles) below for the format.
 
+Every import (all three methods funnel through the same `importMovieFromTmdb`) also captures: **tagline**; **original language** (TMDB's `original_language` code resolved to its English name via `spoken_languages`, e.g. "Cantonese" rather than the bare code "cn"); primary **studio** (first of TMDB's `production_companies`); **US certification** (e.g. "PG-13" — the only region surfaced, since TMDB's per-country rating data is inconsistent enough that picking one authoritative source beats merging them); **box office revenue** in USD (shown on the movie page only when TMDB actually has a nonzero figure — 0 is normalized to "unknown" rather than displayed as $0, since that's far more common than an actual $0 gross, especially for older/foreign titles); and **franchise/collection** info (TMDB's `belongs_to_collection`, e.g. the Ip Man series) — when other entries from the same collection are already in the catalog, the movie page links directly to them. Studio, country, language, box office, and collection are shown together in a "Details" card under the poster, kept separate from the header's own runtime/director/certification line so the two don't compete for the same space. None of this is retroactive: existing movies only get these fields on their next re-import. Top-billed cast pulled per movie is capped at 30 (up from an earlier 15).
+
 ## Member Lists & Profiles
 
 Every member has a profile page at `/members/[username]`. Viewing your own shows a tabbed layout — Profile, Activity, Favorites, Watchlist, Pending Submissions, Favorite Fight Scenes, and Lists — each tab labeled with a live count where applicable. Viewing someone else's shows a smaller tabbed layout — Lists (their public custom lists, read-only) and Activity — since Favorites, Watchlist, Pending Submissions, and Favorite Fight Scenes all stay private to the owner. `/my-lists` still works as a link — it just redirects to your own profile.
@@ -281,6 +284,12 @@ Biography, birthday, and place of birth (when TMDB has them) are shown under the
 Admins can write a long-form review (up to 10,000 characters) for any movie, shown alongside the cast list. There's one review per movie — any admin can write or update it, and the page just tracks who last touched it.
 
 The homepage's **Recent Reviews by Editors** section surfaces the 5 most recently written-or-edited reviews (an admin revising an older review counts, not just brand-new ones) as a two-column grid of compact cards — poster thumbnail, title, reviewer, date, and the review's full text clamped to 3 lines with a "Show more" toggle once it's long enough to need one, rather than a short teaser excerpt.
+
+## You Might Also Like
+
+Every movie page shows a "You Might Also Like" rail (same scrollable card-rail component the homepage uses) of up to 8 similar movies from this catalog — deliberately **not** TMDB's own `/movie/{id}/recommendations` or `/similar` endpoints, which reflect TMDB's general-audience similarity rather than this catalog's data or genre focus.
+
+Similarity is a weighted blend of three signals, all sourced from data already in the catalog: shared genres (lightest weight — in a catalog this genre-homogeneous, almost every movie shares one), shared cast or director (heavier — a specific, personal signal), and same TMDB franchise/collection (heaviest — two entries in the same series are the strongest possible "you'll like this too" signal; see [TMDB Import](#tmdb-import) below). Candidates are scored and ranked in `getSimilarMovies` (`src/lib/similar-movies.ts`); a movie with none of these three signals in common with anything else in the catalog simply doesn't get a rail at all, rather than showing an empty section.
 
 ## Admin Recommendations
 
