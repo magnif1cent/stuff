@@ -9,10 +9,12 @@ export function MovieRail({
   title,
   movies,
   emptyMessage,
+  cardSize = "default",
 }: {
   title: string;
   movies: MovieCardData[];
   emptyMessage?: React.ReactNode;
+  cardSize?: "default" | "compact";
 }) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   // Assume no overflow until measured, so the end-arrow/fade don't flash
@@ -90,7 +92,7 @@ export function MovieRail({
           className="rail-scrollbar flex gap-4 overflow-x-auto scroll-smooth pb-2"
         >
           {movies.map((movie) => (
-            <MovieCard key={movie.id} movie={movie} />
+            <MovieCard key={movie.id} movie={movie} size={cardSize} />
           ))}
         </div>
       </div>

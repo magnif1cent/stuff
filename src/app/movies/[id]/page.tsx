@@ -559,8 +559,6 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
         </div>
       </div>
 
-      {similarMovies.length > 0 && <MovieRail title="You Might Also Like" movies={similarMovies} />}
-
       <div className="mx-auto w-full max-w-6xl px-4 py-8">
         {movie.cast.length > 0 && (
           <section className="mb-8">
@@ -627,7 +625,13 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
           currentUserId={session?.user?.id ?? null}
           isAdmin={session?.user?.role === "ADMIN"}
         />
+      </div>
 
+      {similarMovies.length > 0 && (
+        <MovieRail title="You Might Also Like" movies={similarMovies} cardSize="compact" />
+      )}
+
+      <div className="mx-auto w-full max-w-6xl px-4 py-8">
         <div id="discussion">
           <DiscussionThread
             movieId={movie.id}
