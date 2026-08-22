@@ -61,24 +61,42 @@ export interface TmdbMovieDetails {
   title: string;
   original_title: string;
   overview: string;
+  tagline: string;
   release_date: string | null;
   poster_path: string | null;
   backdrop_path: string | null;
   runtime: number | null;
   vote_average: number;
   popularity: number;
+  revenue: number;
   production_countries: { iso_3166_1: string; name: string }[];
+  production_companies: { id: number; name: string }[];
+  belongs_to_collection: { id: number; name: string } | null;
   genres: { id: number; name: string }[];
   credits: {
     cast: { id: number; name: string; character: string; order: number; profile_path: string | null }[];
     crew: { id: number; name: string; job: string }[];
   };
+  release_dates: {
+    results: { iso_3166_1: string; release_dates: { certification: string }[] }[];
+  };
 }
 
 export async function getTmdbMovieDetails(tmdbId: number) {
   return tmdbFetch<TmdbMovieDetails>(`/movie/${tmdbId}`, {
-    append_to_response: "credits",
+    append_to_response: "credits,release_dates",
   });
+}
+
+// Only US certifications are surfaced -- this site's audience and existing
+// conventions (English titles, US-style genre/rating expectations) are
+// US-centric, and TMDB's release_dates data is inconsistent enough across
+// other regions that picking one authoritative source beats trying to merge
+// them.
+export function extractUsCertification(details: TmdbMovieDetails): string | null {
+  const us = details.release_dates.results.find((r) => r.iso_3166_1 === "US");
+  const certification = us?.release_dates.find((rd) => rd.certification)?.certification;
+  return certification || null;
 }
 
 export interface TmdbKeyword {

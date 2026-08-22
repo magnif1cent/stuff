@@ -132,6 +132,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
     movieRecommenders,
     recentFightCountEdits,
     funFacts,
+    collectionSiblings,
   ] = await Promise.all([
     getCommunityRatingSummary(movie.id),
     getEditorsRatingSummary(movie.id),
@@ -180,6 +181,13 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
       include: { editedBy: { select: { username: true } } },
     }),
     getFunFactsForMovie(movie.id),
+    movie.collectionTmdbId
+      ? prisma.movie.findMany({
+          where: { collectionTmdbId: movie.collectionTmdbId, id: { not: movie.id }, status: "APPROVED" },
+          select: { id: true, title: true },
+          orderBy: { releaseDate: "asc" },
+        })
+      : [],
   ]);
 
   const myMemberListItems = myMemberLists.map((list) => ({
@@ -365,6 +373,8 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
             {movie.title} {year && <span className="text-neutral-400">({year})</span>}
           </h1>
 
+          {movie.tagline && <p className="mt-1 italic text-neutral-500">&ldquo;{movie.tagline}&rdquo;</p>}
+
           <div className="mt-2">
             <RecommendationControl
               movieId={movie.id}
@@ -377,7 +387,13 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
           <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-neutral-400">
             {movie.runtime && <span>{movie.runtime} min</span>}
             {movie.director && <span>Dir. {movie.director}</span>}
+            {movie.studio && <span>{movie.studio}</span>}
             {movie.country && <span>{movie.country}</span>}
+            {movie.certification && (
+              <span className="rounded border border-neutral-600 px-1.5 text-xs font-semibold text-neutral-300">
+                {movie.certification}
+              </span>
+            )}
             {movie.trueFightCount != null && (
               <a
                 href="#fight-count"
@@ -401,6 +417,29 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
                 </Link>
               ))}
             </div>
+          )}
+
+          {movie.collectionName && collectionSiblings.length > 0 && (
+            <p className="mt-2 text-sm text-neutral-400">
+              Part of the {movie.collectionName} —{" "}
+              {collectionSiblings.map((sibling, i) => (
+                <span key={sibling.id}>
+                  <Link
+                    href={`/movies/${sibling.id}`}
+                    className="text-red-500 underline decoration-red-800 underline-offset-2 hover:text-red-400"
+                  >
+                    {sibling.title}
+                  </Link>
+                  {i < collectionSiblings.length - 1 ? ", " : ""}
+                </span>
+              ))}
+            </p>
+          )}
+
+          {!!movie.revenue && (
+            <p className="mt-2 text-sm text-neutral-500">
+              Box Office: {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(movie.revenue)}
+            </p>
           )}
 
           <div className="mt-4 flex flex-wrap items-center gap-6">

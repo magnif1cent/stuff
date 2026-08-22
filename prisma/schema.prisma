@@ -135,6 +135,25 @@ model Movie {
   country        String?
   tmdbPopularity Float?
   tmdbRating     Float?
+  tagline        String?
+  // Primary production company (first entry in TMDB's production_companies)
+  // -- a plain string, same lightweight approach as director/country above,
+  // not a relation, since nothing else needs to query "movies by studio" yet.
+  studio         String?
+  // US certification (e.g. "PG-13", "R") from TMDB's release_dates data --
+  // the only region we surface, since this site's audience and existing
+  // conventions (English titles, US-style ratings) are US-centric.
+  certification  String?
+  // In whole USD, 0/missing normalized to null at import time (TMDB reports
+  // 0 for both "made nothing" and "unknown", and the latter is far more
+  // likely for older/foreign titles this catalog cares about).
+  revenue        Int?
+  // Scalar denormalized franchise info (e.g. "Ip Man Collection"), not a
+  // Collection relation -- collectionTmdbId is enough to find sibling movies
+  // already in this catalog (@@index below) without a join table, matching
+  // the same not-a-relation tradeoff as studio/director/country.
+  collectionName    String?
+  collectionTmdbId  Int?
   createdAt      DateTime @default(now())
   lastSyncedAt   DateTime @default(now())
 
@@ -172,6 +191,7 @@ model Movie {
 
   @@index([title])
   @@index([status])
+  @@index([collectionTmdbId])
   // Plain (non-lower()-wrapped) trigram GIN index backing the ILIKE
   // substring searches in /api/search and /search — see the migration
   // 20260814143815_add_ilike_search_trigram_indexes and DECISIONS.md for

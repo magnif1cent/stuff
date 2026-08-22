@@ -965,6 +965,39 @@ protecting against for this project's actual pace of parallel work.
 
 ## Feature Decisions
 
+### Five more TMDB fields captured: tagline, studio, US certification, revenue, and collection
+**PR #TBD.** Added to every import (`importMovieFromTmdb`, shared by all three admin
+import paths and member submissions): `tagline`, primary `studio`, `certification`,
+`revenue`, and franchise `collectionName`/`collectionTmdbId`. Also raised the top-billed
+cast cap from 15 to 30.
+
+- **Studio and collection are plain scalar fields, not relations** — same
+  not-a-relation tradeoff already made for `director`/`country`: nothing needs to query
+  "movies by studio" yet, and `collectionTmdbId` alone is enough to look up sibling
+  movies already in the catalog (`@@index([collectionTmdbId])`) without a join table. If
+  a `Studio` or `Collection` model with its own page ever becomes worth building, this is
+  cheap to migrate off of.
+- **Revenue stored as `Int`, not `BigInt`.** TMDB reports revenue in whole USD, and a
+  handful of best-known martial arts films — Crouching Tiger, Hidden Dragon topped out
+  around $213M — are nowhere close to `Int`'s ~2.147B ceiling. `BigInt` would have meant
+  handling its non-JSON-serializable-by-default quirk at every server/client boundary
+  (same category of problem `Date` already needs `.toISOString()` for) for a genre where
+  it'll never matter.
+- **Only US certification is surfaced**, via `extractUsCertification` in `src/lib/tmdb.ts`
+  picking the first non-empty `certification` from TMDB's `release_dates.results` entry
+  for `iso_3166_1 === "US"`. TMDB's per-country certification data is inconsistent enough
+  across regions that merging multiple systems (PG-13 vs 15 vs IIB, etc.) wasn't worth it
+  for a site whose existing conventions (English titles, US-style rating expectations)
+  are already US-centric.
+- **`revenue: 0` and `tagline: ""` are normalized to `null` at import time.** TMDB uses
+  `0`/`""` to mean "no data" far more often than "actually zero" for the older and
+  non-US-major titles this catalog cares about, so displaying a literal "$0" or an empty
+  quote line would read as wrong more often than it'd read as true.
+- **Not retroactive.** Existing movies keep `null` for all five fields until their next
+  re-import — same limitation `lastSyncedAt` already implies for any field added after a
+  movie was first imported. No backfill script was written; re-importing is already a
+  supported action from `/admin/import`.
+
 ### Fight scene permalink page redesigned as a standalone destination, not the movie-page card lifted out
 **PR #TBD.** `/movies/[id]/fight-scenes/[fightSceneId]` used to just wrap the same
 `FightSceneSection` card shown in a movie's fight-scene grid, plus a back-link and OG
