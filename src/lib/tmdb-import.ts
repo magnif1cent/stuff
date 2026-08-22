@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { getTmdbMovieDetails, extractUsCertification } from "@/lib/tmdb";
+import { getTmdbMovieDetails, extractUsCertification, extractOriginalLanguageName } from "@/lib/tmdb";
 
 const MAX_CAST = 30;
 
@@ -20,6 +20,7 @@ export async function importMovieFromTmdb(tmdbId: number, options: ImportMovieOp
   const country = details.production_countries[0]?.name ?? null;
   const studio = details.production_companies[0]?.name ?? null;
   const certification = extractUsCertification(details);
+  const originalLanguage = extractOriginalLanguageName(details);
   const tagline = details.tagline || null;
   const revenue = details.revenue || null;
   const collectionName = details.belongs_to_collection?.name ?? null;
@@ -42,6 +43,7 @@ export async function importMovieFromTmdb(tmdbId: number, options: ImportMovieOp
       tmdbPopularity: details.popularity,
       tmdbRating: details.vote_average,
       tagline,
+      originalLanguage,
       studio,
       certification,
       revenue,
@@ -70,6 +72,7 @@ export async function importMovieFromTmdb(tmdbId: number, options: ImportMovieOp
       tmdbPopularity: details.popularity,
       tmdbRating: details.vote_average,
       tagline,
+      originalLanguage,
       studio,
       certification,
       revenue,

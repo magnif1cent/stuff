@@ -25,7 +25,9 @@ import {
   getFightSceneRoundNumbers,
 } from "@/lib/fight-scenes";
 import { getFunFactsForMovie, getFunFactVoteSummaries } from "@/lib/fun-facts";
+import { getSimilarMovies } from "@/lib/similar-movies";
 import { RatingWidget } from "@/components/rating-widget";
+import { MovieRail } from "@/components/movie-rail";
 import { AdminRatingWidget } from "@/components/admin-rating-widget";
 import { ListButtons } from "@/components/list-buttons";
 import { AddToListControl } from "@/components/add-to-list-control";
@@ -133,6 +135,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
     recentFightCountEdits,
     funFacts,
     collectionSiblings,
+    similarMovies,
   ] = await Promise.all([
     getCommunityRatingSummary(movie.id),
     getEditorsRatingSummary(movie.id),
@@ -188,6 +191,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
           orderBy: { releaseDate: "asc" },
         })
       : [],
+    getSimilarMovies(movie),
   ]);
 
   const myMemberListItems = myMemberLists.map((list) => ({
@@ -389,6 +393,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
             {movie.director && <span>Dir. {movie.director}</span>}
             {movie.studio && <span>{movie.studio}</span>}
             {movie.country && <span>{movie.country}</span>}
+            {movie.originalLanguage && <span>{movie.originalLanguage}</span>}
             {movie.certification && (
               <span className="rounded border border-neutral-600 px-1.5 text-xs font-semibold text-neutral-300">
                 {movie.certification}
@@ -520,6 +525,8 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
           )}
         </div>
       </div>
+
+      {similarMovies.length > 0 && <MovieRail title="You Might Also Like" movies={similarMovies} />}
 
       <div className="mx-auto w-full max-w-6xl px-4 py-8">
         {movie.cast.length > 0 && (

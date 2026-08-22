@@ -136,6 +136,10 @@ model Movie {
   tmdbPopularity Float?
   tmdbRating     Float?
   tagline        String?
+  // English name of TMDB's original_language code (e.g. "Cantonese", not
+  // "cn") -- resolved at import time by matching against spoken_languages,
+  // since the raw ISO 639-1 code alone isn't meaningful to a site visitor.
+  originalLanguage String?
   // Primary production company (first entry in TMDB's production_companies)
   // -- a plain string, same lightweight approach as director/country above,
   // not a relation, since nothing else needs to query "movies by studio" yet.

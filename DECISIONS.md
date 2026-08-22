@@ -965,6 +965,33 @@ protecting against for this project's actual pace of parallel work.
 
 ## Feature Decisions
 
+### "You Might Also Like" built from our own data, not TMDB's recommendations endpoint
+**PR #TBD.** TMDB offers `/movie/{id}/recommendations` and `/movie/{id}/similar` for free,
+but both reflect TMDB's general-audience similarity model, not this catalog's data or its
+genre focus — a real risk on a niche single-genre site, where "similar" by TMDB's
+standards could easily mean "action movie from the same decade" rather than "another kung
+fu film." Built `getSimilarMovies` (`src/lib/similar-movies.ts`) instead, scoring every
+other `APPROVED` movie by three signals already in the catalog and summing weighted
+matches: shared genres (+2 each), shared cast or director (+3 each), and same
+`collectionTmdbId` (+10). Top 8 by score, ties unresolved (no secondary sort — acceptable
+for a rail, not a ranked list).
+
+- **Collection weighted heaviest, genre lightest.** Two movies in the same franchise are
+  the strongest possible same-movie-again signal; shared genre is the weakest, since this
+  catalog is genre-homogeneous by design (nearly everything in it is Action + Martial
+  Arts), so almost every pair of movies already shares at least one genre and it
+  shouldn't dominate the ranking on its own.
+- **In-memory scoring over a single-query composite ranking** — same tradeoff already
+  established for Top Curators and fuzzy-search ranking: fetch the candidate pool (movies
+  matching *any* of the three signals via one `OR` query) then score/sort in JS, rather
+  than one large SQL expression. Fine at this catalog's size; would need revisiting if the
+  catalog grew by orders of magnitude.
+- **A movie with zero shared signals against the rest of the catalog gets no rail at all**,
+  not an empty section or a "nothing similar yet" placeholder — the homepage's `MovieRail`
+  supports an `emptyMessage` for exactly that case, but it wasn't used here since an empty
+  "You Might Also Like" on a movie page reads as a bug, not a legitimate empty state the
+  way "no community ratings yet" does on the homepage.
+
 ### Five more TMDB fields captured: tagline, studio, US certification, revenue, and collection
 **PR #TBD.** Added to every import (`importMovieFromTmdb`, shared by all three admin
 import paths and member submissions): `tagline`, primary `studio`, `certification`,
