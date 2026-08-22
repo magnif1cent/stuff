@@ -266,10 +266,11 @@ See `DECISIONS.md` for the fuller reasoning, including the aggregation-based alt
 
 ## Fun Facts
 
-Above the Discussion thread on every movie page: an IMDB "Did you know"-style trivia section. Any verified member can add a short fun fact (500 characters max — a trivia snippet, not a full discussion post), and any other verified member can vote it up or down.
+Below Fight Scenes on every movie page: an IMDB "Did you know"-style trivia section. Any verified member can add a short fun fact (500 characters max — a trivia snippet, not a full discussion post), and any other verified member can vote it up or down.
 
-- **Voting is thumbs up/down, not a 1–10 score** — the first bidirectional vote in the app (`MemberList` likes are one-directional). Voting the same direction again retracts your vote; voting the other direction switches it. You can't vote on your own fun fact.
-- **Ranked by net score** (upvotes minus downvotes), not chronologically — the highest-voted facts rise to the top, same idea as IMDB's own trivia section.
+- **Spotlight + collapsed list.** By default, only the single highest-voted fact shows, in a large "spotlight" card with prev/next arrows to cycle through every fact one at a time, vote buttons, and edit/delete controls for whoever can act on it — the same amount of space regardless of how many facts a movie has. The rest are hidden behind a "Show all N fun facts" toggle, which reveals a compact numbered list (entry number, both vote counts, submitter, date, full un-truncated text) paginated 5 per page with numbered page controls. This keeps the section's default footprint constant rather than growing with community activity.
+- **Voting is thumbs up/down, not a 1–10 score** — the first bidirectional vote in the app (`MemberList` likes are one-directional). Voting the same direction again retracts your vote; voting the other direction switches it. You can't vote on your own fun fact. Both the spotlight and the list show thumbs-up and thumbs-down counts separately, not just a combined net score.
+- **Ranked by net score** (upvotes minus downvotes), ties broken by newest first — the highest-voted facts rise to the top, same idea as IMDB's own trivia section.
 - **Editing/deleting**: the submitter can edit or delete their own fact; admins can delete anyone's. Deletion is a soft-delete (keeps vote history intact) and the fact simply disappears from the list — unlike discussion posts, nothing else (no replies) depends on the row staying visible.
 - Requires a verified email to submit or vote, same bar as fight scenes and discussion posts.
 

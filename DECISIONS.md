@@ -965,6 +965,25 @@ protecting against for this project's actual pace of parallel work.
 
 ## Feature Decisions
 
+### Fun Facts list collapsed behind "Show all N" to cap the section's default footprint
+**PR #TBD.** The spotlight + paginated-list design (see the original Fun Facts entry
+below) already capped the section's height regardless of how many facts a movie
+accumulates, but the list was always visible by default, so the section's own footprint
+was still fairly heavy for a secondary feature, particularly as the movie page picked up
+more sections over time (You Might Also Like, the Details sidebar, etc.). The list and its
+pagination controls now render only after clicking "Show all N fun facts" — the spotlight
+(with prev/next, voting, edit/delete) stays visible unconditionally, since prev/next lets
+someone browse every fact one at a time without needing the list at all, and removing it
+wouldn't have saved any height anyway.
+
+- **Considered shrinking the spotlight itself to a one-line teaser** for an even smaller
+  default footprint, but that would have lost the spotlight's visual presence (the quote
+  styling, vote buttons) entirely until expanded — kept the full spotlight card instead,
+  since the actual space savings come from hiding the list, not the spotlight.
+- **Toggle only appears when there's more than one fact.** With a single fact, the
+  spotlight already shows everything there is to show — a "Show all 1 fun facts" toggle
+  would just be a dead click.
+
 ### "You Might Also Like" built from our own data, not TMDB's recommendations endpoint
 **PR #TBD.** TMDB offers `/movie/{id}/recommendations` and `/movie/{id}/similar` for free,
 but both reflect TMDB's general-audience similarity model, not this catalog's data or its
