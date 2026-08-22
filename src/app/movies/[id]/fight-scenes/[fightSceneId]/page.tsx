@@ -188,25 +188,25 @@ export default async function FightScenePage({ params }: { params: Promise<Param
         {otherScenes.length > 0 && (
           <>
             <p className="mb-2 font-mono text-[11px] tracking-wide text-neutral-500 uppercase">More fights from this movie</p>
-            <div className="rail-scrollbar flex gap-2 overflow-x-auto pb-1">
+            <div className="rail-scrollbar flex gap-4 overflow-x-auto pb-1">
               {otherScenes.map((other) => {
                 const otherRating = otherSceneRatings.get(other.id);
                 return (
                   <Link
                     key={other.id}
                     href={`/movies/${movieId}/fight-scenes/${other.id}`}
-                    className="flex w-[180px] shrink-0 items-center gap-2.5 rounded-md border border-neutral-800 p-1.5 text-neutral-300 hover:border-neutral-600"
+                    className="flex w-[320px] shrink-0 items-center gap-3.5 rounded-md border border-neutral-800 p-3 text-neutral-300 hover:border-neutral-600"
                   >
-                    <div className="relative h-9 w-16 shrink-0 overflow-hidden rounded-sm bg-neutral-950">
-                      <YoutubeThumbnailImage videoId={other.youtubeVideoId} title={other.title} textClassName="text-[6px]" />
+                    <div className="relative h-16 w-28 shrink-0 overflow-hidden rounded-sm bg-neutral-950">
+                      <YoutubeThumbnailImage videoId={other.youtubeVideoId} title={other.title} textClassName="text-[9px]" />
                     </div>
                     <div className="min-w-0">
-                      <p className="font-mono text-[9px] tracking-wide text-neutral-500 uppercase">
+                      <p className="font-mono text-xs tracking-wide text-neutral-500 uppercase">
                         Round {roundNumbers.get(other.id) ?? "?"}
                       </p>
-                      <p className="truncate font-mono text-xs text-neutral-300">{other.title}</p>
+                      <p className="truncate font-mono text-base text-neutral-300">{other.title}</p>
                       {otherRating?.count ? (
-                        <p className="font-mono text-[10px]" style={{ color: "#a4291e" }}>
+                        <p className="font-mono text-sm" style={{ color: "#a4291e" }}>
                           {otherRating.average?.toFixed(1)} <span className="text-neutral-600">({otherRating.count})</span>
                         </p>
                       ) : null}

@@ -569,7 +569,10 @@ export function FightSceneSection({
         </div>
       )}
 
-      <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {/* detail mode is always a single scene meant to fill the page's width, not a grid
+          cell sized for scanning many cards — the multi-column grid defeats the point of
+          the bigger video if left on here. */}
+      <ul className={detail ? "grid grid-cols-1" : "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"}>
         {visibleScenes.map((scene) => {
           const canEdit = currentUserId === scene.submittedById;
           const canDelete = canEdit || isAdmin;
