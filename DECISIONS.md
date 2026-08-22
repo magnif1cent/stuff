@@ -1020,6 +1020,19 @@ cast cap from 15 to 30.
   `0`/`""` to mean "no data" far more often than "actually zero" for the older and
   non-US-major titles this catalog cares about, so displaying a literal "$0" or an empty
   quote line would read as wrong more often than it'd read as true.
+- **Studio, country, language, revenue, and collection moved into a sidebar "Details"
+  card under the poster, out of the header's flowing meta line/paragraphs.** Compared
+  three layouts head to head (a details grid below the overview, this sidebar card, and
+  an icon-glyph strip folded into the meta line) once actual page content — recommend
+  badges, Fight Count, Community/Editors scores, subcategory ratings — was mocked in
+  alongside each, not just the new fields in isolation. The grid-below-overview option
+  read cleanest under that full weight; the icon strip degraded the most (Fight Count
+  alone pushed it to wrapping two lines). Went with the sidebar card anyway, since it
+  keeps the main column's narrative flow (title → tagline → meta → genres → scores →
+  overview) completely uninterrupted — the accepted tradeoff is that the sidebar card
+  can end up shorter than the main column on a movie with a longer overview or more
+  rating data, leaving visible empty space under it; not fixed, since there was nothing
+  else waiting to fill that space.
 - **Not retroactive.** Existing movies keep `null` for all five fields until their next
   re-import — same limitation `lastSyncedAt` already implies for any field added after a
   movie was first imported. No backfill script was written; re-importing is already a
