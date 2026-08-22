@@ -965,6 +965,78 @@ protecting against for this project's actual pace of parallel work.
 
 ## Feature Decisions
 
+### Editorial Reviews opened up to members as "Reviews," admin review kept separate
+**PR #TBD.** Renamed the section (and its heading) from "Editorial Reviews" to "Reviews"
+and let verified members add their own, alongside the existing admin-only review.
+
+- **New `MemberReview` model, `EditorialReview` left untouched** — rather than adding an
+  `authorRole`/`isAdmin` flag to `EditorialReview` and changing its semantics from
+  "one shared row per movie" to "one row per author." `EditorialReview` already has a
+  dependent: the homepage's "Recent Reviews by Editors" grid (`getRecentEditorialReviews`
+  in `src/lib/editorial-reviews.ts`) specifically surfaces admin-authored reviews, and
+  reworking its one-row-per-movie assumption to accommodate members would have meant
+  updating that query's semantics too, for a feature that was explicitly asked to keep
+  admin and member reviews as two distinct kinds, not one merged pool.
+- **`MemberReview` is one row per (movie, member) pair** (`@@unique([movieId, authorId])`),
+  matching `Rating`'s one-review-per-member convention — a member edits their existing
+  review in place (`PATCH`) rather than posting additional ones, and a second `POST`
+  attempt is rejected with a 409 pointing them at editing instead.
+- **Hard-deleted, not soft-deleted** — the established soft-delete convention
+  (`FunFact`, `DiscussionPost`) exists to keep something a vote or reply depends on
+  intact; nothing depends on a `MemberReview` row surviving deletion, so it's a plain
+  `delete()`, no `isDeleted` column.
+- **5,000-character cap**, between `EditorialReview`'s 10,000 (admin, presumably more
+  polished/longer) and `FunFact`'s 500 (a one-line trivia snippet) — long-form enough for
+  an actual review, without matching the admin review's ceiling.
+- **Admin review always renders first, in its own bordered box labeled "Admin Review"**
+  (amber-accented, same family as `AdminRatingWidget`'s existing amber styling elsewhere
+  on the page) — member reviews sort newest-first below it, so the one "official" review
+  is visually unambiguous at a glance.
+- **An admin can also write their own `MemberReview`**, separate from the shared admin
+  review they edit — not specifically requested, but nothing in the spec excluded it, and
+  restricting admins from having a personal take in addition to the official one would
+  have needed extra gating logic for no clear benefit.
+- **Member reviews display as a horizontal scroll rail of cards, not a vertical list** —
+  requested as a follow-up once a vertical stack of several reviews showed the same
+  unbounded-page-growth problem already solved for Fun Facts, but a "show more" toggle
+  didn't fit card-shaped review content as well as it fit a flat trivia list. Reused the
+  existing `rail-scrollbar` utility (already backing Cast and You Might Also Like) instead
+  of inventing new overflow handling, with each card a fixed `w-72` and its own
+  `MemberReviewCard` sub-component holding local expand state. Long card text clamps at
+  `CARD_CLAMP_THRESHOLD = 160` chars (vs. `RecentReviewsFeed`'s `ReviewText` clamp at 220),
+  scaled down to fit the narrower card width, reusing that component's clamp/"Show
+  more"-"Show less" pattern rather than a new one.
+
+### Member reviews get voting, capped rail, and a paginated overflow page
+**PR #TBD.** Follow-up once the rail itself was identified as only moving the
+unbounded-growth problem sideways (unlimited horizontal scroll instead of unlimited
+vertical stacking) — capped the movie page's rail and added somewhere for the rest to go,
+plus member voting on top.
+
+- **Rail capped to `MEMBER_REVIEWS_PREVIEW_COUNT = 2`** on the movie page itself, with a
+  **"View all N reviews →"** link (shown once the total exceeds 2) to a new
+  `/movies/[id]/reviews` page — same `?page=` + `skip`/`take` pagination pattern as the News
+  archive (`NEWS_ARCHIVE_PAGE_SIZE`), at `MEMBER_REVIEWS_PAGE_SIZE = 10`. That page renders
+  every review's full, unclamped text — a plain vertical list, not a rail, since a dedicated
+  "read everything" page is exactly the case a rail is the wrong shape for.
+- **Voting reuses the `FunFactVote` toggle model exactly** (`MemberReviewVote`, one row per
+  (user, review), +1/-1, same-direction-again retracts, opposite-direction switches) — a
+  member can't vote on their own review, mirroring "can't vote on your own fun fact."
+- **Sort key changed from newest-first to net vote score (ties broken by newest)**, matching
+  `FunFactsSection`'s `byNetScore` — necessary once votes exist at all, since "most helpful"
+  is a better ordering for what shows in a 2-slot preview than "most recent."
+- **`MemberReview.voteScore` is a denormalized, kept-in-sync column, not an in-memory
+  groupBy** — the difference from `FunFact`, which just fetches every fact for a movie and
+  sorts client-side after computing scores in memory (`getFunFactVoteSummaries`). That
+  works because Fun Facts aren't paginated at the DB level; member reviews now are, and
+  `skip`/`take` needs a real sortable column to page against, not a value computed after
+  the page's already been sliced. The vote endpoint recomputes and writes it on every vote.
+- **The movie page no longer fetches every member review just to check "have I already
+  reviewed this."** That check moved to its own `findUnique` by the `(movieId, authorId)`
+  unique constraint, decoupled from the preview rail's `take: 2` query — the two were
+  fetching different things (one row belonging to the viewer vs. the top-scored rows for
+  display) that happened to share a table before pagination made that conflation costly.
+
 ### Fun Fact mentions auto-link against a per-movie pool, not an @mention input
 **PR #TBD.** Wanted fun facts to be able to reference the movie's cast (or other movies
 in the same franchise) as links, without requiring people writing a short trivia snippet

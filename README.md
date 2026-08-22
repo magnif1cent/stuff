@@ -27,7 +27,7 @@ An IMDB-style website for kung fu and martial arts films, built for martial arts
 - [Fight Count](#fight-count)
 - [Fun Facts](#fun-facts)
 - [Actor Pages](#actor-pages)
-- [Editorial Reviews](#editorial-reviews)
+- [Reviews](#reviews)
 - [You Might Also Like](#you-might-also-like)
 - [Admin Recommendations](#admin-recommendations)
 - [Admin Poster Overrides](#admin-poster-overrides)
@@ -281,11 +281,16 @@ Every credited person has a page at `/actors/[personId]` showing their Filmograp
 
 Biography, birthday, and place of birth (when TMDB has them) are shown under the actor's name, live-fetched via their `person.tmdbId` on each page view rather than stored in our own database — if TMDB is unreachable or has nothing on record, that section is simply omitted.
 
-## Editorial Reviews
+## Reviews
 
-Admins can write a long-form review (up to 10,000 characters) for any movie, shown alongside the cast list. There's one review per movie — any admin can write or update it, and the page just tracks who last touched it.
+Shown alongside the cast list on every movie page: an admin review (unchanged from the original "Editorial Reviews" feature) plus one review per verified member, both in the same section.
 
-The homepage's **Recent Reviews by Editors** section surfaces the 5 most recently written-or-edited reviews (an admin revising an older review counts, not just brand-new ones) as a two-column grid of compact cards — poster thumbnail, title, reviewer, date, and the review's full text clamped to 3 lines with a "Show more" toggle once it's long enough to need one, rather than a short teaser excerpt.
+- **Admin review** — long-form, up to 10,000 characters. There's one per movie — any admin can write or update it, and the page just tracks who last touched it. Always displayed first, in its own bordered box labeled **Admin Review** to distinguish it from member reviews.
+- **Member reviews** — up to 5,000 characters, one per (movie, member) pair — a member can have at most one review per movie, and edits it in place rather than posting a second one. The movie page shows only the top 2 (by net vote score, ties broken by newest) as a horizontally-scrolling rail of cards — the same `rail-scrollbar` pattern used for Cast and You Might Also Like — each card clamping long text to 4 lines with its own "Show more"/"Show less" toggle. A **"View all N reviews →"** link appears once there are more than 2, leading to a dedicated `/movies/[id]/reviews` page listing every review in full (unclamped), 10 per page. The submitter can edit or delete their own from either place; admins can delete anyone's (hard-deleted, not soft-deleted — unlike Fun Facts, nothing else references a review, so there's no vote history or thread to preserve). Requires a verified email to write one, same bar as fight scenes, discussion, and fun facts.
+- **Voting** — signed-in members can upvote or downvote any member review but their own (mirroring Fun Fact voting: voting the same direction again retracts it, the opposite direction switches it), which determines the sort order described above.
+- Admins can also write their own member review in addition to the shared admin review — the two aren't mutually exclusive.
+
+The homepage's **Recent Reviews by Editors** section is unaffected by this — it still surfaces only the 5 most recently written-or-edited *admin* reviews (an admin revising an older review counts, not just brand-new ones) as a two-column grid of compact cards — poster thumbnail, title, reviewer, date, and the review's full text clamped to 3 lines with a "Show more" toggle once it's long enough to need one, rather than a short teaser excerpt.
 
 ## You Might Also Like
 
