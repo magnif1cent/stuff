@@ -501,7 +501,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
                 <p className="text-sm text-neutral-400">Editors&rsquo; Score</p>
                 <p className="text-2xl font-bold text-amber-500">
                   {editorsRating.average?.toFixed(1)}{" "}
-                  <span className="text-sm font-normal text-neutral-500">/ 10 ({editorsRating.count})</span>
+                  <span className="text-sm font-normal text-neutral-500">({editorsRating.count})</span>
                 </p>
               </div>
             )}
@@ -510,20 +510,30 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
           {RATING_CATEGORIES.some(
             ({ key }) => subcategoryRating[key].count > 0 || subcategoryEditorsRating[key].count > 0,
           ) && (
-            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-neutral-500">
+            <div className="mt-2 flex max-w-xs flex-col gap-0.5 text-xs">
               {RATING_CATEGORIES.map(({ key, label }) => {
                 const community = subcategoryRating[key];
                 const editors = subcategoryEditorsRating[key];
                 if (community.count === 0 && editors.count === 0) return null;
                 return (
-                  <span key={key}>
-                    {label}:{" "}
-                    {community.count > 0 && (
-                      <span className="text-yellow-500">{community.average!.toFixed(1)}</span>
-                    )}
-                    {community.count > 0 && editors.count > 0 && " / "}
-                    {editors.count > 0 && <span className="text-amber-500">{editors.average!.toFixed(1)}</span>}
-                  </span>
+                  <div
+                    key={key}
+                    className="flex items-center justify-between"
+                    title={`Community: ${community.count > 0 ? community.average!.toFixed(1) : "—"}, Editors: ${
+                      editors.count > 0 ? editors.average!.toFixed(1) : "—"
+                    }`}
+                  >
+                    <span className="text-neutral-400">{label}</span>
+                    <span className="text-neutral-500">
+                      {community.count > 0 && (
+                        <span className="text-yellow-500">{community.average!.toFixed(1)}</span>
+                      )}
+                      {community.count > 0 && editors.count > 0 && " / "}
+                      {editors.count > 0 && (
+                        <span className="text-amber-500">{editors.average!.toFixed(1)}</span>
+                      )}
+                    </span>
+                  </div>
                 );
               })}
             </div>
