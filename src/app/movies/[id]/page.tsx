@@ -399,6 +399,15 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
 
+  // Auto-link pool for Fun Facts: this movie's own cast and franchise
+  // siblings only, not the whole site's actor/movie tables -- a small,
+  // per-movie-bounded pool keeps false-positive matches unlikely without
+  // needing an @mention-style input UI.
+  const funFactMentionables = [
+    ...movie.cast.map((credit) => ({ name: credit.person.name, href: `/actors/${credit.person.id}` })),
+    ...collectionSiblings.map((sibling) => ({ name: sibling.title, href: `/movies/${sibling.id}` })),
+  ];
+
   const serializedPosts = discussionPage.posts.map((post) => ({
     ...post,
     createdAt: post.createdAt.toISOString(),
@@ -644,6 +653,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
           signedIn={!!session?.user}
           currentUserId={session?.user?.id ?? null}
           isAdmin={session?.user?.role === "ADMIN"}
+          mentionables={funFactMentionables}
         />
       </div>
 

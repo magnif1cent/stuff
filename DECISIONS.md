@@ -965,6 +965,30 @@ protecting against for this project's actual pace of parallel work.
 
 ## Feature Decisions
 
+### Fun Fact mentions auto-link against a per-movie pool, not an @mention input
+**PR #TBD.** Wanted fun facts to be able to reference the movie's cast (or other movies
+in the same franchise) as links, without requiring people writing a short trivia snippet
+to learn or use any special syntax.
+
+- **Automatic text matching over an `@mention` autocomplete.** An explicit mention syntax
+  (type `@`, pick from a dropdown) would eliminate ambiguity entirely, but needs real UI
+  work (an autocomplete component) for a feature whose whole appeal is a plain one-line
+  textarea. Automatic detection means anyone typing a cast member's name in prose gets a
+  link for free.
+- **Matched only against this movie's own cast list and its `collectionTmdbId` siblings**
+  (`funFactMentionables` in `movies/[id]/page.tsx`), not the whole site's `Person`/`Movie`
+  tables. A site-wide match pool would risk false positives from common names or
+  incidental substring matches; a single movie's cast (typically ~30, capped at
+  `MAX_CAST`) is small and specific enough that an exact name match is almost always a
+  genuine reference.
+- **Longest-name-first matching** (`linkifyContent` in `fun-facts-section.tsx`) so a full
+  name like "Bruce Lee" is consumed whole rather than a shorter substring (e.g. a
+  hypothetical cast member surnamed "Lee") matching part of it first.
+- **List rows switched from `<button>` to `<div role="button">`** to legally nest an `<a>`
+  inside a clickable row — nesting anchors inside buttons is invalid HTML and behaves
+  unpredictably across browsers. The row's own click handler checks `e.target.closest("a")`
+  and defers to the link instead of also spotlighting the row.
+
 ### Fun Facts list collapsed behind "Show all N" to cap the section's default footprint
 **PR #TBD.** The spotlight + paginated-list design (see the original Fun Facts entry
 below) already capped the section's height regardless of how many facts a movie
