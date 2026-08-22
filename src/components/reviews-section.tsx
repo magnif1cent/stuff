@@ -20,10 +20,22 @@ export type MemberReviewData = Pick<MemberReviewModel, "id" | "content" | "autho
   createdAt: string;
   updatedAt: string;
   author: ReviewAuthor;
+  up: number;
+  down: number;
+  myVote: 1 | -1 | null;
 };
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
+}
+
+// Highest net score (up - down) first, ties broken by newest -- same
+// ordering FunFactsSection uses, kept consistent client-side after a vote or
+// a new submission reshuffles the two cards shown here.
+function byNetScore(a: MemberReviewData, b: MemberReviewData) {
+  const scoreDiff = b.up - b.down - (a.up - a.down);
+  if (scoreDiff !== 0) return scoreDiff;
+  return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
 }
 
 // Below this length a review reads fine in full within the card without a
@@ -35,6 +47,7 @@ function MemberReviewCard({
   review,
   canEdit,
   canDelete,
+  canVote,
   isEditing,
   editContent,
   submitting,
@@ -43,10 +56,12 @@ function MemberReviewCard({
   onSaveEdit,
   onCancelEdit,
   onDelete,
+  onVote,
 }: {
   review: MemberReviewData;
   canEdit: boolean;
   canDelete: boolean;
+  canVote: boolean;
   isEditing: boolean;
   editContent: string;
   submitting: boolean;
@@ -55,6 +70,7 @@ function MemberReviewCard({
   onSaveEdit: () => void;
   onCancelEdit: () => void;
   onDelete: () => void;
+  onVote: (value: 1 | -1) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const isLong = review.content.length > CARD_CLAMP_THRESHOLD;
@@ -102,6 +118,25 @@ function MemberReviewCard({
         </div>
       )}
 
+      <div className="mt-2 flex items-center gap-3 text-xs">
+        <button
+          onClick={() => (canVote ? onVote(1) : undefined)}
+          disabled={!canVote}
+          title={canEdit ? "You can't vote on your own review" : undefined}
+          className={`${review.myVote === 1 ? "text-green-500" : "text-neutral-500 hover:text-neutral-300"} disabled:cursor-not-allowed disabled:hover:text-neutral-500`}
+        >
+          👍 {review.up}
+        </button>
+        <button
+          onClick={() => (canVote ? onVote(-1) : undefined)}
+          disabled={!canVote}
+          title={canEdit ? "You can't vote on your own review" : undefined}
+          className={`${review.myVote === -1 ? "text-red-500" : "text-neutral-500 hover:text-neutral-300"} disabled:cursor-not-allowed disabled:hover:text-neutral-500`}
+        >
+          👎 {review.down}
+        </button>
+      </div>
+
       <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-neutral-500">
         <span>
           {review.author.username} &middot; {formatDate(review.createdAt)}
@@ -129,6 +164,8 @@ export function ReviewsSection({
   movieId,
   initialAdminReview,
   initialMemberReviews,
+  memberReviewsCount,
+  hasOwnReview,
   signedIn,
   currentUserId,
   isAdmin,
@@ -136,6 +173,8 @@ export function ReviewsSection({
   movieId: string;
   initialAdminReview: EditorialReviewData | null;
   initialMemberReviews: MemberReviewData[];
+  memberReviewsCount: number;
+  hasOwnReview: boolean;
   signedIn: boolean;
   currentUserId: string | null;
   isAdmin: boolean;
@@ -149,16 +188,17 @@ export function ReviewsSection({
   const [adminSubmitting, setAdminSubmitting] = useState(false);
   const [adminError, setAdminError] = useState<string | null>(null);
 
-  // Member reviews -- one per (movie, member).
+  // Member reviews -- only the top MEMBER_REVIEWS_PREVIEW_COUNT (by vote
+  // score) show here; the rest live on the /movies/[id]/reviews page.
   const [memberReviews, setMemberReviews] = useState(initialMemberReviews);
+  const [reviewsCount, setReviewsCount] = useState(memberReviewsCount);
+  const [hasReviewed, setHasReviewed] = useState(hasOwnReview);
   const [showWriteForm, setShowWriteForm] = useState(false);
   const [newContent, setNewContent] = useState("");
   const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
   const [memberSubmitting, setMemberSubmitting] = useState(false);
   const [memberError, setMemberError] = useState<string | null>(null);
-
-  const myReview = memberReviews.find((r) => r.authorId === currentUserId) ?? null;
 
   async function handleSaveAdmin() {
     if (!adminDraft.trim()) return;
@@ -197,7 +237,10 @@ export function ReviewsSection({
       return;
     }
     const { review } = await res.json();
-    setMemberReviews((prev) => [review, ...prev]);
+    const withVotes: MemberReviewData = { ...review, up: 0, down: 0, myVote: null };
+    setMemberReviews((prev) => [withVotes, ...prev].sort(byNetScore).slice(0, initialMemberReviews.length || 2));
+    setReviewsCount((c) => c + 1);
+    setHasReviewed(true);
     setNewContent("");
     setShowWriteForm(false);
   }
@@ -229,7 +272,7 @@ export function ReviewsSection({
       return;
     }
     const { review } = await res.json();
-    setMemberReviews((prev) => prev.map((r) => (r.id === id ? review : r)));
+    setMemberReviews((prev) => prev.map((r) => (r.id === id ? { ...r, ...review } : r)));
     cancelEdit();
   }
 
@@ -242,7 +285,26 @@ export function ReviewsSection({
       setMemberError(body.error ?? "Something went wrong.");
       return;
     }
+    const wasMine = memberReviews.find((r) => r.id === id)?.authorId === currentUserId;
     setMemberReviews((prev) => prev.filter((r) => r.id !== id));
+    setReviewsCount((c) => Math.max(0, c - 1));
+    if (wasMine) setHasReviewed(false);
+  }
+
+  async function vote(id: string, value: 1 | -1) {
+    setMemberError(null);
+    const res = await fetch(`/api/movies/${movieId}/reviews/${id}/vote`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ value }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setMemberError(body.error ?? "Something went wrong.");
+      return;
+    }
+    const { myVote, up, down } = await res.json();
+    setMemberReviews((prev) => prev.map((r) => (r.id === id ? { ...r, myVote, up, down } : r)).sort(byNetScore));
   }
 
   return (
@@ -307,7 +369,7 @@ export function ReviewsSection({
       )}
 
       {signedIn ? (
-        !myReview && (
+        !hasReviewed && (
           <div className="mb-4">
             {showWriteForm ? (
               <div className="flex flex-col gap-2">
@@ -363,24 +425,36 @@ export function ReviewsSection({
       {memberError && <p className="mb-4 text-sm text-red-500">{memberError}</p>}
 
       {memberReviews.length > 0 ? (
-        <div className="rail-scrollbar flex gap-4 overflow-x-auto pb-2">
-          {memberReviews.map((review) => (
-            <MemberReviewCard
-              key={review.id}
-              review={review}
-              canEdit={currentUserId === review.authorId}
-              canDelete={currentUserId === review.authorId || isAdmin}
-              isEditing={editingReviewId === review.id}
-              editContent={editContent}
-              submitting={memberSubmitting}
-              onStartEdit={() => startEdit(review)}
-              onEditContentChange={setEditContent}
-              onSaveEdit={() => saveEdit(review.id)}
-              onCancelEdit={cancelEdit}
-              onDelete={() => deleteReview(review.id)}
-            />
-          ))}
-        </div>
+        <>
+          <div className="rail-scrollbar flex gap-4 overflow-x-auto pb-2">
+            {memberReviews.map((review) => (
+              <MemberReviewCard
+                key={review.id}
+                review={review}
+                canEdit={currentUserId === review.authorId}
+                canDelete={currentUserId === review.authorId || isAdmin}
+                canVote={signedIn && currentUserId !== review.authorId}
+                isEditing={editingReviewId === review.id}
+                editContent={editContent}
+                submitting={memberSubmitting}
+                onStartEdit={() => startEdit(review)}
+                onEditContentChange={setEditContent}
+                onSaveEdit={() => saveEdit(review.id)}
+                onCancelEdit={cancelEdit}
+                onDelete={() => deleteReview(review.id)}
+                onVote={(value) => vote(review.id, value)}
+              />
+            ))}
+          </div>
+          {reviewsCount > memberReviews.length && (
+            <a
+              href={`/movies/${movieId}/reviews`}
+              className="mt-3 inline-block text-sm text-red-500 hover:underline"
+            >
+              View all {reviewsCount} reviews →
+            </a>
+          )}
+        </>
       ) : (
         !adminReview && <p className="text-sm text-neutral-500">No reviews yet.</p>
       )}

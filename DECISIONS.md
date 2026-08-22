@@ -1007,6 +1007,36 @@ and let verified members add their own, alongside the existing admin-only review
   scaled down to fit the narrower card width, reusing that component's clamp/"Show
   more"-"Show less" pattern rather than a new one.
 
+### Member reviews get voting, capped rail, and a paginated overflow page
+**PR #TBD.** Follow-up once the rail itself was identified as only moving the
+unbounded-growth problem sideways (unlimited horizontal scroll instead of unlimited
+vertical stacking) — capped the movie page's rail and added somewhere for the rest to go,
+plus member voting on top.
+
+- **Rail capped to `MEMBER_REVIEWS_PREVIEW_COUNT = 2`** on the movie page itself, with a
+  **"View all N reviews →"** link (shown once the total exceeds 2) to a new
+  `/movies/[id]/reviews` page — same `?page=` + `skip`/`take` pagination pattern as the News
+  archive (`NEWS_ARCHIVE_PAGE_SIZE`), at `MEMBER_REVIEWS_PAGE_SIZE = 10`. That page renders
+  every review's full, unclamped text — a plain vertical list, not a rail, since a dedicated
+  "read everything" page is exactly the case a rail is the wrong shape for.
+- **Voting reuses the `FunFactVote` toggle model exactly** (`MemberReviewVote`, one row per
+  (user, review), +1/-1, same-direction-again retracts, opposite-direction switches) — a
+  member can't vote on their own review, mirroring "can't vote on your own fun fact."
+- **Sort key changed from newest-first to net vote score (ties broken by newest)**, matching
+  `FunFactsSection`'s `byNetScore` — necessary once votes exist at all, since "most helpful"
+  is a better ordering for what shows in a 2-slot preview than "most recent."
+- **`MemberReview.voteScore` is a denormalized, kept-in-sync column, not an in-memory
+  groupBy** — the difference from `FunFact`, which just fetches every fact for a movie and
+  sorts client-side after computing scores in memory (`getFunFactVoteSummaries`). That
+  works because Fun Facts aren't paginated at the DB level; member reviews now are, and
+  `skip`/`take` needs a real sortable column to page against, not a value computed after
+  the page's already been sliced. The vote endpoint recomputes and writes it on every vote.
+- **The movie page no longer fetches every member review just to check "have I already
+  reviewed this."** That check moved to its own `findUnique` by the `(movieId, authorId)`
+  unique constraint, decoupled from the preview rail's `take: 2` query — the two were
+  fetching different things (one row belonging to the viewer vs. the top-scored rows for
+  display) that happened to share a table before pagination made that conflation costly.
+
 ### Fun Fact mentions auto-link against a per-movie pool, not an @mention input
 **PR #TBD.** Wanted fun facts to be able to reference the movie's cast (or other movies
 in the same franchise) as links, without requiring people writing a short trivia snippet

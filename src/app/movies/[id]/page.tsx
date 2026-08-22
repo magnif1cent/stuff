@@ -25,7 +25,12 @@ import {
   getFightSceneRoundNumbers,
 } from "@/lib/fight-scenes";
 import { getFunFactsForMovie, getFunFactVoteSummaries } from "@/lib/fun-facts";
-import { getMemberReviewsForMovie } from "@/lib/member-reviews";
+import {
+  getTopMemberReviews,
+  getMemberReviewsCount,
+  getMemberReviewVoteSummaries,
+  MEMBER_REVIEWS_PREVIEW_COUNT,
+} from "@/lib/member-reviews";
 import { getSimilarMovies } from "@/lib/similar-movies";
 import { RatingWidget } from "@/components/rating-widget";
 import { MovieRail } from "@/components/movie-rail";
@@ -132,7 +137,9 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
     fightScenes,
     fightSceneTags,
     editorialReview,
-    memberReviews,
+    topMemberReviews,
+    memberReviewsCount,
+    myMemberReview,
     movieRecommenders,
     recentFightCountEdits,
     funFacts,
@@ -178,7 +185,13 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
       where: { movieId: movie.id },
       include: { author: { select: { username: true } } },
     }),
-    getMemberReviewsForMovie(movie.id),
+    getTopMemberReviews(movie.id, MEMBER_REVIEWS_PREVIEW_COUNT),
+    getMemberReviewsCount(movie.id),
+    session?.user
+      ? prisma.memberReview.findUnique({
+          where: { movieId_authorId: { movieId: movie.id, authorId: session.user.id } },
+        })
+      : null,
     getMovieRecommenders(movie.id),
     prisma.fightCountEdit.findMany({
       where: { movieId: movie.id },
@@ -233,6 +246,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
 
   const fightSceneIds = fightScenes.map((s) => s.id);
   const funFactIds = funFacts.map((f) => f.id);
+  const topMemberReviewIds = topMemberReviews.map((r) => r.id);
   const [
     fightSceneRatingSummaries,
     fightSceneAdminRatingSummaries,
@@ -241,6 +255,8 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
     fightSceneRoundNumbers,
     funFactVoteSummaries,
     myFunFactVotes,
+    memberReviewVoteSummaries,
+    myMemberReviewVotes,
   ] = await Promise.all([
     getFightSceneRatingSummaries(fightSceneIds),
     getFightSceneAdminRatingSummaries(fightSceneIds),
@@ -259,6 +275,12 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
     session?.user
       ? prisma.funFactVote.findMany({
           where: { userId: session.user.id, factId: { in: funFactIds } },
+        })
+      : [],
+    getMemberReviewVoteSummaries(topMemberReviewIds),
+    session?.user
+      ? prisma.memberReviewVote.findMany({
+          where: { userId: session.user.id, reviewId: { in: topMemberReviewIds } },
         })
       : [],
   ]);
@@ -372,14 +394,21 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
       }
     : null;
 
-  const serializedMemberReviews = memberReviews.map((review) => ({
-    id: review.id,
-    content: review.content,
-    authorId: review.authorId,
-    createdAt: review.createdAt.toISOString(),
-    updatedAt: review.updatedAt.toISOString(),
-    author: review.author,
-  }));
+  const myMemberReviewVoteMap = new Map(myMemberReviewVotes.map((v) => [v.reviewId, v.value as 1 | -1]));
+  const serializedMemberReviews = topMemberReviews.map((review) => {
+    const summary = memberReviewVoteSummaries.get(review.id);
+    return {
+      id: review.id,
+      content: review.content,
+      authorId: review.authorId,
+      createdAt: review.createdAt.toISOString(),
+      updatedAt: review.updatedAt.toISOString(),
+      author: review.author,
+      up: summary?.up ?? 0,
+      down: summary?.down ?? 0,
+      myVote: myMemberReviewVoteMap.get(review.id) ?? null,
+    };
+  });
 
   const serializedFightCountEdits = recentFightCountEdits.map((edit) => ({
     id: edit.id,
@@ -632,6 +661,8 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
           movieId={movie.id}
           initialAdminReview={serializedEditorialReview}
           initialMemberReviews={serializedMemberReviews}
+          memberReviewsCount={memberReviewsCount}
+          hasOwnReview={!!myMemberReview}
           signedIn={!!session?.user}
           currentUserId={session?.user?.id ?? null}
           isAdmin={session?.user?.role === "ADMIN"}

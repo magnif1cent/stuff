@@ -67,6 +67,7 @@ model User {
   funFacts            FunFact[]
   funFactVotes        FunFactVote[]
   memberReviews       MemberReview[]
+  memberReviewVotes   MemberReviewVote[]
 }
 
 model Account {
@@ -367,14 +368,37 @@ model MemberReview {
   movieId   String
   authorId  String
   content   String   @db.Text
+  // Denormalized up-minus-down count, kept in sync by the vote endpoint --
+  // unlike FunFact (which sorts in memory after fetching every fact), reviews
+  // are paginated at the DB level, so the sort key needs to live in a real
+  // column rather than be computed post-fetch.
+  voteScore Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  movie  Movie @relation(fields: [movieId], references: [id], onDelete: Cascade)
-  author User  @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  movie  Movie              @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  author User               @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  votes  MemberReviewVote[]
 
   @@unique([movieId, authorId])
-  @@index([movieId])
+  @@index([movieId, voteScore, createdAt])
+}
+
+// One vote per member per review, value +1 (up) or -1 (down) -- same
+// toggle behavior as FunFactVote (voting the same direction again retracts
+// it, the opposite direction switches it).
+model MemberReviewVote {
+  id        String   @id @default(cuid())
+  reviewId  String
+  userId    String
+  value     Int
+  createdAt DateTime @default(now())
+
+  review MemberReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  user   User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, reviewId])
+  @@index([reviewId])
 }
 
 // --- Admin recommendations ---
