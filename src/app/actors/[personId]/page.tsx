@@ -18,6 +18,8 @@ import {
 } from "@/lib/person-tributes";
 import { ActorFunFactsSection } from "@/components/actor-fun-facts-section";
 import { ActorTributesSection } from "@/components/actor-tributes-section";
+import { getPersonFavoriteCounts } from "@/lib/person-favorites";
+import { ActorFavoriteButton } from "@/components/actor-favorite-button";
 
 const getPerson = cache((personId: string) =>
   prisma.person.findUnique({
@@ -119,13 +121,19 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
       })
     : [];
 
-  const [funFacts, topTributes, tributesCount, myTribute] = await Promise.all([
+  const [funFacts, topTributes, tributesCount, myTribute, favoriteCountMap, myFavorite] = await Promise.all([
     getFunFactsForPerson(personId),
     getTopPersonTributes(personId, PERSON_TRIBUTES_PREVIEW_COUNT),
     getPersonTributesCount(personId),
     session?.user
       ? prisma.personTribute.findUnique({
           where: { personId_authorId: { personId, authorId: session.user.id } },
+        })
+      : null,
+    getPersonFavoriteCounts([personId]),
+    session?.user
+      ? prisma.personFavorite.findUnique({
+          where: { userId_personId: { userId: session.user.id, personId } },
         })
       : null,
   ]);
@@ -192,7 +200,15 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
           )}
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-white">{person.name}</h1>
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-2xl font-bold text-white">{person.name}</h1>
+            <ActorFavoriteButton
+              personId={person.id}
+              initialFavorite={!!myFavorite}
+              initialCount={favoriteCountMap.get(person.id) ?? 0}
+              signedIn={!!session?.user}
+            />
+          </div>
           {bio && (
             <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-neutral-400">
               {bio.birthday && (

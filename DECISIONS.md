@@ -2391,8 +2391,52 @@ ones.
   them — keeps a burst of actor-page activity from eating into a member's
   movie-page submission budget and vice versa.
 
+### Actor Favorite added, mirroring FightSceneFavorite
+**PR #TBD.** Follow-up to Actor Fun Facts and Tributes above, adding a lighter-weight
+one-tap Favorite to the actor page. (An admin-only "Editor's Spotlight" blurb was
+originally scoped into this same PR but cut before merge — see Deferred & Backlog.)
+
+- **`PersonFavorite` copies `FightSceneFavorite` exactly** (`userId`/`personId` unique
+  pair, no rating scale) rather than reusing `FightSceneFavorite` with a nullable
+  `personId` — same reasoning as the earlier decision to give Person Fun Facts/Tributes
+  their own tables instead of nullable-`movieId` variants: a shared table would need every
+  query to filter on which foreign key is set, for two conceptually distinct favorite
+  feeds. Requires a verified email, matching `FightSceneFavorite`'s bar, even though a
+  favorite is lighter-weight than posting content — consistency with the existing pattern
+  won out over relaxing the bar for this one case.
+- **The favorite route now also returns the updated count** (`{ active, count }`), unlike
+  `POST .../fight-scenes/[fightSceneId]/favorite` which only returns `{ active }`. Fight
+  scene cards never display a live favorite count next to the button, so they never needed
+  one; the actor page does (next to the heart toggle), so the response carries it rather
+  than requiring a second round-trip.
+- **Cutting Editor's Spotlight after this PR's migration had already deployed once
+  repeated the exact mistake "Reverted a migration rename" (above) already warned
+  about.** The first commit's migration (`..._add_person_favorites_and_spotlights`)
+  had already run against the shared preview database via Vercel's `prisma migrate
+  deploy` build step; renaming its folder and rewriting its contents to drop
+  `PersonSpotlight` (to match the trimmed schema) made Vercel's next deploy fail —
+  `migrate deploy` saw a "new," never-applied migration by that new name and tried to
+  recreate `PersonFavorite`, which already existed. Fixed the same way PR #18 did:
+  reverted the rename/edit so the applied migration's name and contents exactly match
+  what already ran, and added a separate follow-up migration
+  (`..._drop_person_spotlight`) to actually remove the table. Migration history only
+  grows forward from what's live; it doesn't get rewritten to look like the feature
+  was never there.
+- **`getMostBelovedActors()` added directly to `lib/leaderboard.ts`**, alongside
+  `getMostLikedLists`/`getTopCurators`, rather than into `lib/person-favorites.ts` —
+  matches how `getMostLikedLists` queries `MemberList` directly rather than living in a
+  separate list-likes module; the leaderboard module is the natural home for "how is this
+  ranking computed," not the per-feature lib.
+
 ## Deferred & Backlog
 
+- **Editor's Spotlight (admin-curated per-actor blurb/badge)** — scoped into the same
+  PR as Actor Favorite (`PersonSpotlight`, mirroring `EditorialReview`'s
+  one-shared-row-per-entity shape) but cut before merge at explicit request: it overlaps
+  with a separate "actor highlight" feature planned elsewhere, so building it here first
+  risked landing something that conflicts with or duplicates that later work. Revisit
+  once the actor-highlight shape is decided — `PersonSpotlight` may still be the right
+  model, or it may fold into whatever that feature turns out to be.
 - **About page copy: mission, About the Creators, Contact/feedback, and
   Community guidelines wording** (**PR #27**) — the mission section ("What
   this site is") and the new "About the Creators" section are both

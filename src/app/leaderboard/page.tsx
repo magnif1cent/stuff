@@ -1,8 +1,14 @@
+import Image from "next/image";
 import Link from "next/link";
-import { getMostLikedLists, getTopCurators } from "@/lib/leaderboard";
+import { getMostLikedLists, getTopCurators, getMostBelovedActors } from "@/lib/leaderboard";
+import { tmdbImageUrl } from "@/lib/tmdb";
 
 export default async function LeaderboardPage() {
-  const [mostLikedLists, topCurators] = await Promise.all([getMostLikedLists(), getTopCurators()]);
+  const [mostLikedLists, topCurators, mostBelovedActors] = await Promise.all([
+    getMostLikedLists(),
+    getTopCurators(),
+    getMostBelovedActors(),
+  ]);
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-10">
@@ -42,7 +48,7 @@ export default async function LeaderboardPage() {
         )}
       </section>
 
-      <section>
+      <section className="mb-10">
         <h2 className="mb-4 text-lg font-semibold text-white">Top Curators</h2>
         {topCurators.length === 0 ? (
           <p className="text-sm text-neutral-400">No member lists yet — create one from a movie&apos;s page.</p>
@@ -64,6 +70,43 @@ export default async function LeaderboardPage() {
                 </div>
                 <span className="shrink-0 text-sm text-neutral-300">
                   {curator.movieCount} {curator.movieCount === 1 ? "movie" : "movies"}
+                </span>
+              </li>
+            ))}
+          </ol>
+        )}
+      </section>
+
+      <section>
+        <h2 className="mb-4 text-lg font-semibold text-white">Most Beloved Actors</h2>
+        {mostBelovedActors.length === 0 ? (
+          <p className="text-sm text-neutral-400">No favorited actors yet — favorite one from their actor page.</p>
+        ) : (
+          <ol className="flex flex-col gap-2">
+            {mostBelovedActors.map((actor, i) => (
+              <li
+                key={actor.id}
+                className="flex items-center gap-4 rounded-md border border-neutral-800 bg-neutral-900 px-4 py-3"
+              >
+                <span className="w-6 shrink-0 text-right text-sm text-neutral-500">{i + 1}</span>
+                <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full bg-neutral-800">
+                  {actor.profilePath && (
+                    <Image
+                      src={tmdbImageUrl(actor.profilePath, "w200") ?? ""}
+                      alt={actor.name}
+                      fill
+                      sizes="36px"
+                      className="object-cover"
+                    />
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <Link href={`/actors/${actor.id}`} className="font-medium text-white hover:text-red-400">
+                    {actor.name}
+                  </Link>
+                </div>
+                <span className="shrink-0 text-sm text-neutral-300">
+                  ♥ {actor.favoriteCount}
                 </span>
               </li>
             ))}
