@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 
 const TOP_LISTS_LIMIT = 20;
 const TOP_CURATORS_LIMIT = 10;
+const TOP_ACTORS_LIMIT = 20;
 
 export async function getMostLikedLists() {
   const lists = await prisma.memberList.findMany({
@@ -44,4 +45,28 @@ export async function getTopCurators() {
     .filter((user) => user.movieCount > 0)
     .sort((a, b) => b.movieCount - a.movieCount)
     .slice(0, TOP_CURATORS_LIMIT);
+}
+
+// Same shape as getMostLikedLists -- ranks Person rows by PersonFavorite
+// count via the relation's _count, one query, no in-memory aggregation
+// needed (unlike getTopCurators, this doesn't span two joins).
+export async function getMostBelovedActors() {
+  const people = await prisma.person.findMany({
+    where: { favorites: { some: {} } },
+    select: {
+      id: true,
+      name: true,
+      profilePath: true,
+      _count: { select: { favorites: true } },
+    },
+    orderBy: { favorites: { _count: "desc" } },
+    take: TOP_ACTORS_LIMIT,
+  });
+
+  return people.map((person) => ({
+    id: person.id,
+    name: person.name,
+    profilePath: person.profilePath,
+    favoriteCount: person._count.favorites,
+  }));
 }

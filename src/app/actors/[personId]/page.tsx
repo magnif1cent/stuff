@@ -18,6 +18,9 @@ import {
 } from "@/lib/person-tributes";
 import { ActorFunFactsSection } from "@/components/actor-fun-facts-section";
 import { ActorTributesSection } from "@/components/actor-tributes-section";
+import { getPersonFavoriteCounts } from "@/lib/person-favorites";
+import { ActorFavoriteButton } from "@/components/actor-favorite-button";
+import { ActorSpotlight } from "@/components/actor-spotlight";
 
 const getPerson = cache((personId: string) =>
   prisma.person.findUnique({
@@ -119,16 +122,27 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
       })
     : [];
 
-  const [funFacts, topTributes, tributesCount, myTribute] = await Promise.all([
-    getFunFactsForPerson(personId),
-    getTopPersonTributes(personId, PERSON_TRIBUTES_PREVIEW_COUNT),
-    getPersonTributesCount(personId),
-    session?.user
-      ? prisma.personTribute.findUnique({
-          where: { personId_authorId: { personId, authorId: session.user.id } },
-        })
-      : null,
-  ]);
+  const [funFacts, topTributes, tributesCount, myTribute, favoriteCountMap, myFavorite, spotlight] =
+    await Promise.all([
+      getFunFactsForPerson(personId),
+      getTopPersonTributes(personId, PERSON_TRIBUTES_PREVIEW_COUNT),
+      getPersonTributesCount(personId),
+      session?.user
+        ? prisma.personTribute.findUnique({
+            where: { personId_authorId: { personId, authorId: session.user.id } },
+          })
+        : null,
+      getPersonFavoriteCounts([personId]),
+      session?.user
+        ? prisma.personFavorite.findUnique({
+            where: { userId_personId: { userId: session.user.id, personId } },
+          })
+        : null,
+      prisma.personSpotlight.findUnique({
+        where: { personId },
+        include: { author: { select: { username: true } } },
+      }),
+    ]);
 
   const funFactIds = funFacts.map((f) => f.id);
   const topTributeIds = topTributes.map((t) => t.id);
@@ -183,6 +197,10 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
     (a, b) => (favoriteCounts.get(b.id) ?? 0) - (favoriteCounts.get(a.id) ?? 0),
   );
 
+  const serializedSpotlight = spotlight
+    ? { content: spotlight.content, updatedAt: spotlight.updatedAt.toISOString(), author: spotlight.author }
+    : null;
+
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-10">
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start">
@@ -192,7 +210,20 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
           )}
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-white">{person.name}</h1>
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-2xl font-bold text-white">{person.name}</h1>
+            {spotlight && (
+              <span className="rounded border border-amber-700 px-1.5 py-0.5 text-xs font-semibold text-amber-500">
+                Editor&apos;s Spotlight
+              </span>
+            )}
+            <ActorFavoriteButton
+              personId={person.id}
+              initialFavorite={!!myFavorite}
+              initialCount={favoriteCountMap.get(person.id) ?? 0}
+              signedIn={!!session?.user}
+            />
+          </div>
           {bio && (
             <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-neutral-400">
               {bio.birthday && (
@@ -209,6 +240,12 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
           )}
         </div>
       </div>
+
+      <ActorSpotlight
+        personId={person.id}
+        initialSpotlight={serializedSpotlight}
+        isAdmin={session?.user?.role === "ADMIN"}
+      />
 
       <h2 className="mb-4 text-xl font-bold text-white">Filmography</h2>
       {movies.length === 0 ? (

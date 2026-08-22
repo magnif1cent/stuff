@@ -2391,6 +2391,51 @@ ones.
   them — keeps a burst of actor-page activity from eating into a member's
   movie-page submission budget and vice versa.
 
+### Actor Favorite and Editor's Spotlight added, mirroring FightSceneFavorite and EditorialReview
+**PR #TBD.** Follow-up to Actor Fun Facts and Tributes above, adding two lighter-weight
+engagement features to the actor page: a one-tap Favorite for members, and an admin-only
+curated blurb ("Editor's Spotlight") for canonizing an actor's importance directly rather
+than only through a movie review.
+
+- **`PersonFavorite` copies `FightSceneFavorite` exactly** (`userId`/`personId` unique
+  pair, no rating scale) rather than reusing `FightSceneFavorite` with a nullable
+  `personId` — same reasoning as the earlier decision to give Person Fun Facts/Tributes
+  their own tables instead of nullable-`movieId` variants: a shared table would need every
+  query to filter on which foreign key is set, for two conceptually distinct favorite
+  feeds. Requires a verified email, matching `FightSceneFavorite`'s bar, even though a
+  favorite is lighter-weight than posting content — consistency with the existing pattern
+  won out over relaxing the bar for this one case.
+- **The favorite route now also returns the updated count** (`{ active, count }`), unlike
+  `POST .../fight-scenes/[fightSceneId]/favorite` which only returns `{ active }`. Fight
+  scene cards never display a live favorite count next to the button, so they never needed
+  one; the actor page does (next to the heart toggle), so the response carries it rather
+  than requiring a second round-trip.
+- **`getMostBelovedActors()` added directly to `lib/leaderboard.ts`**, alongside
+  `getMostLikedLists`/`getTopCurators`, rather than into `lib/person-favorites.ts` —
+  matches how `getMostLikedLists` queries `MemberList` directly rather than living in a
+  separate list-likes module; the leaderboard module is the natural home for "how is this
+  ranking computed," not the per-feature lib.
+- **`PersonSpotlight` mirrors `EditorialReview`'s one-shared-row-per-entity shape**
+  (unique `personId`, any admin can write/update, `authorId` just tracks who last
+  touched it) rather than `MovieRecommendation`'s per-admin toggle — the brief asked for
+  a single canonical "the editors are spotlighting this actor" statement with room for
+  a written case, not a multi-admin badge stack. Capped at `MAX_PERSON_SPOTLIGHT_LENGTH
+  = 1000` — shorter than `EditorialReview`'s 10,000, since the point is a short editorial
+  case for why the actor matters, not a full review.
+- **No separate badge mechanism.** The brief called this a "badge/blurb," which could
+  read as two features (a badge shown everywhere the actor appears, like
+  `RecommendedBadges`, plus separate blurb text). Built one instead: the spotlight row's
+  mere existence renders both a small "Editor's Spotlight" label next to the actor's name
+  and the blurb box under their bio. A `RecommendedBadges`-style badge that propagates to
+  other surfaces isn't meaningful yet anyway — actor pages are still browse-only, not
+  wired into search or shown as cards elsewhere (see "Actor pages browse-only for now"
+  above) — so there's nowhere else for a standalone badge to appear.
+- **Spotlight gets a `DELETE` route, unlike `EditorialReview` (which has no removal
+  path).** Once a spotlight also functions as a badge, admins need a way to un-spotlight
+  an actor, not just leave stale text an admin overwrites later — the presence/absence of
+  the row is itself part of what the feature communicates, which isn't true of an
+  editorial review.
+
 ## Deferred & Backlog
 
 - **About page copy: mission, About the Creators, Contact/feedback, and
