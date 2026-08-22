@@ -68,6 +68,10 @@ model User {
   funFactVotes        FunFactVote[]
   memberReviews       MemberReview[]
   memberReviewVotes   MemberReviewVote[]
+  personFunFacts      PersonFunFact[]
+  personFunFactVotes  PersonFunFactVote[]
+  personTributes      PersonTribute[]
+  personTributeVotes  PersonTributeVote[]
 }
 
 model Account {
@@ -243,6 +247,8 @@ model Person {
 
   castCredits CastCredit[]
   fightSceneAppearances FightSceneCast[]
+  funFacts    PersonFunFact[]
+  tributes    PersonTribute[]
 
   @@index([name])
   // See the matching comment on Movie above — backs the ILIKE actor-name
@@ -534,6 +540,88 @@ model FunFactVote {
 
   @@unique([userId, factId])
   @@index([factId])
+}
+
+// --- Actor Fun Facts & Tributes ---
+//
+// Person-scoped counterparts to FunFact/FunFactVote and MemberReview/
+// MemberReviewVote above, letting members pay homage to an actor directly
+// rather than only through the movies they appear in. Same shapes, same
+// vote-toggle behavior, same soft/hard-delete split as their movie
+// equivalents.
+
+// Short trivia snippet about an actor -- same flat, non-threaded shape and
+// soft-delete (to keep vote history intact) as FunFact.
+model PersonFunFact {
+  id            String   @id @default(cuid())
+  personId      String
+  submittedById String
+  content       String   @db.Text
+  isDeleted     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  person      Person              @relation(fields: [personId], references: [id], onDelete: Cascade)
+  submittedBy User                @relation(fields: [submittedById], references: [id], onDelete: Cascade)
+  votes       PersonFunFactVote[]
+
+  @@index([personId])
+}
+
+// One vote per member per fact, value +1 (up) or -1 (down) -- same toggle
+// behavior as FunFactVote.
+model PersonFunFactVote {
+  id        String   @id @default(cuid())
+  factId    String
+  userId    String
+  value     Int
+  createdAt DateTime @default(now())
+
+  fact PersonFunFact @relation(fields: [factId], references: [id], onDelete: Cascade)
+  user User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, factId])
+  @@index([factId])
+}
+
+// Longer-form member writeup appreciating an actor's career or a specific
+// performance -- one per (person, member) pair, edited in place rather than
+// posting a second one, same as MemberReview. No isDeleted/soft-delete:
+// hard-deletes and cascades its votes away, same as MemberReview.
+model PersonTribute {
+  id        String   @id @default(cuid())
+  personId  String
+  authorId  String
+  content   String   @db.Text
+  // Denormalized up-minus-down count, kept in sync by the vote endpoint --
+  // same reasoning as MemberReview.voteScore, needed because tributes are
+  // paginated at the DB level.
+  voteScore Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  person Person              @relation(fields: [personId], references: [id], onDelete: Cascade)
+  author User                @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  votes  PersonTributeVote[]
+
+  @@unique([personId, authorId])
+  @@index([personId, voteScore, createdAt])
+}
+
+// One vote per member per tribute, value +1 (up) or -1 (down) -- same toggle
+// behavior as MemberReviewVote.
+model PersonTributeVote {
+  id        String   @id @default(cuid())
+  tributeId String
+  userId    String
+  value     Int
+  createdAt DateTime @default(now())
+
+  tribute PersonTribute @relation(fields: [tributeId], references: [id], onDelete: Cascade)
+  user    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tributeId])
+  @@index([tributeId])
 }
 
 // --- Fight scenes ---

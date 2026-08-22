@@ -281,6 +281,13 @@ Every credited person has a page at `/actors/[personId]` showing their Filmograp
 
 Biography, birthday, and place of birth (when TMDB has them) are shown under the actor's name, live-fetched via their `person.tmdbId` on each page view rather than stored in our own database — if TMDB is unreachable or has nothing on record, that section is simply omitted.
 
+Below Fight Scenes, every actor page also carries two member-content sections letting fans pay homage to the actor directly, not just to the movies they're in — **Tributes** and **Fun Facts**, `PersonTribute`/`PersonTributeVote` and `PersonFunFact`/`PersonFunFactVote` in the schema. Both reuse the same shapes, rules, and UI patterns as the equivalent movie-page features (see [Fun Facts](#fun-facts) and [Reviews](#reviews) above):
+
+- **Tributes** — a longer-form (5,000 character max) writeup appreciating an actor's career or a specific performance, the more literal "homage" feature. One per (actor, member) pair, edited in place rather than posting a second one. Shown as a horizontally-scrolling rail capped to the top 2 by net vote score (same `rail-scrollbar` card pattern as member movie reviews), with a **"View all N tributes →"** link once there are more, leading to a dedicated `/actors/[personId]/tributes` page listing every tribute in full, 10 per page. The author can edit or delete their own; admins can delete anyone's (hard-deleted — nothing else references a tribute).
+- **Fun Facts** — a short (500 character max) trivia snippet about the actor, same spotlight-card-plus-collapsed-list UI as movie Fun Facts, ranked by net vote score. The submitter can edit or delete their own; admins can delete anyone's (soft-deleted, keeping vote history intact). Unlike movie Fun Facts, actor fun facts don't auto-link mentions of other cast/movies — there's no small, per-actor-bounded pool of names to safely match against the way a single movie's own cast list provides one.
+- **Voting** on both is thumbs up/down, toggling the same way as their movie counterparts (voting the same direction again retracts it, the opposite direction switches it) — you can't vote on your own tribute or fun fact.
+- Both require a verified email to submit or vote, same bar as every other member-content feature.
+
 ## Reviews
 
 Shown alongside the cast list on every movie page: an admin review (unchanged from the original "Editorial Reviews" feature) plus one review per verified member, both in the same section.
