@@ -56,6 +56,7 @@ export function FunFactsSection({
   // fact the moment the current one's score changes.
   const [spotlightId, setSpotlightId] = useState<string | null>(initialFacts[0]?.id ?? null);
   const [page, setPage] = useState(1);
+  const [showList, setShowList] = useState(false);
 
   function updateFact(id: string, updater: (item: FunFactItem) => FunFactItem) {
     setFacts((prev) => prev.map((f) => (f.id === id ? updater(f) : f)).sort(byNetScore));
@@ -229,102 +230,105 @@ export function FunFactsSection({
             const canVote = signedIn && !canEdit;
 
             return (
-              <div className="border-b border-neutral-800 bg-gradient-to-b from-red-950/20 to-transparent p-5 text-center">
-                {editingId === fact.id ? (
-                  <div className="mx-auto flex max-w-md flex-col gap-2 text-left">
-                    <textarea
-                      value={editContent}
-                      onChange={(e) => setEditContent(e.target.value)}
-                      rows={2}
-                      maxLength={MAX_CONTENT_LENGTH}
-                      className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
-                    />
-                    <div className="flex gap-2">
+              <div className="flex gap-3 border-b border-l-4 border-neutral-800 border-l-red-700 p-4">
+                <span className="font-serif text-4xl leading-[0.6] text-red-700/70">&ldquo;</span>
+                <div className="min-w-0 flex-1">
+                  {editingId === fact.id ? (
+                    <div className="flex flex-col gap-2">
+                      <textarea
+                        value={editContent}
+                        onChange={(e) => setEditContent(e.target.value)}
+                        rows={2}
+                        maxLength={MAX_CONTENT_LENGTH}
+                        className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => saveEdit(fact.id)}
+                          disabled={submitting || !editContent.trim()}
+                          className="w-fit rounded-md bg-red-700 px-3 py-1 text-xs font-medium text-white hover:bg-red-600 disabled:opacity-50"
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={cancelEdit}
+                          className="w-fit rounded-md border border-neutral-700 px-3 py-1 text-xs text-neutral-300 hover:bg-neutral-800"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-lg text-neutral-100">{fact.content}</p>
+                  )}
+
+                  <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-xs text-neutral-500">
+                      — {fact.submittedBy.username} · {formatDate(fact.createdAt)}
+                      {wasEdited(fact) && " (edited)"}
+                    </p>
+
+                    <div className="flex items-center gap-3 text-sm">
+                      {facts.length > 1 && (
+                        <button
+                          onClick={() => shiftSpotlight(-1)}
+                          className="text-neutral-500 hover:text-neutral-300"
+                        >
+                          ‹
+                        </button>
+                      )}
                       <button
-                        onClick={() => saveEdit(fact.id)}
-                        disabled={submitting || !editContent.trim()}
-                        className="w-fit rounded-md bg-red-700 px-3 py-1 text-xs font-medium text-white hover:bg-red-600 disabled:opacity-50"
+                        onClick={() => (canVote ? vote(fact.id, 1) : undefined)}
+                        disabled={!canVote}
+                        title={canEdit ? "You can't vote on your own fun fact" : undefined}
+                        className={`flex items-center gap-1 rounded px-1 leading-none transition disabled:cursor-not-allowed disabled:opacity-40 ${
+                          fact.myVote === 1 ? "text-green-500" : "text-neutral-500 hover:text-neutral-300"
+                        }`}
                       >
-                        Save
+                        👍 {fact.up}
                       </button>
                       <button
-                        onClick={cancelEdit}
-                        className="w-fit rounded-md border border-neutral-700 px-3 py-1 text-xs text-neutral-300 hover:bg-neutral-800"
+                        onClick={() => (canVote ? vote(fact.id, -1) : undefined)}
+                        disabled={!canVote}
+                        title={canEdit ? "You can't vote on your own fun fact" : undefined}
+                        className={`flex items-center gap-1 rounded px-1 leading-none transition disabled:cursor-not-allowed disabled:opacity-40 ${
+                          fact.myVote === -1 ? "text-red-500" : "text-neutral-500 hover:text-neutral-300"
+                        }`}
                       >
-                        Cancel
+                        👎 {fact.down}
                       </button>
+                      {facts.length > 1 && (
+                        <button
+                          onClick={() => shiftSpotlight(1)}
+                          className="text-neutral-500 hover:text-neutral-300"
+                        >
+                          ›
+                        </button>
+                      )}
                     </div>
                   </div>
-                ) : (
-                  <p className="text-lg text-neutral-100">&ldquo;{fact.content}&rdquo;</p>
-                )}
 
-                <p className="mt-2 text-xs text-neutral-500">
-                  — {fact.submittedBy.username} · {formatDate(fact.createdAt)}
-                  {wasEdited(fact) && " (edited)"}
-                </p>
-
-                <div className="mt-3 flex items-center justify-center gap-4">
-                  {facts.length > 1 && (
-                    <button
-                      onClick={() => shiftSpotlight(-1)}
-                      className="text-sm text-neutral-500 hover:text-neutral-300"
-                    >
-                      ‹ prev
-                    </button>
-                  )}
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => (canVote ? vote(fact.id, 1) : undefined)}
-                      disabled={!canVote}
-                      title={canEdit ? "You can't vote on your own fun fact" : undefined}
-                      className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-base leading-none transition disabled:cursor-not-allowed disabled:opacity-40 ${
-                        fact.myVote === 1 ? "text-green-500" : "text-neutral-500 hover:text-neutral-300"
-                      }`}
-                    >
-                      👍 <span className="text-sm">{fact.up}</span>
-                    </button>
-                    <button
-                      onClick={() => (canVote ? vote(fact.id, -1) : undefined)}
-                      disabled={!canVote}
-                      title={canEdit ? "You can't vote on your own fun fact" : undefined}
-                      className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-base leading-none transition disabled:cursor-not-allowed disabled:opacity-40 ${
-                        fact.myVote === -1 ? "text-red-500" : "text-neutral-500 hover:text-neutral-300"
-                      }`}
-                    >
-                      👎 <span className="text-sm">{fact.down}</span>
-                    </button>
-                  </div>
-                  {facts.length > 1 && (
-                    <button
-                      onClick={() => shiftSpotlight(1)}
-                      className="text-sm text-neutral-500 hover:text-neutral-300"
-                    >
-                      next ›
-                    </button>
+                  {(canEdit || canDelete) && editingId !== fact.id && (
+                    <div className="mt-1.5 flex items-center gap-2">
+                      {canEdit && (
+                        <button
+                          onClick={() => startEdit(fact)}
+                          className="text-xs text-neutral-400 hover:text-white"
+                        >
+                          Edit
+                        </button>
+                      )}
+                      {canDelete && (
+                        <button
+                          onClick={() => deleteFact(fact.id)}
+                          className="text-xs text-neutral-400 hover:text-red-400"
+                        >
+                          Delete
+                        </button>
+                      )}
+                    </div>
                   )}
                 </div>
-
-                {(canEdit || canDelete) && editingId !== fact.id && (
-                  <div className="mt-2 flex items-center justify-center gap-2">
-                    {canEdit && (
-                      <button
-                        onClick={() => startEdit(fact)}
-                        className="text-xs text-neutral-400 hover:text-white"
-                      >
-                        Edit
-                      </button>
-                    )}
-                    {canDelete && (
-                      <button
-                        onClick={() => deleteFact(fact.id)}
-                        className="text-xs text-neutral-400 hover:text-red-400"
-                      >
-                        Delete
-                      </button>
-                    )}
-                  </div>
-                )}
               </div>
             );
           })()
@@ -334,66 +338,77 @@ export function FunFactsSection({
           </p>
         )}
 
-        {facts.length > 0 && (
-          <ul className="divide-y divide-neutral-800">
-            {pageFacts.map((fact) => (
-              <li key={fact.id}>
-                <button
-                  onClick={() => setSpotlightId(fact.id)}
-                  className={`flex w-full flex-col gap-1 px-3 py-2 text-left text-sm transition hover:bg-neutral-800/50 ${
-                    fact.id === spotlightId ? "bg-neutral-800/40" : ""
-                  }`}
-                >
-                  <div className="flex items-center gap-2 text-xs text-neutral-500">
-                    <span className="shrink-0 text-neutral-600">#{entryNumbers.get(fact.id)}</span>
-                    <span className={fact.myVote === 1 ? "text-green-500" : "text-neutral-600"}>
-                      👍 {fact.up}
-                    </span>
-                    <span className={fact.myVote === -1 ? "text-red-500" : "text-neutral-600"}>
-                      👎 {fact.down}
-                    </span>
-                    <span className="shrink-0 font-medium text-neutral-100">{fact.submittedBy.username}</span>
-                    <span className="ml-auto shrink-0 text-neutral-600">{formatDate(fact.createdAt)}</span>
-                  </div>
-                  <p className="text-neutral-300">{fact.content}</p>
-                </button>
-              </li>
-            ))}
-          </ul>
+        {facts.length > 1 && (
+          <button
+            onClick={() => setShowList((v) => !v)}
+            className="w-full border-t border-neutral-800 py-2 text-center text-xs text-neutral-400 hover:bg-neutral-800/50 hover:text-neutral-200"
+          >
+            {showList ? "Hide fun facts list" : `Show all ${facts.length} fun facts →`}
+          </button>
         )}
 
-        {totalPages > 1 && (
-          <div className="flex items-center justify-center gap-4 border-t border-neutral-800 py-2 text-sm">
-            <button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="rounded border border-neutral-700 px-2 py-0.5 text-neutral-300 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              ‹
-            </button>
-            <div className="flex items-center gap-1">
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
-                <button
-                  key={n}
-                  onClick={() => setPage(n)}
-                  className={`rounded border px-2 py-0.5 ${
-                    n === currentPage
-                      ? "border-red-700 bg-red-700 text-white"
-                      : "border-neutral-700 text-neutral-300 hover:bg-neutral-800"
-                  }`}
-                >
-                  {n}
-                </button>
+        {showList && facts.length > 0 && (
+          <>
+            <ul className="divide-y divide-neutral-800 border-t border-neutral-800">
+              {pageFacts.map((fact) => (
+                <li key={fact.id}>
+                  <button
+                    onClick={() => setSpotlightId(fact.id)}
+                    className={`flex w-full flex-col gap-1 px-3 py-2 text-left text-sm transition hover:bg-neutral-800/50 ${
+                      fact.id === spotlightId ? "bg-neutral-800/40" : ""
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 text-xs text-neutral-500">
+                      <span className="shrink-0 text-neutral-600">#{entryNumbers.get(fact.id)}</span>
+                      <span className={fact.myVote === 1 ? "text-green-500" : "text-neutral-600"}>
+                        👍 {fact.up}
+                      </span>
+                      <span className={fact.myVote === -1 ? "text-red-500" : "text-neutral-600"}>
+                        👎 {fact.down}
+                      </span>
+                      <span className="shrink-0 font-medium text-neutral-100">{fact.submittedBy.username}</span>
+                      <span className="ml-auto shrink-0 text-neutral-600">{formatDate(fact.createdAt)}</span>
+                    </div>
+                    <p className="text-neutral-300">{fact.content}</p>
+                  </button>
+                </li>
               ))}
-            </div>
-            <button
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-              className="rounded border border-neutral-700 px-2 py-0.5 text-neutral-300 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              ›
-            </button>
-          </div>
+            </ul>
+
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-4 border-t border-neutral-800 py-2 text-sm">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="rounded border border-neutral-700 px-2 py-0.5 text-neutral-300 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  ‹
+                </button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
+                    <button
+                      key={n}
+                      onClick={() => setPage(n)}
+                      className={`rounded border px-2 py-0.5 ${
+                        n === currentPage
+                          ? "border-red-700 bg-red-700 text-white"
+                          : "border-neutral-700 text-neutral-300 hover:bg-neutral-800"
+                      }`}
+                    >
+                      {n}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="rounded border border-neutral-700 px-2 py-0.5 text-neutral-300 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  ›
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </section>
