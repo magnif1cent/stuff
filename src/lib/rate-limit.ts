@@ -42,6 +42,7 @@ export const movieSubmitLimiter = makeLimiter("movie-submit", 10, "10 m");
 export const listCreateLimiter = makeLimiter("list-create", 10, "10 m");
 export const fightCountEditLimiter = makeLimiter("fight-count-edit", 10, "10 m");
 export const funFactSubmitLimiter = makeLimiter("fun-fact-submit", 10, "10 m");
+export const memberReviewSubmitLimiter = makeLimiter("member-review-submit", 10, "10 m");
 
 export interface RateLimitResult {
   success: boolean;

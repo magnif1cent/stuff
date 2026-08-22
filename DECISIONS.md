@@ -965,6 +965,38 @@ protecting against for this project's actual pace of parallel work.
 
 ## Feature Decisions
 
+### Editorial Reviews opened up to members as "Reviews," admin review kept separate
+**PR #TBD.** Renamed the section (and its heading) from "Editorial Reviews" to "Reviews"
+and let verified members add their own, alongside the existing admin-only review.
+
+- **New `MemberReview` model, `EditorialReview` left untouched** — rather than adding an
+  `authorRole`/`isAdmin` flag to `EditorialReview` and changing its semantics from
+  "one shared row per movie" to "one row per author." `EditorialReview` already has a
+  dependent: the homepage's "Recent Reviews by Editors" grid (`getRecentEditorialReviews`
+  in `src/lib/editorial-reviews.ts`) specifically surfaces admin-authored reviews, and
+  reworking its one-row-per-movie assumption to accommodate members would have meant
+  updating that query's semantics too, for a feature that was explicitly asked to keep
+  admin and member reviews as two distinct kinds, not one merged pool.
+- **`MemberReview` is one row per (movie, member) pair** (`@@unique([movieId, authorId])`),
+  matching `Rating`'s one-review-per-member convention — a member edits their existing
+  review in place (`PATCH`) rather than posting additional ones, and a second `POST`
+  attempt is rejected with a 409 pointing them at editing instead.
+- **Hard-deleted, not soft-deleted** — the established soft-delete convention
+  (`FunFact`, `DiscussionPost`) exists to keep something a vote or reply depends on
+  intact; nothing depends on a `MemberReview` row surviving deletion, so it's a plain
+  `delete()`, no `isDeleted` column.
+- **5,000-character cap**, between `EditorialReview`'s 10,000 (admin, presumably more
+  polished/longer) and `FunFact`'s 500 (a one-line trivia snippet) — long-form enough for
+  an actual review, without matching the admin review's ceiling.
+- **Admin review always renders first, in its own bordered box labeled "Admin Review"**
+  (amber-accented, same family as `AdminRatingWidget`'s existing amber styling elsewhere
+  on the page) — member reviews sort newest-first below it, in a plain list with no such
+  box, so the one "official" review is visually unambiguous at a glance.
+- **An admin can also write their own `MemberReview`**, separate from the shared admin
+  review they edit — not specifically requested, but nothing in the spec excluded it, and
+  restricting admins from having a personal take in addition to the official one would
+  have needed extra gating logic for no clear benefit.
+
 ### Fun Fact mentions auto-link against a per-movie pool, not an @mention input
 **PR #TBD.** Wanted fun facts to be able to reference the movie's cast (or other movies
 in the same franchise) as links, without requiring people writing a short trivia snippet

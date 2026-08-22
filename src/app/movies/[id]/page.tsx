@@ -25,6 +25,7 @@ import {
   getFightSceneRoundNumbers,
 } from "@/lib/fight-scenes";
 import { getFunFactsForMovie, getFunFactVoteSummaries } from "@/lib/fun-facts";
+import { getMemberReviewsForMovie } from "@/lib/member-reviews";
 import { getSimilarMovies } from "@/lib/similar-movies";
 import { RatingWidget } from "@/components/rating-widget";
 import { MovieRail } from "@/components/movie-rail";
@@ -34,7 +35,7 @@ import { AddToListControl } from "@/components/add-to-list-control";
 import { DiscussionThread } from "@/components/discussion-thread";
 import { FightSceneSection } from "@/components/fight-scene-section";
 import { FunFactsSection } from "@/components/fun-facts-section";
-import { EditorialReview } from "@/components/editorial-review";
+import { ReviewsSection } from "@/components/reviews-section";
 import { PosterOverrideControl } from "@/components/poster-override-control";
 import { RecommendationControl } from "@/components/recommendation-control";
 import { FightCountControl } from "@/components/fight-count-control";
@@ -131,6 +132,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
     fightScenes,
     fightSceneTags,
     editorialReview,
+    memberReviews,
     movieRecommenders,
     recentFightCountEdits,
     funFacts,
@@ -176,6 +178,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
       where: { movieId: movie.id },
       include: { author: { select: { username: true } } },
     }),
+    getMemberReviewsForMovie(movie.id),
     getMovieRecommenders(movie.id),
     prisma.fightCountEdit.findMany({
       where: { movieId: movie.id },
@@ -368,6 +371,15 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
         author: editorialReview.author,
       }
     : null;
+
+  const serializedMemberReviews = memberReviews.map((review) => ({
+    id: review.id,
+    content: review.content,
+    authorId: review.authorId,
+    createdAt: review.createdAt.toISOString(),
+    updatedAt: review.updatedAt.toISOString(),
+    author: review.author,
+  }));
 
   const serializedFightCountEdits = recentFightCountEdits.map((edit) => ({
     id: edit.id,
@@ -616,9 +628,12 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
           </section>
         )}
 
-        <EditorialReview
+        <ReviewsSection
           movieId={movie.id}
-          initialReview={serializedEditorialReview}
+          initialAdminReview={serializedEditorialReview}
+          initialMemberReviews={serializedMemberReviews}
+          signedIn={!!session?.user}
+          currentUserId={session?.user?.id ?? null}
           isAdmin={session?.user?.role === "ADMIN"}
         />
 
