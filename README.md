@@ -36,6 +36,7 @@ An IMDB-style website for kung fu and martial arts films, built for martial arts
 - [Security](#security)
 - [Continuous Integration](#continuous-integration)
 - [Deploying](#deploying)
+- [Direct database connection for migrations](#direct-database-connection-for-migrations)
 - [Footer & About Page](#footer-about-page)
 - [News & Updates](#news-updates)
 - [Community Activity](#community-activity)
@@ -90,7 +91,7 @@ Pick one:
   ```bash
   createdb kungfu_dev
   ```
-- **Hosted (recommended for deploying)** — create a free database on [Neon](https://neon.tech), [Supabase](https://supabase.com), or [Vercel Postgres](https://vercel.com/storage/postgres), and copy its connection string.
+- **Hosted (recommended for deploying)** — create a free database on [Neon](https://neon.tech), [Supabase](https://supabase.com), or [Vercel Postgres](https://vercel.com/storage/postgres), and copy its connection string. If the provider gives you a separate pooled connection string (e.g. Neon's PgBouncer `-pooler` host) for `DATABASE_URL`, also copy the direct/non-pooled one for `DIRECT_DATABASE_URL` — see step 5.
 
 ### 3. Get a TMDB API key
 
@@ -113,7 +114,7 @@ Pick one:
 cp .env.example .env
 ```
 
-Fill in `DATABASE_URL`, `TMDB_API_KEY`, `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`, and generate an `AUTH_SECRET`. `RESEND_API_KEY`/`EMAIL_FROM` are optional — see [Email Verification](#email-verification) below. `BLOB_READ_WRITE_TOKEN` is optional too — see [Admin Poster Overrides](#admin-poster-overrides). `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` and `NEXT_PUBLIC_TURNSTILE_SITE_KEY`/`TURNSTILE_SECRET_KEY` are optional too — see [Security](#security). `SENTRY_DSN`/`NEXT_PUBLIC_SENTRY_DSN` are optional too — see [Error Monitoring](#error-monitoring).
+Fill in `DATABASE_URL`, `TMDB_API_KEY`, `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`, and generate an `AUTH_SECRET`. `DIRECT_DATABASE_URL` is optional — only needed if `DATABASE_URL` points at a connection pooler (see [Direct database connection for migrations](#direct-database-connection-for-migrations)). `RESEND_API_KEY`/`EMAIL_FROM` are optional — see [Email Verification](#email-verification) below. `BLOB_READ_WRITE_TOKEN` is optional too — see [Admin Poster Overrides](#admin-poster-overrides). `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` and `NEXT_PUBLIC_TURNSTILE_SITE_KEY`/`TURNSTILE_SECRET_KEY` are optional too — see [Security](#security). `SENTRY_DSN`/`NEXT_PUBLIC_SENTRY_DSN` are optional too — see [Error Monitoring](#error-monitoring).
 
 ```bash
 npx auth secret
@@ -353,6 +354,21 @@ Each slide prefers a fight scene clip over the static TMDB backdrop:
 2. Set the environment variables from `.env.example` in the Vercel project settings (use a hosted Postgres connection string).
 3. Run `npx prisma migrate deploy` against the production database (Vercel's build step, or manually).
 4. Update the Google OAuth redirect URI to your production domain.
+
+## Direct database connection for migrations
+
+If your `DATABASE_URL` points at a connection pooler (e.g. Neon's PgBouncer
+`-pooler` endpoint, used by default for Vercel deployments), also set
+`DIRECT_DATABASE_URL` to the same database's direct/non-pooled connection
+string, in both the Preview and Production environments in Vercel's project
+settings. `prisma migrate deploy` takes a session-scoped Postgres advisory
+lock, which transaction-mode pooling doesn't support reliably — the lock can
+end up held or orphaned across pooled connections, causing migrations to
+time out on a later deploy even with no schema changes involved. `prisma.config.ts`
+uses `DIRECT_DATABASE_URL` for migrations only and falls back to
+`DATABASE_URL` when it's unset, so this is a no-op for a local, non-pooled
+Postgres instance — normal app queries always go through the pooled
+`DATABASE_URL`.
 
 ## Footer & About Page
 

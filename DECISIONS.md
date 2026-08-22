@@ -55,6 +55,7 @@ one.
 - [Vercel preview deployments deleted on PR close, to stop Neon preview-branch pileup](#vercel-preview-deployments-deleted-on-pr-close-to-stop-neon-preview-branch-pileup)
 - [Weekly Trending Carousel's cron had never run — `CRON_SECRET` was never configured in Production](#weekly-trending-carousels-cron-had-never-run-cron_secret-was-never-configured-in-production)
 - [Preview database made static across PRs, trading back the migration-collision risk to stop re-seeding every branch](#preview-database-made-static-across-prs-trading-back-the-migration-collision-risk-to-stop-re-seeding-every-branch)
+- [Migrations moved to a direct (non-pooled) Neon connection, separate from the app's pooled DATABASE_URL](#migrations-moved-to-a-direct-non-pooled-neon-connection-separate-from-the-apps-pooled-database_url)
 
 **Feature Decisions**
 
@@ -962,6 +963,50 @@ protecting against for this project's actual pace of parallel work.
   Free-plan branch-count limit from that same incident doesn't get
   re-triggered by deployment pileup), but no longer cascades into deleting
   a Neon branch, since no single deployment owns the shared one anymore.
+
+### Migrations moved to a direct (non-pooled) Neon connection, separate from the app's pooled DATABASE_URL
+**Infra-only change — no schema/migration diff.** Vercel preview deploys
+were intermittently timing out during `prisma migrate deploy`, on at least
+two consecutive deploys in a row (including after a manual redeploy) on a
+PR with zero migration changes — ruling out migration content as the cause.
+`DATABASE_URL` was the only connection string configured (`prisma.config.ts`'s
+`datasource.url`, no `directUrl`), and it points at Neon's pooled
+(PgBouncer, `-pooler` host) endpoint. `prisma migrate deploy` takes a
+session-scoped Postgres advisory lock, which transaction-mode pooling
+doesn't support reliably — the lock can end up held or orphaned across
+pooled connections, timing out the next deploy that tries to acquire it.
+Distinct from both prior Neon incidents above (a shared Preview/Production
+database; Preview's per-branch re-seeding cost) — this one is about how the
+*same, already-correctly-isolated* database is connected to for migrations
+specifically, not about which database is used.
+
+- **What changes**: a new `DIRECT_DATABASE_URL` env var, set to Neon's
+  direct/non-pooled host, threaded through `prisma.config.ts`'s
+  `datasource.directUrl` for Prisma 7.9.1. Confirmed via `prisma validate`
+  that this version rejects a schema-file-level `directUrl` outright
+  (`"no longer supported in schema files... Move connection URLs to
+  prisma.config.ts"`) — the opposite of older Prisma versions, where
+  `directUrl` lived in `schema.prisma`'s `datasource` block instead; this
+  schema never had one, so there was nothing to migrate off of, just the
+  new field to add in the right place. `@prisma/config`'s shipped types
+  don't declare `directUrl` yet even though the CLI requires it there, so
+  `prisma.config.ts` types it locally rather than relying on the (currently
+  incomplete) `PrismaConfig` type. `DATABASE_URL` is untouched and still
+  what the running app queries through.
+- **Falls back to `DATABASE_URL` when `DIRECT_DATABASE_URL` is unset**,
+  rather than requiring it everywhere — a local, non-pooled Postgres
+  instance has no separate direct endpoint to point at, so this stays a
+  no-op for local dev (`npx prisma migrate dev` needs no new env var) and
+  only matters where a pooler sits in front of the database.
+  Preview/Production in Vercel need the real Neon direct host added
+  manually (not something this change can do from here); until that's
+  configured there, migrations keep using the pooled endpoint and the
+  timeout risk remains — this PR only wires up the mechanism.
+- **Considered and rejected**: retrying the deploy instead of fixing the
+  connection (see `9783459`, "Retrigger preview deployment (Neon P1002
+  timeout retry)") — worked as a one-off but treats the symptom, not the
+  cause, and the failure recurred on a subsequent deploy with no migration
+  changes.
 
 ## Feature Decisions
 
