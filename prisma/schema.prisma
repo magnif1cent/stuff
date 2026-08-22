@@ -73,7 +73,6 @@ model User {
   personTributes      PersonTribute[]
   personTributeVotes  PersonTributeVote[]
   personFavorites     PersonFavorite[]
-  personSpotlights    PersonSpotlight[]
 }
 
 model Account {
@@ -252,7 +251,6 @@ model Person {
   funFacts    PersonFunFact[]
   tributes    PersonTribute[]
   favorites   PersonFavorite[]
-  spotlight   PersonSpotlight?
 
   @@index([name])
   // See the matching comment on Movie above — backs the ILIKE actor-name
@@ -641,23 +639,6 @@ model PersonFavorite {
 
   @@unique([userId, personId])
   @@index([userId])
-}
-
-// Admin-curated blurb canonizing an actor's importance -- one shared row
-// per actor (not per-admin), any admin can write or update it, same
-// relationship EditorialReview has to Movie. Its mere presence doubles as
-// the "badge" (an Editor's Spotlight label shown on the actor page),
-// avoiding a second mechanism the way MovieRecommendation would need one.
-model PersonSpotlight {
-  id        String   @id @default(cuid())
-  personId  String   @unique
-  authorId  String
-  content   String   @db.Text
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
-  author User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
 }
 
 // --- Fight scenes ---

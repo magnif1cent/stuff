@@ -2391,11 +2391,10 @@ ones.
   them — keeps a burst of actor-page activity from eating into a member's
   movie-page submission budget and vice versa.
 
-### Actor Favorite and Editor's Spotlight added, mirroring FightSceneFavorite and EditorialReview
-**PR #TBD.** Follow-up to Actor Fun Facts and Tributes above, adding two lighter-weight
-engagement features to the actor page: a one-tap Favorite for members, and an admin-only
-curated blurb ("Editor's Spotlight") for canonizing an actor's importance directly rather
-than only through a movie review.
+### Actor Favorite added, mirroring FightSceneFavorite
+**PR #TBD.** Follow-up to Actor Fun Facts and Tributes above, adding a lighter-weight
+one-tap Favorite to the actor page. (An admin-only "Editor's Spotlight" blurb was
+originally scoped into this same PR but cut before merge — see Deferred & Backlog.)
 
 - **`PersonFavorite` copies `FightSceneFavorite` exactly** (`userId`/`personId` unique
   pair, no rating scale) rather than reusing `FightSceneFavorite` with a nullable
@@ -2415,29 +2414,16 @@ than only through a movie review.
   matches how `getMostLikedLists` queries `MemberList` directly rather than living in a
   separate list-likes module; the leaderboard module is the natural home for "how is this
   ranking computed," not the per-feature lib.
-- **`PersonSpotlight` mirrors `EditorialReview`'s one-shared-row-per-entity shape**
-  (unique `personId`, any admin can write/update, `authorId` just tracks who last
-  touched it) rather than `MovieRecommendation`'s per-admin toggle — the brief asked for
-  a single canonical "the editors are spotlighting this actor" statement with room for
-  a written case, not a multi-admin badge stack. Capped at `MAX_PERSON_SPOTLIGHT_LENGTH
-  = 1000` — shorter than `EditorialReview`'s 10,000, since the point is a short editorial
-  case for why the actor matters, not a full review.
-- **No separate badge mechanism.** The brief called this a "badge/blurb," which could
-  read as two features (a badge shown everywhere the actor appears, like
-  `RecommendedBadges`, plus separate blurb text). Built one instead: the spotlight row's
-  mere existence renders both a small "Editor's Spotlight" label next to the actor's name
-  and the blurb box under their bio. A `RecommendedBadges`-style badge that propagates to
-  other surfaces isn't meaningful yet anyway — actor pages are still browse-only, not
-  wired into search or shown as cards elsewhere (see "Actor pages browse-only for now"
-  above) — so there's nowhere else for a standalone badge to appear.
-- **Spotlight gets a `DELETE` route, unlike `EditorialReview` (which has no removal
-  path).** Once a spotlight also functions as a badge, admins need a way to un-spotlight
-  an actor, not just leave stale text an admin overwrites later — the presence/absence of
-  the row is itself part of what the feature communicates, which isn't true of an
-  editorial review.
 
 ## Deferred & Backlog
 
+- **Editor's Spotlight (admin-curated per-actor blurb/badge)** — scoped into the same
+  PR as Actor Favorite (`PersonSpotlight`, mirroring `EditorialReview`'s
+  one-shared-row-per-entity shape) but cut before merge at explicit request: it overlaps
+  with a separate "actor highlight" feature planned elsewhere, so building it here first
+  risked landing something that conflicts with or duplicates that later work. Revisit
+  once the actor-highlight shape is decided — `PersonSpotlight` may still be the right
+  model, or it may fold into whatever that feature turns out to be.
 - **About page copy: mission, About the Creators, Contact/feedback, and
   Community guidelines wording** (**PR #27**) — the mission section ("What
   this site is") and the new "About the Creators" section are both

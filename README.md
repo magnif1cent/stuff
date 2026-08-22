@@ -288,10 +288,7 @@ Below Fight Scenes, every actor page also carries two member-content sections le
 - **Voting** on both is thumbs up/down, toggling the same way as their movie counterparts (voting the same direction again retracts it, the opposite direction switches it) — you can't vote on your own tribute or fun fact.
 - Both require a verified email to submit or vote, same bar as every other member-content feature.
 
-Two lighter-weight engagement features round out the actor page:
-
-- **Favorite** — a one-tap heart toggle next to the actor's name (`PersonFavorite` in the schema), same pattern as favoriting a fight scene. Requires a verified email, same bar as the content features above. Favorite counts feed the **Most Beloved Actors** ranking on `/leaderboard` — see [Member Lists & Profiles](#member-lists--profiles).
-- **Editor's Spotlight** — an admin-only curated blurb (1,000 character max) canonizing an actor's importance, `PersonSpotlight` in the schema. One shared row per actor (not per-admin) — any admin can write or update it, the same relationship [Editorial Reviews](#reviews) have to a movie — shown in an amber-bordered box under the actor's bio with an **Editor's Spotlight** label, which also doubles as a badge next to the actor's name. Admins can remove a spotlight entirely (unlike an Editorial Review, which has no removal path), since here the blurb's presence or absence is itself part of the feature.
+A lighter-weight **Favorite** rounds out the actor page — a one-tap heart toggle next to the actor's name (`PersonFavorite` in the schema), same pattern as favoriting a fight scene. Requires a verified email, same bar as the content features above. Favorite counts feed the **Most Beloved Actors** ranking on `/leaderboard` — see [Member Lists & Profiles](#member-lists--profiles).
 
 ## Reviews
 
