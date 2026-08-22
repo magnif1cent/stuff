@@ -9,6 +9,15 @@ import { getFightSceneRatingSummaries, getFightSceneAdminRatingSummaries, getFig
 import { MovieCard } from "@/components/movie-card";
 import { FightSceneResultCard } from "@/components/fight-scene-result-card";
 import { getRatingSummaries } from "@/lib/ratings";
+import { getFunFactsForPerson, getPersonFunFactVoteSummaries } from "@/lib/person-fun-facts";
+import {
+  getTopPersonTributes,
+  getPersonTributesCount,
+  getPersonTributeVoteSummaries,
+  PERSON_TRIBUTES_PREVIEW_COUNT,
+} from "@/lib/person-tributes";
+import { ActorFunFactsSection } from "@/components/actor-fun-facts-section";
+import { ActorTributesSection } from "@/components/actor-tributes-section";
 
 const getPerson = cache((personId: string) =>
   prisma.person.findUnique({
@@ -110,6 +119,66 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
       })
     : [];
 
+  const [funFacts, topTributes, tributesCount, myTribute] = await Promise.all([
+    getFunFactsForPerson(personId),
+    getTopPersonTributes(personId, PERSON_TRIBUTES_PREVIEW_COUNT),
+    getPersonTributesCount(personId),
+    session?.user
+      ? prisma.personTribute.findUnique({
+          where: { personId_authorId: { personId, authorId: session.user.id } },
+        })
+      : null,
+  ]);
+
+  const funFactIds = funFacts.map((f) => f.id);
+  const topTributeIds = topTributes.map((t) => t.id);
+  const [funFactVoteSummaries, myFunFactVotes, tributeVoteSummaries, myTributeVotes] = await Promise.all([
+    getPersonFunFactVoteSummaries(funFactIds),
+    session?.user
+      ? prisma.personFunFactVote.findMany({
+          where: { userId: session.user.id, factId: { in: funFactIds } },
+        })
+      : [],
+    getPersonTributeVoteSummaries(topTributeIds),
+    session?.user
+      ? prisma.personTributeVote.findMany({
+          where: { userId: session.user.id, tributeId: { in: topTributeIds } },
+        })
+      : [],
+  ]);
+  const myFunFactVoteMap = new Map(myFunFactVotes.map((v) => [v.factId, v.value as 1 | -1]));
+  const myTributeVoteMap = new Map(myTributeVotes.map((v) => [v.tributeId, v.value as 1 | -1]));
+
+  const serializedFunFacts = funFacts.map((fact) => {
+    const summary = funFactVoteSummaries.get(fact.id);
+    return {
+      id: fact.id,
+      content: fact.content,
+      submittedById: fact.submittedById,
+      createdAt: fact.createdAt.toISOString(),
+      updatedAt: fact.updatedAt.toISOString(),
+      submittedBy: fact.submittedBy,
+      up: summary?.up ?? 0,
+      down: summary?.down ?? 0,
+      myVote: myFunFactVoteMap.get(fact.id) ?? null,
+    };
+  });
+
+  const serializedTributes = topTributes.map((tribute) => {
+    const summary = tributeVoteSummaries.get(tribute.id);
+    return {
+      id: tribute.id,
+      content: tribute.content,
+      authorId: tribute.authorId,
+      createdAt: tribute.createdAt.toISOString(),
+      updatedAt: tribute.updatedAt.toISOString(),
+      author: tribute.author,
+      up: summary?.up ?? 0,
+      down: summary?.down ?? 0,
+      myVote: myTributeVoteMap.get(tribute.id) ?? null,
+    };
+  });
+
   const sortedFightScenes = [...fightScenes].sort(
     (a, b) => (favoriteCounts.get(b.id) ?? 0) - (favoriteCounts.get(a.id) ?? 0),
   );
@@ -188,6 +257,24 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
           })}
         </div>
       )}
+
+      <ActorTributesSection
+        personId={person.id}
+        initialTributes={serializedTributes}
+        tributesCount={tributesCount}
+        hasOwnTribute={!!myTribute}
+        signedIn={!!session?.user}
+        currentUserId={session?.user?.id ?? null}
+        isAdmin={session?.user?.role === "ADMIN"}
+      />
+
+      <ActorFunFactsSection
+        personId={person.id}
+        initialFacts={serializedFunFacts}
+        signedIn={!!session?.user}
+        currentUserId={session?.user?.id ?? null}
+        isAdmin={session?.user?.role === "ADMIN"}
+      />
     </div>
   );
 }

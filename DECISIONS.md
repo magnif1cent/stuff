@@ -2342,6 +2342,55 @@ regression, but tighter than wanted.
   still doesn't count against the cap, and playback still pauses entirely
   while the tab is hidden.
 
+### Actor Fun Facts and Tributes added, mirroring the movie versions exactly
+**PR #TBD.** Wanted a way for members to pay homage to an actor directly
+(trivia about them, a career/performance writeup), not just rate or discuss
+the movies they're in — the site had two existing member-content shapes
+(`FunFact`/`FunFactVote`, `MemberReview`/`MemberReviewVote`) already built
+for movies, so this reuses both shapes verbatim rather than inventing new
+ones.
+
+- **New models, not a `movieId`-nullable variant of the existing ones.**
+  `PersonFunFact`/`PersonFunFactVote` and `PersonTribute`/`PersonTributeVote`
+  are separate tables (`personId` instead of `movieId`) rather than making
+  `FunFact.movieId`/`MemberReview.movieId` nullable and adding an optional
+  `personId` alongside — a shared table would need every query to filter on
+  "which foreign key is set," and would tangle two conceptually distinct
+  feeds (per-movie vs. per-actor) into one table for no real benefit.
+- **`PersonTribute` kept the one-per-(person,author) unique constraint**,
+  same as `MemberReview`, even though the feature brief describes tributes
+  as being about "an actor's career **or** a specific performance" — which
+  could argue for allowing several tributes per member per actor (one per
+  performance). Went with the stricter mirror because there's no
+  `movieId`/performance field on the model to disambiguate multiple tributes
+  by the same member for the same actor, and adding one would be scope
+  beyond what was asked; a member wanting to cover several performances
+  writes about that in one longer tribute instead. Revisit if that turns out
+  to be a real limitation in practice.
+- **Fun Facts soft-delete, Tributes hard-delete** — same split as their
+  movie counterparts, made for the same reason: `PersonFunFactVote` rows
+  would otherwise lose their target on delete, while `PersonTributeVote`
+  rows cascade away with the tribute regardless, so there's no vote history
+  to preserve either way.
+- **No mention auto-linking on actor Fun Facts**, unlike movie Fun Facts
+  (which link mentions of the movie's own cast/franchise siblings). There's
+  no equivalent small, bounded pool to match against for a single actor —
+  linking against the whole site's cast/movie tables would reintroduce the
+  false-positive risk `funFactMentionables` was specifically built to avoid.
+  Not requested in the feature brief either, so left out rather than
+  guessing at a shape for it.
+- **Tributes get the same capped-rail-then-paginated-page pattern as member
+  reviews** (`ActorTributesSection` capped to
+  `PERSON_TRIBUTES_PREVIEW_COUNT = 2`, full list at
+  `/actors/[personId]/tributes`) — called out explicitly in the brief given
+  actors can accumulate tributes from many members the same way movies
+  accumulate reviews.
+- **New rate limiters** (`personFunFactSubmitLimiter`,
+  `personTributeSubmitLimiter`, 10 per 10 minutes) mirror
+  `funFactSubmitLimiter`/`memberReviewSubmitLimiter` rather than sharing
+  them — keeps a burst of actor-page activity from eating into a member's
+  movie-page submission budget and vice versa.
+
 ## Deferred & Backlog
 
 - **About page copy: mission, About the Creators, Contact/feedback, and
