@@ -108,7 +108,7 @@ one.
 - [Social platform icons for the website/social link field](#social-platform-icons-for-the-websitesocial-link-field)
 - [Trending carousel clip autoplay bounded to one lap, paused when the tab is hidden](#trending-carousel-clip-autoplay-bounded-to-one-lap-paused-when-the-tab-is-hidden)
 - [Trending carousel autoplay cap raised from 1 lap to 5](#trending-carousel-autoplay-cap-raised-from-1-lap-to-5)
-- [Actor career stats: Details card treatment, "Sparring Partner" from existing fight-scene data](#actor-career-stats-details-card-treatment-sparring-partner-from-existing-fight-scene-data)
+- [Actor Career Highlights styled like the Signature Spotlight banner, "Sparring Partner" from existing fight-scene data](#actor-career-highlights-styled-like-the-signature-spotlight-banner-sparring-partner-from-existing-fight-scene-data)
 
 **Deferred & Backlog**
 
@@ -2559,30 +2559,44 @@ feature was scoped from.
   other property (same actor scope, same toggle/retract mechanics, same email-verification
   gate), so two tables would just be the one-row-two-nullable-columns shape typed out twice.
 
-### Actor career stats: Details card treatment, "Sparring Partner" from existing fight-scene data
-**PR #TBD.** Added a career-stats box just under the actor's name/avatar, using
-the same bordered dt/dd "Details" card as the movie page's Studio/Country box
-rather than the member profile's stat-tile-strip (`ProfileStatsStrip`) or a
-plain inline stat line — both were mocked up alongside it, but the Details card
-was picked as the closer visual match for a single dense summary block sitting
-this close to a page's header, and it comfortably holds six rows without
-wrapping the way tiles or an inline line would. Six stats, each independently
-omitted when it has nothing to show (same as the movie Details card): total
-approved movies, fight scenes tagged, average community rating across the
-filmography, average rating across their tagged fight scenes, years active
-(earliest–latest release year), and Sparring Partner.
+### Actor Career Highlights styled like the Signature Spotlight banner, "Sparring Partner" from existing fight-scene data
+**PR #TBD.** Added a career-stats box just under the actor's name/avatar.
+Went through three rounds of visual treatment before landing: (1) a plain
+bordered dt/dd "Details" card, matching the movie page's Studio/Country box,
+compared against the member profile's stat-tile-strip (`ProfileStatsStrip`)
+and a plain inline stat line — Details won that round as the closer match for
+a dense summary block this close to a header; (2) Details vs. a full-width
+"hero stat strip" (bigger numbers, more prominent), raised to see if the block
+should read as a bigger feature — rejected because it visually outcompeted the
+actor's own name for attention right under the header; (3) the actual goal
+behind wanting something bigger turned out to be wanting the block to feel
+like a tribute to the actor, not just louder — so it ships styled after the
+existing `SignatureSpotlight` banner instead (gold `border-l-4 border-l-yellow-500`
+accent stripe, a "🏆 Career Highlights" kicker pill, bold two-column stat
+values), reusing a pattern this page already teaches visitors to read as an
+honor rather than inventing a new one. Six stats, each independently omitted
+when it has nothing to show (same "no signal, no row" rule the Details-card
+version had): total approved movies, fight scenes tagged, average community
+rating across the filmography, average rating across their tagged fight
+scenes, years active (earliest–latest release year), and Sparring Partner.
 
 - **Every number comes from data already fetched for the rest of the page** —
   no new queries. Ratings are an unweighted mean of each movie's/scene's own
   average, same "no ratings-count weighting" approach used everywhere else in
   the app (see the Deferred entry below — revisiting that is a whole-app
   question, not something to special-case here).
-- **The two rating rows show as `★ N.N` in yellow, not `N.N / 10`.** The
+- **The two rating stats show as `★ N.N` in yellow, not `N.N / 10`.** The
   movie page's own big hero score does say "/ 10", but every *compact*
   rating display already in the app — `MovieCard`, `FilmographyList` — drops
   it and shows just the bare starred number, since the label next to it
   already establishes what's being rated. This card is a compact context,
   so it follows that convention instead of the hero one.
+- **Kept at card width, not full-bleed**, even after moving to the
+  Spotlight-styled treatment — the goal was to make the block feel earned,
+  not to make it bigger. A two-column grid (rather than the single dt/dd
+  column the Details-card round used) lets each value stand on its own as a
+  bold number instead of a label-left row, without needing the width a hero
+  strip would take.
 - **Sparring Partner — the co-star sharing the most distinct fight scenes with
   this actor** — came out of exploring what a co-starring/collaboration
   signal between two actors could surface (a "You Might Also Like" rail for
@@ -2605,6 +2619,14 @@ filmography, average rating across their tagged fight scenes, years active
 
 ## Deferred & Backlog
 
+- **Combine Career Highlights with the page's other Signature-styled blocks**
+  — raised right after Career Highlights shipped its `SignatureSpotlight`-matched
+  styling: the actor page now carries up to three gold-accented "honor" blocks
+  near its top (Career Highlights, plus the Signature Role and Signature Fight
+  Scene spotlight banners), each currently its own separate element. Worth a
+  later pass to see whether they should visually merge into one combined
+  tribute section, or stay distinct — deliberately not decided now, flagged
+  as a revisit rather than folded into this PR.
 - **Whether per-movie ratings should be weighted by rating count** — raised
   while adding the actor page's career-stats "Community Rating" (mean of each
   movie's own community average across the actor's filmography), which
