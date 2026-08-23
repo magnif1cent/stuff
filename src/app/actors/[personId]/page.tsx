@@ -1,5 +1,6 @@
 import { cache } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
@@ -278,6 +279,129 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
     };
   });
 
+  // Career stat block: every number here is derived from data already loaded
+  // above for the rest of the page (movies/fightScenes/ratingSummaries/
+  // memberSummaries) -- no additional queries. Ratings are an unweighted mean
+  // of each movie's/scene's own average (a movie with 2 ratings counts the
+  // same as one with 200) -- matches how every other per-movie stat in this
+  // app already works; revisit only as part of a broader rating-weighting
+  // pass, not ad hoc here (see DECISIONS.md).
+  const movieRatingAverages = movies
+    .map((m) => ratingSummaries.get(m.id)?.average)
+    .filter((a): a is number => a != null);
+  const avgCommunityRating =
+    movieRatingAverages.length > 0
+      ? movieRatingAverages.reduce((sum, a) => sum + a, 0) / movieRatingAverages.length
+      : null;
+
+  const fightSceneRatingAverages = fightScenes
+    .map((s) => memberSummaries.get(s.id)?.average)
+    .filter((a): a is number => a != null);
+  const avgFightSceneRating =
+    fightSceneRatingAverages.length > 0
+      ? fightSceneRatingAverages.reduce((sum, a) => sum + a, 0) / fightSceneRatingAverages.length
+      : null;
+
+  const releaseYears = movies
+    .map((m) => m.releaseDate?.getFullYear())
+    .filter((y): y is number => y != null);
+  const activeYearsLabel =
+    releaseYears.length > 0
+      ? (() => {
+          const minYear = Math.min(...releaseYears);
+          const maxYear = Math.max(...releaseYears);
+          return minYear === maxYear ? `${minYear}` : `${minYear}–${maxYear}`;
+        })()
+      : null;
+
+  // "Sparring partner" -- the co-star this actor shares the most distinct
+  // fight scenes with. Requires at least 2 shared scenes so one coincidental
+  // scene together doesn't crown a "partner" (same minimum-sample-size
+  // reasoning as TOP_RATED_MIN_RATINGS in src/lib/ratings.ts). Genuinely
+  // sparse -- most actor pairs never clear the threshold -- so most actors
+  // simply won't have this stat, same "no signal, no row" rule the rest of
+  // this block and the You Might Also Like rails already follow.
+  const MIN_SPARRING_SCENES = 2;
+  const sparringCounts = new Map<string, { name: string; count: number }>();
+  for (const scene of fightScenes) {
+    for (const castMember of scene.cast) {
+      if (castMember.personId === person.id) continue;
+      const existing = sparringCounts.get(castMember.personId);
+      sparringCounts.set(castMember.personId, {
+        name: castMember.person.name,
+        count: (existing?.count ?? 0) + 1,
+      });
+    }
+  }
+  let sparringPartner: { id: string; name: string; count: number } | null = null;
+  for (const [id, partner] of sparringCounts) {
+    if (partner.count < MIN_SPARRING_SCENES) continue;
+    if (!sparringPartner || partner.count > sparringPartner.count) {
+      sparringPartner = { id, ...partner };
+    }
+  }
+
+  // Same bordered dt/dd "Details" card treatment as the movie page's
+  // Studio/Country/etc. box (src/app/movies/[id]/page.tsx).
+  const careerStatsCard = (movies.length > 0 ||
+    fightScenes.length > 0 ||
+    avgCommunityRating != null ||
+    avgFightSceneRating != null ||
+    activeYearsLabel ||
+    sparringPartner) && (
+    <div className="rounded-md border border-neutral-800 bg-neutral-900 p-3">
+      <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-neutral-500">Details</h3>
+      <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-sm">
+        {movies.length > 0 && (
+          <>
+            <dt className="text-neutral-500">Filmography</dt>
+            <dd className="text-neutral-300">
+              {movies.length} movie{movies.length === 1 ? "" : "s"}
+            </dd>
+          </>
+        )}
+        {fightScenes.length > 0 && (
+          <>
+            <dt className="text-neutral-500">Fight Scenes</dt>
+            <dd className="text-neutral-300">{fightScenes.length}</dd>
+          </>
+        )}
+        {avgCommunityRating != null && (
+          <>
+            <dt className="text-neutral-500">Community Rating</dt>
+            <dd className="text-neutral-300">{avgCommunityRating.toFixed(1)} / 10</dd>
+          </>
+        )}
+        {avgFightSceneRating != null && (
+          <>
+            <dt className="text-neutral-500">Fight Scene Rating</dt>
+            <dd className="text-neutral-300">{avgFightSceneRating.toFixed(1)} / 10</dd>
+          </>
+        )}
+        {activeYearsLabel && (
+          <>
+            <dt className="text-neutral-500">Years Active</dt>
+            <dd className="text-neutral-300">{activeYearsLabel}</dd>
+          </>
+        )}
+        {sparringPartner && (
+          <>
+            <dt className="text-neutral-500">Sparring Partner</dt>
+            <dd className="text-neutral-300">
+              <Link
+                href={`/actors/${sparringPartner.id}`}
+                className="text-red-500 underline decoration-red-800 underline-offset-2 hover:text-red-400"
+              >
+                {sparringPartner.name}
+              </Link>{" "}
+              ({sparringPartner.count} scenes)
+            </dd>
+          </>
+        )}
+      </dl>
+    </div>
+  );
+
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-10">
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start">
@@ -312,6 +436,8 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
           )}
         </div>
       </div>
+
+      {careerStatsCard && <div className="mb-8 max-w-sm">{careerStatsCard}</div>}
 
       <SignatureVoteProvider
         personId={person.id}

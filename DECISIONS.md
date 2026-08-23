@@ -109,6 +109,7 @@ one.
 - [Trending carousel clip autoplay bounded to one lap, paused when the tab is hidden](#trending-carousel-clip-autoplay-bounded-to-one-lap-paused-when-the-tab-is-hidden)
 - [Trending carousel autoplay cap raised from 1 lap to 5](#trending-carousel-autoplay-cap-raised-from-1-lap-to-5)
 - [Actor "You Might Also Like" scores co-starring and shared fight-scene tags](#actor-you-might-also-like-scores-co-starring-and-shared-fight-scene-tags)
+- [Actor career stats: Details card treatment, "Sparring Partner" from existing fight-scene data](#actor-career-stats-details-card-treatment-sparring-partner-from-existing-fight-scene-data)
 
 **Deferred & Backlog**
 
@@ -2583,6 +2584,42 @@ version).
   `ActorRailTrack` directly inside the actor page's own padded container, same
   reasoning as why Known For uses `MovieRailTrack` and not the full `MovieRail`
   wrapper (see "Actor Filmography split into Known For + a dense list" above).
+
+### Actor career stats: Details card treatment, "Sparring Partner" from existing fight-scene data
+**PR #TBD.** Added a career-stats box just under the actor's name/avatar, using
+the same bordered dt/dd "Details" card as the movie page's Studio/Country box
+rather than the member profile's stat-tile-strip (`ProfileStatsStrip`) or a
+plain inline stat line — both were mocked up alongside it, but the Details card
+was picked as the closer visual match for a single dense summary block sitting
+this close to a page's header, and it comfortably holds six rows without
+wrapping the way tiles or an inline line would. Six stats, each independently
+omitted when it has nothing to show (same as the movie Details card): total
+approved movies, fight scenes tagged, average community rating across the
+filmography, average rating across their tagged fight scenes, years active
+(earliest–latest release year), and Sparring Partner.
+
+- **Every number comes from data already fetched for the rest of the page** —
+  no new queries. Ratings are an unweighted mean of each movie's/scene's own
+  average, same "no ratings-count weighting" approach used everywhere else in
+  the app (see the Deferred entry below — revisiting that is a whole-app
+  question, not something to special-case here).
+- **Sparring Partner — the co-star sharing the most distinct fight scenes with
+  this actor** — came out of exploring what else the new co-star signal
+  (already computed for the "You Might Also Like" rail above) could surface.
+  Computed entirely from `person.fightSceneAppearances[].fightScene.cast`,
+  already loaded for the Fight Scenes section, so it's free. Requires at least
+  2 shared scenes before it's shown — same minimum-sample-size reasoning as
+  `TOP_RATED_MIN_RATINGS` in `src/lib/ratings.ts` — since most actor pairs
+  never clear that bar; the row just doesn't render rather than crowning a
+  "partner" off one coincidental scene together or showing a placeholder.
+  Ties (more than one co-star at the same top count) go unresolved, same
+  precedent as `getSimilarMovies`.
+- **Movie-level co-starring (the "You Might Also Like" signal) was considered
+  and rejected** for this stat in favor of shared fight scenes specifically —
+  fight scenes are this site's flagship content type, and a movie-level
+  version would resolve for nearly every actor with 2+ movies, which is too
+  common to read as a distinctive "sparring partner," not sparse in a way that
+  singles out a real repeat pairing.
 
 ## Deferred & Backlog
 
