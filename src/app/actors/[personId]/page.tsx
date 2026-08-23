@@ -20,6 +20,8 @@ import { ActorFunFactsSection } from "@/components/actor-fun-facts-section";
 import { ActorTributesSection } from "@/components/actor-tributes-section";
 import { getPersonFavoriteCounts } from "@/lib/person-favorites";
 import { ActorFavoriteButton } from "@/components/actor-favorite-button";
+import { getPersonSignatureVoteSummary } from "@/lib/person-signature-votes";
+import { SignatureVoteProvider, SignatureSpotlight, SignatureVoteButton } from "@/components/actor-signature-vote";
 
 const getPerson = cache((personId: string) =>
   prisma.person.findUnique({
@@ -121,6 +123,15 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
       })
     : [];
 
+  const [signatureVoteSummary, mySignatureVote] = await Promise.all([
+    getPersonSignatureVoteSummary(personId),
+    session?.user
+      ? prisma.personSignatureVote.findUnique({
+          where: { userId_personId: { userId: session.user.id, personId } },
+        })
+      : null,
+  ]);
+
   const [funFacts, topTributes, tributesCount, myTribute, favoriteCountMap, myFavorite] = await Promise.all([
     getFunFactsForPerson(personId),
     getTopPersonTributes(personId, PERSON_TRIBUTES_PREVIEW_COUNT),
@@ -191,6 +202,26 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
     (a, b) => (favoriteCounts.get(b.id) ?? 0) - (favoriteCounts.get(a.id) ?? 0),
   );
 
+  const signatureMovies = movies.map((movie) => ({
+    id: movie.id,
+    title: movie.title,
+    year: movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : null,
+    posterPath: movie.posterPath,
+    posterOverrideUrl: movie.posterOverrideUrl,
+  }));
+  const signatureFightScenes = sortedFightScenes.map((scene) => ({
+    id: scene.id,
+    title: scene.title,
+    youtubeVideoId: scene.youtubeVideoId,
+    movieId: scene.movie.id,
+    movieTitle: scene.movie.title,
+  }));
+  const initialMovieVotes = Object.fromEntries(signatureVoteSummary.movieVotes);
+  const initialFightSceneVotes = Object.fromEntries(signatureVoteSummary.fightSceneVotes);
+  const initialMyVote = mySignatureVote
+    ? { movieId: mySignatureVote.movieId, fightSceneId: mySignatureVote.fightSceneId }
+    : null;
+
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-10">
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start">
@@ -226,53 +257,73 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
         </div>
       </div>
 
-      <h2 className="mb-4 text-xl font-bold text-white">Filmography</h2>
-      {movies.length === 0 ? (
-        <p className="mb-8 text-sm text-neutral-400">No movies in the catalog yet.</p>
-      ) : (
-        <div className="mb-10 flex flex-wrap gap-4">
-          {movies.map((movie) => {
-            const summary = ratingSummaries.get(movie.id);
-            return (
-              <MovieCard
-                key={movie.id}
-                movie={{ ...movie, communityAverage: summary?.average ?? null, communityCount: summary?.count ?? 0 }}
-              />
-            );
-          })}
-        </div>
-      )}
+      <SignatureVoteProvider
+        personId={person.id}
+        signedIn={!!session?.user}
+        movies={signatureMovies}
+        fightScenes={signatureFightScenes}
+        initialMovieVotes={initialMovieVotes}
+        initialFightSceneVotes={initialFightSceneVotes}
+        initialMyVote={initialMyVote}
+      >
+        <SignatureSpotlight />
 
-      <h2 className="mb-4 text-xl font-bold text-white">Fight Scenes</h2>
-      {sortedFightScenes.length === 0 ? (
-        <p className="text-sm text-neutral-400">No fight scenes tagged with this actor yet.</p>
-      ) : (
-        <div className="flex flex-wrap gap-4">
-          {sortedFightScenes.map((scene) => {
-            const memberSummary = memberSummaries.get(scene.id);
-            const editorSummary = editorSummaries.get(scene.id);
-            const initialLists = myMemberListItems.map((l) => {
-              const listRow = myMemberLists.find((row) => row.id === l.id)!;
-              return { ...l, hasItem: listRow.fightSceneEntries.some((e) => e.fightSceneId === scene.id) };
-            });
-            return (
-              <FightSceneResultCard
-                key={scene.id}
-                scene={{
-                  ...scene,
-                  memberRatingAverage: memberSummary?.average ?? null,
-                  memberRatingCount: memberSummary?.count ?? 0,
-                  editorRatingAverage: editorSummary?.average ?? null,
-                  editorRatingCount: editorSummary?.count ?? 0,
-                }}
-                initialLists={initialLists}
-                signedIn={!!session?.user}
-                initialFavorite={myFightSceneFavorites.some((e) => e.fightSceneId === scene.id)}
-              />
-            );
-          })}
-        </div>
-      )}
+        <h2 className="mb-4 text-xl font-bold text-white">Filmography</h2>
+        {movies.length === 0 ? (
+          <p className="mb-8 text-sm text-neutral-400">No movies in the catalog yet.</p>
+        ) : (
+          <div className="mb-10 flex flex-wrap gap-4">
+            {movies.map((movie) => {
+              const summary = ratingSummaries.get(movie.id);
+              return (
+                <div key={movie.id} className="relative">
+                  <MovieCard
+                    movie={{ ...movie, communityAverage: summary?.average ?? null, communityCount: summary?.count ?? 0 }}
+                  />
+                  <div className="absolute top-2 right-2">
+                    <SignatureVoteButton kind="movie" id={movie.id} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        <h2 className="mb-4 text-xl font-bold text-white">Fight Scenes</h2>
+        {sortedFightScenes.length === 0 ? (
+          <p className="text-sm text-neutral-400">No fight scenes tagged with this actor yet.</p>
+        ) : (
+          <div className="flex flex-wrap gap-4">
+            {sortedFightScenes.map((scene) => {
+              const memberSummary = memberSummaries.get(scene.id);
+              const editorSummary = editorSummaries.get(scene.id);
+              const initialLists = myMemberListItems.map((l) => {
+                const listRow = myMemberLists.find((row) => row.id === l.id)!;
+                return { ...l, hasItem: listRow.fightSceneEntries.some((e) => e.fightSceneId === scene.id) };
+              });
+              return (
+                <div key={scene.id} className="relative">
+                  <FightSceneResultCard
+                    scene={{
+                      ...scene,
+                      memberRatingAverage: memberSummary?.average ?? null,
+                      memberRatingCount: memberSummary?.count ?? 0,
+                      editorRatingAverage: editorSummary?.average ?? null,
+                      editorRatingCount: editorSummary?.count ?? 0,
+                    }}
+                    initialLists={initialLists}
+                    signedIn={!!session?.user}
+                    initialFavorite={myFightSceneFavorites.some((e) => e.fightSceneId === scene.id)}
+                  />
+                  <div className="absolute top-3 right-3">
+                    <SignatureVoteButton kind="fightScene" id={scene.id} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </SignatureVoteProvider>
 
       <ActorTributesSection
         personId={person.id}

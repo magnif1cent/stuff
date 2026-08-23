@@ -290,6 +290,8 @@ Below Fight Scenes, every actor page also carries two member-content sections le
 
 A lighter-weight **Favorite** rounds out the actor page — a one-tap heart toggle next to the actor's name (`PersonFavorite` in the schema), same pattern as favoriting a fight scene. Requires a verified email, same bar as the content features above. Favorite counts feed the **Most Beloved Actors** ranking on `/leaderboard` — see [Member Lists & Profiles](#member-lists--profiles).
 
+Members also crowd-vote on the actor's **Signature Role or Signature Fight Scene** — a single answer to "what should this actor be remembered for," cast as a 🏆 toggle directly on one of the movie posters in Filmography or one of the fight-scene cards below it (`PersonSignatureVote` in the schema — one vote per member per actor, for either a movie or a fight scene, never both). Whichever single credit has the most votes — across movies and fight scenes combined — appears as a spotlight banner near the top of the page, labeled **Signature Role** or **Signature Fight Scene** depending on which kind won, showing its vote count and share of all signature votes cast for that actor. The banner stays hidden until at least 5 signature votes have been cast for that actor, so it doesn't crown a "leader" off a couple of clicks. Voting toggles the same way as Favorite/Fun Facts (voting your current pick again retracts it; voting a different credit switches to it) and requires a verified email, same bar as the rest of the page.
+
 ## Reviews
 
 Shown alongside the cast list on every movie page: an admin review (unchanged from the original "Editorial Reviews" feature) plus one review per verified member, both in the same section.

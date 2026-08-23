@@ -2428,6 +2428,48 @@ originally scoped into this same PR but cut before merge — see Deferred & Back
   separate list-likes module; the leaderboard module is the natural home for "how is this
   ranking computed," not the per-feature lib.
 
+### Signature Vote: one combined leaderboard across movies and fight scenes, not two
+**PR #TBD.** Lets members crowd-vote on the single movie or fight scene that best
+represents an actor — "what should this actor be remembered for" — surfaced as a
+spotlight banner near the top of the actor page.
+
+- **`PersonSignatureVote` is one table with nullable `movieId`/`fightSceneId`, not two
+  separate vote tables (one per category).** This is the opposite shape from Person Fun
+  Facts/Tributes vs. their movie-page equivalents (kept as separate tables specifically
+  because those are two conceptually distinct feeds that never need comparing against each
+  other). Here the whole point is the reverse: the banner shows a single leader across
+  *both* categories combined, so every vote has to live in one place for a plain
+  `groupBy`/max to find it. `@@unique([userId, personId])` (not `..., category]`) is what
+  makes this one vote per member per actor rather than one per member per actor per
+  category — picking a fight scene silently replaces an existing movie pick, matching the
+  "single answer" framing rather than letting a member hold both a favorite role and a
+  favorite fight scene at once. Exactly one of the two columns being set is enforced only
+  in the vote route (`POST /api/actors/[personId]/signature-vote`), not a DB constraint —
+  this schema has no CHECK-constraint support (see the trigram-index comment on `Movie`
+  for the other functional-index gap already worked around the same way).
+- **No separate "cast your vote" list.** The vote toggle (a small 🏆-plus-count button) sits
+  directly on the existing Filmography poster / Fight Scene card for each credit, rather
+  than a second list duplicating every movie and fight scene already on the page —
+  considered and rejected specifically because some actors have hundreds of film credits,
+  and a second full-length list for voting wouldn't scale any better than a third copy of
+  the filmography would. Net new page real estate is just the one banner row; voting
+  piggybacks on grids that already handle "a lot of items."
+- **Banner hidden below 5 combined votes for that actor**, computed client-side in
+  `SignatureVoteProvider`/`SignatureSpotlight` (`src/components/actor-signature-vote.tsx`)
+  rather than server-side — avoids crowning a "Signature" answer, which reads as a
+  confident, singular statement, off a couple of early clicks that could flip on the very
+  next vote. No "too close to call" state beyond that; the vote-share percentage shown
+  next to the count is enough for a viewer to judge how contested it is without more
+  machinery.
+- **Deliberately doesn't reuse or fold into `getMostBelovedActors`/movie ratings.** A
+  highest-rated movie or most-favorited fight scene answers "how good is this," not
+  "which of this actor's own roles is why you know them" — a movie can be an actor's
+  best-reviewed credit for reasons that have nothing to do with their own performance in
+  it (a strong ensemble, a well-regarded director). In practice the fight-scene side will
+  often echo the existing favorite-count sort on that same section (fight scenes already
+  sort by favorite count), so the vote's real value is mostly on the movie side, where no
+  ranking existed before, and in making the actor-specific association explicit.
+
 ## Deferred & Backlog
 
 - **Editor's Spotlight (admin-curated per-actor blurb/badge)** — scoped into the same
