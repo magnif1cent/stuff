@@ -348,8 +348,7 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
     fightScenes.length > 0 ||
     avgCommunityRating != null ||
     avgFightSceneRating != null ||
-    activeYearsLabel ||
-    sparringPartner) && (
+    activeYearsLabel) && (
     <div className="max-w-sm rounded-md border border-neutral-800 border-l-4 border-l-yellow-500 bg-neutral-900 p-4">
       <span className="inline-flex w-fit items-center gap-1 rounded-full border border-yellow-500/40 bg-yellow-500/10 px-2.5 py-0.5 text-[11px] font-bold tracking-wide text-yellow-500 uppercase">
         🏆 Career Highlights
@@ -387,17 +386,26 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
             <p className="text-[11px] text-neutral-500">Years Active</p>
           </div>
         )}
-        {sparringPartner && (
-          <div>
-            <p className="truncate text-lg font-bold text-white">
-              <Link href={`/actors/${sparringPartner.id}`} className="hover:text-yellow-500">
-                {sparringPartner.name}
-              </Link>
-            </p>
-            <p className="text-[11px] text-neutral-500">Sparring Partner · {sparringPartner.count} scenes</p>
-          </div>
-        )}
       </div>
+    </div>
+  );
+
+  // A relational fact, not a computed/voted "highlight" -- kept out of the
+  // Career Highlights grid (mixing a linked name in with quantitative stats
+  // was a category error) and out of its gold Spotlight styling (nothing
+  // here was earned by a vote). Plain neutral card, same footing as the
+  // movie page's Details box. Small today on purpose: this is the seed of a
+  // possible future collaboration/pairings section (see DECISIONS.md), not
+  // a final design for one.
+  const sparringPartnerCard = sparringPartner && (
+    <div className="w-56 shrink-0 rounded-md border border-neutral-800 bg-neutral-900 p-4">
+      <h3 className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">Sparring Partner</h3>
+      <p className="mt-2 truncate text-lg font-bold text-white">
+        <Link href={`/actors/${sparringPartner.id}`} className="hover:text-red-500">
+          {sparringPartner.name}
+        </Link>
+      </p>
+      <p className="text-xs text-neutral-500">{sparringPartner.count} shared fight scenes</p>
     </div>
   );
 
@@ -420,9 +428,10 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
         </div>
       </div>
 
-      {(careerStatsCard || bio) && (
+      {(careerStatsCard || sparringPartnerCard || bio) && (
         <div className="mb-8 flex flex-col gap-6 sm:flex-row sm:items-start">
           {careerStatsCard && <div className="sm:w-72 sm:shrink-0">{careerStatsCard}</div>}
+          {sparringPartnerCard}
           {bio && (
             <div className="min-w-0 flex-1">
               {(bio.birthday || bio.place_of_birth) && (

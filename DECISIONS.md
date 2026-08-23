@@ -2574,11 +2574,13 @@ like a tribute to the actor, not just louder — so it ships styled after the
 existing `SignatureSpotlight` banner instead (gold `border-l-4 border-l-yellow-500`
 accent stripe, a "🏆 Career Highlights" kicker pill, bold two-column stat
 values), reusing a pattern this page already teaches visitors to read as an
-honor rather than inventing a new one. Six stats, each independently omitted
-when it has nothing to show (same "no signal, no row" rule the Details-card
-version had): total approved movies, fight scenes tagged, average community
-rating across the filmography, average rating across their tagged fight
-scenes, years active (earliest–latest release year), and Sparring Partner.
+honor rather than inventing a new one. Five stats in the grid, each
+independently omitted when it has nothing to show (same "no signal, no row"
+rule the Details-card version had): total approved movies, fight scenes
+tagged, average community rating across the filmography, average rating
+across their tagged fight scenes, and years active (earliest–latest release
+year). Sparring Partner started as a sixth grid cell but was pulled back out
+into its own card shortly after shipping — see the bullet below.
 
 - **Every number comes from data already fetched for the rest of the page** —
   no new queries. Ratings are an unweighted mean of each movie's/scene's own
@@ -2616,6 +2618,20 @@ scenes, years active (earliest–latest release year), and Sparring Partner.
   every actor with 2+ movies, which is too common to read as a distinctive
   "sparring partner," not sparse in a way that singles out a real repeat
   pairing.
+- **Sparring Partner moved out of the Career Highlights grid into its own
+  small card** (still in the same top row, to Career Highlights' right,
+  before the bio) shortly after both shipped, following a design review
+  that flagged mixing it into the stats grid as a category error: the other
+  five values are quantitative (counts, an average, a year range) and
+  Sparring Partner is a linked name — a relational fact, not a stat. The new
+  card deliberately does **not** reuse the gold Spotlight styling — nothing
+  about it was voted on or earned, it's a computed fact, so it gets the same
+  plain-bordered treatment as the movie page's Details box instead. Framed
+  explicitly as a small, likely-temporary home for this data: the real
+  destination is probably the "expand actor-to-actor collaboration data"
+  idea already in Deferred & Backlog below, once that has an actual design —
+  this card exists now because the data was worth keeping visible in the
+  meantime, not because this is that section.
 - **Placement went through one more round after the styling landed**: tried
   living in the same flex row as the avatar/name (pinned to the right,
   desktop-only), then settled on its current spot instead — its own row
