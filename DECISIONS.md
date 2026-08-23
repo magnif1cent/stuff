@@ -2523,6 +2523,41 @@ second, voting-only list duplicating the grid, which is what that earlier bullet
   `ActorFunFactsSection` already established, not a new interaction to invent, just extended
   to a second section.
 
+### Signature Vote split into two independent picks, not one combined leaderboard
+**PR #TBD.** Reverses the "one table, single combined leader" decision at the top of the
+Signature Vote entry above, after review on the PR's preview deployment: voting a fight scene
+was silently replacing an already-cast movie vote (the two categories competed for one shared
+"answer" slot), which read as the site discarding a member's pick rather than recording a
+second one — confusing enough in practice that the combined framing wasn't worth keeping,
+even though it matched the literal "what should this actor be remembered for" phrasing the
+feature was scoped from.
+
+- **No schema change.** `PersonSignatureVote` still has exactly one row per
+  `[userId, personId]`, with nullable `movieId`/`fightSceneId` — only the *meaning* of those
+  two columns changed, from mutually exclusive alternatives (exactly one set) to independent
+  slots (either, both, or — by deleting the row — neither can be set). The migration that
+  shipped with the original decision needed no follow-up migration, unlike the Editor's
+  Spotlight cut earlier in this log, because the column shape itself was never wrong, only the
+  application logic constraining it.
+- **The vote route still validates exactly one of `movieId`/`fightSceneId` per request** —
+  that's unchanged and still correct, since a single click always targets one specific card.
+  What changed is what happens to the *other* slot on the stored row: it used to be cleared
+  every time; now it's left untouched, so a member's fight-scene pick survives a later movie
+  vote and vice versa.
+- **`SignatureSpotlight` now renders up to two banners side by side** (`sm:flex-1` each,
+  stacking on narrow screens), each computed by finding the leader within its own category and
+  checking that category's own vote total against the 5-vote minimum — not a shared combined
+  total. A "vote share" percentage on each banner is now a share of that category's votes only,
+  not blended with the other category's, which is a more honest number than the combined
+  version was (a movie's "72% of all signature votes" previously included fight-scene votes it
+  had nothing to do with).
+- **Still not two separate database tables.** The alternative considered here — going back to
+  splitting `PersonSignatureVote` into `PersonSignatureRoleVote`/`PersonSignatureFightSceneVote`
+  — was rejected for the same reason the single-table shape was chosen originally: no
+  cross-category comparison is needed anymore, true, but the two vote kinds still share every
+  other property (same actor scope, same toggle/retract mechanics, same email-verification
+  gate), so two tables would just be the one-row-two-nullable-columns shape typed out twice.
+
 ## Deferred & Backlog
 
 - **Toggle to a compact table view for the Filmography list** — a full IMDb-style

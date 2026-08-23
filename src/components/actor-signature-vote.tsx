@@ -123,71 +123,70 @@ export function SignatureVoteProvider({
   );
 }
 
-// The crowd-sourced answer to "what should this actor be remembered for" --
-// whichever single movie or fight scene has the most signature votes,
-// combined across both categories (see the PersonSignatureVote model
-// comment in schema.prisma for why that combination is the point).
+function pickLeader(votes: Record<string, number>) {
+  let best: { id: string; votes: number } | null = null;
+  let total = 0;
+  for (const [id, v] of Object.entries(votes)) {
+    total += v;
+    if (!best || v > best.votes) best = { id, votes: v };
+  }
+  if (!best || total < SIGNATURE_VOTE_MINIMUM) return null;
+  return { ...best, total };
+}
+
+// Two independent crowd-sourced answers to "what should this actor be
+// remembered for" -- Signature Role (the movie with the most votes) and
+// Signature Fight Scene (the fight scene with the most votes), each judged
+// only against others in its own category, not against each other. Shown
+// side by side when both clear the vote minimum; either can appear alone.
 export function SignatureSpotlight() {
   const { movieVotes, fightSceneVotes, movies, fightScenes } = useSignatureVote();
 
-  const leader = useMemo(() => {
-    let best: { kind: "movie" | "fightScene"; id: string; votes: number } | null = null;
-    let total = 0;
-    for (const [id, votes] of Object.entries(movieVotes)) {
-      total += votes;
-      if (!best || votes > best.votes) best = { kind: "movie", id, votes };
-    }
-    for (const [id, votes] of Object.entries(fightSceneVotes)) {
-      total += votes;
-      if (!best || votes > best.votes) best = { kind: "fightScene", id, votes };
-    }
-    if (!best || total < SIGNATURE_VOTE_MINIMUM) return null;
-    return { ...best, total };
-  }, [movieVotes, fightSceneVotes]);
+  const movieLeader = useMemo(() => pickLeader(movieVotes), [movieVotes]);
+  const fightSceneLeader = useMemo(() => pickLeader(fightSceneVotes), [fightSceneVotes]);
 
-  if (!leader) return null;
+  const movie = movieLeader ? movies.find((m) => m.id === movieLeader.id) : undefined;
+  const scene = fightSceneLeader ? fightScenes.find((s) => s.id === fightSceneLeader.id) : undefined;
 
-  const share = Math.round((leader.votes / leader.total) * 100);
+  if (!movie && !scene) return null;
 
-  if (leader.kind === "movie") {
-    const movie = movies.find((m) => m.id === leader.id);
-    if (!movie) return null;
-    const posterUrl = resolvePosterUrl(movie, "w342");
-    return (
-      <SpotlightCard
-        href={`/movies/${movie.id}`}
-        kicker="Signature Role"
-        title={movie.title}
-        meta={movie.year ? `${movie.year}` : undefined}
-        votes={leader.votes}
-        share={share}
-        imageClassName="aspect-2/3 w-16"
-        image={
-          posterUrl ? (
-            <Image src={posterUrl} alt={movie.title} fill sizes="64px" className="object-cover" />
-          ) : (
-            <div className="flex h-full items-center justify-center px-1 text-center text-[10px] text-neutral-500">
-              {movie.title}
-            </div>
-          )
-        }
-      />
-    );
-  }
-
-  const scene = fightScenes.find((s) => s.id === leader.id);
-  if (!scene) return null;
   return (
-    <SpotlightCard
-      href={`/movies/${scene.movieId}/fight-scenes/${scene.id}`}
-      kicker="Signature Fight Scene"
-      title={scene.title}
-      meta={`from ${scene.movieTitle}`}
-      votes={leader.votes}
-      share={share}
-      imageClassName="aspect-video w-40"
-      image={<YoutubeThumbnailImage videoId={scene.youtubeVideoId} title={scene.title} />}
-    />
+    <div className="mb-10 flex flex-col gap-4 sm:flex-row">
+      {movie && movieLeader && (
+        <SpotlightCard
+          className="sm:flex-1"
+          href={`/movies/${movie.id}`}
+          kicker="Signature Role"
+          title={movie.title}
+          meta={movie.year ? `${movie.year}` : undefined}
+          votes={movieLeader.votes}
+          share={Math.round((movieLeader.votes / movieLeader.total) * 100)}
+          imageClassName="aspect-2/3 w-16"
+          image={
+            resolvePosterUrl(movie, "w342") ? (
+              <Image src={resolvePosterUrl(movie, "w342")!} alt={movie.title} fill sizes="64px" className="object-cover" />
+            ) : (
+              <div className="flex h-full items-center justify-center px-1 text-center text-[10px] text-neutral-500">
+                {movie.title}
+              </div>
+            )
+          }
+        />
+      )}
+      {scene && fightSceneLeader && (
+        <SpotlightCard
+          className="sm:flex-1"
+          href={`/movies/${scene.movieId}/fight-scenes/${scene.id}`}
+          kicker="Signature Fight Scene"
+          title={scene.title}
+          meta={`from ${scene.movieTitle}`}
+          votes={fightSceneLeader.votes}
+          share={Math.round((fightSceneLeader.votes / fightSceneLeader.total) * 100)}
+          imageClassName="aspect-video w-40"
+          image={<YoutubeThumbnailImage videoId={scene.youtubeVideoId} title={scene.title} />}
+        />
+      )}
+    </div>
   );
 }
 
@@ -200,6 +199,7 @@ function SpotlightCard({
   share,
   image,
   imageClassName,
+  className = "",
 }: {
   href: string;
   kicker: string;
@@ -209,9 +209,12 @@ function SpotlightCard({
   share: number;
   image: ReactNode;
   imageClassName: string;
+  className?: string;
 }) {
   return (
-    <div className="mb-10 flex gap-4 rounded-md border border-neutral-800 border-l-4 border-l-yellow-500 bg-neutral-900 p-4">
+    <div
+      className={`flex gap-4 rounded-md border border-neutral-800 border-l-4 border-l-yellow-500 bg-neutral-900 p-4 ${className}`}
+    >
       <Link href={href} className={`relative shrink-0 overflow-hidden rounded-md bg-neutral-950 ${imageClassName}`}>
         {image}
       </Link>
@@ -237,8 +240,9 @@ function SpotlightCard({
 }
 
 // Small corner toggle rendered on top of each movie/fight-scene card
-// already on the page -- casts (or retracts, or switches) this member's one
-// signature vote for the actor without a separate list of every credit to
+// already on the page -- casts or retracts this member's pick for that
+// category (movie picks and fight scene picks are independent, see
+// SignatureSpotlight above) without a separate list of every credit to
 // vote on, which wouldn't scale for an actor with a long filmography.
 export function SignatureVoteButton({ kind, id }: { kind: "movie" | "fightScene"; id: string }) {
   const { movieVotes, fightSceneVotes, myVote, pending, vote } = useSignatureVote();

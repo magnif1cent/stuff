@@ -39,37 +39,49 @@ export async function POST(request: Request, { params }: { params: Promise<{ per
     where: { userId_personId: { userId: session.user.id, personId } },
   });
 
-  const isSameChoice =
-    !!existing && (movieId ? existing.movieId === movieId : existing.fightSceneId === fightSceneId);
+  // movieId and fightSceneId are independent picks on the same row -- a
+  // member can hold a Signature Role pick and a Signature Fight Scene pick
+  // for the same actor at once. This request only ever touches the one
+  // slot it named, leaving whatever's in the other slot untouched.
+  const targetField: "movieId" | "fightSceneId" = movieId ? "movieId" : "fightSceneId";
+  const targetValue: string = movieId ?? fightSceneId;
+  const isSameChoice = existing?.[targetField] === targetValue;
 
-  let myVote: { movieId: string | null; fightSceneId: string | null } | null;
-  if (!existing) {
-    await prisma.personSignatureVote.create({
-      data: { userId: session.user.id, personId, movieId: movieId ?? null, fightSceneId: fightSceneId ?? null },
-    });
-    myVote = { movieId: movieId ?? null, fightSceneId: fightSceneId ?? null };
-  } else if (isSameChoice) {
+  const nextMovieId = targetField === "movieId" ? (isSameChoice ? null : targetValue) : (existing?.movieId ?? null);
+  const nextFightSceneId =
+    targetField === "fightSceneId" ? (isSameChoice ? null : targetValue) : (existing?.fightSceneId ?? null);
+
+  let myVote: { movieId: string | null; fightSceneId: string | null };
+  if (nextMovieId === null && nextFightSceneId === null) {
     // Voting for your current pick again retracts it, same toggle behavior
-    // as Fun Fact / Tribute / member review voting.
-    await prisma.personSignatureVote.delete({ where: { id: existing.id } });
-    myVote = null;
+    // as Fun Fact / Tribute / member review voting. Once both slots are
+    // empty the row itself serves no purpose.
+    if (existing) await prisma.personSignatureVote.delete({ where: { id: existing.id } });
+    myVote = { movieId: null, fightSceneId: null };
+  } else if (!existing) {
+    await prisma.personSignatureVote.create({
+      data: { userId: session.user.id, personId, movieId: nextMovieId, fightSceneId: nextFightSceneId },
+    });
+    myVote = { movieId: nextMovieId, fightSceneId: nextFightSceneId };
   } else {
     await prisma.personSignatureVote.update({
       where: { id: existing.id },
-      data: { movieId: movieId ?? null, fightSceneId: fightSceneId ?? null },
+      data: { movieId: nextMovieId, fightSceneId: nextFightSceneId },
     });
-    myVote = { movieId: movieId ?? null, fightSceneId: fightSceneId ?? null };
+    myVote = { movieId: nextMovieId, fightSceneId: nextFightSceneId };
   }
 
-  // Only the choices that could have changed count need a fresh tally: the
-  // previous pick (now down one, if it existed and differs from the new
-  // one) and the new pick (now up one, if any).
+  // Only the one slot this request targeted can have changed -- the other
+  // slot was left alone above, so its tally doesn't need refetching.
   const touchedMovieIds = new Set<string>();
   const touchedFightSceneIds = new Set<string>();
-  if (existing?.movieId) touchedMovieIds.add(existing.movieId);
-  if (existing?.fightSceneId) touchedFightSceneIds.add(existing.fightSceneId);
-  if (movieId) touchedMovieIds.add(movieId);
-  if (fightSceneId) touchedFightSceneIds.add(fightSceneId);
+  if (targetField === "movieId") {
+    if (existing?.movieId) touchedMovieIds.add(existing.movieId);
+    if (!isSameChoice) touchedMovieIds.add(targetValue);
+  } else {
+    if (existing?.fightSceneId) touchedFightSceneIds.add(existing.fightSceneId);
+    if (!isSameChoice) touchedFightSceneIds.add(targetValue);
+  }
 
   const [movieCounts, fightSceneCounts] = await Promise.all([
     Promise.all(
