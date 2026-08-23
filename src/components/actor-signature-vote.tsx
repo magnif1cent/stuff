@@ -7,10 +7,11 @@ import Link from "next/link";
 import { resolvePosterUrl } from "@/lib/tmdb";
 import { YoutubeThumbnailImage } from "@/components/fight-scene-thumbnail";
 
-// Below this many combined votes, no leader is shown -- avoids crowning a
-// "Signature" answer off a couple of clicks, one that could flip on the
-// very next vote cast.
-const SIGNATURE_VOTE_MINIMUM = 5;
+// TEMPORARY, for preview review only: dropped from 5 to 1 so a single vote
+// is enough to see the banner on a preview deployment with no real vote
+// history yet. Revert to 5 before this merges -- see DECISIONS.md/README
+// for why 5 is the real value.
+const SIGNATURE_VOTE_MINIMUM = 1;
 
 export interface SignatureMovieOption {
   id: string;
