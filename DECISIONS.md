@@ -56,6 +56,7 @@ one.
 - [Weekly Trending Carousel's cron had never run — `CRON_SECRET` was never configured in Production](#weekly-trending-carousels-cron-had-never-run-cron_secret-was-never-configured-in-production)
 - [Preview database made static across PRs, trading back the migration-collision risk to stop re-seeding every branch](#preview-database-made-static-across-prs-trading-back-the-migration-collision-risk-to-stop-re-seeding-every-branch)
 - [`images.imageSizes` narrowed to match actual usage, after the free tier's Image Optimization quota was hit](#imagesimagesizes-narrowed-to-match-actual-usage-after-the-free-tiers-image-optimization-quota-was-hit)
+- [TMDB-hosted images marked `unoptimized`, removing them from the Image Optimization quota entirely](#tmdb-hosted-images-marked-unoptimized-removing-them-from-the-image-optimization-quota-entirely)
 
 **Feature Decisions**
 
@@ -991,6 +992,60 @@ it again.
   real, if small, user-facing tradeoffs. Left as backlog if the quota
   becomes a recurring problem after this change; upgrading to Vercel Pro is
   the other lever if it does.
+- **Update, same day**: this reset the cache keys for every image (the
+  bucket widths changed), so live traffic re-triggered a full-catalog
+  re-transformation the moment it deployed and re-exhausted the
+  just-reset quota within hours — see the follow-up entry below for the
+  actual fix and the reasoning that superseded this one.
+
+### TMDB-hosted images marked `unoptimized`, removing them from the Image Optimization quota entirely
+Follow-up to the entry above: narrowing `imageSizes` turned out not to be
+a meaningful reduction (see that entry's update) and didn't address the
+underlying scaling problem — transformation usage was still tied to
+catalog size and traffic. This is the structural fix.
+
+- **Key finding**: `src/lib/tmdb.ts`'s `tmdbImageUrl`/`resolvePosterUrl`
+  already request a specific pre-sized TMDB CDN bucket (`w200`, `w342`,
+  etc.) — TMDB serves these for free, outside Vercel's quota entirely.
+  Vercel's optimizer was redundantly resizing an image TMDB had already
+  sized. Only admin-uploaded poster overrides (Vercel Blob,
+  `posterOverrideUrl`) lack this and still benefit from real optimization.
+- **Fix applied**: every `<Image>` sourced from `image.tmdb.org` now sets
+  `unoptimized` (added `isTmdbUrl()` in `tmdb.ts` to detect this per-URL,
+  since `resolvePosterUrl` can return either a TMDB or a Blob URL; call
+  sites that only ever use `tmdbImageUrl` directly, with no override path,
+  set it unconditionally). Confirmed from Next 16.3's own source
+  (`get-img-props.js`) that `unoptimized` skips the optimizer route
+  entirely for external URLs and has no conflict with `fill`/`sizes`.
+- **Backdrops changed from `"original"` to `"w1280"`**: the two
+  `sizes="100vw"` backdrop images (`hero-carousel.tsx`,
+  `movies/[id]/page.tsx`) requested TMDB's unbounded `original` size:
+  raw source images up to 3840×2160. Without Vercel resizing that in
+  front of the browser, `unoptimized` alone would have made backdrops
+  *worse*, not better. `w1280` is a real, documented TMDB `backdrop_sizes`
+  bucket, bounded and reasonable even for large viewports.
+- **Accepted tradeoff**: `unoptimized` images skip Next's automatic
+  AVIF/WebP conversion, so TMDB's plain JPEGs are served as-is — modestly
+  heavier than the optimized version. Traded deliberately for removing
+  the majority of the site's image volume from the quota permanently,
+  independent of catalog growth.
+- **Not verified**: what fraction of movies actually carry a
+  `posterOverrideUrl` (no production database access in the session that
+  made this change) — doesn't affect correctness, only how large the
+  reduction turns out to be. A live TMDB request couldn't be tested
+  directly either (this session's network egress blocks `image.tmdb.org`);
+  the existing `w200`/`w342`/`w500` size codes were kept as-is rather than
+  retuned, since the app's own production history is the proof they
+  already work.
+- **Follow-up, same day**: `recommended-badge.tsx`'s admin badge icon —
+  the one `<Image>` in the app sourced from a local `public/` file, not
+  TMDB or Blob — was missed by this entry's scope (it isn't a TMDB URL, so
+  `isTmdbUrl()` doesn't apply). Any `next/image` usage, local or remote,
+  goes through the same Vercel optimizer and the same team-wide quota
+  unless marked `unoptimized`, so this one small static asset was still
+  exposed to the same 402 failures whenever the quota was exhausted. Since
+  it's a tiny, fixed-size, developer-controlled file that never changes,
+  Vercel's resizing wasn't buying anything — marked `unoptimized` too.
 
 ## Feature Decisions
 

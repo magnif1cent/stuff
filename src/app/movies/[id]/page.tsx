@@ -6,7 +6,7 @@ import type { Metadata } from "next";
 import type { Session } from "next-auth";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { tmdbImageUrl, resolvePosterUrl } from "@/lib/tmdb";
+import { tmdbImageUrl, resolvePosterUrl, isTmdbUrl } from "@/lib/tmdb";
 import { truncate } from "@/lib/text";
 import {
   getCommunityRatingSummary,
@@ -285,7 +285,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
       : [],
   ]);
 
-  const backdropUrl = tmdbImageUrl(movie.backdropPath, "original");
+  const backdropUrl = tmdbImageUrl(movie.backdropPath, "w1280");
   const posterUrl = resolvePosterUrl(movie, "w342");
   const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : null;
   const isFavorite = myListEntries.some((e) => e.listType === "FAVORITE");
@@ -464,7 +464,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
     <div className="flex flex-1 flex-col">
       <div className="relative h-64 w-full sm:h-80">
         {backdropUrl ? (
-          <Image src={backdropUrl} alt="" fill priority sizes="100vw" className="object-cover" />
+          <Image src={backdropUrl} alt="" fill priority unoptimized sizes="100vw" className="object-cover" />
         ) : (
           <div className="h-full w-full bg-neutral-900" />
         )}
@@ -475,7 +475,14 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
         <div className="w-40 shrink-0 sm:w-56">
           <div className="relative aspect-2/3 overflow-hidden rounded-md bg-neutral-800 shadow-xl">
             {posterUrl ? (
-              <Image src={posterUrl} alt={movie.title} fill sizes="224px" className="object-cover" />
+              <Image
+                src={posterUrl}
+                alt={movie.title}
+                fill
+                unoptimized={isTmdbUrl(posterUrl)}
+                sizes="224px"
+                className="object-cover"
+              />
             ) : (
               <div className="flex h-full items-center justify-center px-2 text-center text-xs text-neutral-500">
                 {movie.title}
@@ -642,6 +649,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
                         src={tmdbImageUrl(credit.person.profilePath, "w200") ?? ""}
                         alt={credit.person.name}
                         fill
+                        unoptimized
                         sizes="112px"
                         className="object-cover"
                       />

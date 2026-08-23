@@ -95,6 +95,7 @@ export default async function LeaderboardPage() {
                       src={tmdbImageUrl(actor.profilePath, "w200") ?? ""}
                       alt={actor.name}
                       fill
+                      unoptimized
                       sizes="36px"
                       className="object-cover"
                     />

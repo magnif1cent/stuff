@@ -137,7 +137,7 @@ export function SearchBar({ initialQuery = "" }: { initialQuery?: string }) {
                 >
                   <div className="relative h-10 w-7 shrink-0 overflow-hidden rounded-sm bg-neutral-800">
                     {posterUrl && (
-                      <Image src={posterUrl} alt="" fill sizes="28px" className="object-cover" />
+                      <Image src={posterUrl} alt="" fill unoptimized sizes="28px" className="object-cover" />
                     )}
                   </div>
                   <span className="truncate text-neutral-100">

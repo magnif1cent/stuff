@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { resolvePosterUrl } from "@/lib/tmdb";
+import { resolvePosterUrl, isTmdbUrl } from "@/lib/tmdb";
 import { RecommendedBadges } from "@/components/recommended-badge";
 import type { MovieRecommender } from "@/lib/movie-recommendations";
 import type { Movie } from "@/generated/prisma/client";
@@ -36,6 +36,7 @@ export function MovieCard({ movie, size = "default" }: { movie: MovieCardData; s
             src={posterUrl}
             alt={movie.title}
             fill
+            unoptimized={isTmdbUrl(posterUrl)}
             sizes={sizes}
             className="object-cover transition group-hover:scale-105"
           />

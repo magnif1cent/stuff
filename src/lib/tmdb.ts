@@ -26,7 +26,10 @@ async function tmdbFetch<T>(path: string, params: Record<string, string> = {}): 
   return res.json() as Promise<T>;
 }
 
-export function tmdbImageUrl(path: string | null | undefined, size: "w200" | "w342" | "w500" | "w780" | "original" = "w500") {
+export function tmdbImageUrl(
+  path: string | null | undefined,
+  size: "w200" | "w342" | "w500" | "w780" | "w1280" | "original" = "w500",
+) {
   if (!path) return null;
   return `${TMDB_IMAGE_BASE_URL}/${size}${path}`;
 }
@@ -34,9 +37,19 @@ export function tmdbImageUrl(path: string | null | undefined, size: "w200" | "w3
 // An admin-uploaded poster always wins over whatever TMDB happens to have.
 export function resolvePosterUrl(
   movie: { posterPath: string | null; posterOverrideUrl: string | null },
-  size: "w200" | "w342" | "w500" | "w780" | "original" = "w500",
+  size: "w200" | "w342" | "w500" | "w780" | "w1280" | "original" = "w500",
 ) {
   return movie.posterOverrideUrl || tmdbImageUrl(movie.posterPath, size);
+}
+
+// TMDB's own CDN already serves pre-sized image buckets for free, outside
+// Vercel's Image Optimization quota — so TMDB-hosted images are marked
+// `unoptimized` at their call sites to skip Vercel's transformation
+// pipeline entirely. Admin-uploaded posters (Vercel Blob) don't have that,
+// so they still need real optimization; this tells call sites which case
+// they're in.
+export function isTmdbUrl(url: string | null | undefined): boolean {
+  return !!url && url.startsWith(TMDB_IMAGE_BASE_URL);
 }
 
 export interface TmdbMovieSearchResult {
