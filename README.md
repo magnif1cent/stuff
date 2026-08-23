@@ -296,6 +296,8 @@ Members also crowd-vote on the actor's **Signature Role** and **Signature Fight 
 
 Known For's popularity ranking and the Signature Vote banners are deliberately independent signals and won't always agree — Known For reflects TMDB's general popularity data, while Signature Vote is this site's own members answering "what defines this actor," which can land on a different, less mainstream credit.
 
+Below Fight Scenes, actor pages also show their own **You Might Also Like** rail of up to 8 similar actors — the same idea as the movie page's [You Might Also Like](#you-might-also-like) rail, but scored on actor-to-actor signals: co-starring in the same catalog movie (heavier weight) and sharing a fight-scene tag (lighter weight). Scored and ranked in `getSimilarActors` (`src/lib/similar-actors.ts`); an actor sharing no signal with anyone else in the catalog gets no rail at all, same rule as the movie version.
+
 ## Reviews
 
 Shown alongside the cast list on every movie page: an admin review (unchanged from the original "Editorial Reviews" feature) plus one review per verified member, both in the same section.
@@ -312,6 +314,8 @@ The homepage's **Recent Reviews by Editors** section is unaffected by this — i
 Every movie page shows a "You Might Also Like" rail (same scrollable card-rail component the homepage uses) of up to 8 similar movies from this catalog — deliberately **not** TMDB's own `/movie/{id}/recommendations` or `/similar` endpoints, which reflect TMDB's general-audience similarity rather than this catalog's data or genre focus.
 
 Similarity is a weighted blend of three signals, all sourced from data already in the catalog: shared genres (lightest weight — in a catalog this genre-homogeneous, almost every movie shares one), shared cast or director (heavier — a specific, personal signal), and same TMDB franchise/collection (heaviest — two entries in the same series are the strongest possible "you'll like this too" signal; see [TMDB Import](#tmdb-import) below). Candidates are scored and ranked in `getSimilarMovies` (`src/lib/similar-movies.ts`); a movie with none of these three signals in common with anything else in the catalog simply doesn't get a rail at all, rather than showing an empty section.
+
+Actor pages carry the same idea, scored on different signals — see [Actor Pages](#actor-pages) above.
 
 ## Admin Recommendations
 

@@ -108,6 +108,7 @@ one.
 - [Social platform icons for the website/social link field](#social-platform-icons-for-the-websitesocial-link-field)
 - [Trending carousel clip autoplay bounded to one lap, paused when the tab is hidden](#trending-carousel-clip-autoplay-bounded-to-one-lap-paused-when-the-tab-is-hidden)
 - [Trending carousel autoplay cap raised from 1 lap to 5](#trending-carousel-autoplay-cap-raised-from-1-lap-to-5)
+- [Actor "You Might Also Like" scores co-starring and shared fight-scene tags](#actor-you-might-also-like-scores-co-starring-and-shared-fight-scene-tags)
 
 **Deferred & Backlog**
 
@@ -2558,8 +2559,41 @@ feature was scoped from.
   other property (same actor scope, same toggle/retract mechanics, same email-verification
   gate), so two tables would just be the one-row-two-nullable-columns shape typed out twice.
 
+### Actor "You Might Also Like" scores co-starring and shared fight-scene tags
+**PR #TBD.** Actor-page counterpart to the movie page's "You Might Also Like" (see
+that entry above) — same in-memory blend-signals-then-score approach, adapted to
+the two person-level signals this catalog actually has: co-starring in the same
+`APPROVED` movie (+3 per shared movie) and sharing a fight-scene tag (+2 per
+shared tag). Built as `getSimilarActors` (`src/lib/similar-actors.ts`), modeled
+directly on `getSimilarMovies` — candidate pool fetched via one `OR` query, then
+scored/sorted in JS, top 8, no rail at all for an actor with zero shared signals
+against the rest of the catalog (same "no signal, no rail" rule as the movie
+version).
+
+- **Co-starring weighted heavier than a shared tag**, mirroring the movie
+  version's collection-over-genre weighting logic: appearing in the same movie
+  together is a specific, personal connection; a shared fight-scene tag (e.g.
+  "Weapons") is a looser, more common signal likely shared by many actors in a
+  genre this homogeneous.
+- **New components, not a fork of the movie ones.** `ActorCard`/`ActorRailTrack`
+  (`src/components/actor-card.tsx`, `src/components/actor-rail.tsx`) mirror
+  `MovieCard`/`MovieRailTrack` structurally (same scroll-arrows/edge-fade track),
+  but a `Person` has no poster/rating fields to render — a circular avatar and
+  name is the actor-page equivalent, not a reskin of the movie card. Rendered via
+  `ActorRailTrack` directly inside the actor page's own padded container, same
+  reasoning as why Known For uses `MovieRailTrack` and not the full `MovieRail`
+  wrapper (see "Actor Filmography split into Known For + a dense list" above).
+
 ## Deferred & Backlog
 
+- **Whether per-movie ratings should be weighted by rating count** — raised
+  while adding the actor page's career-stats "Community Rating" (mean of each
+  movie's own community average across the actor's filmography), which
+  currently weighs a movie with 2 ratings the same as one with 200, matching
+  how every other per-movie stat in the app already works (no ratings-count
+  weighting anywhere else either). Explicitly deferred as a broader "how should
+  rating aggregation work across the app" question, not something to decide
+  ad hoc for one new stat.
 - **Toggle to a compact table view for the Filmography list** — a full IMDb-style
   decade-grouped text table (no poster thumbnails, ~3x the density of the shipped
   rows-with-posters view) was prototyped alongside it and works; not shipped as a
