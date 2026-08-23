@@ -35,6 +35,7 @@ export function RecommendedBadges({
               title={`Recommended by ${recommender.username}`}
               width={pixels}
               height={pixels}
+              unoptimized
               className={`${dimensionClass} shrink-0 rounded-md border-2 border-neutral-950 object-contain bg-white`}
             />
           );

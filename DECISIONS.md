@@ -1037,6 +1037,15 @@ catalog size and traffic. This is the structural fix.
   the existing `w200`/`w342`/`w500` size codes were kept as-is rather than
   retuned, since the app's own production history is the proof they
   already work.
+- **Follow-up, same day**: `recommended-badge.tsx`'s admin badge icon —
+  the one `<Image>` in the app sourced from a local `public/` file, not
+  TMDB or Blob — was missed by this entry's scope (it isn't a TMDB URL, so
+  `isTmdbUrl()` doesn't apply). Any `next/image` usage, local or remote,
+  goes through the same Vercel optimizer and the same team-wide quota
+  unless marked `unoptimized`, so this one small static asset was still
+  exposed to the same 402 failures whenever the quota was exhausted. Since
+  it's a tiny, fixed-size, developer-controlled file that never changes,
+  Vercel's resizing wasn't buying anything — marked `unoptimized` too.
 
 ## Feature Decisions
 
