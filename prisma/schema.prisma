@@ -73,6 +73,7 @@ model User {
   personTributes      PersonTribute[]
   personTributeVotes  PersonTributeVote[]
   personFavorites     PersonFavorite[]
+  personSignatureVotes PersonSignatureVote[]
 }
 
 model Account {
@@ -199,6 +200,7 @@ model Movie {
   fightCountEdits FightCountEdit[]
   funFacts        FunFact[]
   memberReviews   MemberReview[]
+  signatureVotes  PersonSignatureVote[]
   submittedBy     User?   @relation(fields: [submittedById], references: [id], onDelete: SetNull)
 
   @@index([title])
@@ -251,6 +253,7 @@ model Person {
   funFacts    PersonFunFact[]
   tributes    PersonTribute[]
   favorites   PersonFavorite[]
+  signatureVotes PersonSignatureVote[]
 
   @@index([name])
   // See the matching comment on Movie above — backs the ILIKE actor-name
@@ -641,6 +644,38 @@ model PersonFavorite {
   @@index([userId])
 }
 
+// Crowd vote for the one credit that best represents an actor -- "what
+// should this actor be remembered for." One row per user per person, not
+// per user per person per category: a member is picking a single answer
+// (a movie *or* a fight scene, never both), and the leader shown on the
+// actor page is whichever choice — across both kinds combined — has the
+// most votes, labeled "Signature Role" if it's a movie or "Signature Fight
+// Scene" if it's a fight scene. That combined-leaderboard requirement is
+// why this isn't two separate vote tables (one per category): comparing
+// counts across categories only works if every vote lives in one place.
+// Exactly one of movieId/fightSceneId must be set — enforced app-side in
+// the vote route, since this schema has no CHECK constraint support (same
+// gap as the functional-index workaround noted on Movie's trigram index
+// above).
+model PersonSignatureVote {
+  id           String   @id @default(cuid())
+  personId     String
+  userId       String
+  movieId      String?
+  fightSceneId String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  person     Person      @relation(fields: [personId], references: [id], onDelete: Cascade)
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  movie      Movie?      @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  fightScene FightScene? @relation(fields: [fightSceneId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, personId])
+  @@index([personId, movieId])
+  @@index([personId, fightSceneId])
+}
+
 // --- Fight scenes ---
 //
 // A member-submitted clip (not a timestamp into the full movie) highlighting
@@ -670,6 +705,7 @@ model FightScene {
   adminRatings FightSceneAdminRating[]
   memberListEntries MemberListFightSceneEntry[]
   favorites FightSceneFavorite[]
+  signatureVotes PersonSignatureVote[]
 
   @@index([movieId])
   // See the matching comment on Movie above — backs the ILIKE title

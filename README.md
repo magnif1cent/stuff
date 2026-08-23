@@ -277,7 +277,9 @@ Below Fight Scenes on every movie page: an IMDB "Did you know"-style trivia sect
 
 ## Actor Pages
 
-Every credited person has a page at `/actors/[personId]` showing their Filmography (movies in the catalog, excluding any still-pending submission) and every Fight Scene they're tagged in across the whole catalog, sorted by most favorited, reusing the same movie/fight-scene cards used everywhere else. Linked from a movie's Cast section and from the "Featuring" line on a fight scene card — there's no dedicated actor search yet, so browsing there is the only way in for now.
+Every credited person has a page at `/actors/[personId]`. Linked from a movie's Cast section and from the "Featuring" line on a fight scene card — there's no dedicated actor search yet, so browsing there is the only way in for now.
+
+The page leads with **Known For** — up to 8 movies from the actor's filmography (excluding any still-pending submission), picked by TMDB popularity and shown as a horizontally-scrolling poster rail (`MovieRailTrack`, the same scrollable-rail mechanics as Cast/Reviews/You Might Also Like, factored out of `MovieRail` for reuse here). Below it, the full **Filmography** is a dense, text-forward list (poster thumbnail, title, character, year, community rating) rather than a second poster grid — some actors in this genre have well over a hundred credits, too many to browse as cards — with a type-to-filter box above it for jumping straight to a title. **Fight Scenes** (every fight scene the actor is tagged in across the catalog, sorted by most favorited) keeps its card grid, since a video thumbnail is the point there, but opens collapsed to the first 6 with a **"Show all N fight scenes →"** toggle and its own title filter, for the same long-tail reason.
 
 Biography, birthday, and place of birth (when TMDB has them) are shown under the actor's name, live-fetched via their `person.tmdbId` on each page view rather than stored in our own database — if TMDB is unreachable or has nothing on record, that section is simply omitted.
 
@@ -289,6 +291,10 @@ Below Fight Scenes, every actor page also carries two member-content sections le
 - Both require a verified email to submit or vote, same bar as every other member-content feature.
 
 A lighter-weight **Favorite** rounds out the actor page — a one-tap heart toggle next to the actor's name (`PersonFavorite` in the schema), same pattern as favoriting a fight scene. Requires a verified email, same bar as the content features above. Favorite counts feed the **Most Beloved Actors** ranking on `/leaderboard` — see [Member Lists & Profiles](#member-lists--profiles).
+
+Members also crowd-vote on the actor's **Signature Role** and **Signature Fight Scene** — two independent answers to "what should this actor be remembered for," cast as a 🏆 toggle on a Known For poster, a Filmography row, or a Fight Scenes card (`PersonSignatureVote` in the schema — one movie pick and one fight-scene pick per member per actor, held at the same time rather than competing with each other). A movie's toggle stays in sync wherever it appears — Known For and Filmography share the same underlying vote state, so voting from either place updates both. Whichever movie has the most votes among movie picks, and whichever fight scene has the most among fight-scene picks, each appear as their own spotlight banner near the top of the page — side by side when both clear the threshold, either alone if only one has. Each banner stays hidden until its own category reaches at least 5 votes for that actor, so neither crowns a "leader" off a couple of clicks. Voting toggles the same way as Favorite/Fun Facts (voting your current pick again retracts it; voting a different credit within the same category switches to it) and requires a verified email, same bar as the rest of the page.
+
+Known For's popularity ranking and the Signature Vote banners are deliberately independent signals and won't always agree — Known For reflects TMDB's general popularity data, while Signature Vote is this site's own members answering "what defines this actor," which can land on a different, less mainstream credit.
 
 ## Reviews
 

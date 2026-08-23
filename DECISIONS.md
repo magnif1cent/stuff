@@ -2428,8 +2428,146 @@ originally scoped into this same PR but cut before merge — see Deferred & Back
   separate list-likes module; the leaderboard module is the natural home for "how is this
   ranking computed," not the per-feature lib.
 
+### Signature Vote: one combined leaderboard across movies and fight scenes, not two
+**PR #TBD.** Lets members crowd-vote on the single movie or fight scene that best
+represents an actor — "what should this actor be remembered for" — surfaced as a
+spotlight banner near the top of the actor page.
+
+- **`PersonSignatureVote` is one table with nullable `movieId`/`fightSceneId`, not two
+  separate vote tables (one per category).** This is the opposite shape from Person Fun
+  Facts/Tributes vs. their movie-page equivalents (kept as separate tables specifically
+  because those are two conceptually distinct feeds that never need comparing against each
+  other). Here the whole point is the reverse: the banner shows a single leader across
+  *both* categories combined, so every vote has to live in one place for a plain
+  `groupBy`/max to find it. `@@unique([userId, personId])` (not `..., category]`) is what
+  makes this one vote per member per actor rather than one per member per actor per
+  category — picking a fight scene silently replaces an existing movie pick, matching the
+  "single answer" framing rather than letting a member hold both a favorite role and a
+  favorite fight scene at once. Exactly one of the two columns being set is enforced only
+  in the vote route (`POST /api/actors/[personId]/signature-vote`), not a DB constraint —
+  this schema has no CHECK-constraint support (see the trigram-index comment on `Movie`
+  for the other functional-index gap already worked around the same way).
+- **No separate "cast your vote" list.** The vote toggle (a small 🏆-plus-count button) sits
+  directly on the existing Filmography poster / Fight Scene card for each credit, rather
+  than a second list duplicating every movie and fight scene already on the page —
+  considered and rejected specifically because some actors have hundreds of film credits,
+  and a second full-length list for voting wouldn't scale any better than a third copy of
+  the filmography would. Net new page real estate is just the one banner row; voting
+  piggybacks on grids that already handle "a lot of items."
+- **Banner hidden below 5 combined votes for that actor**, computed client-side in
+  `SignatureVoteProvider`/`SignatureSpotlight` (`src/components/actor-signature-vote.tsx`)
+  rather than server-side — avoids crowning a "Signature" answer, which reads as a
+  confident, singular statement, off a couple of early clicks that could flip on the very
+  next vote. No "too close to call" state beyond that; the vote-share percentage shown
+  next to the count is enough for a viewer to judge how contested it is without more
+  machinery.
+- **Deliberately doesn't reuse or fold into `getMostBelovedActors`/movie ratings.** A
+  highest-rated movie or most-favorited fight scene answers "how good is this," not
+  "which of this actor's own roles is why you know them" — a movie can be an actor's
+  best-reviewed credit for reasons that have nothing to do with their own performance in
+  it (a strong ensemble, a well-regarded director). In practice the fight-scene side will
+  often echo the existing favorite-count sort on that same section (fight scenes already
+  sort by favorite count), so the vote's real value is mostly on the movie side, where no
+  ranking existed before, and in making the actor-specific association explicit.
+
+### Actor Filmography split into Known For + a dense list, not a bigger poster grid
+**PR #TBD.** Follow-up to Signature Vote above, prompted by testing it against actors with
+long filmographies — common in this genre (Sammo Hung/Jackie Chan–style careers routinely
+run past 100 credits), where the original flat `flex-wrap` poster grid (unchanged since the
+actor page shipped) becomes a wall of cards before a member can find anything to vote for.
+**Supersedes the "No separate cast your vote list" bullet above**: the vote toggle does now
+sit on what amounts to a list, but that list exists to fix Filmography browsing generally —
+Known For and the dense list both serve every visitor, not just voters — rather than being a
+second, voting-only list duplicating the grid, which is what that earlier bullet ruled out.
+
+- **`MovieRailTrack` extracted from `MovieRail`** (`src/components/movie-rail.tsx`) — the
+  scroll-arrows/edge-fade/card-track logic on its own, without the `mx-auto max-w-6xl px-4
+  py-8` section-and-title chrome `MovieRail` wraps it in for its existing page-level callers
+  (homepage, movie page). The actor page's Known For section needed the same scrollable-rail
+  behavior nested inside its *own* already-padded container — reusing `MovieRail` outright
+  would have doubled that padding — so the reusable part was factored out rather than forked;
+  `MovieRail` itself is now a thin wrapper around the track. Per-card overlay content (the
+  🏆 vote button) is passed in as a `Record<movieId, ReactNode>` of already-rendered elements,
+  not a render-prop callback — a Server Component can't pass a function into a Client
+  Component (not serializable across that boundary), but pre-built React elements are fine.
+- **Known For ranks by `Movie.tmdbPopularity`**, already in the schema from TMDB import — no
+  new data or curation step needed. Deliberately independent of the Signature Vote leader
+  (see README): popularity and "what members vote as iconic" are different signals and are
+  expected to disagree sometimes, same reasoning as the "doesn't reuse `getMostBelovedActors`"
+  bullet above.
+- **Filmography itself becomes a dense list (thumbnail, title, character, year, community
+  rating), not a second poster grid.** A poster carries recognition value once, in Known For;
+  repeating it for every one of 100+ credits doesn't add information, just height. A text
+  filter above the list is the fallback for finding one specific title once "Show all" (or,
+  here, "no cap at all") stops being enough.
+- **Four list treatments were prototyped before picking this one**: rows-with-poster-thumbnail
+  (shipped), a compact IMDb-style text table grouped by decade, tag-style chips (title+year
+  only), and a vertical timeline. Chips were cut first — they dropped character/rating for
+  barely more density than the table, without gaining a distinct enough look to earn a second
+  variant. Timeline was cut next — visually the most distinctive, but it's still serving the
+  same "browse and vote" job as the other two while costing more vertical space per entry, and
+  a trophy-vote icon sitting in a career-timeline layout undercut the narrative mood the
+  timeline was going for. That left rows-with-posters vs. the compact table — a genuine
+  real-estate-vs-recognition tradeoff (posters aid recognition; the table fits roughly 3x more
+  per screen) — decided in favor of posters for now, with the table kept as a real fallback,
+  not a rejected idea (see Deferred & Backlog).
+- **No user-facing toggle between list treatments**, even though two (posters, table) were
+  both fully built and are one control away from being switchable. Rejected specifically
+  because it would be a new interaction pattern with no precedent anywhere else in this app
+  (no other page offers a density/view switcher), for a browsing view where one well-chosen
+  default likely serves nearly everyone — a toggle earns its keep when the views serve
+  genuinely different workflows, not just different amounts of the same information.
+- **Fight Scenes stays a card grid** (a video thumbnail is the point, unlike a movie credit),
+  but now opens collapsed to the first 6 with a **"Show all N fight scenes →"** toggle and its
+  own title filter (`FightSceneCollapsibleGrid`) — same collapsed-list-behind-a-toggle pattern
+  `ActorFunFactsSection` already established, not a new interaction to invent, just extended
+  to a second section.
+
+### Signature Vote split into two independent picks, not one combined leaderboard
+**PR #TBD.** Reverses the "one table, single combined leader" decision at the top of the
+Signature Vote entry above, after review on the PR's preview deployment: voting a fight scene
+was silently replacing an already-cast movie vote (the two categories competed for one shared
+"answer" slot), which read as the site discarding a member's pick rather than recording a
+second one — confusing enough in practice that the combined framing wasn't worth keeping,
+even though it matched the literal "what should this actor be remembered for" phrasing the
+feature was scoped from.
+
+- **No schema change.** `PersonSignatureVote` still has exactly one row per
+  `[userId, personId]`, with nullable `movieId`/`fightSceneId` — only the *meaning* of those
+  two columns changed, from mutually exclusive alternatives (exactly one set) to independent
+  slots (either, both, or — by deleting the row — neither can be set). The migration that
+  shipped with the original decision needed no follow-up migration, unlike the Editor's
+  Spotlight cut earlier in this log, because the column shape itself was never wrong, only the
+  application logic constraining it.
+- **The vote route still validates exactly one of `movieId`/`fightSceneId` per request** —
+  that's unchanged and still correct, since a single click always targets one specific card.
+  What changed is what happens to the *other* slot on the stored row: it used to be cleared
+  every time; now it's left untouched, so a member's fight-scene pick survives a later movie
+  vote and vice versa.
+- **`SignatureSpotlight` now renders up to two banners side by side** (`sm:flex-1` each,
+  stacking on narrow screens), each computed by finding the leader within its own category and
+  checking that category's own vote total against the 5-vote minimum — not a shared combined
+  total. A "vote share" percentage on each banner is now a share of that category's votes only,
+  not blended with the other category's, which is a more honest number than the combined
+  version was (a movie's "72% of all signature votes" previously included fight-scene votes it
+  had nothing to do with).
+- **Still not two separate database tables.** The alternative considered here — going back to
+  splitting `PersonSignatureVote` into `PersonSignatureRoleVote`/`PersonSignatureFightSceneVote`
+  — was rejected for the same reason the single-table shape was chosen originally: no
+  cross-category comparison is needed anymore, true, but the two vote kinds still share every
+  other property (same actor scope, same toggle/retract mechanics, same email-verification
+  gate), so two tables would just be the one-row-two-nullable-columns shape typed out twice.
+
 ## Deferred & Backlog
 
+- **Toggle to a compact table view for the Filmography list** — a full IMDb-style
+  decade-grouped text table (no poster thumbnails, ~3x the density of the shipped
+  rows-with-posters view) was prototyped alongside it and works; not shipped as a
+  user-facing switch because it'd be a new interaction pattern with no other precedent in
+  this app for what's still a one-default browsing view (see "Actor Filmography split into
+  Known For + a dense list" above). Revisit if long-filmography actors turn out to need the
+  extra density in practice, e.g. member feedback that the posters-row view is still too
+  tall for actors with 100+ credits.
 - **Editor's Spotlight (admin-curated per-actor blurb/badge)** — scoped into the same
   PR as Actor Favorite (`PersonSpotlight`, mirroring `EditorialReview`'s
   one-shared-row-per-entity shape) but cut before merge at explicit request: it overlaps
