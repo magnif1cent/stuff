@@ -6,8 +6,9 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { tmdbImageUrl, getTmdbPersonDetails } from "@/lib/tmdb";
 import { getFightSceneRatingSummaries, getFightSceneAdminRatingSummaries, getFightSceneFavoriteCounts } from "@/lib/fight-scenes";
-import { MovieCard } from "@/components/movie-card";
-import { FightSceneResultCard } from "@/components/fight-scene-result-card";
+import { MovieRailTrack } from "@/components/movie-rail";
+import { FilmographyList, type FilmographyRow } from "@/components/filmography-list";
+import { FightSceneCollapsibleGrid, type FightSceneEntry } from "@/components/fight-scene-collapsible-grid";
 import { getRatingSummaries } from "@/lib/ratings";
 import { getFunFactsForPerson, getPersonFunFactVoteSummaries } from "@/lib/person-fun-facts";
 import {
@@ -222,6 +223,58 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
     ? { movieId: mySignatureVote.movieId, fightSceneId: mySignatureVote.fightSceneId }
     : null;
 
+  // "Known For" surfaces a handful of highlights via data already in the
+  // catalog (TMDB popularity) rather than the full filmography -- some
+  // actors in this genre have well over a hundred credits, too many to
+  // scan as posters. The full list still lives below as a dense
+  // FilmographyList (see DECISIONS.md for why a poster grid doesn't scale
+  // here the way it does elsewhere).
+  const KNOWN_FOR_COUNT = 8;
+  const knownForMovies = movies
+    .slice()
+    .sort((a, b) => (b.tmdbPopularity ?? -1) - (a.tmdbPopularity ?? -1))
+    .slice(0, KNOWN_FOR_COUNT)
+    .map((movie) => {
+      const summary = ratingSummaries.get(movie.id);
+      return { ...movie, communityAverage: summary?.average ?? null, communityCount: summary?.count ?? 0 };
+    });
+
+  const filmographyRows: FilmographyRow[] = person.castCredits
+    .filter((c) => c.movie.status === "APPROVED")
+    .map((c) => {
+      const summary = ratingSummaries.get(c.movie.id);
+      return {
+        id: c.movie.id,
+        title: c.movie.title,
+        year: c.movie.releaseDate ? new Date(c.movie.releaseDate).getFullYear() : null,
+        posterPath: c.movie.posterPath,
+        posterOverrideUrl: c.movie.posterOverrideUrl,
+        characterName: c.characterName,
+        communityAverage: summary?.average ?? null,
+      };
+    });
+
+  const fightSceneEntries: FightSceneEntry[] = sortedFightScenes.map((scene) => {
+    const memberSummary = memberSummaries.get(scene.id);
+    const editorSummary = editorSummaries.get(scene.id);
+    const initialLists = myMemberListItems.map((l) => {
+      const listRow = myMemberLists.find((row) => row.id === l.id)!;
+      return { ...l, hasItem: listRow.fightSceneEntries.some((e) => e.fightSceneId === scene.id) };
+    });
+    return {
+      scene: {
+        ...scene,
+        memberRatingAverage: memberSummary?.average ?? null,
+        memberRatingCount: memberSummary?.count ?? 0,
+        editorRatingAverage: editorSummary?.average ?? null,
+        editorRatingCount: editorSummary?.count ?? 0,
+      },
+      initialLists,
+      signedIn: !!session?.user,
+      initialFavorite: myFightSceneFavorites.some((e) => e.fightSceneId === scene.id),
+    };
+  });
+
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-10">
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start">
@@ -268,60 +321,32 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
       >
         <SignatureSpotlight />
 
+        {knownForMovies.length > 0 && (
+          <div className="mb-10">
+            <h2 className="mb-4 text-xl font-bold text-white">Known For</h2>
+            <MovieRailTrack
+              movies={knownForMovies}
+              overlays={Object.fromEntries(
+                knownForMovies.map((movie) => [movie.id, <SignatureVoteButton key={movie.id} kind="movie" id={movie.id} />]),
+              )}
+            />
+          </div>
+        )}
+
         <h2 className="mb-4 text-xl font-bold text-white">Filmography</h2>
-        {movies.length === 0 ? (
+        {filmographyRows.length === 0 ? (
           <p className="mb-8 text-sm text-neutral-400">No movies in the catalog yet.</p>
         ) : (
-          <div className="mb-10 flex flex-wrap gap-4">
-            {movies.map((movie) => {
-              const summary = ratingSummaries.get(movie.id);
-              return (
-                <div key={movie.id} className="relative">
-                  <MovieCard
-                    movie={{ ...movie, communityAverage: summary?.average ?? null, communityCount: summary?.count ?? 0 }}
-                  />
-                  <div className="absolute top-2 right-2">
-                    <SignatureVoteButton kind="movie" id={movie.id} />
-                  </div>
-                </div>
-              );
-            })}
+          <div className="mb-10">
+            <FilmographyList rows={filmographyRows} />
           </div>
         )}
 
         <h2 className="mb-4 text-xl font-bold text-white">Fight Scenes</h2>
-        {sortedFightScenes.length === 0 ? (
+        {fightSceneEntries.length === 0 ? (
           <p className="text-sm text-neutral-400">No fight scenes tagged with this actor yet.</p>
         ) : (
-          <div className="flex flex-wrap gap-4">
-            {sortedFightScenes.map((scene) => {
-              const memberSummary = memberSummaries.get(scene.id);
-              const editorSummary = editorSummaries.get(scene.id);
-              const initialLists = myMemberListItems.map((l) => {
-                const listRow = myMemberLists.find((row) => row.id === l.id)!;
-                return { ...l, hasItem: listRow.fightSceneEntries.some((e) => e.fightSceneId === scene.id) };
-              });
-              return (
-                <div key={scene.id} className="relative">
-                  <FightSceneResultCard
-                    scene={{
-                      ...scene,
-                      memberRatingAverage: memberSummary?.average ?? null,
-                      memberRatingCount: memberSummary?.count ?? 0,
-                      editorRatingAverage: editorSummary?.average ?? null,
-                      editorRatingCount: editorSummary?.count ?? 0,
-                    }}
-                    initialLists={initialLists}
-                    signedIn={!!session?.user}
-                    initialFavorite={myFightSceneFavorites.some((e) => e.fightSceneId === scene.id)}
-                  />
-                  <div className="absolute top-3 right-3">
-                    <SignatureVoteButton kind="fightScene" id={scene.id} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <FightSceneCollapsibleGrid entries={fightSceneEntries} />
         )}
       </SignatureVoteProvider>
 

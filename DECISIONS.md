@@ -2470,8 +2470,69 @@ spotlight banner near the top of the actor page.
   sort by favorite count), so the vote's real value is mostly on the movie side, where no
   ranking existed before, and in making the actor-specific association explicit.
 
+### Actor Filmography split into Known For + a dense list, not a bigger poster grid
+**PR #TBD.** Follow-up to Signature Vote above, prompted by testing it against actors with
+long filmographies — common in this genre (Sammo Hung/Jackie Chan–style careers routinely
+run past 100 credits), where the original flat `flex-wrap` poster grid (unchanged since the
+actor page shipped) becomes a wall of cards before a member can find anything to vote for.
+**Supersedes the "No separate cast your vote list" bullet above**: the vote toggle does now
+sit on what amounts to a list, but that list exists to fix Filmography browsing generally —
+Known For and the dense list both serve every visitor, not just voters — rather than being a
+second, voting-only list duplicating the grid, which is what that earlier bullet ruled out.
+
+- **`MovieRailTrack` extracted from `MovieRail`** (`src/components/movie-rail.tsx`) — the
+  scroll-arrows/edge-fade/card-track logic on its own, without the `mx-auto max-w-6xl px-4
+  py-8` section-and-title chrome `MovieRail` wraps it in for its existing page-level callers
+  (homepage, movie page). The actor page's Known For section needed the same scrollable-rail
+  behavior nested inside its *own* already-padded container — reusing `MovieRail` outright
+  would have doubled that padding — so the reusable part was factored out rather than forked;
+  `MovieRail` itself is now a thin wrapper around the track. Per-card overlay content (the
+  🏆 vote button) is passed in as a `Record<movieId, ReactNode>` of already-rendered elements,
+  not a render-prop callback — a Server Component can't pass a function into a Client
+  Component (not serializable across that boundary), but pre-built React elements are fine.
+- **Known For ranks by `Movie.tmdbPopularity`**, already in the schema from TMDB import — no
+  new data or curation step needed. Deliberately independent of the Signature Vote leader
+  (see README): popularity and "what members vote as iconic" are different signals and are
+  expected to disagree sometimes, same reasoning as the "doesn't reuse `getMostBelovedActors`"
+  bullet above.
+- **Filmography itself becomes a dense list (thumbnail, title, character, year, community
+  rating), not a second poster grid.** A poster carries recognition value once, in Known For;
+  repeating it for every one of 100+ credits doesn't add information, just height. A text
+  filter above the list is the fallback for finding one specific title once "Show all" (or,
+  here, "no cap at all") stops being enough.
+- **Four list treatments were prototyped before picking this one**: rows-with-poster-thumbnail
+  (shipped), a compact IMDb-style text table grouped by decade, tag-style chips (title+year
+  only), and a vertical timeline. Chips were cut first — they dropped character/rating for
+  barely more density than the table, without gaining a distinct enough look to earn a second
+  variant. Timeline was cut next — visually the most distinctive, but it's still serving the
+  same "browse and vote" job as the other two while costing more vertical space per entry, and
+  a trophy-vote icon sitting in a career-timeline layout undercut the narrative mood the
+  timeline was going for. That left rows-with-posters vs. the compact table — a genuine
+  real-estate-vs-recognition tradeoff (posters aid recognition; the table fits roughly 3x more
+  per screen) — decided in favor of posters for now, with the table kept as a real fallback,
+  not a rejected idea (see Deferred & Backlog).
+- **No user-facing toggle between list treatments**, even though two (posters, table) were
+  both fully built and are one control away from being switchable. Rejected specifically
+  because it would be a new interaction pattern with no precedent anywhere else in this app
+  (no other page offers a density/view switcher), for a browsing view where one well-chosen
+  default likely serves nearly everyone — a toggle earns its keep when the views serve
+  genuinely different workflows, not just different amounts of the same information.
+- **Fight Scenes stays a card grid** (a video thumbnail is the point, unlike a movie credit),
+  but now opens collapsed to the first 6 with a **"Show all N fight scenes →"** toggle and its
+  own title filter (`FightSceneCollapsibleGrid`) — same collapsed-list-behind-a-toggle pattern
+  `ActorFunFactsSection` already established, not a new interaction to invent, just extended
+  to a second section.
+
 ## Deferred & Backlog
 
+- **Toggle to a compact table view for the Filmography list** — a full IMDb-style
+  decade-grouped text table (no poster thumbnails, ~3x the density of the shipped
+  rows-with-posters view) was prototyped alongside it and works; not shipped as a
+  user-facing switch because it'd be a new interaction pattern with no other precedent in
+  this app for what's still a one-default browsing view (see "Actor Filmography split into
+  Known For + a dense list" above). Revisit if long-filmography actors turn out to need the
+  extra density in practice, e.g. member feedback that the posters-row view is still too
+  tall for actors with 100+ credits.
 - **Editor's Spotlight (admin-curated per-actor blurb/badge)** — scoped into the same
   PR as Actor Favorite (`PersonSpotlight`, mirroring `EditorialReview`'s
   one-shared-row-per-entity shape) but cut before merge at explicit request: it overlaps
