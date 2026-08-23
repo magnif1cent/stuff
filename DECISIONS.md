@@ -55,6 +55,7 @@ one.
 - [Vercel preview deployments deleted on PR close, to stop Neon preview-branch pileup](#vercel-preview-deployments-deleted-on-pr-close-to-stop-neon-preview-branch-pileup)
 - [Weekly Trending Carousel's cron had never run — `CRON_SECRET` was never configured in Production](#weekly-trending-carousels-cron-had-never-run-cron_secret-was-never-configured-in-production)
 - [Preview database made static across PRs, trading back the migration-collision risk to stop re-seeding every branch](#preview-database-made-static-across-prs-trading-back-the-migration-collision-risk-to-stop-re-seeding-every-branch)
+- [`images.imageSizes` narrowed to match actual usage, after the free tier's Image Optimization quota was hit](#imagesimagesizes-narrowed-to-match-actual-usage-after-the-free-tiers-image-optimization-quota-was-hit)
 
 **Feature Decisions**
 
@@ -964,6 +965,32 @@ protecting against for this project's actual pace of parallel work.
   Free-plan branch-count limit from that same incident doesn't get
   re-triggered by deployment pileup), but no longer cascades into deleting
   a Neon branch, since no single deployment owns the shared one anymore.
+
+### `images.imageSizes` narrowed to match actual usage, after the free tier's Image Optimization quota was hit
+The `kfmdb` Vercel team hit 100% of the Hobby plan's 5,000/month Image
+Optimization transformations, which returns a 402 for any new (uncached)
+image and shows the `alt` text instead of the picture — happened to reset
+the same day, so no production impact, but the same growth rate would hit
+it again.
+
+- **Root cause**: `next.config.ts` left `images.imageSizes` at Next's
+  default `[16, 32, 48, 64, 96, 128, 256, 384]`, which doesn't match this
+  app's actual fixed-pixel `sizes` values (28–224px across movie-card,
+  actor/leaderboard rows, feeds, search). Each mismatched bucket Next
+  generates for a source image counts as a separate billed transformation.
+- **Fix applied**: `imageSizes` set explicitly to the widths the app
+  actually renders — `[28, 32, 36, 40, 56, 64, 96, 112, 128, 160, 192,
+  224]`. Next always rounds up to the nearest bucket ≥ the requested size,
+  so this is a zero-tradeoff change: no image renders differently, it just
+  stops generating variants nobody requests.
+- **Deliberately not changed**: `images.deviceSizes` (used only by the two
+  `sizes="100vw"` backdrop/hero images) and `images.formats` (AVIF+WebP).
+  Both would cut further into the transformation count, but trimming
+  `deviceSizes`' top bucket softens backdrops on 4K/ultra-wide monitors,
+  and dropping AVIF makes every image modestly heavier for most visitors —
+  real, if small, user-facing tradeoffs. Left as backlog if the quota
+  becomes a recurring problem after this change; upgrading to Vercel Pro is
+  the other lever if it does.
 
 ## Feature Decisions
 
