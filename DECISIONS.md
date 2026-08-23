@@ -2626,17 +2626,20 @@ scenes, years active (earliest–latest release year), and Sparring Partner.
   Career Highlights ahead of everything else below it, and it doesn't force
   the bio to compete for space with the favorite button and page padding
   the way a three-way avatar-row split would have.
-- **Biography gained a 4-line clamp + "Show more"/"Show less" toggle**
+- **Biography gained a 10-line clamp + "Show more"/"Show less" toggle**
   (`ActorBio`, `src/components/actor-bio.tsx`) as a direct consequence of
   the placement above — sharing its row with a 288px-wide Career Highlights
   column leaves the biography meaningfully narrower than the full-width
   paragraph it used to be, so a long TMDB biography now wraps to far more
-  lines than before. Reuses the exact clamp-with-toggle pattern already
+  lines than before. Reuses the clamp-with-toggle mechanics already
   established by `ReviewText` (`RecentReviewsFeed`) and `MemberReviewCard`
-  (`ReviewsSection`) — a length threshold above which `line-clamp-4` applies,
-  lifted on click — rather than inventing a new one; `CLAMP_THRESHOLD = 280`
-  sits between those two precedents' thresholds (220 and the review card's
-  160), matching how both scale their threshold to their column's width.
+  (`ReviewsSection`) — a length threshold above which a line-clamp applies,
+  lifted on click — but with a taller clamp (10 lines, not those two's 3/4)
+  and a proportionally scaled `CLAMP_THRESHOLD = 700`, since a biography
+  reads as an article, not a review, and can reasonably earn more space
+  before the toggle kicks in. `line-clamp-[10]` is an arbitrary-value class,
+  not `line-clamp-10` — Tailwind's line-clamp utility only ships values 1–6
+  by default, so the bare class name wouldn't generate any CSS.
 
 ## Deferred & Backlog
 

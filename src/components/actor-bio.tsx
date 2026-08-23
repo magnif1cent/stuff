@@ -3,10 +3,13 @@
 import { useState } from "react";
 
 // Same clamp-with-toggle pattern as RecentReviewsFeed/ReviewsSection (see
-// CLAMP_THRESHOLD there) -- scaled for this column, which is narrower than
-// the page's old full-width bio paragraph now that Career Highlights sits
-// beside it, but wider than a review card.
-const CLAMP_THRESHOLD = 280;
+// CLAMP_THRESHOLD there), but clamped to 10 lines instead of those two's
+// 3/4 -- a bio reads more like an article than a review, so it gets more
+// room before the toggle kicks in. Threshold scaled up to match (roughly
+// proportional to the wider line-clamp). line-clamp-[10] is an arbitrary
+// value: Tailwind's line-clamp utility only ships 1-6 by default, so a
+// bare "line-clamp-10" class wouldn't generate any CSS.
+const CLAMP_THRESHOLD = 700;
 
 export function ActorBio({ biography }: { biography: string }) {
   const [expanded, setExpanded] = useState(false);
@@ -14,7 +17,7 @@ export function ActorBio({ biography }: { biography: string }) {
 
   return (
     <div>
-      <p className={`whitespace-pre-line text-sm text-neutral-300 ${!expanded && isLong ? "line-clamp-4" : ""}`}>
+      <p className={`whitespace-pre-line text-sm text-neutral-300 ${!expanded && isLong ? "line-clamp-[10]" : ""}`}>
         {biography}
       </p>
       {isLong && (
