@@ -108,7 +108,6 @@ one.
 - [Social platform icons for the website/social link field](#social-platform-icons-for-the-websitesocial-link-field)
 - [Trending carousel clip autoplay bounded to one lap, paused when the tab is hidden](#trending-carousel-clip-autoplay-bounded-to-one-lap-paused-when-the-tab-is-hidden)
 - [Trending carousel autoplay cap raised from 1 lap to 5](#trending-carousel-autoplay-cap-raised-from-1-lap-to-5)
-- [Actor "You Might Also Like" scores co-starring and shared fight-scene tags](#actor-you-might-also-like-scores-co-starring-and-shared-fight-scene-tags)
 - [Actor career stats: Details card treatment, "Sparring Partner" from existing fight-scene data](#actor-career-stats-details-card-treatment-sparring-partner-from-existing-fight-scene-data)
 
 **Deferred & Backlog**
@@ -2560,31 +2559,6 @@ feature was scoped from.
   other property (same actor scope, same toggle/retract mechanics, same email-verification
   gate), so two tables would just be the one-row-two-nullable-columns shape typed out twice.
 
-### Actor "You Might Also Like" scores co-starring and shared fight-scene tags
-**PR #TBD.** Actor-page counterpart to the movie page's "You Might Also Like" (see
-that entry above) — same in-memory blend-signals-then-score approach, adapted to
-the two person-level signals this catalog actually has: co-starring in the same
-`APPROVED` movie (+3 per shared movie) and sharing a fight-scene tag (+2 per
-shared tag). Built as `getSimilarActors` (`src/lib/similar-actors.ts`), modeled
-directly on `getSimilarMovies` — candidate pool fetched via one `OR` query, then
-scored/sorted in JS, top 8, no rail at all for an actor with zero shared signals
-against the rest of the catalog (same "no signal, no rail" rule as the movie
-version).
-
-- **Co-starring weighted heavier than a shared tag**, mirroring the movie
-  version's collection-over-genre weighting logic: appearing in the same movie
-  together is a specific, personal connection; a shared fight-scene tag (e.g.
-  "Weapons") is a looser, more common signal likely shared by many actors in a
-  genre this homogeneous.
-- **New components, not a fork of the movie ones.** `ActorCard`/`ActorRailTrack`
-  (`src/components/actor-card.tsx`, `src/components/actor-rail.tsx`) mirror
-  `MovieCard`/`MovieRailTrack` structurally (same scroll-arrows/edge-fade track),
-  but a `Person` has no poster/rating fields to render — a circular avatar and
-  name is the actor-page equivalent, not a reskin of the movie card. Rendered via
-  `ActorRailTrack` directly inside the actor page's own padded container, same
-  reasoning as why Known For uses `MovieRailTrack` and not the full `MovieRail`
-  wrapper (see "Actor Filmography split into Known For + a dense list" above).
-
 ### Actor career stats: Details card treatment, "Sparring Partner" from existing fight-scene data
 **PR #TBD.** Added a career-stats box just under the actor's name/avatar, using
 the same bordered dt/dd "Details" card as the movie page's Studio/Country box
@@ -2603,23 +2577,31 @@ filmography, average rating across their tagged fight scenes, years active
   average, same "no ratings-count weighting" approach used everywhere else in
   the app (see the Deferred entry below — revisiting that is a whole-app
   question, not something to special-case here).
+- **The two rating rows show as `★ N.N` in yellow, not `N.N / 10`.** The
+  movie page's own big hero score does say "/ 10", but every *compact*
+  rating display already in the app — `MovieCard`, `FilmographyList` — drops
+  it and shows just the bare starred number, since the label next to it
+  already establishes what's being rated. This card is a compact context,
+  so it follows that convention instead of the hero one.
 - **Sparring Partner — the co-star sharing the most distinct fight scenes with
-  this actor** — came out of exploring what else the new co-star signal
-  (already computed for the "You Might Also Like" rail above) could surface.
-  Computed entirely from `person.fightSceneAppearances[].fightScene.cast`,
-  already loaded for the Fight Scenes section, so it's free. Requires at least
-  2 shared scenes before it's shown — same minimum-sample-size reasoning as
-  `TOP_RATED_MIN_RATINGS` in `src/lib/ratings.ts` — since most actor pairs
-  never clear that bar; the row just doesn't render rather than crowning a
-  "partner" off one coincidental scene together or showing a placeholder.
-  Ties (more than one co-star at the same top count) go unresolved, same
-  precedent as `getSimilarMovies`.
-- **Movie-level co-starring (the "You Might Also Like" signal) was considered
-  and rejected** for this stat in favor of shared fight scenes specifically —
-  fight scenes are this site's flagship content type, and a movie-level
-  version would resolve for nearly every actor with 2+ movies, which is too
-  common to read as a distinctive "sparring partner," not sparse in a way that
-  singles out a real repeat pairing.
+  this actor** — came out of exploring what a co-starring/collaboration
+  signal between two actors could surface (a "You Might Also Like" rail for
+  actors, scored the same way as the movie version, was prototyped alongside
+  this but deferred — see Deferred & Backlog). Computed entirely from
+  `person.fightSceneAppearances[].fightScene.cast`, already loaded for the
+  Fight Scenes section, so it's free regardless of whether that rail ships.
+  Requires at least 2 shared scenes before it's shown — same
+  minimum-sample-size reasoning as `TOP_RATED_MIN_RATINGS` in
+  `src/lib/ratings.ts` — since most actor pairs never clear that bar; the row
+  just doesn't render rather than crowning a "partner" off one coincidental
+  scene together or showing a placeholder. Ties (more than one co-star at the
+  same top count) go unresolved, same precedent as `getSimilarMovies`.
+- **Movie-level co-starring was considered and rejected** for this stat in
+  favor of shared fight scenes specifically — fight scenes are this site's
+  flagship content type, and a movie-level version would resolve for nearly
+  every actor with 2+ movies, which is too common to read as a distinctive
+  "sparring partner," not sparse in a way that singles out a real repeat
+  pairing.
 
 ## Deferred & Backlog
 
@@ -2631,16 +2613,28 @@ filmography, average rating across their tagged fight scenes, years active
   weighting anywhere else either). Explicitly deferred as a broader "how should
   rating aggregation work across the app" question, not something to decide
   ad hoc for one new stat.
+- **Actor-page "You Might Also Like" rail** — a similar-actors rail was
+  prototyped alongside the career stats work, modeled directly on
+  `getSimilarMovies`' weighted-signal approach: co-starring in the same
+  `APPROVED` movie (+3 per shared movie) and sharing a fight-scene tag (+2 per
+  shared tag), candidate pool via one `OR` query then scored/sorted in JS, top
+  8, same "no shared signal, no rail" rule as the movie version. Built as
+  `getSimilarActors` with `ActorCard`/`ActorRailTrack` components mirroring
+  `MovieCard`/`MovieRailTrack` (circular avatar + name, since a `Person` has
+  no poster/rating fields to render) — then pulled back out before merge, not
+  ready to ship yet. The design above is the starting point for whoever
+  revisits this, not a from-scratch redesign.
 - **Expand actor-to-actor collaboration data beyond the single "Sparring
   Partner" stat** — that stat (top co-star by shared fight scenes, min. 2 to
-  qualify) and the "You Might Also Like" co-starring signal (shared movies)
+  qualify) and the shelved co-starring signal above (see the previous bullet)
   both compute pairwise actor relationships already, but only surface a single
-  number/name each. Worth exploring as its own feature: a ranked list of an
-  actor's top collaborators (blending movie co-starring and fight-scene
-  pairings, not just the single top match), a dedicated pairwise view ("every
-  scene/movie X and Y share"), or a site-wide "most frequent pairings"
-  leaderboard. No schema change needed — same underlying `CastCredit`/
-  `FightSceneCast` data, just more of it surfaced and packaged differently.
+  number/name each. Worth exploring as its own feature once the similar-actors
+  rail (or something like it) ships: a ranked list of an actor's top
+  collaborators (blending movie co-starring and fight-scene pairings, not just
+  the single top match), a dedicated pairwise view ("every scene/movie X and Y
+  share"), or a site-wide "most frequent pairings" leaderboard. No schema
+  change needed — same underlying `CastCredit`/`FightSceneCast` data, just
+  more of it surfaced and packaged differently.
 - **Toggle to a compact table view for the Filmography list** — a full IMDb-style
   decade-grouped text table (no poster thumbnails, ~3x the density of the shipped
   rows-with-posters view) was prototyped alongside it and works; not shipped as a

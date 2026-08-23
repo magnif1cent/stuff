@@ -8,8 +8,6 @@ import { prisma } from "@/lib/prisma";
 import { tmdbImageUrl, getTmdbPersonDetails } from "@/lib/tmdb";
 import { getFightSceneRatingSummaries, getFightSceneAdminRatingSummaries, getFightSceneFavoriteCounts } from "@/lib/fight-scenes";
 import { MovieRailTrack } from "@/components/movie-rail";
-import { ActorRailTrack } from "@/components/actor-rail";
-import { getSimilarActors } from "@/lib/similar-actors";
 import { FilmographyList, type FilmographyRow } from "@/components/filmography-list";
 import { FightSceneCollapsibleGrid, type FightSceneEntry } from "@/components/fight-scene-collapsible-grid";
 import { getRatingSummaries } from "@/lib/ratings";
@@ -104,11 +102,10 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
     .map((a) => a.fightScene)
     .filter((s) => !s.isDeleted && s.movie);
 
-  const [memberSummaries, editorSummaries, favoriteCounts, similarActors] = await Promise.all([
+  const [memberSummaries, editorSummaries, favoriteCounts] = await Promise.all([
     getFightSceneRatingSummaries(fightScenes.map((s) => s.id)),
     getFightSceneAdminRatingSummaries(fightScenes.map((s) => s.id)),
     getFightSceneFavoriteCounts(fightScenes.map((s) => s.id)),
-    getSimilarActors(person),
   ]);
 
   const myMemberLists = session?.user
@@ -369,13 +366,13 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
         {avgCommunityRating != null && (
           <>
             <dt className="text-neutral-500">Community Rating</dt>
-            <dd className="text-neutral-300">{avgCommunityRating.toFixed(1)} / 10</dd>
+            <dd className="text-yellow-500">★ {avgCommunityRating.toFixed(1)}</dd>
           </>
         )}
         {avgFightSceneRating != null && (
           <>
             <dt className="text-neutral-500">Fight Scene Rating</dt>
-            <dd className="text-neutral-300">{avgFightSceneRating.toFixed(1)} / 10</dd>
+            <dd className="text-yellow-500">★ {avgFightSceneRating.toFixed(1)}</dd>
           </>
         )}
         {activeYearsLabel && (
@@ -478,13 +475,6 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
           <FightSceneCollapsibleGrid entries={fightSceneEntries} />
         )}
       </SignatureVoteProvider>
-
-      {similarActors.length > 0 && (
-        <div className="my-10">
-          <h2 className="mb-4 text-xl font-bold text-white">You Might Also Like</h2>
-          <ActorRailTrack actors={similarActors} />
-        </div>
-      )}
 
       <ActorTributesSection
         personId={person.id}
