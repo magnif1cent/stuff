@@ -292,14 +292,6 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
       ? movieRatingAverages.reduce((sum, a) => sum + a, 0) / movieRatingAverages.length
       : null;
 
-  const fightSceneRatingAverages = fightScenes
-    .map((s) => memberSummaries.get(s.id)?.average)
-    .filter((a): a is number => a != null);
-  const avgFightSceneRating =
-    fightSceneRatingAverages.length > 0
-      ? fightSceneRatingAverages.reduce((sum, a) => sum + a, 0) / fightSceneRatingAverages.length
-      : null;
-
   const releaseYears = movies
     .map((m) => m.releaseDate?.getFullYear())
     .filter((y): y is number => y != null);
@@ -339,54 +331,47 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
     }
   }
 
-  // Styled after the SignatureSpotlight banner (src/components/actor-signature-vote.tsx)
-  // -- gold left accent stripe and 🏆 kicker pill -- rather than the movie
-  // page's neutral Details card, so this reads as a tribute to the actor's
-  // career using a pattern this page already teaches visitors to recognize
-  // as an honor.
+  // Plain bordered dt/dd "Details" card, same treatment as the movie page's
+  // Studio/Country/etc. box -- rolled back from an earlier gold/Spotlight-styled
+  // "Career Highlights" pass (see DECISIONS.md): these four are collection
+  // statistics (how much exists), not earned distinctions, so they don't get
+  // the crowd-voted-honor styling that treatment borrowed. Fight Scene Rating
+  // was dropped from this card entirely, not just restyled, on the same
+  // rollback.
   const careerStatsCard = (movies.length > 0 ||
     fightScenes.length > 0 ||
     avgCommunityRating != null ||
-    avgFightSceneRating != null ||
     activeYearsLabel) && (
-    <div className="max-w-sm rounded-md border border-neutral-800 border-l-4 border-l-yellow-500 bg-neutral-900 p-4">
-      <span className="inline-flex w-fit items-center gap-1 rounded-full border border-yellow-500/40 bg-yellow-500/10 px-2.5 py-0.5 text-[11px] font-bold tracking-wide text-yellow-500 uppercase">
-        🏆 Career Highlights
-      </span>
-      <div className="mt-3 grid grid-cols-2 gap-x-5 gap-y-3">
+    <div className="max-w-sm rounded-md border border-neutral-800 bg-neutral-900 p-3">
+      <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-neutral-500">Details</h3>
+      <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-sm">
         {movies.length > 0 && (
-          <div>
-            <p className="text-lg font-bold text-white tabular-nums">
+          <>
+            <dt className="text-neutral-500">Filmography</dt>
+            <dd className="text-neutral-300">
               {movies.length} movie{movies.length === 1 ? "" : "s"}
-            </p>
-            <p className="text-[11px] text-neutral-500">Filmography</p>
-          </div>
+            </dd>
+          </>
         )}
         {fightScenes.length > 0 && (
-          <div>
-            <p className="text-lg font-bold text-white tabular-nums">{fightScenes.length}</p>
-            <p className="text-[11px] text-neutral-500">Fight Scenes</p>
-          </div>
+          <>
+            <dt className="text-neutral-500">Fight Scenes</dt>
+            <dd className="text-neutral-300">{fightScenes.length}</dd>
+          </>
         )}
         {avgCommunityRating != null && (
-          <div>
-            <p className="text-lg font-bold text-yellow-500 tabular-nums">★ {avgCommunityRating.toFixed(1)}</p>
-            <p className="text-[11px] text-neutral-500">Community Rating</p>
-          </div>
-        )}
-        {avgFightSceneRating != null && (
-          <div>
-            <p className="text-lg font-bold text-yellow-500 tabular-nums">★ {avgFightSceneRating.toFixed(1)}</p>
-            <p className="text-[11px] text-neutral-500">Fight Scene Rating</p>
-          </div>
+          <>
+            <dt className="text-neutral-500">Community Rating</dt>
+            <dd className="text-yellow-500">★ {avgCommunityRating.toFixed(1)}</dd>
+          </>
         )}
         {activeYearsLabel && (
-          <div>
-            <p className="text-lg font-bold text-white tabular-nums">{activeYearsLabel}</p>
-            <p className="text-[11px] text-neutral-500">Years Active</p>
-          </div>
+          <>
+            <dt className="text-neutral-500">Years Active</dt>
+            <dd className="text-neutral-300">{activeYearsLabel}</dd>
+          </>
         )}
-      </div>
+      </dl>
     </div>
   );
 

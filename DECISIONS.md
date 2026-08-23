@@ -109,6 +109,7 @@ one.
 - [Trending carousel clip autoplay bounded to one lap, paused when the tab is hidden](#trending-carousel-clip-autoplay-bounded-to-one-lap-paused-when-the-tab-is-hidden)
 - [Trending carousel autoplay cap raised from 1 lap to 5](#trending-carousel-autoplay-cap-raised-from-1-lap-to-5)
 - [Actor Career Highlights styled like the Signature Spotlight banner, "Sparring Partner" from existing fight-scene data](#actor-career-highlights-styled-like-the-signature-spotlight-banner-sparring-partner-from-existing-fight-scene-data)
+- [Career Highlights reverted to a plain Details card](#career-highlights-reverted-to-a-plain-details-card)
 
 **Deferred & Backlog**
 
@@ -2657,16 +2658,60 @@ into its own card shortly after shipping — see the bullet below.
   not `line-clamp-10` — Tailwind's line-clamp utility only ships values 1–6
   by default, so the bare class name wouldn't generate any CSS.
 
+### Career Highlights reverted to a plain Details card
+**PR #TBD.** Reverses the gold `SignatureSpotlight`-styled treatment from the
+entry above, after further design review distinguished two different kinds
+of information the block had been treating identically: Filmography size,
+Fight Scenes count, average Community Rating, and Years Active are all
+*collection statistics* — they describe how much exists, not anything the
+actor was recognized for — while `SignatureSpotlight` (Signature Role/
+Signature Fight Scene) already carries this app's one genuine crowd-earned
+"achievement" signal on this page. Applying the same gold/trophy chrome to
+both diluted what "gold" meant: multiple gold-bordered blocks near the top
+of the page, only one of which was actually earned. The card is back to the
+plain bordered dt/dd treatment (same as the movie page's Studio/Country
+box), renamed from "Career Highlights" back to "Details," with Fight Scene
+Rating dropped from it entirely — not just restyled, narrowed to the four
+stats above by explicit request rather than carried forward by default.
+
+- **Several accent-color middle grounds were tried and rejected before
+  landing on fully plain** — an amber/bronze accent (a distinct hue reserving
+  gold specifically for votes), the same gold at lower visual weight (a thin
+  rule, no pill badge), a belt emoji (🥋) swapped in for the trophy, and a
+  muted/darker gold variant, each mocked directly beside the real
+  `SignatureSpotlight` banner for comparison. All were more visually
+  resolved than "plain," but none of them fixed the actual problem once
+  "these are collection statistics, not achievements" was named directly —
+  no amount of restyling turns a movie count into something earned.
+- **What a genuine actor "achievement" block would need was scoped, then
+  explicitly deferred** — see Deferred & Backlog below. The initial
+  candidates (a Most Beloved Actors leaderboard rank; highest-rated movie in
+  the filmography) were cut for a different reason than the styling: a
+  cross-actor rank would introduce a second, different ranking mechanism
+  competing with `SignatureSpotlight` on the same page, not just look wrong.
+  Within-actor superlatives (e.g. an actor's own highest-rated or
+  most-favorited fight scene) don't have that problem, since they don't rank
+  actors against each other — flagged as the one thread still worth pulling
+  on later, likely as an addition to `SignatureSpotlight` itself rather than
+  a new block.
+- **Sparring Partner is unaffected** — it already shipped as its own plain
+  card in the entry above, for the same "not earned, don't gild it"
+  reasoning this rollback now applies to the rest of the block too.
+
 ## Deferred & Backlog
 
-- **Combine Career Highlights with the page's other Signature-styled blocks**
-  — raised right after Career Highlights shipped its `SignatureSpotlight`-matched
-  styling: the actor page now carries up to three gold-accented "honor" blocks
-  near its top (Career Highlights, plus the Signature Role and Signature Fight
-  Scene spotlight banners), each currently its own separate element. Worth a
-  later pass to see whether they should visually merge into one combined
-  tribute section, or stay distinct — deliberately not decided now, flagged
-  as a revisit rather than folded into this PR.
+- **A real actor "achievement" block, distinct from the plain Details card**
+  — the actual ask behind Career Highlights' original gold styling (see
+  "Career Highlights reverted to a plain Details card" above) was wanting
+  something that pays tribute to an actor's earned distinctions, not their
+  raw stats. `SignatureSpotlight` (Signature Role/Signature Fight Scene)
+  already is that, crowd-voted; the open question is whether it's enough on
+  its own or should grow to also surface within-actor superlatives (their
+  highest-rated or most-favorited fight scene, say) — explicitly not a
+  cross-actor leaderboard rank, which was ruled out for competing with
+  Signature Vote as a second ranking mechanism on the same page, not for any
+  data-availability reason. Deliberately not scoped further than this until
+  there's an actual plan.
 - **Whether per-movie ratings should be weighted by rating count** — raised
   while adding the actor page's career-stats "Community Rating" (mean of each
   movie's own community average across the actor's filmography), which
