@@ -2616,6 +2616,27 @@ scenes, years active (earliest–latest release year), and Sparring Partner.
   every actor with 2+ movies, which is too common to read as a distinctive
   "sparring partner," not sparse in a way that singles out a real repeat
   pairing.
+- **Placement went through one more round after the styling landed**: tried
+  living in the same flex row as the avatar/name (pinned to the right,
+  desktop-only), then settled on its current spot instead — its own row
+  below the avatar/name, with the bio (birthday, place of birth, biography)
+  sharing that row to its right rather than sitting directly under the name
+  the way it used to. Picked over the avatar-row placement because it keeps
+  the very top of the page (avatar + name) uncluttered while still putting
+  Career Highlights ahead of everything else below it, and it doesn't force
+  the bio to compete for space with the favorite button and page padding
+  the way a three-way avatar-row split would have.
+- **Biography gained a 4-line clamp + "Show more"/"Show less" toggle**
+  (`ActorBio`, `src/components/actor-bio.tsx`) as a direct consequence of
+  the placement above — sharing its row with a 288px-wide Career Highlights
+  column leaves the biography meaningfully narrower than the full-width
+  paragraph it used to be, so a long TMDB biography now wraps to far more
+  lines than before. Reuses the exact clamp-with-toggle pattern already
+  established by `ReviewText` (`RecentReviewsFeed`) and `MemberReviewCard`
+  (`ReviewsSection`) — a length threshold above which `line-clamp-4` applies,
+  lifted on click — rather than inventing a new one; `CLAMP_THRESHOLD = 280`
+  sits between those two precedents' thresholds (220 and the review card's
+  160), matching how both scale their threshold to their column's width.
 
 ## Deferred & Backlog
 

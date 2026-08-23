@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { tmdbImageUrl, getTmdbPersonDetails } from "@/lib/tmdb";
 import { getFightSceneRatingSummaries, getFightSceneAdminRatingSummaries, getFightSceneFavoriteCounts } from "@/lib/fight-scenes";
 import { MovieRailTrack } from "@/components/movie-rail";
+import { ActorBio } from "@/components/actor-bio";
 import { FilmographyList, type FilmographyRow } from "@/components/filmography-list";
 import { FightSceneCollapsibleGrid, type FightSceneEntry } from "@/components/fight-scene-collapsible-grid";
 import { getRatingSummaries } from "@/lib/ratings";
@@ -402,40 +403,44 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-10">
-      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start">
+      <div className="mb-6 flex items-center gap-4">
         <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-full bg-neutral-800">
           {person.profilePath && (
             <Image src={tmdbImageUrl(person.profilePath, "w200") ?? ""} alt={person.name} fill sizes="96px" className="object-cover" />
           )}
         </div>
-        <div>
-          <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-2xl font-bold text-white">{person.name}</h1>
-            <ActorFavoriteButton
-              personId={person.id}
-              initialFavorite={!!myFavorite}
-              initialCount={favoriteCountMap.get(person.id) ?? 0}
-              signedIn={!!session?.user}
-            />
-          </div>
-          {bio && (
-            <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-neutral-400">
-              {bio.birthday && (
-                <span>
-                  Born {new Date(bio.birthday).toLocaleDateString(undefined, { dateStyle: "long" })}
-                  {bio.deathday && ` — Died ${new Date(bio.deathday).toLocaleDateString(undefined, { dateStyle: "long" })}`}
-                </span>
-              )}
-              {bio.place_of_birth && <span>{bio.place_of_birth}</span>}
-            </div>
-          )}
-          {bio?.biography && (
-            <p className="mt-2 max-w-2xl whitespace-pre-line text-sm text-neutral-300">{bio.biography}</p>
-          )}
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="text-2xl font-bold text-white">{person.name}</h1>
+          <ActorFavoriteButton
+            personId={person.id}
+            initialFavorite={!!myFavorite}
+            initialCount={favoriteCountMap.get(person.id) ?? 0}
+            signedIn={!!session?.user}
+          />
         </div>
       </div>
 
-      {careerStatsCard && <div className="mb-8">{careerStatsCard}</div>}
+      {(careerStatsCard || bio) && (
+        <div className="mb-8 flex flex-col gap-6 sm:flex-row sm:items-start">
+          {careerStatsCard && <div className="sm:w-72 sm:shrink-0">{careerStatsCard}</div>}
+          {bio && (
+            <div className="min-w-0 flex-1">
+              {(bio.birthday || bio.place_of_birth) && (
+                <div className="mb-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-neutral-400">
+                  {bio.birthday && (
+                    <span>
+                      Born {new Date(bio.birthday).toLocaleDateString(undefined, { dateStyle: "long" })}
+                      {bio.deathday && ` — Died ${new Date(bio.deathday).toLocaleDateString(undefined, { dateStyle: "long" })}`}
+                    </span>
+                  )}
+                  {bio.place_of_birth && <span>{bio.place_of_birth}</span>}
+                </div>
+              )}
+              {bio.biography && <ActorBio biography={bio.biography} />}
+            </div>
+          )}
+        </div>
+      )}
 
       <SignatureVoteProvider
         personId={person.id}
