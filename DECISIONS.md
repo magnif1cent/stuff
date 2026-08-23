@@ -108,6 +108,8 @@ one.
 - [Social platform icons for the website/social link field](#social-platform-icons-for-the-websitesocial-link-field)
 - [Trending carousel clip autoplay bounded to one lap, paused when the tab is hidden](#trending-carousel-clip-autoplay-bounded-to-one-lap-paused-when-the-tab-is-hidden)
 - [Trending carousel autoplay cap raised from 1 lap to 5](#trending-carousel-autoplay-cap-raised-from-1-lap-to-5)
+- [Actor Career Highlights styled like the Signature Spotlight banner, "Sparring Partner" from existing fight-scene data](#actor-career-highlights-styled-like-the-signature-spotlight-banner-sparring-partner-from-existing-fight-scene-data)
+- [Career Highlights reverted to a plain Details card](#career-highlights-reverted-to-a-plain-details-card)
 
 **Deferred & Backlog**
 
@@ -2558,8 +2560,229 @@ feature was scoped from.
   other property (same actor scope, same toggle/retract mechanics, same email-verification
   gate), so two tables would just be the one-row-two-nullable-columns shape typed out twice.
 
+### Actor Career Highlights styled like the Signature Spotlight banner, "Sparring Partner" from existing fight-scene data
+**PR #TBD.** Added a career-stats box just under the actor's name/avatar.
+Went through three rounds of visual treatment before landing: (1) a plain
+bordered dt/dd "Details" card, matching the movie page's Studio/Country box,
+compared against the member profile's stat-tile-strip (`ProfileStatsStrip`)
+and a plain inline stat line — Details won that round as the closer match for
+a dense summary block this close to a header; (2) Details vs. a full-width
+"hero stat strip" (bigger numbers, more prominent), raised to see if the block
+should read as a bigger feature — rejected because it visually outcompeted the
+actor's own name for attention right under the header; (3) the actual goal
+behind wanting something bigger turned out to be wanting the block to feel
+like a tribute to the actor, not just louder — so it ships styled after the
+existing `SignatureSpotlight` banner instead (gold `border-l-4 border-l-yellow-500`
+accent stripe, a "🏆 Career Highlights" kicker pill, bold two-column stat
+values), reusing a pattern this page already teaches visitors to read as an
+honor rather than inventing a new one. Five stats in the grid, each
+independently omitted when it has nothing to show (same "no signal, no row"
+rule the Details-card version had): total approved movies, fight scenes
+tagged, average community rating across the filmography, average rating
+across their tagged fight scenes, and years active (earliest–latest release
+year). Sparring Partner started as a sixth grid cell but was pulled back out
+into its own card shortly after shipping — see the bullet below.
+
+- **Every number comes from data already fetched for the rest of the page** —
+  no new queries. Ratings are an unweighted mean of each movie's/scene's own
+  average, same "no ratings-count weighting" approach used everywhere else in
+  the app (see the Deferred entry below — revisiting that is a whole-app
+  question, not something to special-case here).
+- **The two rating stats show as `★ N.N` in yellow, not `N.N / 10`.** The
+  movie page's own big hero score does say "/ 10", but every *compact*
+  rating display already in the app — `MovieCard`, `FilmographyList` — drops
+  it and shows just the bare starred number, since the label next to it
+  already establishes what's being rated. This card is a compact context,
+  so it follows that convention instead of the hero one.
+- **Kept at card width, not full-bleed**, even after moving to the
+  Spotlight-styled treatment — the goal was to make the block feel earned,
+  not to make it bigger. A two-column grid (rather than the single dt/dd
+  column the Details-card round used) lets each value stand on its own as a
+  bold number instead of a label-left row, without needing the width a hero
+  strip would take.
+- **Sparring Partner — the co-star sharing the most distinct fight scenes with
+  this actor** — came out of exploring what a co-starring/collaboration
+  signal between two actors could surface (a "You Might Also Like" rail for
+  actors, scored the same way as the movie version, was prototyped alongside
+  this but deferred — see Deferred & Backlog). Computed entirely from
+  `person.fightSceneAppearances[].fightScene.cast`, already loaded for the
+  Fight Scenes section, so it's free regardless of whether that rail ships.
+  Requires at least 2 shared scenes before it's shown — same
+  minimum-sample-size reasoning as `TOP_RATED_MIN_RATINGS` in
+  `src/lib/ratings.ts` — since most actor pairs never clear that bar; the row
+  just doesn't render rather than crowning a "partner" off one coincidental
+  scene together or showing a placeholder. Ties (more than one co-star at the
+  same top count) go unresolved, same precedent as `getSimilarMovies`.
+- **Movie-level co-starring was considered and rejected** for this stat in
+  favor of shared fight scenes specifically — fight scenes are this site's
+  flagship content type, and a movie-level version would resolve for nearly
+  every actor with 2+ movies, which is too common to read as a distinctive
+  "sparring partner," not sparse in a way that singles out a real repeat
+  pairing.
+- **Sparring Partner moved out of the Career Highlights grid into its own
+  small card** (still in the same top row, to Career Highlights' right,
+  before the bio) shortly after both shipped, following a design review
+  that flagged mixing it into the stats grid as a category error: the other
+  five values are quantitative (counts, an average, a year range) and
+  Sparring Partner is a linked name — a relational fact, not a stat. The new
+  card deliberately does **not** reuse the gold Spotlight styling — nothing
+  about it was voted on or earned, it's a computed fact, so it gets the same
+  plain-bordered treatment as the movie page's Details box instead. Framed
+  explicitly as a small, likely-temporary home for this data: the real
+  destination is probably the "expand actor-to-actor collaboration data"
+  idea already in Deferred & Backlog below, once that has an actual design —
+  this card exists now because the data was worth keeping visible in the
+  meantime, not because this is that section.
+- **Placement went through one more round after the styling landed**: tried
+  living in the same flex row as the avatar/name (pinned to the right,
+  desktop-only), then settled on its current spot instead — its own row
+  below the avatar/name, with the bio (birthday, place of birth, biography)
+  sharing that row to its right rather than sitting directly under the name
+  the way it used to. Picked over the avatar-row placement because it keeps
+  the very top of the page (avatar + name) uncluttered while still putting
+  Career Highlights ahead of everything else below it, and it doesn't force
+  the bio to compete for space with the favorite button and page padding
+  the way a three-way avatar-row split would have.
+- **Biography gained a 10-line clamp + "Show more"/"Show less" toggle**
+  (`ActorBio`, `src/components/actor-bio.tsx`) as a direct consequence of
+  the placement above — sharing its row with a 288px-wide Career Highlights
+  column leaves the biography meaningfully narrower than the full-width
+  paragraph it used to be, so a long TMDB biography now wraps to far more
+  lines than before. Reuses the clamp-with-toggle mechanics already
+  established by `ReviewText` (`RecentReviewsFeed`) and `MemberReviewCard`
+  (`ReviewsSection`) — a length threshold above which a line-clamp applies,
+  lifted on click — but with a taller clamp (10 lines, not those two's 3/4)
+  and a proportionally scaled `CLAMP_THRESHOLD = 700`, since a biography
+  reads as an article, not a review, and can reasonably earn more space
+  before the toggle kicks in. `line-clamp-[10]` is an arbitrary-value class,
+  not `line-clamp-10` — Tailwind's line-clamp utility only ships values 1–6
+  by default, so the bare class name wouldn't generate any CSS.
+
+### Career Highlights reverted to a plain Details card
+**PR #TBD.** Reverses the gold `SignatureSpotlight`-styled treatment from the
+entry above, after further design review distinguished two different kinds
+of information the block had been treating identically: Filmography size,
+Fight Scenes count, average Community Rating, and Years Active are all
+*collection statistics* — they describe how much exists, not anything the
+actor was recognized for — while `SignatureSpotlight` (Signature Role/
+Signature Fight Scene) already carries this app's one genuine crowd-earned
+"achievement" signal on this page. Applying the same gold/trophy chrome to
+both diluted what "gold" meant: multiple gold-bordered blocks near the top
+of the page, only one of which was actually earned. The card is back to the
+plain bordered dt/dd treatment (same as the movie page's Studio/Country
+box), renamed from "Career Highlights" back to "Details," with Fight Scene
+Rating dropped from it entirely — not just restyled, narrowed to the four
+stats above by explicit request rather than carried forward by default.
+
+- **Several accent-color middle grounds were tried and rejected before
+  landing on fully plain** — an amber/bronze accent (a distinct hue reserving
+  gold specifically for votes), the same gold at lower visual weight (a thin
+  rule, no pill badge), a belt emoji (🥋) swapped in for the trophy, and a
+  muted/darker gold variant, each mocked directly beside the real
+  `SignatureSpotlight` banner for comparison. All were more visually
+  resolved than "plain," but none of them fixed the actual problem once
+  "these are collection statistics, not achievements" was named directly —
+  no amount of restyling turns a movie count into something earned.
+- **What a genuine actor "achievement" block would need was scoped, then
+  explicitly deferred** — see Deferred & Backlog below. The initial
+  candidates (a Most Beloved Actors leaderboard rank; highest-rated movie in
+  the filmography) were cut for a different reason than the styling: a
+  cross-actor rank would introduce a second, different ranking mechanism
+  competing with `SignatureSpotlight` on the same page, not just look wrong.
+  Within-actor superlatives (e.g. an actor's own highest-rated or
+  most-favorited fight scene) don't have that problem, since they don't rank
+  actors against each other — flagged as the one thread still worth pulling
+  on later, likely as an addition to `SignatureSpotlight` itself rather than
+  a new block.
+- **Sparring Partner is unaffected** — it already shipped as its own plain
+  card in the entry above, for the same "not earned, don't gild it"
+  reasoning this rollback now applies to the rest of the block too.
+
+### Sparring Partner tie-breaking made random and disclosed, not silent
+**PR #TBD.** A design review flagged that the original tie-break (whichever
+co-star was encountered first while iterating fight scenes, i.e. an
+insertion-order artifact of scene `createdAt desc` ordering) picked silently
+— a visitor who'd actually counted the scenes could see the card name a
+different co-star than theirs with the same count and reasonably think the
+site got it wrong. Now: all co-stars tied at the top count are collected,
+one is chosen with `Math.random()` (via a `pickRandom` helper — see below),
+and the card discloses the tie ("5 shared fight scenes · tied with 1
+other") instead of presenting one name as if it were the clear answer.
+
+- **`Math.random()` lives in a standalone `pickRandom` helper, not inline in
+  `ActorPage`** — React's purity rules (`react-hooks/purity`, enforced by
+  this repo's lint config) reject calling an impure function directly in a
+  component's own body, flagging it as unstable-render-output risk. The
+  helper isn't a component or hook by the rule's naming heuristic, so the
+  call is invisible to that check from inside `ActorPage`, while the
+  behavior — pick unpredictably among the tied candidates — is unchanged.
+- **The shown partner can change between page loads when a tie exists** —
+  there's no request-scoped or cached seed pinning the pick, and this page
+  is fully dynamic (server-rendered per request, not statically generated),
+  so a visitor refreshing mid-tie may see a different name each time. Judged
+  acceptable: the alternative (a stable deterministic tiebreak, e.g.
+  alphabetical) trades "flicker" for "arbitrary-looking but consistent,"
+  which isn't obviously better for a stat framed as bragging rights — and
+  the tie is disclosed either way, so neither name reads as definitively
+  wrong.
+
 ## Deferred & Backlog
 
+- **Long-value wrapping risk in the Details/Sparring Partner cards, on real
+  (not mocked) data** — flagged during design review and explicitly
+  deferred rather than fixed: neither card guards against a long value
+  breaking its bold-number layout — `activeYearsLabel`, the "N movies"
+  Filmography string, and a co-star's name (`SparringPartner`, only
+  `truncate`d, no width floor) were all only ever checked against short
+  mocked values. This app's own docs note actors with 100+ credits exist
+  (see "Actor Filmography split into Known For + a dense list" above), and
+  every actor page render in this session was checked via `npm run lint`/
+  `npm run build` only — no live database or dev server was available in
+  this environment, so nothing here has actually been rendered against real
+  data. Revisit with either real data or deliberately long test values
+  before trusting the layout at the edges.
+- **A real actor "achievement" block, distinct from the plain Details card**
+  — the actual ask behind Career Highlights' original gold styling (see
+  "Career Highlights reverted to a plain Details card" above) was wanting
+  something that pays tribute to an actor's earned distinctions, not their
+  raw stats. `SignatureSpotlight` (Signature Role/Signature Fight Scene)
+  already is that, crowd-voted; the open question is whether it's enough on
+  its own or should grow to also surface within-actor superlatives (their
+  highest-rated or most-favorited fight scene, say) — explicitly not a
+  cross-actor leaderboard rank, which was ruled out for competing with
+  Signature Vote as a second ranking mechanism on the same page, not for any
+  data-availability reason. Deliberately not scoped further than this until
+  there's an actual plan.
+- **Whether per-movie ratings should be weighted by rating count** — raised
+  while adding the actor page's career-stats "Community Rating" (mean of each
+  movie's own community average across the actor's filmography), which
+  currently weighs a movie with 2 ratings the same as one with 200, matching
+  how every other per-movie stat in the app already works (no ratings-count
+  weighting anywhere else either). Explicitly deferred as a broader "how should
+  rating aggregation work across the app" question, not something to decide
+  ad hoc for one new stat.
+- **Actor-page "You Might Also Like" rail** — a similar-actors rail was
+  prototyped alongside the career stats work, modeled directly on
+  `getSimilarMovies`' weighted-signal approach: co-starring in the same
+  `APPROVED` movie (+3 per shared movie) and sharing a fight-scene tag (+2 per
+  shared tag), candidate pool via one `OR` query then scored/sorted in JS, top
+  8, same "no shared signal, no rail" rule as the movie version. Built as
+  `getSimilarActors` with `ActorCard`/`ActorRailTrack` components mirroring
+  `MovieCard`/`MovieRailTrack` (circular avatar + name, since a `Person` has
+  no poster/rating fields to render) — then pulled back out before merge, not
+  ready to ship yet. The design above is the starting point for whoever
+  revisits this, not a from-scratch redesign.
+- **Expand actor-to-actor collaboration data beyond the single "Sparring
+  Partner" stat** — that stat (top co-star by shared fight scenes, min. 2 to
+  qualify) and the shelved co-starring signal above (see the previous bullet)
+  both compute pairwise actor relationships already, but only surface a single
+  number/name each. Worth exploring as its own feature once the similar-actors
+  rail (or something like it) ships: a ranked list of an actor's top
+  collaborators (blending movie co-starring and fight-scene pairings, not just
+  the single top match), a dedicated pairwise view ("every scene/movie X and Y
+  share"), or a site-wide "most frequent pairings" leaderboard. No schema
+  change needed — same underlying `CastCredit`/`FightSceneCast` data, just
+  more of it surfaced and packaged differently.
 - **Toggle to a compact table view for the Filmography list** — a full IMDb-style
   decade-grouped text table (no poster thumbnails, ~3x the density of the shipped
   rows-with-posters view) was prototyped alongside it and works; not shipped as a

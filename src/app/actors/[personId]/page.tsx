@@ -1,5 +1,6 @@
 import { cache } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
@@ -7,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { tmdbImageUrl, getTmdbPersonDetails } from "@/lib/tmdb";
 import { getFightSceneRatingSummaries, getFightSceneAdminRatingSummaries, getFightSceneFavoriteCounts } from "@/lib/fight-scenes";
 import { MovieRailTrack } from "@/components/movie-rail";
+import { ActorBio } from "@/components/actor-bio";
 import { FilmographyList, type FilmographyRow } from "@/components/filmography-list";
 import { FightSceneCollapsibleGrid, type FightSceneEntry } from "@/components/fight-scene-collapsible-grid";
 import { getRatingSummaries } from "@/lib/ratings";
@@ -23,6 +25,14 @@ import { getPersonFavoriteCounts } from "@/lib/person-favorites";
 import { ActorFavoriteButton } from "@/components/actor-favorite-button";
 import { getPersonSignatureVoteSummary } from "@/lib/person-signature-votes";
 import { SignatureVoteProvider, SignatureSpotlight, SignatureVoteButton } from "@/components/actor-signature-vote";
+
+// Split out from ActorPage's body so the Math.random() call it wraps isn't
+// flagged as an impurity inside the page's own render function (React's
+// purity rules apply to the component body itself, not to plain helpers it
+// calls) -- see the Sparring Partner tie-break below.
+function pickRandom<T>(items: T[]): T {
+  return items[Math.floor(Math.random() * items.length)];
+}
 
 const getPerson = cache((personId: string) =>
   prisma.person.findUnique({
@@ -275,40 +285,176 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
     };
   });
 
+  // Career stat block: every number here is derived from data already loaded
+  // above for the rest of the page (movies/fightScenes/ratingSummaries/
+  // memberSummaries) -- no additional queries. Ratings are an unweighted mean
+  // of each movie's/scene's own average (a movie with 2 ratings counts the
+  // same as one with 200) -- matches how every other per-movie stat in this
+  // app already works; revisit only as part of a broader rating-weighting
+  // pass, not ad hoc here (see DECISIONS.md).
+  const movieRatingAverages = movies
+    .map((m) => ratingSummaries.get(m.id)?.average)
+    .filter((a): a is number => a != null);
+  const avgCommunityRating =
+    movieRatingAverages.length > 0
+      ? movieRatingAverages.reduce((sum, a) => sum + a, 0) / movieRatingAverages.length
+      : null;
+
+  const releaseYears = movies
+    .map((m) => m.releaseDate?.getFullYear())
+    .filter((y): y is number => y != null);
+  const activeYearsLabel =
+    releaseYears.length > 0
+      ? (() => {
+          const minYear = Math.min(...releaseYears);
+          const maxYear = Math.max(...releaseYears);
+          return minYear === maxYear ? `${minYear}` : `${minYear}–${maxYear}`;
+        })()
+      : null;
+
+  // "Sparring partner" -- the co-star this actor shares the most distinct
+  // fight scenes with. Requires at least 2 shared scenes so one coincidental
+  // scene together doesn't crown a "partner" (same minimum-sample-size
+  // reasoning as TOP_RATED_MIN_RATINGS in src/lib/ratings.ts). Genuinely
+  // sparse -- most actor pairs never clear the threshold -- so most actors
+  // simply won't have this stat, same "no signal, no row" rule the rest of
+  // this block and the You Might Also Like rails already follow.
+  //
+  // A tie at the top count is picked at random (not deterministically, e.g.
+  // by insertion order) and disclosed via tieCount, rather than silently
+  // crowning whichever candidate happened to be encountered first -- a
+  // visitor who's counted the scenes themselves should never see this card
+  // name someone else with no indication the pick wasn't clear-cut. Note
+  // this means the shown partner can differ between page loads when a tie
+  // exists, since there's no caching keying the pick to a stable seed.
+  const MIN_SPARRING_SCENES = 2;
+  const sparringCounts = new Map<string, { name: string; count: number }>();
+  for (const scene of fightScenes) {
+    for (const castMember of scene.cast) {
+      if (castMember.personId === person.id) continue;
+      const existing = sparringCounts.get(castMember.personId);
+      sparringCounts.set(castMember.personId, {
+        name: castMember.person.name,
+        count: (existing?.count ?? 0) + 1,
+      });
+    }
+  }
+  const eligiblePartners = [...sparringCounts.entries()]
+    .map(([id, partner]) => ({ id, ...partner }))
+    .filter((p) => p.count >= MIN_SPARRING_SCENES);
+  const topCount = eligiblePartners.length > 0 ? Math.max(...eligiblePartners.map((p) => p.count)) : 0;
+  const topPartners = eligiblePartners.filter((p) => p.count === topCount);
+  const sparringPartner: { id: string; name: string; count: number; tieCount: number } | null =
+    topPartners.length > 0 ? { ...pickRandom(topPartners), tieCount: topPartners.length } : null;
+
+  // Plain bordered dt/dd "Details" card, same treatment as the movie page's
+  // Studio/Country/etc. box -- rolled back from an earlier gold/Spotlight-styled
+  // "Career Highlights" pass (see DECISIONS.md): these four are collection
+  // statistics (how much exists), not earned distinctions, so they don't get
+  // the crowd-voted-honor styling that treatment borrowed. Fight Scene Rating
+  // was dropped from this card entirely, not just restyled, on the same
+  // rollback.
+  const careerStatsCard = (movies.length > 0 ||
+    fightScenes.length > 0 ||
+    avgCommunityRating != null ||
+    activeYearsLabel) && (
+    <div className="max-w-sm rounded-md border border-neutral-800 bg-neutral-900 p-3">
+      <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-neutral-500">Details</h3>
+      <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-sm">
+        {movies.length > 0 && (
+          <>
+            <dt className="text-neutral-500">Filmography</dt>
+            <dd className="text-neutral-300">
+              {movies.length} movie{movies.length === 1 ? "" : "s"}
+            </dd>
+          </>
+        )}
+        {fightScenes.length > 0 && (
+          <>
+            <dt className="text-neutral-500">Fight Scenes</dt>
+            <dd className="text-neutral-300">{fightScenes.length}</dd>
+          </>
+        )}
+        {avgCommunityRating != null && (
+          <>
+            <dt className="text-neutral-500">Community Rating</dt>
+            <dd className="text-yellow-500">★ {avgCommunityRating.toFixed(1)}</dd>
+          </>
+        )}
+        {activeYearsLabel && (
+          <>
+            <dt className="text-neutral-500">Years Active</dt>
+            <dd className="text-neutral-300">{activeYearsLabel}</dd>
+          </>
+        )}
+      </dl>
+    </div>
+  );
+
+  // A relational fact, not a computed/voted "highlight" -- kept out of the
+  // Career Highlights grid (mixing a linked name in with quantitative stats
+  // was a category error) and out of its gold Spotlight styling (nothing
+  // here was earned by a vote). Plain neutral card, same footing as the
+  // movie page's Details box. Small today on purpose: this is the seed of a
+  // possible future collaboration/pairings section (see DECISIONS.md), not
+  // a final design for one.
+  const sparringPartnerCard = sparringPartner && (
+    <div className="w-56 shrink-0 rounded-md border border-neutral-800 bg-neutral-900 p-4">
+      <h3 className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">Sparring Partner</h3>
+      <p className="mt-2 truncate text-lg font-bold text-white">
+        <Link href={`/actors/${sparringPartner.id}`} className="hover:text-red-500">
+          {sparringPartner.name}
+        </Link>
+      </p>
+      <p className="text-xs text-neutral-500">
+        {sparringPartner.count} shared fight scenes
+        {sparringPartner.tieCount > 1 &&
+          ` · tied with ${sparringPartner.tieCount - 1} other${sparringPartner.tieCount - 1 === 1 ? "" : "s"}`}
+      </p>
+    </div>
+  );
+
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-10">
-      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start">
+      <div className="mb-6 flex items-center gap-4">
         <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-full bg-neutral-800">
           {person.profilePath && (
             <Image src={tmdbImageUrl(person.profilePath, "w200") ?? ""} alt={person.name} fill sizes="96px" className="object-cover" />
           )}
         </div>
-        <div>
-          <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-2xl font-bold text-white">{person.name}</h1>
-            <ActorFavoriteButton
-              personId={person.id}
-              initialFavorite={!!myFavorite}
-              initialCount={favoriteCountMap.get(person.id) ?? 0}
-              signedIn={!!session?.user}
-            />
-          </div>
-          {bio && (
-            <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-neutral-400">
-              {bio.birthday && (
-                <span>
-                  Born {new Date(bio.birthday).toLocaleDateString(undefined, { dateStyle: "long" })}
-                  {bio.deathday && ` — Died ${new Date(bio.deathday).toLocaleDateString(undefined, { dateStyle: "long" })}`}
-                </span>
-              )}
-              {bio.place_of_birth && <span>{bio.place_of_birth}</span>}
-            </div>
-          )}
-          {bio?.biography && (
-            <p className="mt-2 max-w-2xl whitespace-pre-line text-sm text-neutral-300">{bio.biography}</p>
-          )}
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="text-2xl font-bold text-white">{person.name}</h1>
+          <ActorFavoriteButton
+            personId={person.id}
+            initialFavorite={!!myFavorite}
+            initialCount={favoriteCountMap.get(person.id) ?? 0}
+            signedIn={!!session?.user}
+          />
         </div>
       </div>
+
+      {(careerStatsCard || sparringPartnerCard || bio) && (
+        <div className="mb-8 flex flex-col gap-6 sm:flex-row sm:items-start">
+          {careerStatsCard && <div className="sm:w-72 sm:shrink-0">{careerStatsCard}</div>}
+          {sparringPartnerCard}
+          {bio && (
+            <div className="min-w-0 flex-1">
+              {(bio.birthday || bio.place_of_birth) && (
+                <div className="mb-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-neutral-400">
+                  {bio.birthday && (
+                    <span>
+                      Born {new Date(bio.birthday).toLocaleDateString(undefined, { dateStyle: "long" })}
+                      {bio.deathday && ` — Died ${new Date(bio.deathday).toLocaleDateString(undefined, { dateStyle: "long" })}`}
+                    </span>
+                  )}
+                  {bio.place_of_birth && <span>{bio.place_of_birth}</span>}
+                </div>
+              )}
+              {bio.biography && <ActorBio biography={bio.biography} />}
+            </div>
+          )}
+        </div>
+      )}
 
       <SignatureVoteProvider
         personId={person.id}
