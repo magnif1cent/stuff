@@ -2698,8 +2698,49 @@ stats above by explicit request rather than carried forward by default.
   card in the entry above, for the same "not earned, don't gild it"
   reasoning this rollback now applies to the rest of the block too.
 
+### Sparring Partner tie-breaking made random and disclosed, not silent
+**PR #TBD.** A design review flagged that the original tie-break (whichever
+co-star was encountered first while iterating fight scenes, i.e. an
+insertion-order artifact of scene `createdAt desc` ordering) picked silently
+— a visitor who'd actually counted the scenes could see the card name a
+different co-star than theirs with the same count and reasonably think the
+site got it wrong. Now: all co-stars tied at the top count are collected,
+one is chosen with `Math.random()` (via a `pickRandom` helper — see below),
+and the card discloses the tie ("5 shared fight scenes · tied with 1
+other") instead of presenting one name as if it were the clear answer.
+
+- **`Math.random()` lives in a standalone `pickRandom` helper, not inline in
+  `ActorPage`** — React's purity rules (`react-hooks/purity`, enforced by
+  this repo's lint config) reject calling an impure function directly in a
+  component's own body, flagging it as unstable-render-output risk. The
+  helper isn't a component or hook by the rule's naming heuristic, so the
+  call is invisible to that check from inside `ActorPage`, while the
+  behavior — pick unpredictably among the tied candidates — is unchanged.
+- **The shown partner can change between page loads when a tie exists** —
+  there's no request-scoped or cached seed pinning the pick, and this page
+  is fully dynamic (server-rendered per request, not statically generated),
+  so a visitor refreshing mid-tie may see a different name each time. Judged
+  acceptable: the alternative (a stable deterministic tiebreak, e.g.
+  alphabetical) trades "flicker" for "arbitrary-looking but consistent,"
+  which isn't obviously better for a stat framed as bragging rights — and
+  the tie is disclosed either way, so neither name reads as definitively
+  wrong.
+
 ## Deferred & Backlog
 
+- **Long-value wrapping risk in the Details/Sparring Partner cards, on real
+  (not mocked) data** — flagged during design review and explicitly
+  deferred rather than fixed: neither card guards against a long value
+  breaking its bold-number layout — `activeYearsLabel`, the "N movies"
+  Filmography string, and a co-star's name (`SparringPartner`, only
+  `truncate`d, no width floor) were all only ever checked against short
+  mocked values. This app's own docs note actors with 100+ credits exist
+  (see "Actor Filmography split into Known For + a dense list" above), and
+  every actor page render in this session was checked via `npm run lint`/
+  `npm run build` only — no live database or dev server was available in
+  this environment, so nothing here has actually been rendered against real
+  data. Revisit with either real data or deliberately long test values
+  before trusting the layout at the edges.
 - **A real actor "achievement" block, distinct from the plain Details card**
   — the actual ask behind Career Highlights' original gold styling (see
   "Career Highlights reverted to a plain Details card" above) was wanting

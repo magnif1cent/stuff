@@ -26,6 +26,14 @@ import { ActorFavoriteButton } from "@/components/actor-favorite-button";
 import { getPersonSignatureVoteSummary } from "@/lib/person-signature-votes";
 import { SignatureVoteProvider, SignatureSpotlight, SignatureVoteButton } from "@/components/actor-signature-vote";
 
+// Split out from ActorPage's body so the Math.random() call it wraps isn't
+// flagged as an impurity inside the page's own render function (React's
+// purity rules apply to the component body itself, not to plain helpers it
+// calls) -- see the Sparring Partner tie-break below.
+function pickRandom<T>(items: T[]): T {
+  return items[Math.floor(Math.random() * items.length)];
+}
+
 const getPerson = cache((personId: string) =>
   prisma.person.findUnique({
     where: { id: personId },
@@ -311,6 +319,14 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
   // sparse -- most actor pairs never clear the threshold -- so most actors
   // simply won't have this stat, same "no signal, no row" rule the rest of
   // this block and the You Might Also Like rails already follow.
+  //
+  // A tie at the top count is picked at random (not deterministically, e.g.
+  // by insertion order) and disclosed via tieCount, rather than silently
+  // crowning whichever candidate happened to be encountered first -- a
+  // visitor who's counted the scenes themselves should never see this card
+  // name someone else with no indication the pick wasn't clear-cut. Note
+  // this means the shown partner can differ between page loads when a tie
+  // exists, since there's no caching keying the pick to a stable seed.
   const MIN_SPARRING_SCENES = 2;
   const sparringCounts = new Map<string, { name: string; count: number }>();
   for (const scene of fightScenes) {
@@ -323,13 +339,13 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
       });
     }
   }
-  let sparringPartner: { id: string; name: string; count: number } | null = null;
-  for (const [id, partner] of sparringCounts) {
-    if (partner.count < MIN_SPARRING_SCENES) continue;
-    if (!sparringPartner || partner.count > sparringPartner.count) {
-      sparringPartner = { id, ...partner };
-    }
-  }
+  const eligiblePartners = [...sparringCounts.entries()]
+    .map(([id, partner]) => ({ id, ...partner }))
+    .filter((p) => p.count >= MIN_SPARRING_SCENES);
+  const topCount = eligiblePartners.length > 0 ? Math.max(...eligiblePartners.map((p) => p.count)) : 0;
+  const topPartners = eligiblePartners.filter((p) => p.count === topCount);
+  const sparringPartner: { id: string; name: string; count: number; tieCount: number } | null =
+    topPartners.length > 0 ? { ...pickRandom(topPartners), tieCount: topPartners.length } : null;
 
   // Plain bordered dt/dd "Details" card, same treatment as the movie page's
   // Studio/Country/etc. box -- rolled back from an earlier gold/Spotlight-styled
@@ -390,7 +406,11 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
           {sparringPartner.name}
         </Link>
       </p>
-      <p className="text-xs text-neutral-500">{sparringPartner.count} shared fight scenes</p>
+      <p className="text-xs text-neutral-500">
+        {sparringPartner.count} shared fight scenes
+        {sparringPartner.tieCount > 1 &&
+          ` · tied with ${sparringPartner.tieCount - 1} other${sparringPartner.tieCount - 1 === 1 ? "" : "s"}`}
+      </p>
     </div>
   );
 
