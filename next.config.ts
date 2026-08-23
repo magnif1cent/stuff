@@ -13,6 +13,12 @@ const SECURITY_HEADERS = [
 
 const nextConfig: NextConfig = {
   images: {
+    // Matches every fixed-pixel `sizes` value actually used in the app
+    // (movie-card, actor/leaderboard rows, feeds, search). Next's default
+    // imageSizes list doesn't line up with these, so it was generating
+    // extra width variants nobody needed — each one counts against
+    // Vercel's Image Optimization transformation quota.
+    imageSizes: [28, 32, 36, 40, 56, 64, 96, 112, 128, 160, 192, 224],
     remotePatterns: [
       {
         protocol: "https",
