@@ -2631,6 +2631,16 @@ filmography, average rating across their tagged fight scenes, years active
   weighting anywhere else either). Explicitly deferred as a broader "how should
   rating aggregation work across the app" question, not something to decide
   ad hoc for one new stat.
+- **Expand actor-to-actor collaboration data beyond the single "Sparring
+  Partner" stat** — that stat (top co-star by shared fight scenes, min. 2 to
+  qualify) and the "You Might Also Like" co-starring signal (shared movies)
+  both compute pairwise actor relationships already, but only surface a single
+  number/name each. Worth exploring as its own feature: a ranked list of an
+  actor's top collaborators (blending movie co-starring and fight-scene
+  pairings, not just the single top match), a dedicated pairwise view ("every
+  scene/movie X and Y share"), or a site-wide "most frequent pairings"
+  leaderboard. No schema change needed — same underlying `CastCredit`/
+  `FightSceneCast` data, just more of it surfaced and packaged differently.
 - **Toggle to a compact table view for the Filmography list** — a full IMDb-style
   decade-grouped text table (no poster thumbnails, ~3x the density of the shipped
   rows-with-posters view) was prototyped alongside it and works; not shipped as a
