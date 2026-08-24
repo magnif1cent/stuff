@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isEmailVerified } from "@/lib/verification";
-import { getNextListRank } from "@/lib/member-list-rank";
+import { getNextListRank, getListItemCount } from "@/lib/member-list-rank";
+import { MAX_ITEMS_PER_LIST } from "@/lib/member-lists";
 
 export async function POST(request: Request, { params }: { params: Promise<{ listId: string }> }) {
   const session = await auth();
@@ -34,6 +35,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ lis
   const existingEntry = await prisma.memberListEntry.findUnique({
     where: { listId_movieId: { listId, movieId } },
   });
+  if (!existingEntry && (await getListItemCount(listId)) >= MAX_ITEMS_PER_LIST) {
+    return NextResponse.json({ error: `A list can have at most ${MAX_ITEMS_PER_LIST} items.` }, { status: 400 });
+  }
   const entry = existingEntry
     ? existingEntry
     : await prisma.memberListEntry.create({

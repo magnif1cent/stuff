@@ -16,6 +16,7 @@ import { ProfileStatsStrip } from "@/components/profile-stats-strip";
 import { ActivityFeed, ListCard } from "@/components/activity-feed";
 import { getRecentActivity } from "@/lib/activity";
 import { detectSocialPlatform } from "@/lib/profile";
+import { MEMBER_LIST_PROFILE_PREVIEW_LIMIT } from "@/lib/member-lists";
 import { SocialIcon } from "@/components/social-icon";
 import type { Movie } from "@/generated/prisma/client";
 
@@ -137,14 +138,26 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
             orderBy: { createdAt: "desc" },
           })
         : [],
+      // Capped to MEMBER_LIST_PROFILE_PREVIEW_LIMIT per relation — unlike
+      // /lists/[listId] (a single list, fully rendered), this page loads
+      // every list a member owns in one request, so an unbounded fetch here
+      // scales with (list count) × (items per list) on every profile visit.
+      // `_count` carries the true totals so the UI can link out to the full
+      // list rather than silently showing a partial one.
       prisma.memberList.findMany({
         where: { userId: profileUser.id },
         include: {
-          entries: { include: { movie: true }, orderBy: { createdAt: "desc" } },
+          entries: {
+            include: { movie: true },
+            orderBy: { createdAt: "desc" },
+            take: MEMBER_LIST_PROFILE_PREVIEW_LIMIT,
+          },
           fightSceneEntries: {
             include: { fightScene: { include: fightSceneCardInclude } },
             orderBy: { createdAt: "desc" },
+            take: MEMBER_LIST_PROFILE_PREVIEW_LIMIT,
           },
+          _count: { select: { entries: true, fightSceneEntries: true } },
         },
         orderBy: { createdAt: "asc" },
       }),
@@ -278,6 +291,11 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
     name: list.name,
     movies: list.entries.map((entry) => withRatings(entry.movie)),
     fightScenes: list.fightSceneEntries.map((entry) => withSceneListState(entry.fightScene)),
+    // True totals, not just what's shown — the queries above cap each
+    // relation at MEMBER_LIST_PROFILE_PREVIEW_LIMIT, so a list bigger than
+    // that needs to tell the UI more exists rather than silently truncating.
+    totalMovieCount: list._count.entries,
+    totalFightSceneCount: list._count.fightSceneEntries,
   }));
 
   const favoriteFightSceneData = favoriteFightScenes.map(withSceneListState);
@@ -296,34 +314,48 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
     ) : isOwner ? (
       <MemberListManager initialLists={memberListData} viewerSignedIn={!!session?.user} />
     ) : (
-      memberListData.map((list) => (
-        <section key={list.id} className="mb-8">
-          <div className="mb-3 flex items-center gap-3">
-            <h3 className="text-lg font-semibold text-white">{list.name}</h3>
-            <Link href={`/lists/${list.id}`} className="text-xs text-neutral-400 underline hover:text-white">
-              Permalink
-            </Link>
-          </div>
-          {list.movies.length === 0 && list.fightScenes.length === 0 ? (
-            <p className="text-sm text-neutral-400">Nothing in this list yet.</p>
-          ) : (
-            <div className="flex flex-wrap gap-4">
-              {list.movies.map((movie) => (
-                <MovieCard key={movie.id} movie={movie} size="compact" />
-              ))}
-              {list.fightScenes.map((scene) => (
-                <FightSceneResultCard
-                  key={scene.id}
-                  scene={scene}
-                  initialLists={scene.initialLists}
-                  signedIn={!!session?.user}
-                  initialFavorite={scene.initialFavorite}
-                />
-              ))}
+      memberListData.map((list) => {
+        const shownCount = list.movies.length + list.fightScenes.length;
+        const totalCount = list.totalMovieCount + list.totalFightSceneCount;
+        return (
+          <section key={list.id} className="mb-8">
+            <div className="mb-3 flex items-center gap-3">
+              <h3 className="text-lg font-semibold text-white">{list.name}</h3>
+              <Link href={`/lists/${list.id}`} className="text-xs text-neutral-400 underline hover:text-white">
+                Permalink
+              </Link>
             </div>
-          )}
-        </section>
-      ))
+            {list.movies.length === 0 && list.fightScenes.length === 0 ? (
+              <p className="text-sm text-neutral-400">Nothing in this list yet.</p>
+            ) : (
+              <div className="flex flex-wrap items-end gap-4">
+                {list.movies.map((movie) => (
+                  <MovieCard key={movie.id} movie={movie} size="compact" />
+                ))}
+                {list.fightScenes.map((scene) => (
+                  <FightSceneResultCard
+                    key={scene.id}
+                    scene={scene}
+                    initialLists={scene.initialLists}
+                    signedIn={!!session?.user}
+                    initialFavorite={scene.initialFavorite}
+                    size="compact"
+                  />
+                ))}
+                {totalCount > shownCount && (
+                  <Link
+                    href={`/lists/${list.id}`}
+                    className="flex h-28 w-28 shrink-0 items-center justify-center rounded-md border border-neutral-800 text-center text-xs text-neutral-400 hover:border-neutral-600 hover:text-white"
+                  >
+                    View full list
+                    <br />({totalCount - shownCount} more)
+                  </Link>
+                )}
+              </div>
+            )}
+          </section>
+        );
+      })
     );
 
   const socialPlatform = profileUser.websiteUrl ? detectSocialPlatform(profileUser.websiteUrl) : null;

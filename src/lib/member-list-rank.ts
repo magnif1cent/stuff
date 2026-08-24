@@ -17,3 +17,13 @@ export async function getNextListRank(listId: string): Promise<number> {
   const highest = Math.max(maxMovieRank._max.rank ?? 0, maxFightSceneRank._max.rank ?? 0);
   return highest + 1;
 }
+
+// Movies and fight scenes combined, for enforcing MAX_ITEMS_PER_LIST before
+// a new entry is created.
+export async function getListItemCount(listId: string): Promise<number> {
+  const [movieCount, fightSceneCount] = await Promise.all([
+    prisma.memberListEntry.count({ where: { listId } }),
+    prisma.memberListFightSceneEntry.count({ where: { listId } }),
+  ]);
+  return movieCount + fightSceneCount;
+}

@@ -60,6 +60,7 @@ one.
 
 **Feature Decisions**
 
+- [Lists scale hardening: item cap, and the profile page stops eager-loading every list in full](#lists-scale-hardening-item-cap-and-the-profile-page-stops-eager-loading-every-list-in-full)
 - [Ranked lists merge movies and fight scenes into one reel, not two separate rankings](#ranked-lists-merge-movies-and-fight-scenes-into-one-reel-not-two-separate-rankings)
 - [Community Activity feed merges three existing tables, no new schema](#community-activity-feed-merges-three-existing-tables-no-new-schema)
 - [Error monitoring added without wrapping next.config.ts in Sentry's build plugin](#error-monitoring-added-without-wrapping-nextconfigts-in-sentrys-build-plugin)
@@ -1049,6 +1050,45 @@ catalog size and traffic. This is the structural fix.
   Vercel's resizing wasn't buying anything — marked `unoptimized` too.
 
 ## Feature Decisions
+
+### Lists scale hardening: item cap, and the profile page stops eager-loading every list in full
+**PR #TBD.** Follow-up to [Ranked lists merge movies and fight scenes into one reel](#ranked-lists-merge-movies-and-fight-scenes-into-one-reel-not-two-separate-rankings)
+below, prompted by a direct question about scale before this shipped: lists had no
+per-item cap at all, and the member-count cap (25) doesn't bound how large any one of
+those 25 could get.
+
+- **`MAX_ITEMS_PER_LIST = 200`**, movies and fight scenes combined, enforced in the same
+  place and the same way as `MAX_MEMBER_LISTS` already is — checked once before a new
+  entry is created (`getListItemCount`, `src/lib/member-list-rank.ts`), not on the
+  toggle-already-in-list path. 200 rather than something tighter because the catalog
+  approves most submissions rather than gatekeeping them, so "every kung fu movie in
+  the database" is a plausible list to want, not an abuse case.
+- **`MAX_MEMBER_LISTS` (25) left unchanged** — the list-count cap isn't the actual scale
+  risk here. A member's *profile* page is: it loads every list that member owns, in one
+  request, and before this fix did so with no `take` on either entry relation — so
+  25 lists × (up to) 200 items each was a 5,000-row fetch on a single profile visit,
+  regardless of what either cap was individually. Shrinking 25 further would have
+  masked that without fixing it.
+- **Profile Lists tab query capped at `MEMBER_LIST_PROFILE_PREVIEW_LIMIT = 6`** per
+  relation (movies, fight scenes), with `_count` carried alongside so the UI knows the
+  true total and can render a "View full list" card linking to `/lists/[listId]` — the
+  one page that's still allowed to show a list in full, unpaginated, since it's
+  rendering exactly one list, not every list a member owns at once. Applied to both the
+  owner's own Lists tab (`MemberListManager`) and a visitor's view of someone else's
+  public lists on their profile — the latter was previously rendering full-size
+  `MovieCard`s (not `size="compact"`, unlike the owner's own tab), an inconsistency
+  fixed in the same pass since both needed the same truncation treatment anyway.
+- **`FightSceneResultCard` gained a `size="compact"` variant**, mirroring `MovieCard`'s
+  existing one, surfaced by review of this same preview row: the "Fight Ticket" card
+  had no compact mode at all, so a compact movie poster (~128px) sat next to a
+  full-width 256px ticket card in the same truncated row. Compact drops cast, tags, the
+  verified badge, and the favorite/save actions — same simplification `MovieCard`
+  compact already makes — down to thumbnail, title, and rating, keeping the cream
+  ticket identity at the smaller footprint rather than falling back to a generic card.
+- **Not done here**: pagination or infinite-scroll *within* a single list past the
+  200-item cap — `/lists/[listId]` still fetches and renders a whole list in one shot.
+  200 items was judged small enough not to need it yet; revisit if that cap itself
+  turns out to need raising later.
 
 ### Ranked lists merge movies and fight scenes into one reel, not two separate rankings
 **PR #TBD.** Follow-up to [Cross-member list browsing at `/lists`](#cross-member-list-browsing-at-lists-separate-from-the-leaderboard)
