@@ -60,6 +60,7 @@ one.
 
 **Feature Decisions**
 
+- [Ranked-list toggle simplified to a plain checkbox, reversing the earlier explainer treatment](#ranked-list-toggle-simplified-to-a-plain-checkbox-reversing-the-earlier-explainer-treatment)
 - [Unranked lists switched to the same row layout as ranked ones](#unranked-lists-switched-to-the-same-row-layout-as-ranked-ones)
 - [Edit list panel split into Details / Rank my list pills](#edit-list-panel-split-into-details--rank-my-list-pills)
 - [Lists scale hardening: item cap, and the profile page stops eager-loading every list in full](#lists-scale-hardening-item-cap-and-the-profile-page-stops-eager-loading-every-list-in-full)
@@ -1052,6 +1053,34 @@ catalog size and traffic. This is the structural fix.
   Vercel's resizing wasn't buying anything — marked `unoptimized` too.
 
 ## Feature Decisions
+
+### Ranked-list toggle simplified to a plain checkbox, reversing the earlier explainer treatment
+**PR #TBD.** A direct reversal of a decision two entries below ("Edit list panel split
+into Details / Rank my list pills"): that entry replaced a bare checkbox with a
+prominent card (heading, paragraph, a bar-chart before/after comparison) reasoning that
+the checkbox alone hadn't explained itself. Prompted to reconsider by a Letterboxd
+screenshot showing their own ranked-list control: a plain checkbox labeled "Ranked
+list" with one short caption ("Show position for each film") — no card, no comparison
+graphic — which is apparently sufficient there.
+
+- **Reverted to checkbox + bold label + one-line caption**, in both places the control
+  appears — the "Edit list" → "Rank my list" pill (which dropped the card and bar-chart
+  entirely) and the inline toggle above the rows (which dropped its link-button
+  in favor of the same checkbox). One consistent, minimal control instead of two
+  different treatments for the same setting.
+- **Label changed from "Ranked" to "Ranked list"** and the caption from a longer
+  description to "Show a rank number for each item and enable reordering" — adapted
+  from Letterboxd's "Show position for each film," worded for this catalog's mixed
+  movie/fight-scene items rather than "film" alone.
+- **State-describing label, not action-describing** — the inline control previously read
+  "Rank this list" / "Turn off ranking" (what clicking *does*); a checkbox next to
+  "Ranked list" states what *is*, checked or not, matching how every other boolean
+  toggle should read and removing the need to read a separate sentence to know current
+  state.
+- The lesson generalizes past this one control: the earlier, more elaborate treatment
+  wasn't wrong to attempt (discoverability was a real, confirmed problem), but a known,
+  working reference example settled in two iterations what guessing at a heavier fix
+  hadn't in one.
 
 ### Unranked lists switched to the same row layout as ranked ones
 **PR #TBD.** More direct testing feedback, one step further than the previous entry:

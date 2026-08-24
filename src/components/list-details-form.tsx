@@ -113,52 +113,18 @@ export function ListDetailsForm({
             </div>
           </>
         ) : (
-          <>
-            <div className="rounded-md border border-red-950 bg-gradient-to-br from-red-950/30 to-neutral-900 p-3">
-              <h3 className="font-serif text-base font-bold text-white">Rank my list</h3>
-              <p className="mt-1.5 text-xs text-neutral-300">
-                Turns your flat list into a numbered 1–N sequence you control the order of — movies and fight
-                scenes ranked against each other, not grouped separately.
-              </p>
-            </div>
-
-            <div className="mt-3 flex items-center justify-center gap-3 py-1">
-              <div className="text-center">
-                <p className="mb-1.5 font-mono text-[10px] tracking-wide text-neutral-500 uppercase">Off — today</p>
-                <div className="flex gap-1">
-                  {[1, 2, 3, 4].map((i) => (
-                    <span key={i} className="h-8 w-6 rounded-sm bg-neutral-700" />
-                  ))}
-                </div>
-              </div>
-              <span className="text-neutral-600">→</span>
-              <div className="text-center">
-                <p className="mb-1.5 font-mono text-[10px] tracking-wide text-neutral-500 uppercase">On</p>
-                <div className="flex items-end gap-1">
-                  <span className="h-9 w-6 rounded-sm bg-gradient-to-b from-red-800 to-red-950" />
-                  <span className="h-7 w-6 rounded-sm bg-gradient-to-b from-red-800 to-red-950" />
-                  <span className="h-5 w-6 rounded-sm bg-gradient-to-b from-red-800 to-red-950" />
-                </div>
-              </div>
-            </div>
-
-            <label className="mt-3 flex items-center justify-between gap-3 rounded-md border border-neutral-700 bg-neutral-950 p-3">
-              <span>
-                <span className="block text-sm font-medium text-neutral-100">Ranked</span>
-                <span className="block text-xs text-neutral-500">
-                  {isRanked
-                    ? "On — reorder with the ↑↓ controls on each item, add notes to explain a pick."
-                    : "Off — shows the plain grid, movies then fight scenes, like before."}
-                </span>
-              </span>
+          <label className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+            <span className="inline-flex items-center gap-2">
               <input
                 type="checkbox"
                 checked={isRanked}
                 onChange={(e) => setIsRanked(e.target.checked)}
-                className="h-5 w-5 shrink-0 accent-red-600"
+                className="h-4 w-4 accent-red-600"
               />
-            </label>
-          </>
+              <span className="text-sm font-medium text-neutral-100">Ranked list</span>
+            </span>
+            <span className="text-xs text-neutral-500">Show a rank number for each item and enable reordering.</span>
+          </label>
         )}
 
         {error && <p className="mt-3 text-sm text-red-500">{error}</p>}

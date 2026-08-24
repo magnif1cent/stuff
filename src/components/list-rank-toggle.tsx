@@ -14,10 +14,10 @@ export function ListRankToggle({ listId, initialIsRanked }: { listId: string; in
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
-  async function toggle() {
+  async function toggle(e: React.ChangeEvent<HTMLInputElement>) {
+    const next = e.target.checked;
     setSaving(true);
     setError(null);
-    const next = !isRanked;
     const res = await fetch(`/api/lists/${listId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -34,19 +34,20 @@ export function ListRankToggle({ listId, initialIsRanked }: { listId: string; in
   }
 
   return (
-    <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-md border border-neutral-800 bg-neutral-900/60 px-3 py-2">
-      <p className="text-xs text-neutral-400">
-        {isRanked
-          ? "Ranked — numbered by your order, reorder with the ↑↓ on each item."
-          : "Not ranked — items are just sorted by when added."}
-      </p>
-      <button
-        onClick={toggle}
-        disabled={saving}
-        className="shrink-0 text-xs font-medium text-red-500 hover:underline disabled:opacity-50"
-      >
-        {saving ? "Saving…" : isRanked ? "Turn off ranking" : "Rank this list"}
-      </button>
+    <div className="mb-3 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-md border border-neutral-800 bg-neutral-900/60 px-3 py-2">
+      <label className="inline-flex items-center gap-2">
+        <input
+          type="checkbox"
+          checked={isRanked}
+          disabled={saving}
+          onChange={toggle}
+          className="h-4 w-4 accent-red-600"
+        />
+        <span className="text-sm font-medium text-neutral-100">Ranked list</span>
+      </label>
+      <span className="text-xs text-neutral-500">
+        {saving ? "Saving…" : "Show a rank number for each item and enable reordering."}
+      </span>
       {error && <p className="w-full text-xs text-red-500">{error}</p>}
     </div>
   );
