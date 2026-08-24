@@ -136,7 +136,9 @@ export function ListItemRows({
         {items.map((item, index) => (
           <div
             key={`${item.kind}-${item.id}`}
-            className="flex items-center gap-4 rounded-md border border-neutral-800 bg-neutral-900 p-3"
+            className={`flex items-center gap-4 rounded-md border border-neutral-800 bg-neutral-900 p-3 border-l-4 ${
+              item.kind === "FIGHT_SCENE" ? "border-l-red-700" : "border-l-neutral-600"
+            }`}
           >
             {isRanked && (
               <span className="w-8 shrink-0 text-center font-serif text-xl font-bold text-neutral-600">
@@ -155,21 +157,26 @@ export function ListItemRows({
               ) : (
                 <YoutubeThumbnailImage videoId={item.youtubeVideoId} title={item.title} textClassName="text-[7px]" />
               )}
-              <span
-                className={`absolute bottom-0 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-t px-1.5 py-0.5 text-[9px] font-medium tracking-wide ${
-                  item.kind === "FIGHT_SCENE"
-                    ? "bg-red-950 text-red-300"
-                    : "bg-neutral-950 text-neutral-400"
-                }`}
-              >
-                {item.kind === "FIGHT_SCENE" ? "FIGHT" : "FILM"}
-              </span>
             </div>
 
             <div className="min-w-0 flex-1">
-              <Link href={item.href} className="truncate text-sm font-medium text-neutral-100 hover:text-red-500">
-                {item.title}
-              </Link>
+              <div className="flex min-w-0 items-center gap-2">
+                <span
+                  className={`shrink-0 rounded-full border px-2 py-0.5 font-mono text-[10px] font-semibold tracking-wide uppercase ${
+                    item.kind === "FIGHT_SCENE"
+                      ? "border-red-800 bg-red-950/70 text-red-300"
+                      : "border-neutral-600 bg-neutral-800 text-neutral-300"
+                  }`}
+                >
+                  {item.kind === "FIGHT_SCENE" ? "Fight" : "Film"}
+                </span>
+                <Link
+                  href={item.href}
+                  className="min-w-0 truncate text-sm font-medium text-neutral-100 hover:text-red-500"
+                >
+                  {item.title}
+                </Link>
+              </div>
               <p className="font-mono text-xs text-neutral-500">
                 {ratingLine(item)}
                 {item.kind === "FIGHT_SCENE" && ` · ${item.movieTitle}`}
