@@ -58,6 +58,7 @@ one.
 
 **Feature Decisions**
 
+- [Ranked lists merge movies and fight scenes into one reel, not two separate rankings](#ranked-lists-merge-movies-and-fight-scenes-into-one-reel-not-two-separate-rankings)
 - [Community Activity feed merges three existing tables, no new schema](#community-activity-feed-merges-three-existing-tables-no-new-schema)
 - [Error monitoring added without wrapping next.config.ts in Sentry's build plugin](#error-monitoring-added-without-wrapping-nextconfigts-in-sentrys-build-plugin)
 - [Search substring queries got their own trigram indexes, separate from the fuzzy-search ones](#search-substring-queries-got-their-own-trigram-indexes-separate-from-the-fuzzy-search-ones)
@@ -966,6 +967,47 @@ protecting against for this project's actual pace of parallel work.
   a Neon branch, since no single deployment owns the shared one anymore.
 
 ## Feature Decisions
+
+### Ranked lists merge movies and fight scenes into one reel, not two separate rankings
+**PR #TBD.** Follow-up to [Cross-member list browsing at `/lists`](#cross-member-list-browsing-at-lists-separate-from-the-leaderboard)
+below — scoped from a broader Lists-expansion brainstorm (search, cover art, cloning,
+following, comments) down to the piece with the clearest payoff: letting a member rank
+a specific fight scene above or below a whole film in the same list, something no
+movies-only site like Letterboxd can express.
+
+- **One shared `rank` column on each entry table, not a polymorphic join** —
+  `MemberListEntry.rank` and `MemberListFightSceneEntry.rank` are separate `Int?`
+  columns, matching the schema's existing decision to keep movies and fight scenes as
+  two entry tables rather than one polymorphic model (see the comment on
+  `MemberListFightSceneEntry`). "One ranking across both content types" is therefore an
+  app-level merge-sort by `rank` at read time (`/lists/[listId]`), not a DB-level
+  ordering — the tradeoff already accepted for that split carries forward here rather
+  than reopening it.
+- **`MemberList.isRanked` defaults to `false` and gates the whole reel** — off keeps
+  today's behavior exactly (two flat grids, sorted by `createdAt`), on replaces both
+  grids with the unified numbered reel. This was the one existing-behavior guarantee
+  worth protecting: every list created before this shipped stays visually identical
+  until its owner opts in.
+- **`rank` is assigned on every entry creation, ranked or not** — appending to the end
+  of a shared counter (`getNextListRank`, `src/lib/member-list-rank.ts`) regardless of
+  `isRanked`, rather than only backfilling ranks when a list is switched on. Toggling
+  ranking on for an existing list therefore produces an immediately sensible order
+  (append order) with no separate backfill step or migration script.
+- **Reordering is up/down buttons, not drag-and-drop** — the repo has no drag library
+  today, and adding one for a single feature was more surface than the interaction
+  needs. The reorder API (`PATCH /api/lists/[listId]/reorder`) re-submits the full
+  ordered item list rather than a single moved item either way, so swapping in
+  drag-and-drop later is a client-side change only, not an API change.
+- **Per-entry notes are a separate optional field (`note`, 240 characters), not folded
+  into the description** — `MemberList.description` (280 characters, same cap as
+  `User.bio`) is the list's own one-time pitch; a note is commentary on one specific
+  item and only ever shown once ranking is on, so collapsing the two would have meant
+  either showing item commentary on unranked lists (undesired) or losing it entirely
+  when ranking is off.
+- **Deferred, not built**: the cover-collage/browse-card redesign, in-list search, list
+  cloning, following, and comments all came up in the same scoping pass and were cut to
+  keep this PR to one coherent change (schema + description + ranking + notes) — see
+  the git history around this entry for the fuller options considered on each.
 
 ### Editorial Reviews opened up to members as "Reviews," admin review kept separate
 **PR #TBD.** Renamed the section (and its heading) from "Editorial Reviews" to "Reviews"

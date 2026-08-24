@@ -6,6 +6,8 @@ import { getFightSceneRatingSummaries, getFightSceneAdminRatingSummaries } from 
 import { MovieCard } from "@/components/movie-card";
 import { FightSceneResultCard } from "@/components/fight-scene-result-card";
 import { LikeListButton } from "@/components/like-list-button";
+import { ListDetailsForm } from "@/components/list-details-form";
+import { RankedListReel, type ReelItem } from "@/components/ranked-list-reel";
 
 export default async function PublicListPage({ params }: { params: Promise<{ listId: string }> }) {
   const { listId } = await params;
@@ -77,22 +79,87 @@ export default async function PublicListPage({ params }: { params: Promise<{ lis
       })
     : [];
 
+  // Only built (and only rendered) when the list opted into ranking — the
+  // two entry tables stay separate (see the schema comment on
+  // MemberListFightSceneEntry), so "one ranking across both" is this
+  // in-app merge by `rank`, not a DB-level ordering. Rank ties (mainly
+  // pre-migration rows that never got one) fall back to each table's own
+  // createdAt-desc order, movies before fight scenes.
+  const reelItems: ReelItem[] = !list.isRanked
+    ? []
+    : [
+        ...list.entries
+          .filter((entry) => movies.some((m) => m.id === entry.movieId))
+          .map((entry): ReelItem => {
+            const movie = movies.find((m) => m.id === entry.movieId)!;
+            const summary = ratingSummaries.get(movie.id);
+            return {
+              kind: "MOVIE",
+              id: movie.id,
+              rank: entry.rank,
+              note: entry.note,
+              title: movie.title,
+              href: `/movies/${movie.id}`,
+              posterPath: movie.posterPath,
+              posterOverrideUrl: movie.posterOverrideUrl,
+              releaseYear: movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : null,
+              ratingAverage: summary?.average ?? null,
+              ratingCount: summary?.count ?? 0,
+            };
+          }),
+        ...list.fightSceneEntries
+          .filter((entry) => fightScenes.some((s) => s.id === entry.fightSceneId))
+          .map((entry): ReelItem => {
+            const scene = fightScenes.find((s) => s.id === entry.fightSceneId)!;
+            const memberSummary = memberSummaries.get(scene.id);
+            return {
+              kind: "FIGHT_SCENE",
+              id: scene.id,
+              rank: entry.rank,
+              note: entry.note,
+              title: scene.title,
+              href: `/movies/${scene.movieId}/fight-scenes/${scene.id}`,
+              youtubeVideoId: scene.youtubeVideoId,
+              movieTitle: scene.movie.title,
+              ratingAverage: memberSummary?.average ?? null,
+              ratingCount: memberSummary?.count ?? 0,
+            };
+          }),
+      ].sort((a, b) => (a.rank ?? Number.MAX_SAFE_INTEGER) - (b.rank ?? Number.MAX_SAFE_INTEGER));
+
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-10">
       <p className="mb-1 text-sm text-neutral-400">List by {list.user.username}</p>
-      <h1 className="mb-4 text-2xl font-bold text-white">{list.name}</h1>
-      {!isOwnList && (
-        <div className="mb-6">
+      <div className="mb-1 flex flex-wrap items-center gap-3">
+        <h1 className="text-2xl font-bold text-white">{list.name}</h1>
+        {list.isRanked && (
+          <span className="rounded-full border border-red-900 bg-red-950/60 px-2.5 py-0.5 font-mono text-[10px] tracking-wide text-red-300 uppercase">
+            Ranked
+          </span>
+        )}
+      </div>
+      {list.description && <p className="mt-2 max-w-2xl text-sm text-neutral-300">{list.description}</p>}
+      <div className="mt-4 mb-6">
+        {isOwnList ? (
+          <ListDetailsForm
+            listId={list.id}
+            initialName={list.name}
+            initialDescription={list.description}
+            initialIsRanked={list.isRanked}
+          />
+        ) : (
           <LikeListButton
             listId={list.id}
             initialLiked={!!myLike}
             initialLikeCount={list._count.likes}
             canLike={!!session?.user}
           />
-        </div>
-      )}
+        )}
+      </div>
       {movies.length === 0 && fightScenes.length === 0 ? (
         <p className="text-neutral-400">Nothing in this list yet.</p>
+      ) : list.isRanked ? (
+        <RankedListReel listId={list.id} initialItems={reelItems} isOwnList={isOwnList} />
       ) : (
         <>
           {movies.length > 0 && (

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isEmailVerified } from "@/lib/verification";
+import { getNextListRank } from "@/lib/member-list-rank";
 
 export async function POST(request: Request, { params }: { params: Promise<{ listId: string }> }) {
   const session = await auth();
@@ -30,10 +31,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ lis
     return NextResponse.json({ error: "Movie not found." }, { status: 404 });
   }
 
-  const entry = await prisma.memberListEntry.upsert({
+  const existingEntry = await prisma.memberListEntry.findUnique({
     where: { listId_movieId: { listId, movieId } },
-    update: {},
-    create: { listId, movieId },
   });
+  const entry = existingEntry
+    ? existingEntry
+    : await prisma.memberListEntry.create({
+        data: { listId, movieId, rank: await getNextListRank(listId) },
+      });
   return NextResponse.json({ entry });
 }
