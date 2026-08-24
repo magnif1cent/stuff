@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { resolvePosterUrl } from "@/lib/tmdb";
+import { resolvePosterUrl, isTmdbUrl } from "@/lib/tmdb";
 
 // Tailwind's class scanner needs the full class name literally in source
 // (not built from a template string) to generate its CSS, so this isn't a
@@ -75,7 +75,14 @@ export function RecentReviewsFeed({ reviews }: { reviews: RecentReviewItem[] }) 
                 <Link href={`/movies/${review.movie.id}`} className="shrink-0">
                   <div className="relative aspect-2/3 w-10 overflow-hidden rounded bg-neutral-800">
                     {posterUrl ? (
-                      <Image src={posterUrl} alt={review.movie.title} fill sizes="40px" className="object-cover" />
+                      <Image
+                        src={posterUrl}
+                        alt={review.movie.title}
+                        fill
+                        unoptimized={isTmdbUrl(posterUrl)}
+                        sizes="40px"
+                        className="object-cover"
+                      />
                     ) : null}
                   </div>
                 </Link>

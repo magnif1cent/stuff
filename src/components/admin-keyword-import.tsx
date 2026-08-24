@@ -306,7 +306,7 @@ export function AdminKeywordImport() {
                   />
                   <div className="relative aspect-2/3 w-14 shrink-0 overflow-hidden rounded bg-neutral-800">
                     {posterUrl && (
-                      <Image src={posterUrl} alt={movie.title} fill sizes="56px" className="object-cover" />
+                      <Image src={posterUrl} alt={movie.title} fill unoptimized sizes="56px" className="object-cover" />
                     )}
                   </div>
                   <div className="min-w-0">

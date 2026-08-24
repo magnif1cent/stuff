@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { resolvePosterUrl } from "@/lib/tmdb";
+import { resolvePosterUrl, isTmdbUrl } from "@/lib/tmdb";
 import { SignatureVoteButton } from "@/components/actor-signature-vote";
 
 export interface FilmographyRow {
@@ -62,7 +62,14 @@ export function FilmographyList({ rows }: { rows: FilmographyRow[] }) {
                   className="relative h-12 w-8 shrink-0 overflow-hidden rounded bg-neutral-800"
                 >
                   {posterUrl && (
-                    <Image src={posterUrl} alt={row.title} fill sizes="32px" className="object-cover" />
+                    <Image
+                      src={posterUrl}
+                      alt={row.title}
+                      fill
+                      unoptimized={isTmdbUrl(posterUrl)}
+                      sizes="32px"
+                      className="object-cover"
+                    />
                   )}
                 </Link>
                 <div className="min-w-0 flex-1">

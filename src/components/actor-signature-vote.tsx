@@ -4,7 +4,7 @@ import { createContext, useContext, useMemo, useState, type ReactNode } from "re
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { resolvePosterUrl } from "@/lib/tmdb";
+import { resolvePosterUrl, isTmdbUrl } from "@/lib/tmdb";
 import { YoutubeThumbnailImage } from "@/components/fight-scene-thumbnail";
 
 // Below this many combined votes in a category, no leader is shown --
@@ -146,6 +146,7 @@ export function SignatureSpotlight() {
 
   const movie = movieLeader ? movies.find((m) => m.id === movieLeader.id) : undefined;
   const scene = fightSceneLeader ? fightScenes.find((s) => s.id === fightSceneLeader.id) : undefined;
+  const moviePosterUrl = movie ? resolvePosterUrl(movie, "w342") : null;
 
   if (!movie && !scene) return null;
 
@@ -162,8 +163,15 @@ export function SignatureSpotlight() {
           share={Math.round((movieLeader.votes / movieLeader.total) * 100)}
           imageClassName="aspect-2/3 w-16"
           image={
-            resolvePosterUrl(movie, "w342") ? (
-              <Image src={resolvePosterUrl(movie, "w342")!} alt={movie.title} fill sizes="64px" className="object-cover" />
+            moviePosterUrl ? (
+              <Image
+                src={moviePosterUrl}
+                alt={movie.title}
+                fill
+                unoptimized={isTmdbUrl(moviePosterUrl)}
+                sizes="64px"
+                className="object-cover"
+              />
             ) : (
               <div className="flex h-full items-center justify-center px-1 text-center text-[10px] text-neutral-500">
                 {movie.title}

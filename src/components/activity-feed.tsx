@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { resolvePosterUrl } from "@/lib/tmdb";
+import { resolvePosterUrl, isTmdbUrl } from "@/lib/tmdb";
 import type {
   DiscussionActivityItem,
   FightSceneActivityItem,
@@ -35,7 +35,16 @@ function PosterThumb({ movie }: { movie: { id: string; title: string; posterPath
   return (
     <Link href={`/movies/${movie.id}`} className="shrink-0">
       <div className="relative aspect-2/3 w-10 overflow-hidden rounded bg-neutral-800">
-        {posterUrl ? <Image src={posterUrl} alt={movie.title} fill sizes="40px" className="object-cover" /> : null}
+        {posterUrl ? (
+          <Image
+            src={posterUrl}
+            alt={movie.title}
+            fill
+            unoptimized={isTmdbUrl(posterUrl)}
+            sizes="40px"
+            className="object-cover"
+          />
+        ) : null}
       </div>
     </Link>
   );

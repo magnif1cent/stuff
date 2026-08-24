@@ -38,7 +38,7 @@ function clipEmbedUrl(videoId: string, startSeconds: number | null) {
 }
 
 function Slide({ movie, active, playClip }: { movie: FeaturedMovie; active: boolean; playClip: boolean }) {
-  const backdropUrl = tmdbImageUrl(movie.backdropPath, "original");
+  const backdropUrl = tmdbImageUrl(movie.backdropPath, "w1280");
   const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : null;
   const showClip = active && playClip && !!movie.fightSceneClip;
 
@@ -56,6 +56,7 @@ function Slide({ movie, active, playClip }: { movie: FeaturedMovie; active: bool
           alt={movie.title}
           fill
           priority
+          unoptimized
           sizes="100vw"
           className={`object-cover transition-opacity ${showClip ? "opacity-0" : "opacity-100"}`}
           style={{ transitionDuration: `${FADE_MS}ms` }}

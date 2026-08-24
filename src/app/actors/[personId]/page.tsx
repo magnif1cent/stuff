@@ -419,7 +419,14 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
       <div className="mb-6 flex items-center gap-4">
         <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-full bg-neutral-800">
           {person.profilePath && (
-            <Image src={tmdbImageUrl(person.profilePath, "w200") ?? ""} alt={person.name} fill sizes="96px" className="object-cover" />
+            <Image
+              src={tmdbImageUrl(person.profilePath, "w200") ?? ""}
+              alt={person.name}
+              fill
+              unoptimized
+              sizes="96px"
+              className="object-cover"
+            />
           )}
         </div>
         <div className="flex flex-wrap items-center gap-3">
