@@ -60,6 +60,7 @@ one.
 
 **Feature Decisions**
 
+- [Unranked lists switched to the same row layout as ranked ones](#unranked-lists-switched-to-the-same-row-layout-as-ranked-ones)
 - [Edit list panel split into Details / Rank my list pills](#edit-list-panel-split-into-details--rank-my-list-pills)
 - [Lists scale hardening: item cap, and the profile page stops eager-loading every list in full](#lists-scale-hardening-item-cap-and-the-profile-page-stops-eager-loading-every-list-in-full)
 - [Ranked lists merge movies and fight scenes into one reel, not two separate rankings](#ranked-lists-merge-movies-and-fight-scenes-into-one-reel-not-two-separate-rankings)
@@ -1051,6 +1052,50 @@ catalog size and traffic. This is the structural fix.
   Vercel's resizing wasn't buying anything — marked `unoptimized` too.
 
 ## Feature Decisions
+
+### Unranked lists switched to the same row layout as ranked ones
+**PR #TBD.** More direct testing feedback, one step further than the previous entry:
+"regular list is large card type and ranked list is large row type" — the two list
+states had visibly different page layouts (the original movie/fight-scene grid vs. the
+new ranked reel), on top of the ranked *toggle* itself being hard to find. Confirmed
+true, not a caching artifact: the classic grid was left completely untouched when
+ranking was added, so the two states only ever looked consistent by accident.
+
+- **`RankedListReel` generalized into `ListItemRows`** (`src/components/list-item-
+  rows.tsx`), taking an `isRanked` prop that controls only the two ranking-specific
+  pieces — the position number and the owner's up/down reorder buttons. Everything
+  else (thumbnail, FILM/FIGHT badge, title, rating, and the owner's note-edit/remove
+  controls) renders identically whether the list is ranked or not.
+- **Notes and removal are no longer ranked-only** — previously gated to the reel
+  (see the earlier entry's reasoning: "a note is commentary on one specific item...
+  shown once ranking is on"). Unifying to one row component made that gate an extra
+  prop for no real benefit, and there's no reason a note or removal should need
+  ranking turned on first; both now work on every list.
+- **`/lists/[listId]`'s old per-type `MovieCard`/`FightSceneResultCard` grid is gone
+  entirely** — `movies`/`fightScenes` are still computed (for the empty-state check and
+  as source data for `ListItemRows`), but nothing on this page renders a `MovieCard` or
+  `FightSceneResultCard` anymore. Trimmed the Prisma query to match: fight scene
+  `tags`/`cast` were only ever consumed by the old `FightSceneResultCard` there.
+- **Dropped, not preserved**: the classic grid's favorite-heart and "+ save to list"
+  icons on each fight scene card. `ListItemRows` doesn't have anywhere to put them
+  without either crowding the row or reintroducing per-row height variance the row
+  format exists to avoid. Both actions stay reachable from the fight scene's own
+  permalink and every other card it appears on (search results, its movie's page) —
+  this page just isn't one of them anymore. Flagged here rather than left silent, since
+  it's a real (if narrow) capability loss on lists specifically.
+- **Interleaving is a real merge now in both modes, not two concatenated per-type
+  lists** — ranked sorts the combined array by `rank`; unranked sorts it by `createdAt`
+  descending, so a fight scene added between two movies sits between them, matching
+  what "one row list" implies. The old classic grid never did this (movies always
+  preceded the "Fight Scenes" heading regardless of add order); this is a small,
+  deliberate behavior change, not just a visual one.
+- **Added an inline "Rank this list" / "Turn off ranking" toggle** (`ListRankToggle`,
+  `src/components/list-rank-toggle.tsx`) directly above the rows, alongside the fuller
+  "Edit list" → "Rank my list" panel from the previous entry rather than replacing it —
+  direct follow-up ask: "allow a mechanism to assign ranking... without switch views."
+  The panel still exists for the first-time explanation (the before/after comparison);
+  this is the fast path for someone who already knows what ranking does and just wants
+  to flip it without leaving the page.
 
 ### Edit list panel split into Details / Rank my list pills
 **PR #TBD.** Direct user-testing feedback on the ranked-lists feature above: "I did not

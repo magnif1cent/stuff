@@ -50,13 +50,21 @@ function removeEndpoint(listId: string, item: ReelItem) {
   return noteEndpoint(listId, item);
 }
 
-export function RankedListReel({
+// The single row-based layout for a list's items — used whether or not the
+// list is ranked, so a "Top 10 Fight Scenes" and a plain unordered list read
+// as the same kind of thing, not two different page layouts. `isRanked`
+// controls only the two ranking-specific pieces: the position number and the
+// owner's up/down reorder controls. Notes and removal stay available to the
+// owner either way — they're list-management, not ranking-specific.
+export function ListItemRows({
   listId,
   initialItems,
+  isRanked,
   isOwnList,
 }: {
   listId: string;
   initialItems: ReelItem[];
+  isRanked: boolean;
   isOwnList: boolean;
 }) {
   const [items, setItems] = useState(initialItems);
@@ -130,9 +138,11 @@ export function RankedListReel({
             key={`${item.kind}-${item.id}`}
             className="flex items-center gap-4 rounded-md border border-neutral-800 bg-neutral-900 p-3"
           >
-            <span className="w-8 shrink-0 text-center font-serif text-xl font-bold text-neutral-600">
-              {index + 1}
-            </span>
+            {isRanked && (
+              <span className="w-8 shrink-0 text-center font-serif text-xl font-bold text-neutral-600">
+                {index + 1}
+              </span>
+            )}
 
             <div className="relative h-20 w-14 shrink-0 overflow-hidden rounded bg-neutral-800">
               {item.kind === "MOVIE" ? (
@@ -206,22 +216,26 @@ export function RankedListReel({
                     ✎
                   </button>
                 )}
-                <button
-                  onClick={() => move(index, -1)}
-                  disabled={index === 0}
-                  title="Move up"
-                  className="flex h-7 w-7 items-center justify-center rounded text-neutral-500 hover:bg-neutral-800 hover:text-white disabled:opacity-30"
-                >
-                  ↑
-                </button>
-                <button
-                  onClick={() => move(index, 1)}
-                  disabled={index === items.length - 1}
-                  title="Move down"
-                  className="flex h-7 w-7 items-center justify-center rounded text-neutral-500 hover:bg-neutral-800 hover:text-white disabled:opacity-30"
-                >
-                  ↓
-                </button>
+                {isRanked && (
+                  <>
+                    <button
+                      onClick={() => move(index, -1)}
+                      disabled={index === 0}
+                      title="Move up"
+                      className="flex h-7 w-7 items-center justify-center rounded text-neutral-500 hover:bg-neutral-800 hover:text-white disabled:opacity-30"
+                    >
+                      ↑
+                    </button>
+                    <button
+                      onClick={() => move(index, 1)}
+                      disabled={index === items.length - 1}
+                      title="Move down"
+                      className="flex h-7 w-7 items-center justify-center rounded text-neutral-500 hover:bg-neutral-800 hover:text-white disabled:opacity-30"
+                    >
+                      ↓
+                    </button>
+                  </>
+                )}
                 <button
                   onClick={() => remove(item)}
                   disabled={busyId === item.id}
