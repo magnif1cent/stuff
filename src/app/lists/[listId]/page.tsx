@@ -120,12 +120,7 @@ export default async function PublicListPage({ params }: { params: Promise<{ lis
       {list.description && <p className="mt-2 max-w-2xl text-sm text-neutral-300">{list.description}</p>}
       <div className="mt-4 mb-6">
         {isOwnList ? (
-          <ListDetailsForm
-            listId={list.id}
-            initialName={list.name}
-            initialDescription={list.description}
-            initialIsRanked={list.isRanked}
-          />
+          <ListDetailsForm listId={list.id} initialName={list.name} initialDescription={list.description} />
         ) : (
           <LikeListButton
             listId={list.id}

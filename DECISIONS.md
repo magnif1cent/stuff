@@ -60,6 +60,7 @@ one.
 
 **Feature Decisions**
 
+- [Removed the duplicate "Rank my list" pill from Edit list](#removed-the-duplicate-rank-my-list-pill-from-edit-list)
 - [Ranked-list toggle simplified to a plain checkbox, reversing the earlier explainer treatment](#ranked-list-toggle-simplified-to-a-plain-checkbox-reversing-the-earlier-explainer-treatment)
 - [Unranked lists switched to the same row layout as ranked ones](#unranked-lists-switched-to-the-same-row-layout-as-ranked-ones)
 - [Edit list panel split into Details / Rank my list pills](#edit-list-panel-split-into-details--rank-my-list-pills)
@@ -1053,6 +1054,23 @@ catalog size and traffic. This is the structural fix.
   Vercel's resizing wasn't buying anything — marked `unoptimized` too.
 
 ## Feature Decisions
+
+### Removed the duplicate "Rank my list" pill from Edit list
+**PR #TBD.** Explicit follow-up once the checkbox simplification (below) landed: with
+`ListRankToggle` living directly above the rows, the identical checkbox inside "Edit
+list" → "Rank my list" was doing nothing the inline one didn't already cover, just
+requiring an extra click to reach. Called obsolete and cut.
+
+- **`ListDetailsForm` dropped back to Name + Description only** — no `isRanked` state,
+  no pill-tab UI, and its `PATCH` body no longer sends `isRanked` at all (the inline
+  toggle owns that field's writes exclusively now). With a single section left, the
+  pill-toggle pattern itself had nothing left to switch between, so it came out too,
+  not just its ranking content.
+- **One control, one place** — ranking now has exactly one entry point
+  (`ListRankToggle`, above the rows) instead of two identical checkboxes kept in sync
+  by nothing but both PATCHing the same field. Removes a real (if narrow) source of
+  drift: nothing enforced the two copies would ever show the same "Saving…" state or
+  error at the same moment.
 
 ### Ranked-list toggle simplified to a plain checkbox, reversing the earlier explainer treatment
 **PR #TBD.** A direct reversal of a decision two entries below ("Edit list panel split
