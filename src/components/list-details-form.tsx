@@ -7,6 +7,13 @@ import {
   MEMBER_LIST_NAME_MAX_LENGTH,
 } from "@/lib/member-lists";
 
+// Split into "Details" / "Rank my list" pills (matching ListsPanel's own
+// My Lists / Liked toggle) rather than one flat form — Ranked used to be a
+// checkbox at the bottom of the name/description form, easy to miss and,
+// once checked, unexplained beyond a one-line caption. Its own labeled
+// section fixes both: it's reachable without scrolling past unrelated
+// fields, and the label states the effect ("Rank my list") instead of a
+// term ("Ranked") that needs decoding.
 export function ListDetailsForm({
   listId,
   initialName,
@@ -19,6 +26,7 @@ export function ListDetailsForm({
   initialIsRanked: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const [tab, setTab] = useState<"details" | "rank">("details");
   const [name, setName] = useState(initialName);
   const [description, setDescription] = useState(initialDescription ?? "");
   const [isRanked, setIsRanked] = useState(initialIsRanked);
@@ -57,60 +65,119 @@ export function ListDetailsForm({
   }
 
   return (
-    <form onSubmit={save} className="w-full max-w-md rounded-md border border-neutral-800 bg-neutral-900 p-4">
-      <div className="mb-3">
-        <label className="mb-1 block text-xs tracking-wide text-neutral-500 uppercase">Name</label>
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          maxLength={MEMBER_LIST_NAME_MAX_LENGTH}
-          className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
-        />
+    <form onSubmit={save} className="w-full max-w-md rounded-md border border-neutral-800 bg-neutral-900">
+      <div className="flex gap-2 p-4 pb-0">
+        {(
+          [
+            ["details", "Details"],
+            ["rank", "Rank my list"],
+          ] as const
+        ).map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setTab(key)}
+            className={`rounded-full px-3 py-1 text-xs font-medium ${
+              tab === key ? "bg-red-700 text-white" : "bg-neutral-950 text-neutral-400 hover:text-neutral-200"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
       </div>
-      <div className="mb-3">
-        <label className="mb-1 block text-xs tracking-wide text-neutral-500 uppercase">Description</label>
-        <textarea
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          maxLength={MEMBER_LIST_DESCRIPTION_MAX_LENGTH}
-          rows={3}
-          className="w-full resize-y rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
-        />
-        <p className="mt-1 text-right font-mono text-xs text-neutral-600">
-          {description.length} / {MEMBER_LIST_DESCRIPTION_MAX_LENGTH}
-        </p>
-      </div>
-      <label className="mb-4 flex items-start justify-between gap-3">
-        <span>
-          <span className="block text-sm text-neutral-100">Ranked list</span>
-          <span className="block text-xs text-neutral-500">
-            Numbers your items 1–N and lets you reorder them. Off shows the plain grid, movies then fight scenes,
-            like before.
-          </span>
-        </span>
-        <input
-          type="checkbox"
-          checked={isRanked}
-          onChange={(e) => setIsRanked(e.target.checked)}
-          className="mt-1 h-4 w-4 shrink-0 accent-red-600"
-        />
-      </label>
-      {error && <p className="mb-3 text-sm text-red-500">{error}</p>}
-      <div className="flex gap-2">
-        <button
-          type="submit"
-          disabled={saving || !name.trim()}
-          className="rounded-md bg-red-700 px-4 py-1.5 text-sm font-medium text-white hover:bg-red-600 disabled:opacity-50"
-        >
-          {saving ? "Saving…" : "Save"}
-        </button>
-        <button
-          type="button"
-          onClick={() => setOpen(false)}
-          className="rounded-md border border-neutral-700 px-4 py-1.5 text-sm text-neutral-300 hover:bg-neutral-800"
-        >
-          Cancel
-        </button>
+
+      <div className="p-4">
+        {tab === "details" ? (
+          <>
+            <div className="mb-3">
+              <label className="mb-1 block text-xs tracking-wide text-neutral-500 uppercase">Name</label>
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                maxLength={MEMBER_LIST_NAME_MAX_LENGTH}
+                className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs tracking-wide text-neutral-500 uppercase">Description</label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                maxLength={MEMBER_LIST_DESCRIPTION_MAX_LENGTH}
+                rows={3}
+                className="w-full resize-y rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
+              />
+              <p className="mt-1 text-right font-mono text-xs text-neutral-600">
+                {description.length} / {MEMBER_LIST_DESCRIPTION_MAX_LENGTH}
+              </p>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="rounded-md border border-red-950 bg-gradient-to-br from-red-950/30 to-neutral-900 p-3">
+              <h3 className="font-serif text-base font-bold text-white">Rank my list</h3>
+              <p className="mt-1.5 text-xs text-neutral-300">
+                Turns your flat list into a numbered 1–N sequence you control the order of — movies and fight
+                scenes ranked against each other, not grouped separately.
+              </p>
+            </div>
+
+            <div className="mt-3 flex items-center justify-center gap-3 py-1">
+              <div className="text-center">
+                <p className="mb-1.5 font-mono text-[10px] tracking-wide text-neutral-500 uppercase">Off — today</p>
+                <div className="flex gap-1">
+                  {[1, 2, 3, 4].map((i) => (
+                    <span key={i} className="h-8 w-6 rounded-sm bg-neutral-700" />
+                  ))}
+                </div>
+              </div>
+              <span className="text-neutral-600">→</span>
+              <div className="text-center">
+                <p className="mb-1.5 font-mono text-[10px] tracking-wide text-neutral-500 uppercase">On</p>
+                <div className="flex items-end gap-1">
+                  <span className="h-9 w-6 rounded-sm bg-gradient-to-b from-red-800 to-red-950" />
+                  <span className="h-7 w-6 rounded-sm bg-gradient-to-b from-red-800 to-red-950" />
+                  <span className="h-5 w-6 rounded-sm bg-gradient-to-b from-red-800 to-red-950" />
+                </div>
+              </div>
+            </div>
+
+            <label className="mt-3 flex items-center justify-between gap-3 rounded-md border border-neutral-700 bg-neutral-950 p-3">
+              <span>
+                <span className="block text-sm font-medium text-neutral-100">Ranked</span>
+                <span className="block text-xs text-neutral-500">
+                  {isRanked
+                    ? "On — reorder with the ↑↓ controls on each item, add notes to explain a pick."
+                    : "Off — shows the plain grid, movies then fight scenes, like before."}
+                </span>
+              </span>
+              <input
+                type="checkbox"
+                checked={isRanked}
+                onChange={(e) => setIsRanked(e.target.checked)}
+                className="h-5 w-5 shrink-0 accent-red-600"
+              />
+            </label>
+          </>
+        )}
+
+        {error && <p className="mt-3 text-sm text-red-500">{error}</p>}
+        <div className="mt-4 flex gap-2">
+          <button
+            type="submit"
+            disabled={saving || !name.trim()}
+            className="rounded-md bg-red-700 px-4 py-1.5 text-sm font-medium text-white hover:bg-red-600 disabled:opacity-50"
+          >
+            {saving ? "Saving…" : "Save"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            className="rounded-md border border-neutral-700 px-4 py-1.5 text-sm text-neutral-300 hover:bg-neutral-800"
+          >
+            Cancel
+          </button>
+        </div>
       </div>
     </form>
   );

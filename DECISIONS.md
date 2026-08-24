@@ -60,6 +60,7 @@ one.
 
 **Feature Decisions**
 
+- [Edit list panel split into Details / Rank my list pills](#edit-list-panel-split-into-details--rank-my-list-pills)
 - [Lists scale hardening: item cap, and the profile page stops eager-loading every list in full](#lists-scale-hardening-item-cap-and-the-profile-page-stops-eager-loading-every-list-in-full)
 - [Ranked lists merge movies and fight scenes into one reel, not two separate rankings](#ranked-lists-merge-movies-and-fight-scenes-into-one-reel-not-two-separate-rankings)
 - [Community Activity feed merges three existing tables, no new schema](#community-activity-feed-merges-three-existing-tables-no-new-schema)
@@ -1050,6 +1051,28 @@ catalog size and traffic. This is the structural fix.
   Vercel's resizing wasn't buying anything — marked `unoptimized` too.
 
 ## Feature Decisions
+
+### Edit list panel split into Details / Rank my list pills
+**PR #TBD.** Direct user-testing feedback on the ranked-lists feature above: "I did not
+know I had to check the ranked list checkbox. After I did, it was not clear to me what
+it was for." The checkbox worked exactly as built — the problem was entirely
+discoverability and explanation, not behavior, so this is a UI-only change.
+
+- **Split `ListDetailsForm` into two pills, "Details" and "Rank my list,"** rather than
+  one flat form with the toggle as a checkbox row at the bottom. Considered real tabs
+  first, rejected: the form only holds three fields total (name, description, the
+  toggle), and a tab component for that little content would be more structure than the
+  content warrants.
+- **Reused `ListsPanel`'s existing pill-toggle pattern** (My Lists / Liked) instead of
+  building a new tab component — the same "few things, need separation" shape already
+  had a established answer in this codebase.
+- **"Rank my list" as the label, not "Ranked"** — states the effect directly rather than
+  a term that needs its own explanation. The section also got real visual weight (its
+  own heading, a highlighted card, a before/after bar-chart comparison of an unranked
+  vs. ranked list) instead of a single line of gray caption text.
+- Explored via a mockup first (before/after comparison, both pill states clickable)
+  before touching the real component, same as the original ranked-lists mockup —
+  confirmed with the site owner before building.
 
 ### Lists scale hardening: item cap, and the profile page stops eager-loading every list in full
 **PR #TBD.** Follow-up to [Ranked lists merge movies and fight scenes into one reel](#ranked-lists-merge-movies-and-fight-scenes-into-one-reel-not-two-separate-rankings)
