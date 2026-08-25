@@ -4,6 +4,7 @@ import { isEmailVerified } from "@/lib/verification";
 import { Logo } from "@/components/logo";
 import { SearchBar } from "@/components/search-bar";
 import { SignOutButton } from "@/components/sign-out-button";
+import { ListsNavMenu } from "@/components/lists-nav-menu";
 import { VerifyEmailBanner } from "@/components/verify-email-banner";
 
 export async function Navbar() {
@@ -28,9 +29,7 @@ export async function Navbar() {
           <Link href="/search/fight-scenes" className="text-sm whitespace-nowrap text-neutral-300 hover:text-white">
             Fights
           </Link>
-          <Link href="/lists" className="text-sm whitespace-nowrap text-neutral-300 hover:text-white">
-            Lists
-          </Link>
+          <ListsNavMenu />
           <Link href="/movies/submit" className="text-sm whitespace-nowrap text-neutral-300 hover:text-white">
             + Add Movie
           </Link>
