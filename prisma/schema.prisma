@@ -783,6 +783,17 @@ model MemberList {
   id        String   @id @default(cuid())
   userId    String
   name      String
+  // Free text, owner-editable, shown on the list's permalink — same
+  // app-side-only length cap convention as User.bio (MEMBER_LIST_DESCRIPTION_
+  // MAX_LENGTH in src/lib/member-lists.ts). Null/empty means unset.
+  description String? @db.Text
+  // Off (default) keeps today's behavior: two flat, unordered grids (movies,
+  // then fight scenes), sorted by when each item was added. On unlocks the
+  // "ranked reel" — a single numbered sequence merging both entry tables by
+  // `rank`, letting a member rank a specific fight scene above or below a
+  // whole film. Off doesn't clear existing `rank`/`note` values on entries,
+  // it just stops the page from reading them.
+  isRanked  Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -799,6 +810,17 @@ model MemberListEntry {
   id        String   @id @default(cuid())
   listId    String
   movieId   String
+  // Position within the list's unified ranking, shared with
+  // MemberListFightSceneEntry.rank below — the two stay separate tables (see
+  // that model's comment), so "one ranking across both content types" is an
+  // app-level merge-sort by this column, not a DB-level ordering. Assigned on
+  // every entry creation (append-to-end), read only while MemberList.isRanked
+  // is true.
+  rank      Int?
+  // Optional owner commentary shown under the item on the ranked reel — same
+  // app-side length cap convention as description (MEMBER_LIST_ENTRY_NOTE_
+  // MAX_LENGTH). Null/empty means unset.
+  note      String?  @db.Text
   createdAt DateTime @default(now())
 
   list  MemberList @relation(fields: [listId], references: [id], onDelete: Cascade)
@@ -816,6 +838,10 @@ model MemberListFightSceneEntry {
   id           String   @id @default(cuid())
   listId       String
   fightSceneId String
+  // Same shared-ranking column as MemberListEntry.rank above.
+  rank         Int?
+  // Same optional owner commentary as MemberListEntry.note above.
+  note         String?  @db.Text
   createdAt    DateTime @default(now())
 
   list       MemberList @relation(fields: [listId], references: [id], onDelete: Cascade)

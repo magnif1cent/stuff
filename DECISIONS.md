@@ -60,6 +60,12 @@ one.
 
 **Feature Decisions**
 
+- [Removed the duplicate "Rank my list" pill from Edit list](#removed-the-duplicate-rank-my-list-pill-from-edit-list)
+- [Ranked-list toggle simplified to a plain checkbox, reversing the earlier explainer treatment](#ranked-list-toggle-simplified-to-a-plain-checkbox-reversing-the-earlier-explainer-treatment)
+- [Unranked lists switched to the same row layout as ranked ones](#unranked-lists-switched-to-the-same-row-layout-as-ranked-ones)
+- [Edit list panel split into Details / Rank my list pills](#edit-list-panel-split-into-details--rank-my-list-pills)
+- [Lists scale hardening: item cap, and the profile page stops eager-loading every list in full](#lists-scale-hardening-item-cap-and-the-profile-page-stops-eager-loading-every-list-in-full)
+- [Ranked lists merge movies and fight scenes into one reel, not two separate rankings](#ranked-lists-merge-movies-and-fight-scenes-into-one-reel-not-two-separate-rankings)
 - [Community Activity feed merges three existing tables, no new schema](#community-activity-feed-merges-three-existing-tables-no-new-schema)
 - [Error monitoring added without wrapping next.config.ts in Sentry's build plugin](#error-monitoring-added-without-wrapping-nextconfigts-in-sentrys-build-plugin)
 - [Search substring queries got their own trigram indexes, separate from the fuzzy-search ones](#search-substring-queries-got-their-own-trigram-indexes-separate-from-the-fuzzy-search-ones)
@@ -1048,6 +1054,197 @@ catalog size and traffic. This is the structural fix.
   Vercel's resizing wasn't buying anything — marked `unoptimized` too.
 
 ## Feature Decisions
+
+### Removed the duplicate "Rank my list" pill from Edit list
+**PR #TBD.** Explicit follow-up once the checkbox simplification (below) landed: with
+`ListRankToggle` living directly above the rows, the identical checkbox inside "Edit
+list" → "Rank my list" was doing nothing the inline one didn't already cover, just
+requiring an extra click to reach. Called obsolete and cut.
+
+- **`ListDetailsForm` dropped back to Name + Description only** — no `isRanked` state,
+  no pill-tab UI, and its `PATCH` body no longer sends `isRanked` at all (the inline
+  toggle owns that field's writes exclusively now). With a single section left, the
+  pill-toggle pattern itself had nothing left to switch between, so it came out too,
+  not just its ranking content.
+- **One control, one place** — ranking now has exactly one entry point
+  (`ListRankToggle`, above the rows) instead of two identical checkboxes kept in sync
+  by nothing but both PATCHing the same field. Removes a real (if narrow) source of
+  drift: nothing enforced the two copies would ever show the same "Saving…" state or
+  error at the same moment.
+
+### Ranked-list toggle simplified to a plain checkbox, reversing the earlier explainer treatment
+**PR #TBD.** A direct reversal of a decision two entries below ("Edit list panel split
+into Details / Rank my list pills"): that entry replaced a bare checkbox with a
+prominent card (heading, paragraph, a bar-chart before/after comparison) reasoning that
+the checkbox alone hadn't explained itself. Prompted to reconsider by a Letterboxd
+screenshot showing their own ranked-list control: a plain checkbox labeled "Ranked
+list" with one short caption ("Show position for each film") — no card, no comparison
+graphic — which is apparently sufficient there.
+
+- **Reverted to checkbox + bold label + one-line caption**, in both places the control
+  appears — the "Edit list" → "Rank my list" pill (which dropped the card and bar-chart
+  entirely) and the inline toggle above the rows (which dropped its link-button
+  in favor of the same checkbox). One consistent, minimal control instead of two
+  different treatments for the same setting.
+- **Label changed from "Ranked" to "Ranked list"** and the caption from a longer
+  description to "Show a rank number for each item and enable reordering" — adapted
+  from Letterboxd's "Show position for each film," worded for this catalog's mixed
+  movie/fight-scene items rather than "film" alone.
+- **State-describing label, not action-describing** — the inline control previously read
+  "Rank this list" / "Turn off ranking" (what clicking *does*); a checkbox next to
+  "Ranked list" states what *is*, checked or not, matching how every other boolean
+  toggle should read and removing the need to read a separate sentence to know current
+  state.
+- The lesson generalizes past this one control: the earlier, more elaborate treatment
+  wasn't wrong to attempt (discoverability was a real, confirmed problem), but a known,
+  working reference example settled in two iterations what guessing at a heavier fix
+  hadn't in one.
+
+### Unranked lists switched to the same row layout as ranked ones
+**PR #TBD.** More direct testing feedback, one step further than the previous entry:
+"regular list is large card type and ranked list is large row type" — the two list
+states had visibly different page layouts (the original movie/fight-scene grid vs. the
+new ranked reel), on top of the ranked *toggle* itself being hard to find. Confirmed
+true, not a caching artifact: the classic grid was left completely untouched when
+ranking was added, so the two states only ever looked consistent by accident.
+
+- **`RankedListReel` generalized into `ListItemRows`** (`src/components/list-item-
+  rows.tsx`), taking an `isRanked` prop that controls only the two ranking-specific
+  pieces — the position number and the owner's up/down reorder buttons. Everything
+  else (thumbnail, FILM/FIGHT badge, title, rating, and the owner's note-edit/remove
+  controls) renders identically whether the list is ranked or not.
+- **Notes and removal are no longer ranked-only** — previously gated to the reel
+  (see the earlier entry's reasoning: "a note is commentary on one specific item...
+  shown once ranking is on"). Unifying to one row component made that gate an extra
+  prop for no real benefit, and there's no reason a note or removal should need
+  ranking turned on first; both now work on every list.
+- **`/lists/[listId]`'s old per-type `MovieCard`/`FightSceneResultCard` grid is gone
+  entirely** — `movies`/`fightScenes` are still computed (for the empty-state check and
+  as source data for `ListItemRows`), but nothing on this page renders a `MovieCard` or
+  `FightSceneResultCard` anymore. Trimmed the Prisma query to match: fight scene
+  `tags`/`cast` were only ever consumed by the old `FightSceneResultCard` there.
+- **Dropped, not preserved**: the classic grid's favorite-heart and "+ save to list"
+  icons on each fight scene card. `ListItemRows` doesn't have anywhere to put them
+  without either crowding the row or reintroducing per-row height variance the row
+  format exists to avoid. Both actions stay reachable from the fight scene's own
+  permalink and every other card it appears on (search results, its movie's page) —
+  this page just isn't one of them anymore. Flagged here rather than left silent, since
+  it's a real (if narrow) capability loss on lists specifically.
+- **Interleaving is a real merge now in both modes, not two concatenated per-type
+  lists** — ranked sorts the combined array by `rank`; unranked sorts it by `createdAt`
+  descending, so a fight scene added between two movies sits between them, matching
+  what "one row list" implies. The old classic grid never did this (movies always
+  preceded the "Fight Scenes" heading regardless of add order); this is a small,
+  deliberate behavior change, not just a visual one.
+- **Added an inline "Rank this list" / "Turn off ranking" toggle** (`ListRankToggle`,
+  `src/components/list-rank-toggle.tsx`) directly above the rows, alongside the fuller
+  "Edit list" → "Rank my list" panel from the previous entry rather than replacing it —
+  direct follow-up ask: "allow a mechanism to assign ranking... without switch views."
+  The panel still exists for the first-time explanation (the before/after comparison);
+  this is the fast path for someone who already knows what ranking does and just wants
+  to flip it without leaving the page.
+
+### Edit list panel split into Details / Rank my list pills
+**PR #TBD.** Direct user-testing feedback on the ranked-lists feature above: "I did not
+know I had to check the ranked list checkbox. After I did, it was not clear to me what
+it was for." The checkbox worked exactly as built — the problem was entirely
+discoverability and explanation, not behavior, so this is a UI-only change.
+
+- **Split `ListDetailsForm` into two pills, "Details" and "Rank my list,"** rather than
+  one flat form with the toggle as a checkbox row at the bottom. Considered real tabs
+  first, rejected: the form only holds three fields total (name, description, the
+  toggle), and a tab component for that little content would be more structure than the
+  content warrants.
+- **Reused `ListsPanel`'s existing pill-toggle pattern** (My Lists / Liked) instead of
+  building a new tab component — the same "few things, need separation" shape already
+  had a established answer in this codebase.
+- **"Rank my list" as the label, not "Ranked"** — states the effect directly rather than
+  a term that needs its own explanation. The section also got real visual weight (its
+  own heading, a highlighted card, a before/after bar-chart comparison of an unranked
+  vs. ranked list) instead of a single line of gray caption text.
+- Explored via a mockup first (before/after comparison, both pill states clickable)
+  before touching the real component, same as the original ranked-lists mockup —
+  confirmed with the site owner before building.
+
+### Lists scale hardening: item cap, and the profile page stops eager-loading every list in full
+**PR #TBD.** Follow-up to [Ranked lists merge movies and fight scenes into one reel](#ranked-lists-merge-movies-and-fight-scenes-into-one-reel-not-two-separate-rankings)
+below, prompted by a direct question about scale before this shipped: lists had no
+per-item cap at all, and the member-count cap (25) doesn't bound how large any one of
+those 25 could get.
+
+- **`MAX_ITEMS_PER_LIST = 200`**, movies and fight scenes combined, enforced in the same
+  place and the same way as `MAX_MEMBER_LISTS` already is — checked once before a new
+  entry is created (`getListItemCount`, `src/lib/member-list-rank.ts`), not on the
+  toggle-already-in-list path. 200 rather than something tighter because the catalog
+  approves most submissions rather than gatekeeping them, so "every kung fu movie in
+  the database" is a plausible list to want, not an abuse case.
+- **`MAX_MEMBER_LISTS` (25) left unchanged** — the list-count cap isn't the actual scale
+  risk here. A member's *profile* page is: it loads every list that member owns, in one
+  request, and before this fix did so with no `take` on either entry relation — so
+  25 lists × (up to) 200 items each was a 5,000-row fetch on a single profile visit,
+  regardless of what either cap was individually. Shrinking 25 further would have
+  masked that without fixing it.
+- **Profile Lists tab query capped at `MEMBER_LIST_PROFILE_PREVIEW_LIMIT = 6`** per
+  relation (movies, fight scenes), with `_count` carried alongside so the UI knows the
+  true total and can render a "View full list" card linking to `/lists/[listId]` — the
+  one page that's still allowed to show a list in full, unpaginated, since it's
+  rendering exactly one list, not every list a member owns at once. Applied to both the
+  owner's own Lists tab (`MemberListManager`) and a visitor's view of someone else's
+  public lists on their profile — the latter was previously rendering full-size
+  `MovieCard`s (not `size="compact"`, unlike the owner's own tab), an inconsistency
+  fixed in the same pass since both needed the same truncation treatment anyway.
+- **`FightSceneResultCard` gained a `size="compact"` variant**, mirroring `MovieCard`'s
+  existing one, surfaced by review of this same preview row: the "Fight Ticket" card
+  had no compact mode at all, so a compact movie poster (~128px) sat next to a
+  full-width 256px ticket card in the same truncated row. Compact drops cast, tags, the
+  verified badge, and the favorite/save actions — same simplification `MovieCard`
+  compact already makes — down to thumbnail, title, and rating, keeping the cream
+  ticket identity at the smaller footprint rather than falling back to a generic card.
+- **Not done here**: pagination or infinite-scroll *within* a single list past the
+  200-item cap — `/lists/[listId]` still fetches and renders a whole list in one shot.
+  200 items was judged small enough not to need it yet; revisit if that cap itself
+  turns out to need raising later.
+
+### Ranked lists merge movies and fight scenes into one reel, not two separate rankings
+**PR #TBD.** Follow-up to [Cross-member list browsing at `/lists`](#cross-member-list-browsing-at-lists-separate-from-the-leaderboard)
+below — scoped from a broader Lists-expansion brainstorm (search, cover art, cloning,
+following, comments) down to the piece with the clearest payoff: letting a member rank
+a specific fight scene above or below a whole film in the same list, something no
+movies-only site like Letterboxd can express.
+
+- **One shared `rank` column on each entry table, not a polymorphic join** —
+  `MemberListEntry.rank` and `MemberListFightSceneEntry.rank` are separate `Int?`
+  columns, matching the schema's existing decision to keep movies and fight scenes as
+  two entry tables rather than one polymorphic model (see the comment on
+  `MemberListFightSceneEntry`). "One ranking across both content types" is therefore an
+  app-level merge-sort by `rank` at read time (`/lists/[listId]`), not a DB-level
+  ordering — the tradeoff already accepted for that split carries forward here rather
+  than reopening it.
+- **`MemberList.isRanked` defaults to `false` and gates the whole reel** — off keeps
+  today's behavior exactly (two flat grids, sorted by `createdAt`), on replaces both
+  grids with the unified numbered reel. This was the one existing-behavior guarantee
+  worth protecting: every list created before this shipped stays visually identical
+  until its owner opts in.
+- **`rank` is assigned on every entry creation, ranked or not** — appending to the end
+  of a shared counter (`getNextListRank`, `src/lib/member-list-rank.ts`) regardless of
+  `isRanked`, rather than only backfilling ranks when a list is switched on. Toggling
+  ranking on for an existing list therefore produces an immediately sensible order
+  (append order) with no separate backfill step or migration script.
+- **Reordering is up/down buttons, not drag-and-drop** — the repo has no drag library
+  today, and adding one for a single feature was more surface than the interaction
+  needs. The reorder API (`PATCH /api/lists/[listId]/reorder`) re-submits the full
+  ordered item list rather than a single moved item either way, so swapping in
+  drag-and-drop later is a client-side change only, not an API change.
+- **Per-entry notes are a separate optional field (`note`, 240 characters), not folded
+  into the description** — `MemberList.description` (280 characters, same cap as
+  `User.bio`) is the list's own one-time pitch; a note is commentary on one specific
+  item and only ever shown once ranking is on, so collapsing the two would have meant
+  either showing item commentary on unranked lists (undesired) or losing it entirely
+  when ranking is off.
+- **Deferred, not built**: the cover-collage/browse-card redesign, in-list search, list
+  cloning, following, and comments all came up in the same scoping pass and were cut to
+  keep this PR to one coherent change (schema + description + ranking + notes) — see
+  the git history around this entry for the fuller options considered on each.
 
 ### Editorial Reviews opened up to members as "Reviews," admin review kept separate
 **PR #TBD.** Renamed the section (and its heading) from "Editorial Reviews" to "Reviews"
@@ -2810,6 +3007,20 @@ other") instead of presenting one name as if it were the clear answer.
 
 ## Deferred & Backlog
 
+- **Drag-and-drop reordering for ranked list items** — up/down buttons
+  (`ListItemRows`, `src/components/list-item-rows.tsx`) work but are slow
+  for a big jump on a longer list (promoting something from #18 to #2 is 16
+  clicks). Not built now because a cheaper, no-new-dependency option covers
+  most of the same need: move-to-top/move-to-bottom buttons, reusing the
+  same `PATCH /api/lists/[listId]/reorder` endpoint, which already takes a
+  full reordered list rather than a single-item delta specifically so it
+  could back either mechanism. Drag-and-drop itself isn't a big lift when it
+  does get built — no drag library exists in this repo yet, so it needs one
+  (`@dnd-kit` is the reasonable pick: modern, keyboard-accessible, decent
+  touch support) plus a drag handle and an `onDragEnd` wired to the same
+  endpoint — closer to a focused afternoon than a real project, since the
+  backend was already shaped for it. Revisit if move-to-top/bottom turns out
+  not to be enough once lists in real use get long.
 - **Long-value wrapping risk in the Details/Sparring Partner cards, on real
   (not mocked) data** — flagged during design review and explicitly
   deferred rather than fixed: neither card guards against a long value

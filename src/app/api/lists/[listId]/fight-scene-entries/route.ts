@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isEmailVerified } from "@/lib/verification";
+import { getNextListRank, getListItemCount } from "@/lib/member-list-rank";
+import { MAX_ITEMS_PER_LIST } from "@/lib/member-lists";
 
 export async function POST(request: Request, { params }: { params: Promise<{ listId: string }> }) {
   const session = await auth();
@@ -30,10 +32,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ lis
     return NextResponse.json({ error: "Fight scene not found." }, { status: 404 });
   }
 
-  const entry = await prisma.memberListFightSceneEntry.upsert({
+  const existingEntry = await prisma.memberListFightSceneEntry.findUnique({
     where: { listId_fightSceneId: { listId, fightSceneId } },
-    update: {},
-    create: { listId, fightSceneId },
   });
+  if (!existingEntry && (await getListItemCount(listId)) >= MAX_ITEMS_PER_LIST) {
+    return NextResponse.json({ error: `A list can have at most ${MAX_ITEMS_PER_LIST} items.` }, { status: 400 });
+  }
+  const entry = existingEntry
+    ? existingEntry
+    : await prisma.memberListFightSceneEntry.create({
+        data: { listId, fightSceneId, rank: await getNextListRank(listId) },
+      });
   return NextResponse.json({ entry });
 }

@@ -11,6 +11,12 @@ export interface MemberListData {
   name: string;
   movies: MovieCardData[];
   fightScenes: (FightSceneResult & { initialLists: AddToListItem[]; initialFavorite: boolean })[];
+  // True totals — movies/fightScenes above are capped to
+  // MEMBER_LIST_PROFILE_PREVIEW_LIMIT per list (see the query in
+  // members/[username]/page.tsx), so a list bigger than that needs these to
+  // know there's more to link out to.
+  totalMovieCount: number;
+  totalFightSceneCount: number;
 }
 
 export function MemberListManager({
@@ -43,7 +49,10 @@ export function MemberListManager({
       setError(body.error ?? "Something went wrong.");
       return;
     }
-    setLists((prev) => [...prev, { id: body.list.id, name: body.list.name, movies: [], fightScenes: [] }]);
+    setLists((prev) => [
+      ...prev,
+      { id: body.list.id, name: body.list.name, movies: [], fightScenes: [], totalMovieCount: 0, totalFightSceneCount: 0 },
+    ]);
     setNewName("");
   }
 
@@ -146,7 +155,7 @@ export function MemberListManager({
               Nothing here yet — add movies or fight scenes from their own pages.
             </p>
           ) : (
-            <div className="flex flex-wrap gap-4">
+            <div className="flex flex-wrap items-end gap-4">
               {list.movies.map((movie) => (
                 <MovieCard key={movie.id} movie={movie} size="compact" />
               ))}
@@ -157,8 +166,20 @@ export function MemberListManager({
                   initialLists={scene.initialLists}
                   signedIn={viewerSignedIn}
                   initialFavorite={scene.initialFavorite}
+                  size="compact"
                 />
               ))}
+              {list.totalMovieCount + list.totalFightSceneCount > list.movies.length + list.fightScenes.length && (
+                <Link
+                  href={`/lists/${list.id}`}
+                  className="flex h-28 w-28 shrink-0 items-center justify-center rounded-md border border-neutral-800 text-center text-xs text-neutral-400 hover:border-neutral-600 hover:text-white"
+                >
+                  View full list
+                  <br />
+                  ({list.totalMovieCount + list.totalFightSceneCount - list.movies.length - list.fightScenes.length}{" "}
+                  more)
+                </Link>
+              )}
             </div>
           )}
         </section>

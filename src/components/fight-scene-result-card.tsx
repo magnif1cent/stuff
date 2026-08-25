@@ -33,15 +33,52 @@ export function FightSceneResultCard({
   initialLists = [],
   signedIn = false,
   initialFavorite = false,
+  size = "default",
 }: {
   scene: FightSceneResult;
   initialLists?: AddToListItem[];
   signedIn?: boolean;
   initialFavorite?: boolean;
+  // "compact" mirrors MovieCard's own compact size (same ~w-28/w-32
+  // footprint) for the same reason: a profile page can show several lists'
+  // worth of cards behind tabs, where the full "Fight Ticket" card (cast,
+  // tags, verified badge, favorite/save actions) is more than a preview
+  // needs. Keeps the cream ticket identity, drops everything but the
+  // thumbnail, title, and rating.
+  size?: "default" | "compact";
 }) {
   const year = scene.movie.releaseDate ? new Date(scene.movie.releaseDate).getFullYear() : null;
   const permalink = `/movies/${scene.movieId}/fight-scenes/${scene.id}`;
   const memberLabel = scene.memberRatingAverage ? scene.memberRatingAverage.toFixed(1) : "—";
+
+  if (size === "compact") {
+    return (
+      <div
+        className="relative w-28 shrink-0 bg-[#e8dcc4] p-2 font-mono sm:w-32"
+        style={{
+          color: TICKET_INK,
+          clipPath:
+            "polygon(0 6px, 6px 0, calc(100% - 6px) 0, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0 calc(100% - 6px))",
+        }}
+      >
+        <FightSceneThumbnail href={permalink} videoId={scene.youtubeVideoId} title={scene.title} inkColor={TICKET_INK} />
+        <Link
+          href={permalink}
+          title={scene.title}
+          className="mt-2 block truncate text-xs font-bold hover:opacity-70"
+          style={{ fontFamily: "Georgia, serif" }}
+        >
+          {scene.title}
+        </Link>
+        <p className="truncate text-[10px]" style={{ color: TICKET_MUTED }}>
+          <span className="font-bold" style={{ color: TICKET_STAMP }}>
+            ★ {memberLabel}
+          </span>{" "}
+          ({scene.memberRatingCount})
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div
