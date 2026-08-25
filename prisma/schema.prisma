@@ -74,6 +74,13 @@ model User {
   personTributeVotes  PersonTributeVote[]
   personFavorites     PersonFavorite[]
   personSignatureVotes PersonSignatureVote[]
+
+  // Same ILIKE-substring-search pattern as Movie.title/director and
+  // Person.name — backs the /lists browse-page search box matching by list
+  // owner. Plain (case-preserving) username, not usernameLower, matching
+  // how the other trigram indexes sit on their display column rather than
+  // a normalized one.
+  @@index([username(ops: raw("gin_trgm_ops"))], type: Gin, map: "User_username_ilike_trgm_idx")
 }
 
 model Account {
@@ -804,6 +811,15 @@ model MemberList {
 
   @@unique([userId, name])
   @@index([userId])
+  // Backs the "Newest" sort on /lists — without this, that ORDER BY needs a
+  // full sort of every public list on every page load rather than an index
+  // scan, the same scaling concern the trigram indexes below address for
+  // the new browse-page search.
+  @@index([updatedAt])
+  // Same ILIKE-substring-search pattern as Movie.title/director and
+  // Person.name (see the trigram index comment on Movie above) — backs the
+  // /lists browse-page search box matching by list name.
+  @@index([name(ops: raw("gin_trgm_ops"))], type: Gin, map: "MemberList_name_ilike_trgm_idx")
 }
 
 model MemberListEntry {

@@ -60,6 +60,7 @@ one.
 
 **Feature Decisions**
 
+- [Browse-card cover collage and in-list search](#browse-card-cover-collage-and-in-list-search)
 - [Move-to-top/bottom buttons added for ranked list items](#move-to-topbottom-buttons-added-for-ranked-list-items)
 - [Removed the duplicate "Rank my list" pill from Edit list](#removed-the-duplicate-rank-my-list-pill-from-edit-list)
 - [Ranked-list toggle simplified to a plain checkbox, reversing the earlier explainer treatment](#ranked-list-toggle-simplified-to-a-plain-checkbox-reversing-the-earlier-explainer-treatment)
@@ -1055,6 +1056,106 @@ catalog size and traffic. This is the structural fix.
   Vercel's resizing wasn't buying anything — marked `unoptimized` too.
 
 ## Feature Decisions
+
+### Browse-card cover collage and in-list search
+**PR #TBD.** Two of the items explicitly deferred alongside the ranked-lists
+schema change (see "Deferred, not built" on "Ranked lists merge movies and
+fight scenes into one reel" below) — picked up together here since both are
+fully independent of that schema and of each other, small enough to ship in
+one pass without growing into a multi-feature PR. List cloning and
+actor-anchored lists (also raised in that same scoping/brainstorm pass)
+stay out of this PR on purpose — real, self-contained features, kept to
+their own single-purpose PRs rather than bundled in, matching this repo's
+existing one-feature-per-PR history.
+
+- **`ListCoverCollage` (`src/components/list-cover-collage.tsx`)** — a
+  Spotify-playlist-style cover for each `/lists` browse card: up to
+  `LIST_COVER_TILE_LIMIT` (4) poster/YouTube-thumbnail tiles standing in for
+  the list's own contents instead of the card's previous plain-text-only
+  layout. Tile count drives the grid (1 tile fills the square, 2 splits
+  in half, 3-4 fill a 2x2 grid) rather than always rendering a fixed 2x2
+  with empty cells, so a short list's cover doesn't read as "mostly empty."
+  An empty list (shouldn't occur given `NON_EMPTY_WHERE`, but the type
+  allows it) falls back to the list's name over a plain panel, the same
+  fallback shape `MovieCard` already uses for a posterless movie.
+- **Cover tiles ordered oldest-added first, not newest** — `getPublicListsPage`
+  (`src/lib/lists.ts`) takes the first `LIST_COVER_TILE_LIMIT` movie entries
+  and fight-scene entries by `createdAt: asc` each, movies first, sliced
+  to 4 total. Reasoned as showing a list's original core rather than
+  whatever was most recently tacked on, matching how a curated collection
+  (e.g. a playlist) usually wants its cover read. Same visibility filters as
+  the list's own page apply here too — a pending movie or soft-deleted
+  fight scene never appears in a cover tile.
+- **Cover tiles are a browse-card-only concern, not shared with the profile
+  Lists tab** — the profile page's own list previews (see "Lists scale
+  hardening" above) already have their own truncation/compact-card
+  treatment for a different reason (bounding a profile's total fetch size
+  across every list a member owns, not decorating one card); reusing
+  `ListCoverCollage` there wasn't in scope for this pass.
+- **In-list search filters client-side, not via a new endpoint** — a list
+  is capped at 200 items (see "Lists scale hardening" above), small enough
+  that filtering the already-fetched `items` array in `ListItemRows` beats
+  a server round-trip. Shown only once a list has more than 4 items, to
+  avoid a search box on a list too short to need one. Matches against
+  title, note, and (for a fight scene) its parent movie's title, so
+  searching a movie's name surfaces scenes from it too.
+- **Reordering targets the real index, search is a view filter only** — the
+  existing move buttons (up/down/top/bottom) still operate on the item's
+  position in the full `items` array, looked up per visible row
+  (`visibleIndices`), not the filtered subset's position. A move-to-top
+  while filtered moves the item to the top of the whole list, which is the
+  actually-expected operation; the alternative (constraining moves to
+  within the filtered view) would have made "top" mean something different
+  depending on what's currently typed into the search box.
+
+**Follow-up in the same PR**: the browse page itself (`/lists`) got a
+scaling pass, prompted by a direct question about it holding up at
+thousands of lists rather than the dozens it was built and tested against:
+
+- **Cards shrunk and the grid densified** — `LISTS_PAGE_SIZE` raised from
+  12 to 24, grid columns from a max of 3 to a max of 6 (`grid-cols-2` up to
+  `lg:grid-cols-6`), and each card's text trimmed to name + one compact
+  meta line (owner, combined item count, like count) instead of a full
+  byline-plus-date paragraph — the full detail already lives one click away
+  on the list's own page, so the card doesn't need to repeat it.
+- **Browse-level search added, backed by new indexes, not just the
+  existing per-list one above** — a search box on `/lists` itself matches
+  by list name or owner username in one box (`searchWhere` in
+  `src/lib/lists.ts`), same "one input across multiple fields" idiom as
+  the navbar search. Unlike the in-list search, this one has to scale with
+  the *total* list count, so it's a real `ILIKE`-via-`contains` query, not
+  a client-side filter — backed by new trigram GIN indexes on
+  `MemberList.name` and `User.username`, the same pattern already used for
+  `Movie.title`/`director` and `Person.name` (see "Typo-tolerant search
+  added via Postgres trigram extension" above). Also added a plain
+  `MemberList.updatedAt` index for the "Newest" sort, which had none before
+  — both are schema changes (migration `add_list_browse_search_indexes`).
+- **Grouped into Ranked / Unranked sections, using the existing `isRanked`
+  flag** — considered and rejected two other groupings first: a "Recently
+  added" section (redundant with the existing Newest sort, and not a
+  stable category a list belongs to) and a "Most liked" section (same
+  problem — redundant with the existing Most-liked sort, and would need an
+  arbitrary inclusion threshold). Ranked/Unranked was the one that actually
+  partitions the dataset stably and exclusively, which is what makes a
+  section header meaningful rather than a re-skinned sort control. Grouping
+  is computed per fetched page, not as a second query — the underlying
+  sort/pagination is still one flat query across both kinds, so a page of
+  all-unranked lists (the common case, since `isRanked` defaults to false)
+  renders with no section headers at all rather than an empty "Ranked"
+  heading every time.
+- **Sort/leaderboard controls restyled as filter-chip pills, reusing the
+  fight-scene search page's look** — "Newest"/"Most liked" were plain text
+  links (active = white/bold, inactive = grey), and "see the leaderboard →"
+  was an inline link buried in the subtitle paragraph. Replaced with the
+  same rounded-pill button style already established on
+  `/search/fight-scenes` (`bubbleClass` there) — active state is a red
+  border/fill, inactive is a neutral outline — so a "pick one of these"
+  control looks the same wherever it appears on the site instead of this
+  page having its own plain-link treatment. Leaderboard became its own
+  pill in the same row (visually separated with a divider, since it
+  navigates away rather than toggling a sort) instead of inline text,
+  removing the old duplicate-link risk of having the same destination
+  written out twice on the page.
 
 ### Move-to-top/bottom buttons added for ranked list items
 **PR #TBD.** Picks up the cheaper half of the deferred "drag-and-drop reordering"
@@ -3219,3 +3320,22 @@ other") instead of presenting one name as if it were the clear answer.
     for a feed that must prefetch ahead of scroll position), and real
     entry points from `FightSceneSection`/`/search/fight-scenes` (the
     preview route is direct-navigate only, not linked from anywhere).
+- **Franchise Gauntlet** — a mode for ranking/rating every movie in a TMDB
+  franchise/collection against each other in sequence (e.g. every Ip Man
+  film head-to-head), surfacing a per-franchise ranking rather than each
+  film's rating standing alone. Originated as an open-ended "innovation"
+  suggestion, not a scoped feature — no UI, data-flow, or schema thinking
+  done yet. `Movie.collectionTmdbId`/`collectionName` (see "Five more TMDB
+  fields captured" above) already give the franchise grouping this would
+  need; the
+  ranking mechanic and result presentation are both still open.
+- **"Beat This"** — a per-fight-scene challenge mechanic: from a fight
+  scene's own permalink page, a member nominates a different scene they
+  think is better, creating a direct pairwise challenge between the two
+  that other members vote on, building a head-to-head record/leaderboard
+  over time rather than each scene's rating standing alone. Distinct from
+  the existing star-rating system and from the "Streamlined, swipeable
+  fight scene viewing" idea above — this is a comparison mechanic, not a
+  viewing-format change. Naming, vote UI, and how (or whether) results
+  surface on the scene's permalink page are all still open; not scoped
+  further than this concept yet.
