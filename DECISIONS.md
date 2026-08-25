@@ -1143,6 +1143,19 @@ thousands of lists rather than the dozens it was built and tested against:
   all-unranked lists (the common case, since `isRanked` defaults to false)
   renders with no section headers at all rather than an empty "Ranked"
   heading every time.
+- **Sort/leaderboard controls restyled as filter-chip pills, reusing the
+  fight-scene search page's look** — "Newest"/"Most liked" were plain text
+  links (active = white/bold, inactive = grey), and "see the leaderboard →"
+  was an inline link buried in the subtitle paragraph. Replaced with the
+  same rounded-pill button style already established on
+  `/search/fight-scenes` (`bubbleClass` there) — active state is a red
+  border/fill, inactive is a neutral outline — so a "pick one of these"
+  control looks the same wherever it appears on the site instead of this
+  page having its own plain-link treatment. Leaderboard became its own
+  pill in the same row (visually separated with a divider, since it
+  navigates away rather than toggling a sort) instead of inline text,
+  removing the old duplicate-link risk of having the same destination
+  written out twice on the page.
 
 ### Move-to-top/bottom buttons added for ranked list items
 **PR #TBD.** Picks up the cheaper half of the deferred "drag-and-drop reordering"

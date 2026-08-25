@@ -11,6 +11,17 @@ function pageHref(page: number, sort: ListsSort, q: string) {
   return query ? `/lists?${query}` : "/lists";
 }
 
+// Same filter-chip look as the fight-scene search page's sort/filter row
+// (bubbleClass there) — one shared visual language for "pick one of these"
+// controls across the site, rather than this page's own plain-text links.
+function pillClass(active: boolean) {
+  return `rounded-full border px-3 py-1 text-xs font-medium whitespace-nowrap ${
+    active
+      ? "border-red-600 bg-red-950/40 text-red-300"
+      : "border-neutral-700 text-neutral-300 hover:border-neutral-500 hover:text-white"
+  }`;
+}
+
 // A small, dense grid card — see "Browse-page redesign" in DECISIONS.md.
 // Text is trimmed to just what's needed to tell lists apart at a glance;
 // the full byline/date lives on the list's own page, not every card here.
@@ -68,26 +79,18 @@ export default async function BrowseListsPage({
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-white">Browse Lists</h1>
-          <p className="text-sm text-neutral-400">
-            Public lists created by members —{" "}
-            <Link href="/leaderboard" className="text-red-500 hover:underline">
-              see the leaderboard →
-            </Link>
-          </p>
+          <p className="text-sm text-neutral-400">Public lists created by members</p>
         </div>
-        <div className="flex gap-2 text-sm">
-          <Link
-            href={pageHref(1, "newest", q)}
-            className={sort === "newest" ? "font-medium text-white" : "text-neutral-400 hover:text-white"}
-          >
+        <div className="flex flex-wrap gap-2">
+          <Link href={pageHref(1, "newest", q)} className={pillClass(sort === "newest")}>
             Newest
           </Link>
-          <span className="text-neutral-700">·</span>
-          <Link
-            href={pageHref(1, "liked", q)}
-            className={sort === "liked" ? "font-medium text-white" : "text-neutral-400 hover:text-white"}
-          >
-            Most liked
+          <Link href={pageHref(1, "liked", q)} className={pillClass(sort === "liked")}>
+            ♥ Most liked
+          </Link>
+          <span className="mx-1 self-center text-neutral-700">|</span>
+          <Link href="/leaderboard" className={pillClass(false)}>
+            Leaderboard →
           </Link>
         </div>
       </div>
