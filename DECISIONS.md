@@ -3219,3 +3219,22 @@ other") instead of presenting one name as if it were the clear answer.
     for a feed that must prefetch ahead of scroll position), and real
     entry points from `FightSceneSection`/`/search/fight-scenes` (the
     preview route is direct-navigate only, not linked from anywhere).
+- **Franchise Gauntlet** — a mode for ranking/rating every movie in a TMDB
+  franchise/collection against each other in sequence (e.g. every Ip Man
+  film head-to-head), surfacing a per-franchise ranking rather than each
+  film's rating standing alone. Originated as an open-ended "innovation"
+  suggestion, not a scoped feature — no UI, data-flow, or schema thinking
+  done yet. `Movie.collectionTmdbId`/`collectionName` (see "Five more TMDB
+  fields captured" above) already give the franchise grouping this would
+  need; the
+  ranking mechanic and result presentation are both still open.
+- **"Beat This"** — a per-fight-scene challenge mechanic: from a fight
+  scene's own permalink page, a member nominates a different scene they
+  think is better, creating a direct pairwise challenge between the two
+  that other members vote on, building a head-to-head record/leaderboard
+  over time rather than each scene's rating standing alone. Distinct from
+  the existing star-rating system and from the "Streamlined, swipeable
+  fight scene viewing" idea above — this is a comparison mechanic, not a
+  viewing-format change. Naming, vote UI, and how (or whether) results
+  surface on the scene's permalink page are all still open; not scoped
+  further than this concept yet.
