@@ -1,6 +1,9 @@
 import { prisma } from "@/lib/prisma";
 
-export const LISTS_PAGE_SIZE = 12;
+// Smaller, denser cards (see the browse-page redesign decision in
+// DECISIONS.md) fit more per row, so a page holds more than the old
+// large-card layout's 12.
+export const LISTS_PAGE_SIZE = 24;
 
 // How many poster/thumbnail tiles the browse-card cover collage shows.
 export const LIST_COVER_TILE_LIMIT = 4;
@@ -17,13 +20,27 @@ const NON_EMPTY_WHERE = {
   OR: [{ entries: { some: {} } }, { fightSceneEntries: { some: {} } }],
 };
 
-export function getPublicListsCount() {
-  return prisma.memberList.count({ where: NON_EMPTY_WHERE });
+// Matches by list name or owner username — one search box covering both,
+// same "one input, multiple fields" idiom as the navbar's movie/actor
+// search. `contains`+`insensitive` compiles to an ILIKE substring match,
+// backed by the trigram GIN indexes on MemberList.name and User.username
+// (see the migration and the schema comments on those indexes) so this
+// stays an index scan rather than a full-table scan as the list count grows.
+function searchWhere(query: string) {
+  const q = query.trim();
+  if (!q) return {};
+  return {
+    OR: [{ name: { contains: q, mode: "insensitive" as const } }, { user: { username: { contains: q, mode: "insensitive" as const } } }],
+  };
 }
 
-export async function getPublicListsPage(page: number, sort: ListsSort) {
+export function getPublicListsCount(query: string = "") {
+  return prisma.memberList.count({ where: { AND: [NON_EMPTY_WHERE, searchWhere(query)] } });
+}
+
+export async function getPublicListsPage(page: number, sort: ListsSort, query: string = "") {
   const lists = await prisma.memberList.findMany({
-    where: NON_EMPTY_WHERE,
+    where: { AND: [NON_EMPTY_WHERE, searchWhere(query)] },
     include: {
       user: { select: { username: true } },
       _count: { select: { entries: true, fightSceneEntries: true, likes: true } },
@@ -70,6 +87,7 @@ export async function getPublicListsPage(page: number, sort: ListsSort) {
       name: list.name,
       username: list.user.username,
       updatedAt: list.updatedAt,
+      isRanked: list.isRanked,
       movieCount: list._count.entries,
       fightSceneCount: list._count.fightSceneEntries,
       likeCount: list._count.likes,

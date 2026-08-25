@@ -2,30 +2,66 @@ import Link from "next/link";
 import { getPublicListsCount, getPublicListsPage, LISTS_PAGE_SIZE, type ListsSort } from "@/lib/lists";
 import { ListCoverCollage } from "@/components/list-cover-collage";
 
-function formatDate(date: Date) {
-  return date.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
-}
-
-function pageHref(page: number, sort: ListsSort) {
+function pageHref(page: number, sort: ListsSort, q: string) {
   const params = new URLSearchParams();
   if (page > 1) params.set("page", String(page));
   if (sort !== "newest") params.set("sort", sort);
+  if (q) params.set("q", q);
   const query = params.toString();
   return query ? `/lists?${query}` : "/lists";
+}
+
+// A small, dense grid card — see "Browse-page redesign" in DECISIONS.md.
+// Text is trimmed to just what's needed to tell lists apart at a glance;
+// the full byline/date lives on the list's own page, not every card here.
+function ListCard({ list }: { list: Awaited<ReturnType<typeof getPublicListsPage>>[number] }) {
+  return (
+    <Link
+      href={`/lists/${list.id}`}
+      className="group overflow-hidden rounded-md border border-neutral-800 bg-neutral-900 hover:border-neutral-700"
+    >
+      <ListCoverCollage tiles={list.coverTiles} listName={list.name} />
+      <div className="p-2.5">
+        <h2 className="truncate text-sm font-semibold text-white group-hover:text-red-500">{list.name}</h2>
+        <p className="truncate font-mono text-[11px] text-neutral-500">
+          by {list.username} · {list.movieCount + list.fightSceneCount} · ♥ {list.likeCount}
+        </p>
+      </div>
+    </Link>
+  );
+}
+
+function ListCardGrid({ lists }: { lists: Awaited<ReturnType<typeof getPublicListsPage>> }) {
+  return (
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+      {lists.map((list) => (
+        <ListCard key={list.id} list={list} />
+      ))}
+    </div>
+  );
 }
 
 export default async function BrowseListsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; sort?: string }>;
+  searchParams: Promise<{ page?: string; sort?: string; q?: string }>;
 }) {
   const params = await searchParams;
   const sort: ListsSort = params.sort === "liked" ? "liked" : "newest";
+  const q = (params.q ?? "").trim();
 
-  const totalCount = await getPublicListsCount();
+  const totalCount = await getPublicListsCount(q);
   const totalPages = Math.max(1, Math.ceil(totalCount / LISTS_PAGE_SIZE));
   const page = Math.min(Math.max(1, Number(params.page) || 1), totalPages);
-  const pageLists = await getPublicListsPage(page, sort);
+  const pageLists = await getPublicListsPage(page, sort, q);
+
+  // Ranked vs. unranked grouping uses the isRanked flag every list already
+  // has — no new taxonomy/schema needed for it. Groups are computed per
+  // page (the underlying sort/pagination stays one flat query across both),
+  // so a heading only shows when that page actually has a list of that
+  // kind, rather than every page repeating both headings regardless.
+  const rankedLists = pageLists.filter((list) => list.isRanked);
+  const unrankedLists = pageLists.filter((list) => !list.isRanked);
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-10">
@@ -41,14 +77,14 @@ export default async function BrowseListsPage({
         </div>
         <div className="flex gap-2 text-sm">
           <Link
-            href={pageHref(1, "newest")}
+            href={pageHref(1, "newest", q)}
             className={sort === "newest" ? "font-medium text-white" : "text-neutral-400 hover:text-white"}
           >
             Newest
           </Link>
           <span className="text-neutral-700">·</span>
           <Link
-            href={pageHref(1, "liked")}
+            href={pageHref(1, "liked", q)}
             className={sort === "liked" ? "font-medium text-white" : "text-neutral-400 hover:text-white"}
           >
             Most liked
@@ -56,38 +92,46 @@ export default async function BrowseListsPage({
         </div>
       </div>
 
+      <form method="get" className="mb-6 max-w-xs">
+        {sort !== "newest" && <input type="hidden" name="sort" value={sort} />}
+        <input
+          type="text"
+          name="q"
+          defaultValue={q}
+          placeholder="Search by list name or member…"
+          className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
+        />
+      </form>
+
       {pageLists.length === 0 ? (
-        <p className="text-neutral-400">No public lists yet — create one from a movie&apos;s page.</p>
+        <p className="text-neutral-400">
+          {q
+            ? <>No lists match &ldquo;{q}&rdquo;.</>
+            : "No public lists yet — create one from a movie's page."}
+        </p>
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {pageLists.map((list) => (
-              <Link
-                key={list.id}
-                href={`/lists/${list.id}`}
-                className="group overflow-hidden rounded-md border border-neutral-800 bg-neutral-900 hover:border-neutral-700"
-              >
-                <ListCoverCollage tiles={list.coverTiles} listName={list.name} />
-                <div className="p-4">
-                  <h2 className="font-serif text-lg font-bold text-white group-hover:text-red-500">{list.name}</h2>
-                  <p className="mb-2 text-xs text-neutral-500">
-                    by {list.username} · updated {formatDate(list.updatedAt)}
-                  </p>
-                  <p className="text-sm text-neutral-300">
-                    {list.movieCount} {list.movieCount === 1 ? "movie" : "movies"}
-                    {list.fightSceneCount > 0 &&
-                      ` · ${list.fightSceneCount} fight ${list.fightSceneCount === 1 ? "scene" : "scenes"}`}
-                    {" · "}♥ {list.likeCount}
-                  </p>
-                </div>
-              </Link>
-            ))}
+          <div className="flex flex-col gap-8">
+            {rankedLists.length > 0 && (
+              <div>
+                <h2 className="mb-3 font-mono text-xs tracking-wide text-neutral-500 uppercase">Ranked</h2>
+                <ListCardGrid lists={rankedLists} />
+              </div>
+            )}
+            {unrankedLists.length > 0 && (
+              <div>
+                {rankedLists.length > 0 && (
+                  <h2 className="mb-3 font-mono text-xs tracking-wide text-neutral-500 uppercase">Unranked</h2>
+                )}
+                <ListCardGrid lists={unrankedLists} />
+              </div>
+            )}
           </div>
 
           {totalPages > 1 && (
             <div className="mt-8 flex items-center justify-center gap-4 text-sm">
               {page > 1 ? (
-                <Link href={pageHref(page - 1, sort)} className="text-red-500 hover:underline">
+                <Link href={pageHref(page - 1, sort, q)} className="text-red-500 hover:underline">
                   ← Previous
                 </Link>
               ) : (
@@ -97,7 +141,7 @@ export default async function BrowseListsPage({
                 Page {page} of {totalPages} ({totalCount} lists)
               </span>
               {page < totalPages ? (
-                <Link href={pageHref(page + 1, sort)} className="text-red-500 hover:underline">
+                <Link href={pageHref(page + 1, sort, q)} className="text-red-500 hover:underline">
                   Next →
                 </Link>
               ) : (

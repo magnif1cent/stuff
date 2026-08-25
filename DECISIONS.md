@@ -1108,6 +1108,42 @@ existing one-feature-per-PR history.
   within the filtered view) would have made "top" mean something different
   depending on what's currently typed into the search box.
 
+**Follow-up in the same PR**: the browse page itself (`/lists`) got a
+scaling pass, prompted by a direct question about it holding up at
+thousands of lists rather than the dozens it was built and tested against:
+
+- **Cards shrunk and the grid densified** — `LISTS_PAGE_SIZE` raised from
+  12 to 24, grid columns from a max of 3 to a max of 6 (`grid-cols-2` up to
+  `lg:grid-cols-6`), and each card's text trimmed to name + one compact
+  meta line (owner, combined item count, like count) instead of a full
+  byline-plus-date paragraph — the full detail already lives one click away
+  on the list's own page, so the card doesn't need to repeat it.
+- **Browse-level search added, backed by new indexes, not just the
+  existing per-list one above** — a search box on `/lists` itself matches
+  by list name or owner username in one box (`searchWhere` in
+  `src/lib/lists.ts`), same "one input across multiple fields" idiom as
+  the navbar search. Unlike the in-list search, this one has to scale with
+  the *total* list count, so it's a real `ILIKE`-via-`contains` query, not
+  a client-side filter — backed by new trigram GIN indexes on
+  `MemberList.name` and `User.username`, the same pattern already used for
+  `Movie.title`/`director` and `Person.name` (see "Typo-tolerant search
+  added via Postgres trigram extension" above). Also added a plain
+  `MemberList.updatedAt` index for the "Newest" sort, which had none before
+  — both are schema changes (migration `add_list_browse_search_indexes`).
+- **Grouped into Ranked / Unranked sections, using the existing `isRanked`
+  flag** — considered and rejected two other groupings first: a "Recently
+  added" section (redundant with the existing Newest sort, and not a
+  stable category a list belongs to) and a "Most liked" section (same
+  problem — redundant with the existing Most-liked sort, and would need an
+  arbitrary inclusion threshold). Ranked/Unranked was the one that actually
+  partitions the dataset stably and exclusively, which is what makes a
+  section header meaningful rather than a re-skinned sort control. Grouping
+  is computed per fetched page, not as a second query — the underlying
+  sort/pagination is still one flat query across both kinds, so a page of
+  all-unranked lists (the common case, since `isRanked` defaults to false)
+  renders with no section headers at all rather than an empty "Ranked"
+  heading every time.
+
 ### Move-to-top/bottom buttons added for ranked list items
 **PR #TBD.** Picks up the cheaper half of the deferred "drag-and-drop reordering"
 backlog item (see **Deferred & Backlog** below): promoting an item from near the
