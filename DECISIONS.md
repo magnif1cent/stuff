@@ -3007,6 +3007,20 @@ other") instead of presenting one name as if it were the clear answer.
 
 ## Deferred & Backlog
 
+- **Drag-and-drop reordering for ranked list items** — up/down buttons
+  (`ListItemRows`, `src/components/list-item-rows.tsx`) work but are slow
+  for a big jump on a longer list (promoting something from #18 to #2 is 16
+  clicks). Not built now because a cheaper, no-new-dependency option covers
+  most of the same need: move-to-top/move-to-bottom buttons, reusing the
+  same `PATCH /api/lists/[listId]/reorder` endpoint, which already takes a
+  full reordered list rather than a single-item delta specifically so it
+  could back either mechanism. Drag-and-drop itself isn't a big lift when it
+  does get built — no drag library exists in this repo yet, so it needs one
+  (`@dnd-kit` is the reasonable pick: modern, keyboard-accessible, decent
+  touch support) plus a drag handle and an `onDragEnd` wired to the same
+  endpoint — closer to a focused afternoon than a real project, since the
+  backend was already shaped for it. Revisit if move-to-top/bottom turns out
+  not to be enough once lists in real use get long.
 - **Long-value wrapping risk in the Details/Sparring Partner cards, on real
   (not mocked) data** — flagged during design review and explicitly
   deferred rather than fixed: neither card guards against a long value
