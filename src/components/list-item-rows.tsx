@@ -30,6 +30,7 @@ export type ReelItem =
       title: string;
       href: string;
       youtubeVideoId: string;
+      movieId: string;
       movieTitle: string;
       ratingAverage: number | null;
       ratingCount: number;
@@ -150,7 +151,18 @@ export function ListItemRows({
     <div>
       {error && <p className="mb-3 text-sm text-red-500">{error}</p>}
       <div className="flex flex-col gap-2">
-        {items.map((item, index) => (
+        {items.map((item, index) => {
+          // When a fight scene's own movie is separately in this same list,
+          // note the relationship instead of leaving it implicit — this is
+          // exactly the "mixed reel" idea (a scene and its film ranked
+          // against each other), worth surfacing rather than just letting
+          // two unrelated-looking rows happen to share a title.
+          const relatedMovieIndex =
+            item.kind === "FIGHT_SCENE"
+              ? items.findIndex((i) => i.kind === "MOVIE" && i.id === item.movieId)
+              : -1;
+
+          return (
           <div
             key={`${item.kind}-${item.id}`}
             className={`flex items-center gap-4 rounded-md border border-neutral-800 bg-neutral-900 p-3 border-l-4 ${
@@ -219,6 +231,12 @@ export function ListItemRows({
                 {ratingLine(item)}
                 {item.kind === "FIGHT_SCENE" && ` · ${item.movieTitle}`}
                 {item.kind === "MOVIE" && item.releaseYear ? ` · ${item.releaseYear}` : ""}
+                {relatedMovieIndex !== -1 && (
+                  <span className="text-neutral-600">
+                    {" · "}
+                    {isRanked ? `also #${relatedMovieIndex + 1} in this list` : "also in this list"}
+                  </span>
+                )}
               </p>
 
               {editingNoteId === item.id ? (
@@ -299,7 +317,8 @@ export function ListItemRows({
               </div>
             )}
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
