@@ -4,7 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { resolvePosterUrl } from "@/lib/tmdb";
+import { resolvePosterUrl, isTmdbUrl } from "@/lib/tmdb";
 import { YoutubeThumbnailImage } from "@/components/fight-scene-thumbnail";
 import { MEMBER_LIST_ENTRY_NOTE_MAX_LENGTH } from "@/lib/member-lists";
 
@@ -151,8 +151,19 @@ export function ListItemRows({
                 (() => {
                   const posterUrl = resolvePosterUrl(item, "w200");
                   return posterUrl ? (
-                    <Image src={posterUrl} alt={item.title} fill sizes="56px" className="object-cover" />
-                  ) : null;
+                    <Image
+                      src={posterUrl}
+                      alt={item.title}
+                      fill
+                      unoptimized={isTmdbUrl(posterUrl)}
+                      sizes="56px"
+                      className="object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full items-center justify-center px-1 text-center text-[10px] text-neutral-500">
+                      {item.title}
+                    </div>
+                  );
                 })()
               ) : (
                 <YoutubeThumbnailImage videoId={item.youtubeVideoId} title={item.title} textClassName="text-[7px]" />
