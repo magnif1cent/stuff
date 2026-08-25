@@ -177,12 +177,22 @@ export function ListItemRows({
             <div className="min-w-0 flex-1">
               <div className="flex min-w-0 items-center gap-2">
                 <span
-                  className={`shrink-0 rounded-full border px-2 py-0.5 font-mono text-[10px] font-semibold tracking-wide uppercase ${
+                  className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 font-mono text-[10px] font-semibold tracking-wide uppercase ${
                     item.kind === "FIGHT_SCENE"
                       ? "border-red-800 bg-red-950/70 text-red-300"
                       : "border-neutral-600 bg-neutral-800 text-neutral-300"
                   }`}
                 >
+                  {item.kind === "FIGHT_SCENE" ? (
+                    <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M13 2 4 14h6l-1 8 9-12h-6z" />
+                    </svg>
+                  ) : (
+                    <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="2" y="5" width="20" height="14" rx="2" />
+                      <path d="M7 5v14M17 5v14M2 10h5M17 10h5M2 15h5M17 15h5" />
+                    </svg>
+                  )}
                   {item.kind === "FIGHT_SCENE" ? "Fight" : "Film"}
                 </span>
                 <Link
