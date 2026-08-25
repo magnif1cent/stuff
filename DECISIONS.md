@@ -60,6 +60,7 @@ one.
 
 **Feature Decisions**
 
+- [Leaderboard reachable from a "Lists" nav hover submenu](#leaderboard-reachable-from-a-lists-nav-hover-submenu)
 - [Top Franchises leaderboard and collection pages](#top-franchises-leaderboard-and-collection-pages)
 - [List cloning](#list-cloning)
 - [Browse-card cover collage and in-list search](#browse-card-cover-collage-and-in-list-search)
@@ -1058,6 +1059,31 @@ catalog size and traffic. This is the structural fix.
   Vercel's resizing wasn't buying anything — marked `unoptimized` too.
 
 ## Feature Decisions
+
+### Leaderboard reachable from a "Lists" nav hover submenu
+**PR #TBD.** `/leaderboard` was previously only reachable by first landing
+on `/lists` (or vice versa, via their existing cross-links) — no presence
+in the main navbar at all. Requested as a hover submenu under "Lists";
+went through two iterations before landing.
+
+- **First pass: pure CSS hover (`group`/`group-hover`), no client JS** —
+  matched the ask literally and kept `Navbar` a server component. Caught
+  before merging: hover has no touch equivalent, so on mobile (where this
+  navbar already wraps to a second row) tapping "Lists" would navigate
+  straight through and the submenu would never be reachable at all — a
+  real desktop/mobile inconsistency, not just a rough edge. It also had no
+  visual affordance; nothing on screen suggested hovering would reveal
+  anything.
+- **Landed on: click-to-toggle via a separate chevron button
+  (`ListsNavMenu`, `src/components/lists-nav-menu.tsx`)** — works
+  identically on touch and desktop, and the chevron itself is the
+  affordance a hover-only version lacked. "Lists" stays a plain, unchanged
+  link (still navigates straight to `/lists`); the chevron is a distinct
+  control specifically so a single click on the row is never ambiguous
+  between "navigate" and "open the menu." This is the one new client
+  component this pass needed — same dropdown look (and same lack of
+  click-outside-to-close) as the existing `ShareButton`
+  (`src/components/share-button.tsx`), not a new interaction pattern.
 
 ### Top Franchises leaderboard and collection pages
 **PR #TBD.** Grew out of discussing "Franchise Gauntlet" (see the
