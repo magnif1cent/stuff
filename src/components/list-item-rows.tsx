@@ -214,6 +214,10 @@ export function ListItemRows({
                     autoFocus
                     value={noteDraft}
                     onChange={(e) => setNoteDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") saveNote(item);
+                      if (e.key === "Escape") setEditingNoteId(null);
+                    }}
                     maxLength={MEMBER_LIST_ENTRY_NOTE_MAX_LENGTH}
                     placeholder="Add a note…"
                     className="w-full max-w-sm rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1 text-xs text-neutral-100 focus:border-red-600 focus:outline-none"
