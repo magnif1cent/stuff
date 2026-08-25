@@ -42,6 +42,19 @@ export async function getCommunityRatingSummary(movieId: string): Promise<Rating
   return { average: result._avg.score, count: result._count._all };
 }
 
+// A collection's own rating: every individual community rating across its
+// (approved) movies averaged directly, same weighted approach as
+// getTopFranchises in lib/leaderboard.ts -- one query is enough here since
+// this is scoped to a single collection, not ranking all of them at once.
+export async function getCollectionRatingSummary(collectionTmdbId: number): Promise<RatingSummary> {
+  const result = await prisma.rating.aggregate({
+    where: { movie: { collectionTmdbId, status: "APPROVED" } },
+    _avg: { score: true },
+    _count: { _all: true },
+  });
+  return { average: result._avg.score, count: result._count._all };
+}
+
 export async function getEditorsRatingSummary(movieId: string): Promise<RatingSummary> {
   const result = await prisma.adminRating.aggregate({
     where: { movieId },

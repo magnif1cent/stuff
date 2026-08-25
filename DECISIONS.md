@@ -60,6 +60,7 @@ one.
 
 **Feature Decisions**
 
+- [Top Franchises leaderboard and collection pages](#top-franchises-leaderboard-and-collection-pages)
 - [List cloning](#list-cloning)
 - [Browse-card cover collage and in-list search](#browse-card-cover-collage-and-in-list-search)
 - [Move-to-top/bottom buttons added for ranked list items](#move-to-topbottom-buttons-added-for-ranked-list-items)
@@ -1057,6 +1058,65 @@ catalog size and traffic. This is the structural fix.
   Vercel's resizing wasn't buying anything — marked `unoptimized` too.
 
 ## Feature Decisions
+
+### Top Franchises leaderboard and collection pages
+**PR #TBD.** Grew out of discussing "Franchise Gauntlet" (see the
+Deferred & Backlog entry below) — that idea (ranking *movies within one
+franchise* against each other) was talked through and rejected: the
+member rating already tells that story, the catalog doesn't have enough
+multi-movie franchises to make a real comparison mechanic worth its
+build cost, and sequels being worse than the original is too predictable
+an outcome to be an interesting reveal. What survived is a different,
+better-scoped idea: ranking *franchises against each other*, using data
+that already exists.
+
+- **Weighted average, not per-movie-average-then-averaged** — a
+  franchise's score is the mean of every individual `Rating` row across
+  all its (approved) movies, computed as one query
+  (`Rating.aggregate({ where: { movie: { collectionTmdbId, status:
+  "APPROVED" } } })` in `getCollectionRatingSummary`,
+  `src/lib/ratings.ts`), not an average of each movie's own average.
+  Chosen over the unweighted version specifically to avoid a low-vote
+  outlier (a just-released sequel with 3 ratings) dragging the score as
+  hard as an entry with hundreds — the same small-sample problem IMDb's
+  public weighted-rating formula solves, though deliberately the plain
+  version here: no Bayesian shrinkage toward a global mean the way
+  IMDb's does. Ship the simple version, tune the formula later once
+  there's a real sense of how it behaves on the actual catalog.
+- **No other site's precedent to copy for the franchise-level number
+  itself** — checked before building: TMDB's own Collection pages (the
+  closest analog, same underlying data this app already imports) show
+  no combined score at all, just a grid of individually-rated movies.
+  Built the dedicated page anyway, because the actual gap it closes
+  isn't a missing score — it's not always obvious which movies belong
+  to a given franchise, and the page answers that directly.
+- **Dedicated collection page over the cheaper alternative** — the
+  other option on the table was making a franchise's leaderboard row
+  link straight to its top-rated movie (zero new pages). Rejected in
+  favor of a real `/collections/[collectionTmdbId]` page once "which
+  movies are actually in this franchise" was identified as valuable
+  information on its own, not just a means to a score.
+- **Minimum 2 movies to rank, no minimum to have a page** — a
+  single-movie "collection" isn't a franchise to compare
+  (`MIN_FRANCHISE_MOVIES`, `src/lib/leaderboard.ts`), so it's excluded
+  from `getTopFranchises`. The collection page itself has no such floor
+  — `getTopFranchises` and the page are independent, so a 1-movie
+  collection (or one with zero ratings anywhere in it) still gets a
+  working page, just never appears on the leaderboard.
+- **Two queries for the leaderboard, not one aggregate per franchise**
+  — same "rank in memory" tradeoff already made in `getTopCurators`
+  above: fetch every approved movie with a `collectionTmdbId`, group by
+  collection in JS, then fetch every `Rating` row for the qualifying
+  movies in one more query and sum per collection. Prisma's `groupBy`
+  can't group `Rating` rows by a joined `Movie` field directly, and at
+  this catalog's scale (tens, not thousands, of multi-movie franchises)
+  one collection-by-collection aggregate query each would have been
+  needless N+1 querying for no real benefit.
+- **The movie page's existing "Collection" row now also links to the
+  collection page** — previously it only linked to individual sibling
+  movies, never showed the collection's own name as a link anywhere.
+  Small addition to the same `src/app/movies/[id]/page.tsx` row, not a
+  new feature of its own.
 
 ### List cloning
 **PR #TBD.** Another of the items from the "Lists expansion" brainstorm (see
@@ -3374,15 +3434,17 @@ other") instead of presenting one name as if it were the clear answer.
     for a feed that must prefetch ahead of scroll position), and real
     entry points from `FightSceneSection`/`/search/fight-scenes` (the
     preview route is direct-navigate only, not linked from anywhere).
-- **Franchise Gauntlet** — a mode for ranking/rating every movie in a TMDB
-  franchise/collection against each other in sequence (e.g. every Ip Man
-  film head-to-head), surfacing a per-franchise ranking rather than each
-  film's rating standing alone. Originated as an open-ended "innovation"
-  suggestion, not a scoped feature — no UI, data-flow, or schema thinking
-  done yet. `Movie.collectionTmdbId`/`collectionName` (see "Five more TMDB
-  fields captured" above) already give the franchise grouping this would
-  need; the
-  ranking mechanic and result presentation are both still open.
+- **Franchise Gauntlet** — originally: a mode for ranking/rating every
+  movie in a TMDB franchise/collection against each other in sequence
+  (e.g. every Ip Man film head-to-head). Discussed and rejected in that
+  form — the member rating already tells that story, this catalog
+  doesn't have enough multi-movie franchises to justify a real voting
+  mechanic, and a franchise's first entry usually being its best is too
+  predictable an outcome to be worth exposing. What that discussion led
+  to instead — ranking franchises *against each other*, not movies
+  within one — shipped as "Top Franchises" (see **Feature Decisions**
+  above: "Top Franchises leaderboard and collection pages"). Nothing
+  left open here.
 - **"Beat This"** — a per-fight-scene challenge mechanic: from a fight
   scene's own permalink page, a member nominates a different scene they
   think is better, creating a direct pairwise challenge between the two
