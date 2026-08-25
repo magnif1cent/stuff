@@ -71,16 +71,19 @@ export function ListItemRows({
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [noteDraft, setNoteDraft] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [reordering, setReordering] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   async function persistOrder(next: ReelItem[]) {
+    setReordering(true);
     setItems(next);
     const res = await fetch(`/api/lists/${listId}/reorder`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ items: next.map((item) => ({ kind: item.kind, id: item.id })) }),
     });
+    setReordering(false);
     if (!res.ok) {
       setItems(initialItems);
       const body = await res.json().catch(() => ({}));
@@ -89,6 +92,7 @@ export function ListItemRows({
   }
 
   function move(index: number, direction: -1 | 1) {
+    if (reordering) return;
     const target = index + direction;
     if (target < 0 || target >= items.length) return;
     const next = [...items];
@@ -204,6 +208,9 @@ export function ListItemRows({
                     placeholder="Add a note…"
                     className="w-full max-w-sm rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1 text-xs text-neutral-100 focus:border-red-600 focus:outline-none"
                   />
+                  <span className="shrink-0 font-mono text-[10px] text-neutral-600">
+                    {noteDraft.length} / {MEMBER_LIST_ENTRY_NOTE_MAX_LENGTH}
+                  </span>
                   <button
                     onClick={() => saveNote(item)}
                     disabled={busyId === item.id}
@@ -238,7 +245,7 @@ export function ListItemRows({
                   <>
                     <button
                       onClick={() => move(index, -1)}
-                      disabled={index === 0}
+                      disabled={index === 0 || reordering}
                       title="Move up"
                       className="flex h-7 w-7 items-center justify-center rounded text-neutral-500 hover:bg-neutral-800 hover:text-white disabled:opacity-30"
                     >
@@ -246,7 +253,7 @@ export function ListItemRows({
                     </button>
                     <button
                       onClick={() => move(index, 1)}
-                      disabled={index === items.length - 1}
+                      disabled={index === items.length - 1 || reordering}
                       title="Move down"
                       className="flex h-7 w-7 items-center justify-center rounded text-neutral-500 hover:bg-neutral-800 hover:text-white disabled:opacity-30"
                     >
