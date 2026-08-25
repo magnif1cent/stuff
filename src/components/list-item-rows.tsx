@@ -87,7 +87,25 @@ export function ListItemRows({
   const [busyId, setBusyId] = useState<string | null>(null);
   const [reordering, setReordering] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
   const router = useRouter();
+
+  // Client-side only — lists cap at 200 items (see the item-cap decision in
+  // DECISIONS.md), small enough that filtering the already-fetched array
+  // beats round-tripping to the server for this. Matches title, note, and
+  // (for a fight scene) its parent movie's title, so searching a movie name
+  // also surfaces scenes from it. Reorder buttons still act on `items`, the
+  // full unfiltered array — a move-to-top while filtered moves the item to
+  // the top of the whole list, not just the visible subset, since filtering
+  // is a view, not a different order.
+  const query = search.trim().toLowerCase();
+  const visibleIndices = !query
+    ? items.map((_, i) => i)
+    : items.reduce<number[]>((acc, item, i) => {
+        const haystack = `${item.title} ${item.note ?? ""} ${item.kind === "FIGHT_SCENE" ? item.movieTitle : ""}`.toLowerCase();
+        if (haystack.includes(query)) acc.push(i);
+        return acc;
+      }, []);
 
   async function persistOrder(next: ReelItem[]) {
     setReordering(true);
@@ -160,8 +178,31 @@ export function ListItemRows({
   return (
     <div>
       {error && <p className="mb-3 text-sm text-red-500">{error}</p>}
+      {items.length > 4 && (
+        <div className="relative mb-3 max-w-xs">
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search this list…"
+            className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              title="Clear search"
+              className="absolute top-1/2 right-2 -translate-y-1/2 text-neutral-500 hover:text-white"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+      )}
+      {query && visibleIndices.length === 0 ? (
+        <p className="text-sm text-neutral-400">No items in this list match &ldquo;{search.trim()}&rdquo;.</p>
+      ) : (
       <div className="flex flex-col gap-2">
-        {items.map((item, index) => {
+        {visibleIndices.map((index) => {
+          const item = items[index];
           // When a fight scene's own movie is separately in this same list,
           // note the relationship instead of leaving it implicit — this is
           // exactly the "mixed reel" idea (a scene and its film ranked
@@ -346,6 +387,7 @@ export function ListItemRows({
           );
         })}
       </div>
+      )}
     </div>
   );
 }

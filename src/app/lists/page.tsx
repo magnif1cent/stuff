@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getPublicListsCount, getPublicListsPage, LISTS_PAGE_SIZE, type ListsSort } from "@/lib/lists";
+import { ListCoverCollage } from "@/components/list-cover-collage";
 
 function formatDate(date: Date) {
   return date.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
@@ -64,18 +65,21 @@ export default async function BrowseListsPage({
               <Link
                 key={list.id}
                 href={`/lists/${list.id}`}
-                className="rounded-md border border-neutral-800 bg-neutral-900 p-4 hover:border-neutral-700"
+                className="group overflow-hidden rounded-md border border-neutral-800 bg-neutral-900 hover:border-neutral-700"
               >
-                <h2 className="font-serif text-lg font-bold text-white">{list.name}</h2>
-                <p className="mb-2 text-xs text-neutral-500">
-                  by {list.username} · updated {formatDate(list.updatedAt)}
-                </p>
-                <p className="text-sm text-neutral-300">
-                  {list.movieCount} {list.movieCount === 1 ? "movie" : "movies"}
-                  {list.fightSceneCount > 0 &&
-                    ` · ${list.fightSceneCount} fight ${list.fightSceneCount === 1 ? "scene" : "scenes"}`}
-                  {" · "}♥ {list.likeCount}
-                </p>
+                <ListCoverCollage tiles={list.coverTiles} listName={list.name} />
+                <div className="p-4">
+                  <h2 className="font-serif text-lg font-bold text-white group-hover:text-red-500">{list.name}</h2>
+                  <p className="mb-2 text-xs text-neutral-500">
+                    by {list.username} · updated {formatDate(list.updatedAt)}
+                  </p>
+                  <p className="text-sm text-neutral-300">
+                    {list.movieCount} {list.movieCount === 1 ? "movie" : "movies"}
+                    {list.fightSceneCount > 0 &&
+                      ` · ${list.fightSceneCount} fight ${list.fightSceneCount === 1 ? "scene" : "scenes"}`}
+                    {" · "}♥ {list.likeCount}
+                  </p>
+                </div>
               </Link>
             ))}
           </div>

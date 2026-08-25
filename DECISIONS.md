@@ -60,6 +60,7 @@ one.
 
 **Feature Decisions**
 
+- [Browse-card cover collage and in-list search](#browse-card-cover-collage-and-in-list-search)
 - [Move-to-top/bottom buttons added for ranked list items](#move-to-topbottom-buttons-added-for-ranked-list-items)
 - [Removed the duplicate "Rank my list" pill from Edit list](#removed-the-duplicate-rank-my-list-pill-from-edit-list)
 - [Ranked-list toggle simplified to a plain checkbox, reversing the earlier explainer treatment](#ranked-list-toggle-simplified-to-a-plain-checkbox-reversing-the-earlier-explainer-treatment)
@@ -1055,6 +1056,57 @@ catalog size and traffic. This is the structural fix.
   Vercel's resizing wasn't buying anything — marked `unoptimized` too.
 
 ## Feature Decisions
+
+### Browse-card cover collage and in-list search
+**PR #TBD.** Two of the items explicitly deferred alongside the ranked-lists
+schema change (see "Deferred, not built" on "Ranked lists merge movies and
+fight scenes into one reel" below) — picked up together here since both are
+fully independent of that schema and of each other, small enough to ship in
+one pass without growing into a multi-feature PR. List cloning and
+actor-anchored lists (also raised in that same scoping/brainstorm pass)
+stay out of this PR on purpose — real, self-contained features, kept to
+their own single-purpose PRs rather than bundled in, matching this repo's
+existing one-feature-per-PR history.
+
+- **`ListCoverCollage` (`src/components/list-cover-collage.tsx`)** — a
+  Spotify-playlist-style cover for each `/lists` browse card: up to
+  `LIST_COVER_TILE_LIMIT` (4) poster/YouTube-thumbnail tiles standing in for
+  the list's own contents instead of the card's previous plain-text-only
+  layout. Tile count drives the grid (1 tile fills the square, 2 splits
+  in half, 3-4 fill a 2x2 grid) rather than always rendering a fixed 2x2
+  with empty cells, so a short list's cover doesn't read as "mostly empty."
+  An empty list (shouldn't occur given `NON_EMPTY_WHERE`, but the type
+  allows it) falls back to the list's name over a plain panel, the same
+  fallback shape `MovieCard` already uses for a posterless movie.
+- **Cover tiles ordered oldest-added first, not newest** — `getPublicListsPage`
+  (`src/lib/lists.ts`) takes the first `LIST_COVER_TILE_LIMIT` movie entries
+  and fight-scene entries by `createdAt: asc` each, movies first, sliced
+  to 4 total. Reasoned as showing a list's original core rather than
+  whatever was most recently tacked on, matching how a curated collection
+  (e.g. a playlist) usually wants its cover read. Same visibility filters as
+  the list's own page apply here too — a pending movie or soft-deleted
+  fight scene never appears in a cover tile.
+- **Cover tiles are a browse-card-only concern, not shared with the profile
+  Lists tab** — the profile page's own list previews (see "Lists scale
+  hardening" above) already have their own truncation/compact-card
+  treatment for a different reason (bounding a profile's total fetch size
+  across every list a member owns, not decorating one card); reusing
+  `ListCoverCollage` there wasn't in scope for this pass.
+- **In-list search filters client-side, not via a new endpoint** — a list
+  is capped at 200 items (see "Lists scale hardening" above), small enough
+  that filtering the already-fetched `items` array in `ListItemRows` beats
+  a server round-trip. Shown only once a list has more than 4 items, to
+  avoid a search box on a list too short to need one. Matches against
+  title, note, and (for a fight scene) its parent movie's title, so
+  searching a movie's name surfaces scenes from it too.
+- **Reordering targets the real index, search is a view filter only** — the
+  existing move buttons (up/down/top/bottom) still operate on the item's
+  position in the full `items` array, looked up per visible row
+  (`visibleIndices`), not the filtered subset's position. A move-to-top
+  while filtered moves the item to the top of the whole list, which is the
+  actually-expected operation; the alternative (constraining moves to
+  within the filtered view) would have made "top" mean something different
+  depending on what's currently typed into the search box.
 
 ### Move-to-top/bottom buttons added for ranked list items
 **PR #TBD.** Picks up the cheaper half of the deferred "drag-and-drop reordering"
