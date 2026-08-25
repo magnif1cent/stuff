@@ -60,6 +60,7 @@ one.
 
 **Feature Decisions**
 
+- [List cloning](#list-cloning)
 - [Browse-card cover collage and in-list search](#browse-card-cover-collage-and-in-list-search)
 - [Move-to-top/bottom buttons added for ranked list items](#move-to-topbottom-buttons-added-for-ranked-list-items)
 - [Removed the duplicate "Rank my list" pill from Edit list](#removed-the-duplicate-rank-my-list-pill-from-edit-list)
@@ -1056,6 +1057,44 @@ catalog size and traffic. This is the structural fix.
   Vercel's resizing wasn't buying anything — marked `unoptimized` too.
 
 ## Feature Decisions
+
+### List cloning
+**PR #TBD.** Another of the items from the "Lists expansion" brainstorm (see
+"Ranked lists merge movies and fight scenes into one reel" below), built as
+its own single-purpose PR per this repo's convention rather than bundled
+with the browse-page/search PR that shipped alongside it in the same
+overall pass.
+
+- **A one-click action, not a form** — `POST /api/lists/[listId]/clone`
+  (no request body) creates the clone and redirects straight to it,
+  mirroring how "+ Add to list" and Like are also single-click actions with
+  no intermediate confirmation screen. Same auth/verification/rate-limit
+  gate as list creation (`listCreateLimiter` reused directly — cloning
+  *is* creating a list, just pre-populated, so it's the same abuse surface
+  and cap).
+- **Description and per-item notes don't carry over; structure does** — the
+  new list gets the same movies/fight scenes, the same order (`rank`
+  copied verbatim when the source is ranked), and the same `isRanked`
+  state, but starts with no description and no per-item notes. Both of
+  those are free-text commentary in the *original* owner's voice; copying
+  them silently into someone else's list would read as the new owner's own
+  words with no indication they weren't. Structure (what's in the list, in
+  what order) isn't anyone's authored commentary, so it copies without
+  that problem.
+- **Name collisions resolved automatically, not asked about** —
+  `uniqueCloneName` (`src/app/api/lists/[listId]/clone/route.ts`) tries
+  "{name} (copy)", then "(copy 2)", etc. against the cloner's own lists,
+  rather than prompting for a name before cloning. Keeps the action a
+  true one-click flow; the owner can rename afterward via the existing
+  Edit list panel like any other list.
+- **Only offered where it makes sense** — hidden on the viewer's own list
+  (nothing to gain cloning something you already own, same reasoning as
+  Like being owner-hidden) and on an empty list (visibility-filtered same
+  as the page itself: a pending movie or soft-deleted fight scene never
+  makes it into a clone, same as they never show on the source page).
+- **Clone still counts against the cloner's `MAX_MEMBER_LISTS` (25)** — no
+  special exemption; a clone is exactly as real a list as one built by
+  hand, and letting clones bypass the cap would make it a loophole.
 
 ### Browse-card cover collage and in-list search
 **PR #TBD.** Two of the items explicitly deferred alongside the ranked-lists

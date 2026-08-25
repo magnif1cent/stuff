@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getRatingSummaries } from "@/lib/ratings";
 import { getFightSceneRatingSummaries } from "@/lib/fight-scenes";
 import { LikeListButton } from "@/components/like-list-button";
+import { CloneListButton } from "@/components/clone-list-button";
 import { ListDetailsForm } from "@/components/list-details-form";
 import { ListRankToggle } from "@/components/list-rank-toggle";
 import { ListItemRows, type ReelItem } from "@/components/list-item-rows";
@@ -123,12 +124,17 @@ export default async function PublicListPage({ params }: { params: Promise<{ lis
         {isOwnList ? (
           <ListDetailsForm listId={list.id} initialName={list.name} initialDescription={list.description} />
         ) : (
-          <LikeListButton
-            listId={list.id}
-            initialLiked={!!myLike}
-            initialLikeCount={list._count.likes}
-            canLike={!!session?.user}
-          />
+          <div className="flex flex-wrap items-center gap-3">
+            <LikeListButton
+              listId={list.id}
+              initialLiked={!!myLike}
+              initialLikeCount={list._count.likes}
+              canLike={!!session?.user}
+            />
+            {(movies.length > 0 || fightScenes.length > 0) && (
+              <CloneListButton listId={list.id} canClone={!!session?.user} />
+            )}
+          </div>
         )}
       </div>
       {movies.length === 0 && fightScenes.length === 0 ? (
