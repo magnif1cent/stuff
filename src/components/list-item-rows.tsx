@@ -68,6 +68,19 @@ export function ListItemRows({
   isOwnList: boolean;
 }) {
   const [items, setItems] = useState(initialItems);
+  // `initialItems` only seeds state on mount — without tracking it like
+  // this, toggling Ranked list calls router.refresh(), the server
+  // recomputes reelItems in the new sort order, but this component keeps
+  // rendering the order it first mounted with until something else (a note
+  // save, a remove) happens to touch `items`. Adjusting state during render
+  // when the prop reference changes (React's documented alternative to an
+  // effect for this) keeps row order matching the server's after any
+  // refresh, ranking toggle included.
+  const [prevInitialItems, setPrevInitialItems] = useState(initialItems);
+  if (initialItems !== prevInitialItems) {
+    setPrevInitialItems(initialItems);
+    setItems(initialItems);
+  }
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [noteDraft, setNoteDraft] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
