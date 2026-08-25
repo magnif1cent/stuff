@@ -3,6 +3,9 @@ import { prisma } from "@/lib/prisma";
 const TOP_LISTS_LIMIT = 20;
 const TOP_CURATORS_LIMIT = 10;
 const TOP_ACTORS_LIMIT = 20;
+const TOP_FRANCHISES_LIMIT = 10;
+// A single-movie "collection" isn't a franchise to rank against others.
+export const MIN_FRANCHISE_MOVIES = 2;
 
 export async function getMostLikedLists() {
   const lists = await prisma.memberList.findMany({
@@ -69,4 +72,74 @@ export async function getMostBelovedActors() {
     profilePath: person.profilePath,
     favoriteCount: person._count.favorites,
   }));
+}
+
+// Ranks TMDB collections ("franchises") by the average of every individual
+// community rating across all their (approved) movies -- a straight
+// weighted average, each rating counted once, not each movie's own average
+// counted once. Deliberately the simple version: no Bayesian shrinkage
+// toward a global mean (the way IMDb's public weighted-rating formula
+// does), which would better damp a low-vote outlier further -- ship this,
+// revisit the formula once there's a real sense of how it behaves on the
+// actual catalog. See DECISIONS.md for the weighted-vs-unweighted reasoning.
+//
+// Two queries total regardless of collection count (same "rank in memory"
+// tradeoff already made in getTopCurators above) rather than one aggregate
+// per collection -- Prisma's groupBy can't group Rating rows by a joined
+// Movie field directly.
+export async function getTopFranchises() {
+  const movies = await prisma.movie.findMany({
+    where: { status: "APPROVED", collectionTmdbId: { not: null } },
+    select: { id: true, collectionTmdbId: true, collectionName: true },
+  });
+
+  const byCollection = new Map<number, { collectionName: string; movieIds: string[] }>();
+  for (const movie of movies) {
+    const collectionTmdbId = movie.collectionTmdbId!;
+    const existing = byCollection.get(collectionTmdbId);
+    if (existing) {
+      existing.movieIds.push(movie.id);
+    } else {
+      byCollection.set(collectionTmdbId, { collectionName: movie.collectionName!, movieIds: [movie.id] });
+    }
+  }
+
+  const qualifying = [...byCollection.entries()].filter(
+    ([, { movieIds }]) => movieIds.length >= MIN_FRANCHISE_MOVIES,
+  );
+  if (qualifying.length === 0) return [];
+
+  const movieToCollection = new Map<string, number>();
+  for (const [collectionTmdbId, { movieIds }] of qualifying) {
+    for (const movieId of movieIds) movieToCollection.set(movieId, collectionTmdbId);
+  }
+
+  const ratings = await prisma.rating.findMany({
+    where: { movieId: { in: [...movieToCollection.keys()] } },
+    select: { movieId: true, score: true },
+  });
+
+  const sums = new Map<number, { total: number; count: number }>();
+  for (const rating of ratings) {
+    const collectionTmdbId = movieToCollection.get(rating.movieId)!;
+    const sum = sums.get(collectionTmdbId) ?? { total: 0, count: 0 };
+    sum.total += rating.score;
+    sum.count += 1;
+    sums.set(collectionTmdbId, sum);
+  }
+
+  return qualifying
+    .map(([collectionTmdbId, { collectionName, movieIds }]) => {
+      const sum = sums.get(collectionTmdbId);
+      return {
+        collectionTmdbId,
+        collectionName,
+        movieCount: movieIds.length,
+        ratingAverage: sum ? sum.total / sum.count : null,
+        ratingCount: sum?.count ?? 0,
+      };
+    })
+    .filter((franchise): franchise is typeof franchise & { ratingAverage: number } => franchise.ratingAverage !== null)
+    .sort((a, b) => b.ratingAverage - a.ratingAverage)
+    .slice(0, TOP_FRANCHISES_LIMIT);
 }

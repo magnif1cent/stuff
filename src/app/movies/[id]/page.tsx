@@ -338,6 +338,13 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
           <>
             <dt className="text-neutral-500">Collection</dt>
             <dd>
+              <Link
+                href={`/collections/${movie.collectionTmdbId}`}
+                className="text-red-500 underline decoration-red-800 underline-offset-2 hover:text-red-400"
+              >
+                {movie.collectionName}
+              </Link>
+              {" — "}
               {collectionSiblings.map((sibling, i) => (
                 <span key={sibling.id}>
                   <Link
