@@ -3330,6 +3330,21 @@ other") instead of presenting one name as if it were the clear answer.
   member-created ones, or a "follow a member's lists" mechanic tied into
   the notifications backlog item if that gets built. Needs a real
   brainstorming pass before committing to any of these.
+  - **The "themed admin-curated collections" idea revisited and narrowed
+    (still deferred)**: worked through a concrete example ("Essential
+    Bruce Lee" — a ranked mix of his films and specific fight scenes) and
+    concluded nearly all of it is already possible today with a plain
+    `MemberList` — any admin can create one, add movies and fight scenes
+    to the same ranked reel, and it's public immediately. No new list
+    type, schema, or content model is actually needed for the *content*
+    side of this. The one real gap is **discoverability**: an admin's
+    curated list only surfaces via `/lists` browse or their own profile,
+    not anywhere tied to what it's about. Candidate anchors, none chosen:
+    the relevant actor's page, the relevant movie's page, a homepage rail
+    (would overlap with the separate "Editor's Picks rail" backlog item
+    below), or just a "Curated" filter/badge within `/lists` itself with
+    no dedicated anchor page at all. Still not scoped — revisit once
+    there's conviction on where curated lists should actually surface.
 - **Streamlined, swipeable fight scene viewing (YouTube Shorts-style)** —
   replace or supplement the current card-grid presentation
   (`FightSceneSection`, `/search/fight-scenes`) with a full-screen,
