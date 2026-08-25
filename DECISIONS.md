@@ -60,6 +60,7 @@ one.
 
 **Feature Decisions**
 
+- [Move-to-top/bottom buttons added for ranked list items](#move-to-topbottom-buttons-added-for-ranked-list-items)
 - [Removed the duplicate "Rank my list" pill from Edit list](#removed-the-duplicate-rank-my-list-pill-from-edit-list)
 - [Ranked-list toggle simplified to a plain checkbox, reversing the earlier explainer treatment](#ranked-list-toggle-simplified-to-a-plain-checkbox-reversing-the-earlier-explainer-treatment)
 - [Unranked lists switched to the same row layout as ranked ones](#unranked-lists-switched-to-the-same-row-layout-as-ranked-ones)
@@ -1054,6 +1055,19 @@ catalog size and traffic. This is the structural fix.
   Vercel's resizing wasn't buying anything — marked `unoptimized` too.
 
 ## Feature Decisions
+
+### Move-to-top/bottom buttons added for ranked list items
+**PR #TBD.** Picks up the cheaper half of the deferred "drag-and-drop reordering"
+backlog item (see **Deferred & Backlog** below): promoting an item from near the
+bottom of a long ranked list to #1 took one click per step with only up/down
+buttons. Added `⇈`/`⇊` buttons in `ListItemRows` (`src/components/list-item-rows.tsx`)
+alongside the existing `↑`/`↓` ones, splicing the item to the front/back of the
+array client-side and reusing the exact same `persistOrder` call — and so the same
+`PATCH /api/lists/[listId]/reorder` endpoint — as the single-step buttons already
+do. No new endpoint, no new dependency. Drag-and-drop itself (which would need
+`@dnd-kit`, since no drag library exists in this repo yet) stays deferred — this
+was the "not enough on its own" case the backlog entry called out as worth
+checking before committing to that heavier build.
 
 ### Removed the duplicate "Rank my list" pill from Edit list
 **PR #TBD.** Explicit follow-up once the checkbox simplification (below) landed: with
@@ -3007,20 +3021,19 @@ other") instead of presenting one name as if it were the clear answer.
 
 ## Deferred & Backlog
 
-- **Drag-and-drop reordering for ranked list items** — up/down buttons
-  (`ListItemRows`, `src/components/list-item-rows.tsx`) work but are slow
-  for a big jump on a longer list (promoting something from #18 to #2 is 16
-  clicks). Not built now because a cheaper, no-new-dependency option covers
-  most of the same need: move-to-top/move-to-bottom buttons, reusing the
-  same `PATCH /api/lists/[listId]/reorder` endpoint, which already takes a
-  full reordered list rather than a single-item delta specifically so it
-  could back either mechanism. Drag-and-drop itself isn't a big lift when it
-  does get built — no drag library exists in this repo yet, so it needs one
-  (`@dnd-kit` is the reasonable pick: modern, keyboard-accessible, decent
-  touch support) plus a drag handle and an `onDragEnd` wired to the same
-  endpoint — closer to a focused afternoon than a real project, since the
-  backend was already shaped for it. Revisit if move-to-top/bottom turns out
-  not to be enough once lists in real use get long.
+- **Drag-and-drop reordering for ranked list items** — `ListItemRows`
+  (`src/components/list-item-rows.tsx`) now has move-to-top/move-to-bottom
+  buttons alongside up/down (see **Feature Decisions** above), covering the
+  big-jump case cheaply with no new dependency. Full drag-and-drop itself
+  isn't a big lift when it does get built — no drag library exists in this
+  repo yet, so it needs one (`@dnd-kit` is the reasonable pick: modern,
+  keyboard-accessible, decent touch support) plus a drag handle and an
+  `onDragEnd` wired to the same `PATCH /api/lists/[listId]/reorder`
+  endpoint, which already takes a full reordered list rather than a
+  single-item delta specifically so it could back either mechanism —
+  closer to a focused afternoon than a real project, since the backend was
+  already shaped for it. Revisit if the button-based approach still feels
+  clunky once lists in real use get long.
 - **Long-value wrapping risk in the Details/Sparring Partner cards, on real
   (not mocked) data** — flagged during design review and explicitly
   deferred rather than fixed: neither card guards against a long value

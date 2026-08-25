@@ -114,6 +114,16 @@ export function ListItemRows({
     void persistOrder(next);
   }
 
+  function moveToEnd(index: number, end: "top" | "bottom") {
+    if (reordering) return;
+    if (end === "top" && index === 0) return;
+    if (end === "bottom" && index === items.length - 1) return;
+    const next = [...items];
+    const [moved] = next.splice(index, 1);
+    next.splice(end === "top" ? 0 : next.length, 0, moved);
+    void persistOrder(next);
+  }
+
   async function saveNote(item: ReelItem) {
     setBusyId(item.id);
     setError(null);
@@ -289,6 +299,14 @@ export function ListItemRows({
                 {isRanked && (
                   <>
                     <button
+                      onClick={() => moveToEnd(index, "top")}
+                      disabled={index === 0 || reordering}
+                      title="Move to top"
+                      className="flex h-7 w-7 items-center justify-center rounded text-neutral-500 hover:bg-neutral-800 hover:text-white disabled:opacity-30"
+                    >
+                      ⇈
+                    </button>
+                    <button
                       onClick={() => move(index, -1)}
                       disabled={index === 0 || reordering}
                       title="Move up"
@@ -303,6 +321,14 @@ export function ListItemRows({
                       className="flex h-7 w-7 items-center justify-center rounded text-neutral-500 hover:bg-neutral-800 hover:text-white disabled:opacity-30"
                     >
                       ↓
+                    </button>
+                    <button
+                      onClick={() => moveToEnd(index, "bottom")}
+                      disabled={index === items.length - 1 || reordering}
+                      title="Move to bottom"
+                      className="flex h-7 w-7 items-center justify-center rounded text-neutral-500 hover:bg-neutral-800 hover:text-white disabled:opacity-30"
+                    >
+                      ⇊
                     </button>
                   </>
                 )}
