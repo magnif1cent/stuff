@@ -654,11 +654,9 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
                       />
                     ) : null}
                   </div>
-                  <p className="font-cond truncate text-sm tracking-wide text-neutral-100 uppercase">
-                    {credit.person.name}
-                  </p>
+                  <p className="truncate text-sm font-medium text-neutral-100">{credit.person.name}</p>
                   {credit.characterName && (
-                    <p className="font-cond truncate text-sm text-neutral-400">{credit.characterName}</p>
+                    <p className="truncate text-xs text-neutral-500">{credit.characterName}</p>
                   )}
                 </Link>
               ))}
