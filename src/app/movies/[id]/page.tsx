@@ -12,7 +12,6 @@ import {
   getCommunityRatingSummary,
   getEditorsRatingSummary,
   getSubcategoryRatingSummary,
-  getSubcategoryEditorsRatingSummary,
   RATING_CATEGORIES,
 } from "@/lib/ratings";
 import { getMovieRecommenders } from "@/lib/movie-recommendations";
@@ -127,7 +126,6 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
     communityRating,
     editorsRating,
     subcategoryRating,
-    subcategoryEditorsRating,
     myRating,
     myCategoryRatings,
     myListEntries,
@@ -149,7 +147,6 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
     getCommunityRatingSummary(movie.id),
     getEditorsRatingSummary(movie.id),
     getSubcategoryRatingSummary(movie.id),
-    getSubcategoryEditorsRatingSummary(movie.id),
     session?.user
       ? prisma.rating.findUnique({
           where: { userId_movieId: { userId: session.user.id, movieId: movie.id } },
@@ -581,39 +578,16 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
             )}
           </div>
 
-          {RATING_CATEGORIES.some(
-            ({ key }) => subcategoryRating[key].count > 0 || subcategoryEditorsRating[key].count > 0,
-          ) && (
+          {RATING_CATEGORIES.some(({ key }) => subcategoryRating[key].count > 0) && (
             <div className="font-cond mt-4 flex max-w-sm flex-col gap-1.5 text-sm tracking-widest">
               {RATING_CATEGORIES.map(({ key, label }) => {
                 const community = subcategoryRating[key];
-                const editors = subcategoryEditorsRating[key];
-                if (community.count === 0 && editors.count === 0) return null;
+                if (community.count === 0) return null;
                 return (
-                  <div
-                    key={key}
-                    className="flex items-baseline justify-between uppercase"
-                    title={`Community: ${community.count > 0 ? community.average!.toFixed(1) : "—"}, Editors: ${
-                      editors.count > 0 ? editors.average!.toFixed(1) : "—"
-                    }`}
-                  >
+                  <div key={key} className="flex items-baseline justify-between uppercase">
                     <span className="text-neutral-400">{label}</span>
-                    <span className="text-base font-semibold normal-case tabular-nums">
-                      {community.count > 0 && (
-                        <span className="text-yellow-500">
-                          <span className="text-[10px] font-normal text-neutral-500">C</span>{" "}
-                          {community.average!.toFixed(1)}
-                        </span>
-                      )}
-                      {community.count > 0 && editors.count > 0 && (
-                        <span className="mx-1.5 text-neutral-600">&middot;</span>
-                      )}
-                      {editors.count > 0 && (
-                        <span className="text-amber-500">
-                          <span className="text-[10px] font-normal text-neutral-500">E</span>{" "}
-                          {editors.average!.toFixed(1)}
-                        </span>
-                      )}
+                    <span className="text-base font-semibold text-yellow-500 tabular-nums">
+                      {community.average!.toFixed(1)}
                     </span>
                   </div>
                 );
