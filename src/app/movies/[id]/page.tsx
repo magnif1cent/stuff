@@ -661,6 +661,10 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
               {movie.cast.map((credit) => (
                 <Link key={credit.id} href={`/actors/${credit.person.id}`} className="w-28 shrink-0 text-center hover:opacity-80">
                   <div className="relative mb-2 aspect-square overflow-hidden rounded-sm border border-neutral-700 bg-neutral-800">
+                    <span className="absolute top-1 left-1 z-10 h-1 w-1 rounded-full bg-neutral-400/70" />
+                    <span className="absolute top-1 right-1 z-10 h-1 w-1 rounded-full bg-neutral-400/70" />
+                    <span className="absolute bottom-1 left-1 z-10 h-1 w-1 rounded-full bg-neutral-400/70" />
+                    <span className="absolute right-1 bottom-1 z-10 h-1 w-1 rounded-full bg-neutral-400/70" />
                     {credit.person.profilePath ? (
                       <Image
                         src={tmdbImageUrl(credit.person.profilePath, "w200") ?? ""}
@@ -676,7 +680,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
                     {credit.person.name}
                   </p>
                   {credit.characterName && (
-                    <p className="font-cond truncate text-xs text-neutral-500">{credit.characterName}</p>
+                    <p className="font-cond truncate text-sm text-neutral-400">{credit.characterName}</p>
                   )}
                 </Link>
               ))}
