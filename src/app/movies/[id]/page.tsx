@@ -600,11 +600,19 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
                     <span className="text-neutral-400">{label}</span>
                     <span className="text-base font-semibold normal-case tabular-nums">
                       {community.count > 0 && (
-                        <span className="text-yellow-500">{community.average!.toFixed(1)}</span>
+                        <span className="text-yellow-500">
+                          <span className="text-[10px] font-normal text-neutral-500">C</span>{" "}
+                          {community.average!.toFixed(1)}
+                        </span>
                       )}
-                      {community.count > 0 && editors.count > 0 && " / "}
+                      {community.count > 0 && editors.count > 0 && (
+                        <span className="mx-1.5 text-neutral-600">&middot;</span>
+                      )}
                       {editors.count > 0 && (
-                        <span className="text-amber-500">{editors.average!.toFixed(1)}</span>
+                        <span className="text-amber-500">
+                          <span className="text-[10px] font-normal text-neutral-500">E</span>{" "}
+                          {editors.average!.toFixed(1)}
+                        </span>
                       )}
                     </span>
                   </div>
