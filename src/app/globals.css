@@ -3,6 +3,14 @@
 @theme inline {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  /* Upgrades the font-serif utility (already used for a handful of editorial
+     headings -- movie titles, News/Reviews archive headings) from Tailwind's
+     generic serif fallback to a real face, site-wide. */
+  --font-serif: var(--font-source-serif-4), Georgia, serif;
+  /* Poster-title display face and condensed credit-block/label face, both
+     new and scoped to the movie detail hero -- see DECISIONS.md. */
+  --font-display: var(--font-anton), "Arial Narrow", sans-serif;
+  --font-cond: var(--font-barlow-condensed), "Arial Narrow", sans-serif;
 
   /* --- "Poster House" preview palette ---
      Remaps the neutral/red/yellow/amber scales the whole app already uses,

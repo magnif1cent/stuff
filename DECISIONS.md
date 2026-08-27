@@ -1060,6 +1060,51 @@ catalog size and traffic. This is the structural fix.
 
 ## Feature Decisions
 
+### Movie detail hero redesigned poster-forward, away from the generic media-app look
+**PR #TBD.** Observation that the movie detail page's hero (full-bleed blurred backdrop,
+poster overlapping it, cast as a row of circular headshots) reads as generic
+streaming/media-server chrome (Plex, Jellyfin, etc.) rather than something specific to
+this site. Went through many small iterations as a design mockup before landing here;
+this entry covers the final direction, not every intermediate step tried.
+
+- **Three new display faces, used narrowly, not site-wide.** Anton (movie titles),
+  Barlow Condensed (byline, labels, credit-block text, Cast names), and Source Serif 4
+  (body copy, tagline). `font-serif` already existed as a Tailwind utility used in a
+  handful of places (movie title, News/Reviews archive headings) but fell back to the
+  browser's generic serif stack with no real face loaded — redefining it to Source
+  Serif 4 upgrades those existing spots for free rather than being scope creep.
+  `font-display`/`font-cond` are new theme tokens, deliberately scoped to the movie
+  detail page rather than applied elsewhere.
+- **Backdrop kept, poster no longer overlaps it.** Early passes tried removing the
+  backdrop banner entirely, then muting it to a desktop-only wash, then restoring it at
+  full strength with the poster card breaking over its bottom edge (matching what the
+  real page already does via a negative top margin). Landed on: keep the backdrop
+  banner as-is, but let the poster sit in normal flow below it rather than overlapping —
+  simpler, and not dependent on hand-tuning an overlap amount against the backdrop's
+  height every time either changes. The trade-off is losing the "poster breaking the
+  frame" depth effect the overlap gave it.
+- **Community/Editors' scores no longer both amber** — an intermediate pass unified
+  them to the same color, then needed a second signal (a bordered box) to tell them
+  apart again once color stopped doing that job, then simplified to just giving each
+  its own color instead of adding a shape difference: Community Score stays amber,
+  Editors' Score is off-white (parchment, the page's default text color) — a quieter,
+  "printed page" number next to Community's warmer, crowd-sourced amber.
+- **Subcategory breakdown (Fight Choreography/Story/Acting) widened and enlarged** —
+  wider label letter-spacing and a bigger, bolder value than before, so the breakdown
+  doesn't read as an afterthought squeezed under the two headline scores.
+- **Cast stays a horizontally-scrolling rail, not a text billing line** — explicitly
+  requested: a "STARRING Name · Name · Name" poster-style credit line was tried first,
+  but caps out around 4-5 names before it stops reading as poster copy, and this site's
+  cast lists can run longer than that. Portraits changed from circular to small framed
+  squares (matching the poster's own mat/frame treatment) with condensed-caps
+  name/character labels, keeping the scrollable-rail mechanism unchanged.
+- **Out of scope for this pass:** the internal styling of `RatingWidget`,
+  `AdminRatingWidget`, `ListButtons`, `AddToListControl`, `PosterOverrideControl`, and
+  `RecommendationControl` — these components' own markup/classes weren't touched, only
+  where they sit in the new layout. Restyling their internals (the mockup's
+  "seal mark," bordered admin panel, number-grid buttons) would touch several more
+  component files independently and is a reasonable follow-up, not part of this PR.
+
 ### Leaderboard reachable from a "Lists" nav hover submenu
 **PR #TBD.** `/leaderboard` was previously only reachable by first landing
 on `/lists` (or vice versa, via their existing cross-links) — no presence
