@@ -480,7 +480,13 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
 
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 pt-8 sm:flex-row">
         <div className="w-40 shrink-0 sm:w-56">
-          <div className="rounded-sm border border-neutral-600 bg-neutral-800 p-2 shadow-xl">
+          <div className="relative rounded-sm border border-neutral-600 bg-neutral-800 p-2 shadow-xl">
+            {/* corner accents, so the mat reads as a mounted print rather
+                than just padding around the poster */}
+            <span className="absolute top-1.5 left-1.5 h-1.5 w-1.5 rounded-full bg-neutral-500" />
+            <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-neutral-500" />
+            <span className="absolute bottom-1.5 left-1.5 h-1.5 w-1.5 rounded-full bg-neutral-500" />
+            <span className="absolute right-1.5 bottom-1.5 h-1.5 w-1.5 rounded-full bg-neutral-500" />
             <div className="relative aspect-2/3 overflow-hidden border border-neutral-700 bg-neutral-950">
               {posterUrl ? (
                 <Image
@@ -578,7 +584,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
           {RATING_CATEGORIES.some(
             ({ key }) => subcategoryRating[key].count > 0 || subcategoryEditorsRating[key].count > 0,
           ) && (
-            <div className="font-cond mt-4 flex max-w-sm flex-col gap-1.5 text-sm tracking-wide">
+            <div className="font-cond mt-4 flex max-w-sm flex-col gap-1.5 text-sm tracking-widest">
               {RATING_CATEGORIES.map(({ key, label }) => {
                 const community = subcategoryRating[key];
                 const editors = subcategoryEditorsRating[key];
@@ -592,7 +598,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
                     }`}
                   >
                     <span className="text-neutral-400">{label}</span>
-                    <span className="font-semibold normal-case tabular-nums">
+                    <span className="text-base font-semibold normal-case tabular-nums">
                       {community.count > 0 && (
                         <span className="text-yellow-500">{community.average!.toFixed(1)}</span>
                       )}
