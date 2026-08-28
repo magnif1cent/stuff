@@ -73,9 +73,13 @@ export function AdminRatingWidget({
   }
 
   return (
-    <div className="rounded-md border border-amber-800/50 bg-amber-950/20 p-3">
-      <p className="font-cond mb-2 text-sm tracking-wide text-amber-500 uppercase">
-        Editors&rsquo; Score <span className="normal-case">(admin only)</span>
+    <div className="rounded-md border border-amber-800/50 bg-gradient-to-b from-amber-500/10 to-transparent bg-amber-950/20 p-3">
+      <p className="font-cond mb-2 flex items-center text-sm tracking-wide text-amber-500 uppercase">
+        <span className="mr-2 inline-block h-3.5 w-3.5 rounded-full border-2 border-amber-500" />
+        Editors&rsquo; Score
+        <span className="font-cond ml-2.5 rounded-sm border border-red-700 px-1.5 py-0.5 text-[10px] tracking-wide text-red-500 uppercase">
+          Admin Only
+        </span>
       </p>
       <div className="mb-2 flex flex-wrap gap-1">
         {SCORES.map((value) => (

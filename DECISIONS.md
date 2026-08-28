@@ -1124,8 +1124,13 @@ this entry covers the final direction, not every intermediate step tried.
   narrow: `font-cond` uppercase on labels, `rounded` → `rounded-sm` on the number
   grids, and `AdminRatingWidget`'s number-grid fill unified from `yellow-500` to
   `amber-500` (the same recurring inconsistency fixed elsewhere in this PR) — no
-  layout or logic changes, and no attempt to port the mockup's heavier decorative
-  devices (ring mark, bordered "certified" panel) into working, untested components.
+  layout or logic changes, and initially no attempt to port the mockup's heavier
+  decorative devices (ring mark, bordered "certified" panel) into working, untested
+  components. Revisited later in this PR (see the mockup-vs-preview comparison entry
+  below) once it was decided that gap mattered enough to close after all: the ring
+  mark, a separate "Admin Only" tag (red-accented, distinct from the amber ring mark's
+  "this is editorial content" meaning), and a subtle amber gradient wash on the panel
+  background were all added to the real `AdminRatingWidget`.
 - **A follow-up consistency pass turned up four smaller things, fixed after the
   rating-widget pass above rather than in the same commit:**
   - Restyling `RatingWidget`/`AdminRatingWidget` removed the "plain UI" buffer that
