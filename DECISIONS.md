@@ -1132,11 +1132,21 @@ this entry covers the final direction, not every intermediate step tried.
     used to sit between the new hero and the rest of the page, which exposed
     `ListButtons` (Favorite/Watchlist) and `AddToListControl` ("+ Add to list") as the
     next mismatched thing directly above them. `ListButtons` is movie-page-only, so it
-    got the same `font-cond` uppercase / `rounded-sm` treatment. `AddToListControl` is
-    shared with fight-scene cards (`fight-scene-section.tsx`,
-    `fight-scene-result-card.tsx`) — checked before touching it — so it was left alone;
-    "+ Add to list" is the one remaining plain button in that row, a known, much
-    smaller residual seam rather than an oversight.
+    got the same `font-cond` uppercase / `rounded-sm` treatment right away.
+    `AddToListControl` is shared with fight-scene cards (`fight-scene-section.tsx`,
+    `fight-scene-result-card.tsx`), so it was initially left alone on the same
+    "checked the blast radius first" reasoning as `MovieCard`. Revisited once a
+    side-by-side mockup-vs-preview comparison made the one plain button in an
+    otherwise-uppercase row look like an oversight rather than a choice — decided the
+    inconsistency was worse than the ripple, and both fight-scene call sites
+    (`fight-scene-section.tsx`, `fight-scene-result-card.tsx`) use `variant="icon"`
+    anyway, so they only pick up the `rounded-sm` corner change, not any text/case
+    change. `RecommendationControl`'s button ("+ Recommend this movie" /
+    "✓ Recommended by you") got the same treatment at the same time, since it was the
+    other shared-looking button flagged in that comparison — it's movie-page-only, so
+    no ripple concern there. Sitewide consistency for the rest of `AddToListControl`'s
+    callers (and anything else still plain elsewhere) is intentionally deferred to a
+    separate build, not part of this PR.
   - The Fight Count link's hover state was `amber-300`, the only place on the page
     using that shade (everywhere else is `amber-500`) — a one-off, not a choice.
   - The top byline (runtime/director/certification/fight count) was amber, but every

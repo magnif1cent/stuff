@@ -42,7 +42,7 @@ export function RecommendationControl({
         <button
           onClick={toggle}
           disabled={submitting}
-          className="rounded-md border border-neutral-700 px-3 py-1.5 text-xs text-neutral-300 hover:bg-neutral-800 disabled:opacity-50"
+          className="font-cond rounded-sm border border-neutral-700 px-3 py-1.5 text-xs tracking-wide text-neutral-300 uppercase hover:bg-neutral-800 disabled:opacity-50"
         >
           {recommendedByMe ? "✓ Recommended by you" : "+ Recommend this movie"}
         </button>
