@@ -304,25 +304,25 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
         {movie.studio && (
           <>
             <dt className="text-neutral-500">Studio</dt>
-            <dd className="text-neutral-300">{movie.studio}</dd>
+            <dd className="text-right text-neutral-300">{movie.studio}</dd>
           </>
         )}
         {movie.country && (
           <>
             <dt className="text-neutral-500">Country</dt>
-            <dd className="text-neutral-300">{movie.country}</dd>
+            <dd className="text-right text-neutral-300">{movie.country}</dd>
           </>
         )}
         {movie.originalLanguage && (
           <>
             <dt className="text-neutral-500">Language</dt>
-            <dd className="text-neutral-300">{movie.originalLanguage}</dd>
+            <dd className="text-right text-neutral-300">{movie.originalLanguage}</dd>
           </>
         )}
         {!!movie.revenue && (
           <>
             <dt className="text-neutral-500">Box Office</dt>
-            <dd className="text-neutral-300">
+            <dd className="text-right text-neutral-300">
               {new Intl.NumberFormat("en-US", {
                 style: "currency",
                 currency: "USD",
