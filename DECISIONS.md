@@ -1149,9 +1149,14 @@ this entry covers the final direction, not every intermediate step tried.
     change. `RecommendationControl`'s button ("+ Recommend this movie" /
     "✓ Recommended by you") got the same treatment at the same time, since it was the
     other shared-looking button flagged in that comparison — it's movie-page-only, so
-    no ripple concern there. Sitewide consistency for the rest of `AddToListControl`'s
-    callers (and anything else still plain elsewhere) is intentionally deferred to a
-    separate build, not part of this PR.
+    no ripple concern there. `PosterOverrideControl`'s "Replace poster"/"Upload custom
+    poster" and "Remove" were caught the same way a round later — the one control
+    directly under the poster mat that never got revisited after the initial
+    "leave these alone" list, still plain `rounded-md` and mixed-case next to an
+    otherwise fully-restyled poster/action-button area. Also movie-page-only, so no
+    ripple concern. Sitewide consistency for the rest of `AddToListControl`'s callers
+    (and anything else still plain elsewhere) is intentionally deferred to a separate
+    build, not part of this PR.
   - The Fight Count link's hover state was `amber-300`, the only place on the page
     using that shade (everywhere else is `amber-500`) — a one-off, not a choice.
   - The top byline (runtime/director/certification/fight count) was amber, but every
