@@ -1170,6 +1170,29 @@ this entry covers the final direction, not every intermediate step tried.
     to read as an oversight. Unified to `rounded-sm`, along with `AdminRatingWidget`'s
     note textarea and Save button, which had picked up `rounded-sm` on their number
     grid but not on themselves in the same earlier pass.
+- **Third consistency pass, from a fresh mockup-vs-preview comparison.**
+  - The Details card's `<dt>` labels (Studio, Country, Language, Box Office,
+    Collection) were plain `text-neutral-500`, missing the `font-cond
+    uppercase tracking-wide` treatment every other label on the page (Details
+    heading itself, byline, Community Score suffix, "Your rating") already had —
+    an oversight, not a choice. Added to all five.
+  - `RatingWidget` ("Your rating") had no wrapping card at all, unlike
+    `AdminRatingWidget` right next to it — a real gap next to the mockup's
+    `.rating-console`, not a deliberate contrast with the admin panel's
+    `.editors-panel` box. Added the matching neutral
+    `rounded-md border border-neutral-800 bg-neutral-900 p-3` frame (no amber
+    wash — that's reserved for the admin/editorial panel).
+  - Checked whether the backdrop band is supposed to be viewport-gated on
+    mobile: re-read the mockup's final CSS directly rather than relying on
+    memory of earlier iterations. An early mockup pass did hide the backdrop
+    below 760px, but that version was explicitly rejected in favor of "full
+    backdrop, prod-style positioning... full strength, always visible"; the
+    final mockup's only mobile `@media` rule (`max-width: 760px`) touches the
+    hero grid, poster size, and title size, not `.backdrop-band` — it renders
+    unconditionally at every width. The real page's backdrop `<div>` already
+    matches that (no responsive `hidden`/`sm:block` gating), so no code change
+    made here; flagged back rather than adding suppression that would
+    contradict the current source-of-truth mockup and the earlier rejection.
 
 ### Leaderboard reachable from a "Lists" nav hover submenu
 **PR #TBD.** `/leaderboard` was previously only reachable by first landing

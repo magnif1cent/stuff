@@ -80,7 +80,7 @@ export function RatingWidget({
   }
 
   return (
-    <div>
+    <div className="rounded-md border border-neutral-800 bg-neutral-900 p-3">
       <p className="font-cond mb-1 text-sm tracking-wide text-neutral-400 uppercase">Your rating</p>
       <div className="flex flex-wrap gap-1">
         {SCORES.map((value) => (

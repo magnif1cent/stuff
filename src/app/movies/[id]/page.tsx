@@ -303,25 +303,25 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
       <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-sm">
         {movie.studio && (
           <>
-            <dt className="text-neutral-500">Studio</dt>
+            <dt className="font-cond text-neutral-500 uppercase tracking-wide">Studio</dt>
             <dd className="text-right text-neutral-300">{movie.studio}</dd>
           </>
         )}
         {movie.country && (
           <>
-            <dt className="text-neutral-500">Country</dt>
+            <dt className="font-cond text-neutral-500 uppercase tracking-wide">Country</dt>
             <dd className="text-right text-neutral-300">{movie.country}</dd>
           </>
         )}
         {movie.originalLanguage && (
           <>
-            <dt className="text-neutral-500">Language</dt>
+            <dt className="font-cond text-neutral-500 uppercase tracking-wide">Language</dt>
             <dd className="text-right text-neutral-300">{movie.originalLanguage}</dd>
           </>
         )}
         {!!movie.revenue && (
           <>
-            <dt className="text-neutral-500">Box Office</dt>
+            <dt className="font-cond text-neutral-500 uppercase tracking-wide">Box Office</dt>
             <dd className="text-right text-neutral-300">
               {new Intl.NumberFormat("en-US", {
                 style: "currency",
@@ -333,7 +333,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
         )}
         {movie.collectionName && collectionSiblings.length > 0 && (
           <>
-            <dt className="text-neutral-500">Collection</dt>
+            <dt className="font-cond text-neutral-500 uppercase tracking-wide">Collection</dt>
             <dd>
               <Link
                 href={`/collections/${movie.collectionTmdbId}`}
@@ -537,7 +537,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
             )}
           </div>
 
-          <h1 className="font-display mt-2 text-5xl text-balance text-white">
+          <h1 className="font-display mt-2 text-5xl text-balance text-neutral-100">
             {movie.title} {year && <span className="font-editorial text-2xl font-normal text-neutral-400">({year})</span>}
           </h1>
 
@@ -551,7 +551,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
                 <Link
                   key={genre.id}
                   href={`/search?genre=${encodeURIComponent(genre.name)}`}
-                  className="rounded-full border border-neutral-700 px-2 py-0.5 text-xs text-neutral-300 underline decoration-neutral-600 underline-offset-2 hover:border-neutral-500 hover:text-white"
+                  className="rounded-full border border-neutral-700 px-2 py-0.5 text-xs text-neutral-300 underline decoration-neutral-600 underline-offset-2 hover:border-neutral-500 hover:text-neutral-100"
                 >
                   {genre.name}
                 </Link>
