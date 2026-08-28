@@ -1067,14 +1067,17 @@ streaming/media-server chrome (Plex, Jellyfin, etc.) rather than something speci
 this site. Went through many small iterations as a design mockup before landing here;
 this entry covers the final direction, not every intermediate step tried.
 
-- **Three new display faces, used narrowly, not site-wide.** Anton (movie titles),
-  Barlow Condensed (byline, labels, credit-block text, Cast names), and Source Serif 4
-  (body copy, tagline). `font-serif` already existed as a Tailwind utility used in a
-  handful of places (movie title, News/Reviews archive headings) but fell back to the
-  browser's generic serif stack with no real face loaded — redefining it to Source
-  Serif 4 upgrades those existing spots for free rather than being scope creep.
-  `font-display`/`font-cond` are new theme tokens, deliberately scoped to the movie
-  detail page rather than applied elsewhere.
+- **Three new display faces, used narrowly, not site-wide.** Anton (movie title),
+  Barlow Condensed (byline, labels, credit-block text), and Source Serif 4 (body copy,
+  tagline). All three are new theme tokens (`font-display`, `font-cond`,
+  `font-editorial`), deliberately not applied to the existing `font-serif` utility —
+  an earlier version of this change redefined `font-serif` itself to Source Serif 4,
+  on the reasoning that it already fell back to the browser's generic serif stack
+  everywhere it was used. That undersold the actual blast radius: `font-serif` is used
+  in ~20 files sitewide, including the navbar wordmark in `components/logo.tsx` —
+  redefining the shared token would have silently changed the site's own logo
+  typeface as a side effect of a single-page redesign. Caught before merging;
+  `font-editorial` is its own token instead, and `font-serif` is untouched.
 - **Backdrop kept, poster no longer overlaps it.** Early passes tried removing the
   backdrop banner entirely, then muting it to a desktop-only wash, then restoring it at
   full strength with the poster card breaking over its bottom edge (matching what the
@@ -1091,13 +1094,25 @@ this entry covers the final direction, not every intermediate step tried.
   "printed page" number next to Community's warmer, crowd-sourced amber.
 - **Subcategory breakdown (Fight Choreography/Story/Acting) widened and enlarged** —
   wider label letter-spacing and a bigger, bolder value than before, so the breakdown
-  doesn't read as an afterthought squeezed under the two headline scores.
+  doesn't read as an afterthought squeezed under the two headline scores. Editors'
+  per-category values were dropped from this display entirely (a later, separate
+  request) — admins can still submit them via `AdminRatingWidget`, and the aggregate
+  Editors' Score above is unaffected; only this breakdown row is community-only now.
+  Its value color was also brought in line with the headline Community Score plaque
+  (`amber-500`) — it had been left at the original `yellow-500` through several
+  earlier passes, which put two different colors on "community rating" on the same
+  page for no reason.
 - **Cast stays a horizontally-scrolling rail, not a text billing line** — explicitly
   requested: a "STARRING Name · Name · Name" poster-style credit line was tried first,
   but caps out around 4-5 names before it stops reading as poster copy, and this site's
   cast lists can run longer than that. Portraits changed from circular to small framed
-  squares (matching the poster's own mat/frame treatment) with condensed-caps
-  name/character labels, keeping the scrollable-rail mechanism unchanged.
+  squares (matching the poster's own mat/frame treatment), but the name/character-name
+  typography was tried in Barlow Condensed uppercase first and then reverted back to
+  plain sans-serif matching `MovieCard` — Cast sits on the same page as the
+  `MovieRail`/`MovieCard`-based "You Might Also Like" rail, and two different card
+  typographic systems on one page read as an inconsistency, not an intentional
+  contrast. The framed-photo shape alone is enough of a nod to the poster treatment
+  without repeating its type as well.
 - **Out of scope for this pass:** the internal styling of `RatingWidget`,
   `AdminRatingWidget`, `ListButtons`, `AddToListControl`, `PosterOverrideControl`, and
   `RecommendationControl` — these components' own markup/classes weren't touched, only

@@ -538,11 +538,11 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
           </div>
 
           <h1 className="font-display mt-2 text-5xl text-balance text-white">
-            {movie.title} {year && <span className="font-serif text-2xl font-normal text-neutral-400">({year})</span>}
+            {movie.title} {year && <span className="font-editorial text-2xl font-normal text-neutral-400">({year})</span>}
           </h1>
 
           {movie.tagline && (
-            <p className="font-serif mt-2 text-base text-neutral-400 italic">&ldquo;{movie.tagline}&rdquo;</p>
+            <p className="font-editorial mt-2 text-base text-neutral-400 italic">&ldquo;{movie.tagline}&rdquo;</p>
           )}
 
           {movie.genres.length > 0 && (
@@ -564,7 +564,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
               <p className="font-cond text-xs tracking-wider text-neutral-500 uppercase">Community Score</p>
               <p className="font-display mt-1 text-3xl text-amber-500">
                 {communityRating.average ? communityRating.average.toFixed(1) : "—"}{" "}
-                <span className="font-serif text-sm font-normal text-neutral-500">/ 10 ({communityRating.count})</span>
+                <span className="font-editorial text-sm font-normal text-neutral-500">/ 10 ({communityRating.count})</span>
               </p>
             </div>
             {editorsRating.count > 0 && (
@@ -572,7 +572,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
                 <p className="font-cond text-xs tracking-wider text-neutral-500 uppercase">Editors&rsquo; Score</p>
                 <p className="font-display mt-1 text-3xl text-neutral-100">
                   {editorsRating.average?.toFixed(1)}{" "}
-                  <span className="font-serif text-sm font-normal text-neutral-500">({editorsRating.count})</span>
+                  <span className="font-editorial text-sm font-normal text-neutral-500">({editorsRating.count})</span>
                 </p>
               </div>
             )}
@@ -586,7 +586,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
                 return (
                   <div key={key} className="flex items-baseline justify-between uppercase">
                     <span className="text-neutral-400">{label}</span>
-                    <span className="text-base font-semibold text-yellow-500 tabular-nums">
+                    <span className="text-base font-semibold text-amber-500 tabular-nums">
                       {community.average!.toFixed(1)}
                     </span>
                   </div>
@@ -595,7 +595,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
             </div>
           )}
 
-          <p className="font-serif mt-4 max-w-2xl text-neutral-300">{movie.overview}</p>
+          <p className="font-editorial mt-4 max-w-2xl text-neutral-300">{movie.overview}</p>
 
           {movieDetailsCard && <div className="mt-4 max-w-2xl sm:hidden">{movieDetailsCard}</div>}
 
