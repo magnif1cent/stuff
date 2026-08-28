@@ -1126,9 +1126,30 @@ this entry covers the final direction, not every intermediate step tried.
   `amber-500` (the same recurring inconsistency fixed elsewhere in this PR) — no
   layout or logic changes, and no attempt to port the mockup's heavier decorative
   devices (ring mark, bordered "certified" panel) into working, untested components.
-  `ListButtons`, `AddToListControl`, `PosterOverrideControl`, and
-  `RecommendationControl` remain untouched — they already read as plain utility
-  controls rather than content, so they don't create the same jarring seam.
+- **A follow-up consistency pass turned up four smaller things, fixed after the
+  rating-widget pass above rather than in the same commit:**
+  - Restyling `RatingWidget`/`AdminRatingWidget` removed the "plain UI" buffer that
+    used to sit between the new hero and the rest of the page, which exposed
+    `ListButtons` (Favorite/Watchlist) and `AddToListControl` ("+ Add to list") as the
+    next mismatched thing directly above them. `ListButtons` is movie-page-only, so it
+    got the same `font-cond` uppercase / `rounded-sm` treatment. `AddToListControl` is
+    shared with fight-scene cards (`fight-scene-section.tsx`,
+    `fight-scene-result-card.tsx`) — checked before touching it — so it was left alone;
+    "+ Add to list" is the one remaining plain button in that row, a known, much
+    smaller residual seam rather than an oversight.
+  - The Fight Count link's hover state was `amber-300`, the only place on the page
+    using that shade (everywhere else is `amber-500`) — a one-off, not a choice.
+  - The top byline (runtime/director/certification/fight count) was amber, but every
+    other small-caps label on the page (Community Score, subcategory labels,
+    "Details," "Your rating") is neutral — amber was otherwise reserved for
+    editorial/admin content (Editors' Score, the Admin-only panel, the Admin Review
+    badge). Switched the byline to neutral so amber keeps one consistent meaning
+    instead of doing double duty as both a semantic flag and a decorative accent.
+  - The certification badge was still plain `rounded` (unchanged from before this
+    PR) next to the poster mat and rating number-grids at `rounded-sm` — close enough
+    to read as an oversight. Unified to `rounded-sm`, along with `AdminRatingWidget`'s
+    note textarea and Save button, which had picked up `rounded-sm` on their number
+    grid but not on themselves in the same earlier pass.
 
 ### Leaderboard reachable from a "Lists" nav hover submenu
 **PR #TBD.** `/leaderboard` was previously only reachable by first landing

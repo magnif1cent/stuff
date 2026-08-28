@@ -518,11 +518,11 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
             />
           </div>
 
-          <div className="font-cond flex flex-wrap items-center gap-x-3 gap-y-1 text-sm tracking-wide text-amber-500 uppercase">
+          <div className="font-cond flex flex-wrap items-center gap-x-3 gap-y-1 text-sm tracking-wide text-neutral-400 uppercase">
             {movie.runtime && <span>{movie.runtime} min</span>}
             {movie.director && <span>Dir. {movie.director}</span>}
             {movie.certification && (
-              <span className="rounded border border-neutral-500 px-1.5 text-xs font-semibold text-neutral-400 normal-case">
+              <span className="rounded-sm border border-neutral-500 px-1.5 text-xs font-semibold text-neutral-400 normal-case">
                 {movie.certification}
               </span>
             )}
@@ -530,7 +530,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
               <a
                 href="#fight-count"
                 title="Number of fights in the movie, maintained by members — click to view or edit"
-                className="underline decoration-neutral-600 underline-offset-2 hover:text-amber-300"
+                className="underline decoration-neutral-600 underline-offset-2 hover:text-neutral-200"
               >
                 Fight Count: {movie.trueFightCount}
               </a>
