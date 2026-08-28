@@ -74,13 +74,15 @@ export function AdminRatingWidget({
 
   return (
     <div className="rounded-md border border-amber-800/50 bg-amber-950/20 p-3">
-      <p className="mb-2 text-sm font-semibold text-amber-500">Editors&rsquo; Score (admin only)</p>
+      <p className="font-cond mb-2 text-sm tracking-wide text-amber-500 uppercase">
+        Editors&rsquo; Score <span className="normal-case">(admin only)</span>
+      </p>
       <div className="mb-2 flex flex-wrap gap-1">
         {SCORES.map((value) => (
           <button
             key={value}
             onClick={() => setScore(value)}
-            className={`h-8 w-8 rounded text-sm font-medium transition ${
+            className={`font-cond h-8 w-8 rounded-sm text-sm font-medium transition ${
               score !== null && value <= score
                 ? "bg-amber-500 text-neutral-950"
                 : "bg-neutral-800 text-neutral-300 hover:bg-neutral-700"
@@ -110,13 +112,17 @@ export function AdminRatingWidget({
           rows only appear once an overall score has been picked. */}
       {score !== null && (
         <>
-          <p className="mt-3 mb-1 text-xs font-semibold text-amber-500">Rate by category (optional)</p>
+          <p className="font-cond mt-3 mb-1 text-xs tracking-wide text-amber-500 uppercase">
+            Rate by category <span className="normal-case">(optional)</span>
+          </p>
           <div className="flex flex-col gap-1.5">
             {RATING_CATEGORIES.map(({ key, label }) => {
               const categoryScore = categoryScores[key] ?? null;
               return (
                 <div key={key} className="flex items-center gap-3">
-                  <p className="w-32 shrink-0 text-xs text-amber-200/70">{label}</p>
+                  <p className="font-cond w-32 shrink-0 text-xs tracking-wide text-amber-200/70 uppercase">
+                    {label}
+                  </p>
                   <StarRatingPicker
                     value={categoryScore}
                     disabled={savingCategory === key}

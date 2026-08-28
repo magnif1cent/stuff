@@ -1113,12 +1113,22 @@ this entry covers the final direction, not every intermediate step tried.
   typographic systems on one page read as an inconsistency, not an intentional
   contrast. The framed-photo shape alone is enough of a nod to the poster treatment
   without repeating its type as well.
-- **Out of scope for this pass:** the internal styling of `RatingWidget`,
-  `AdminRatingWidget`, `ListButtons`, `AddToListControl`, `PosterOverrideControl`, and
-  `RecommendationControl` — these components' own markup/classes weren't touched, only
-  where they sit in the new layout. Restyling their internals (the mockup's
-  "seal mark," bordered admin panel, number-grid buttons) would touch several more
-  component files independently and is a reasonable follow-up, not part of this PR.
+- **`RatingWidget`/`AdminRatingWidget` got a light typography pass after all** — an
+  earlier draft of this decision left them alone entirely, on the reasoning that
+  restyling component internals was a bigger follow-up. Revisited once the hero's new
+  identity (condensed-caps labels, amber accents) sat directly above these two
+  untouched, plain-Tailwind widgets — a sharper seam than the Cast/`MovieRail` one,
+  since these two sit immediately adjacent rather than a full section apart. Unlike
+  `MovieCard`, both components are used only on this one page (checked before
+  touching them), so there was no sitewide blast radius to worry about. Scope stayed
+  narrow: `font-cond` uppercase on labels, `rounded` → `rounded-sm` on the number
+  grids, and `AdminRatingWidget`'s number-grid fill unified from `yellow-500` to
+  `amber-500` (the same recurring inconsistency fixed elsewhere in this PR) — no
+  layout or logic changes, and no attempt to port the mockup's heavier decorative
+  devices (ring mark, bordered "certified" panel) into working, untested components.
+  `ListButtons`, `AddToListControl`, `PosterOverrideControl`, and
+  `RecommendationControl` remain untouched — they already read as plain utility
+  controls rather than content, so they don't create the same jarring seam.
 
 ### Leaderboard reachable from a "Lists" nav hover submenu
 **PR #TBD.** `/leaderboard` was previously only reachable by first landing
