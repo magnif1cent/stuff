@@ -360,6 +360,20 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
     </div>
   );
 
+  // Rendered twice below, same reasoning as movieDetailsCard above: in
+  // source order the title sits inside the content column, after the
+  // poster -- fine on desktop's sm:flex-row layout, but on mobile's single
+  // flex-col column that puts the backdrop and poster ahead of the movie's
+  // own name. A second, mobile-only copy sits above the poster instead.
+  // sm:mt-2 (no bare mt-2) is safe on the shared element: whichever
+  // instance is hidden at a given breakpoint doesn't have its margin
+  // "count" either.
+  const titleBlock = (
+    <h1 className="font-display text-4xl text-balance text-neutral-100 sm:mt-2 sm:text-5xl">
+      {movie.title} {year && <span className="font-editorial text-2xl font-normal text-neutral-400">({year})</span>}
+    </h1>
+  );
+
   const serializedFightScenes = fightScenes.map((scene) => {
     const summary = fightSceneRatingSummaries.get(scene.id);
     const adminSummary = fightSceneAdminRatingSummaries.get(scene.id);
@@ -476,6 +490,8 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
       </div>
 
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 pt-8 sm:flex-row">
+        <div className="sm:hidden">{titleBlock}</div>
+
         <div className="w-40 shrink-0 sm:w-56">
           <div className="relative rounded-sm border border-neutral-600 bg-neutral-800 p-2 shadow-xl">
             {/* corner accents, so the mat reads as a mounted print rather
@@ -537,9 +553,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
             )}
           </div>
 
-          <h1 className="font-display mt-2 text-4xl text-balance text-neutral-100 sm:text-5xl">
-            {movie.title} {year && <span className="font-editorial text-2xl font-normal text-neutral-400">({year})</span>}
-          </h1>
+          <div className="hidden sm:block">{titleBlock}</div>
 
           {movie.tagline && (
             <p className="font-editorial mt-2 text-base text-neutral-400 italic">&ldquo;{movie.tagline}&rdquo;</p>
