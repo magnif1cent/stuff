@@ -288,13 +288,11 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
   const isFavorite = myListEntries.some((e) => e.listType === "FAVORITE");
   const isOnWatchlist = myListEntries.some((e) => e.listType === "WATCHLIST");
 
-  // Rendered twice below: alongside the poster in both layouts now -- next
-  // to it in a mobile row (filling the width a smaller poster leaves empty),
-  // stacked underneath it in the desktop sidebar. The title itself is a
-  // separate mobile-only block above this whole row (see titleClassName/
-  // titleText below), so Details showing before the title is no longer a
-  // concern here the way it was when this card used to land after the
-  // overview instead.
+  // Rendered twice below: after the overview on mobile (back to where it
+  // originally lived -- scoreItems below took over the poster's row-mate
+  // spot instead, since Details' long, variable-length field values didn't
+  // fit that narrow column well), alongside the poster in the desktop
+  // sidebar, unchanged.
   const movieDetailsCard = (movie.studio ||
     movie.country ||
     movie.originalLanguage ||
@@ -383,6 +381,34 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
   const titleText = (
     <>
       {movie.title} {year && <span className="font-editorial text-2xl font-normal text-neutral-400">({year})</span>}
+    </>
+  );
+
+  // Also rendered twice, replacing movieDetailsCard as the mobile poster's
+  // row-mate: a fixed-width number (Community/Editors' Score) doesn't have
+  // Details' problem of long, variable-length field values (studio names,
+  // formatted currency, a comma-separated collection list) wrapping
+  // awkwardly in a ~200px column. Stacked (flex-col) beside the poster
+  // rather than reusing the wide-format side-by-side layout below, which
+  // was tuned for the full content-column width, not this narrower one.
+  const scoreItems = (
+    <>
+      <div>
+        <p className="font-cond text-xs tracking-wider text-neutral-500 uppercase">Community Score</p>
+        <p className="font-display mt-1 text-3xl text-amber-500">
+          {communityRating.average ? communityRating.average.toFixed(1) : "—"}{" "}
+          <span className="font-editorial text-sm font-normal text-neutral-500">/ 10 ({communityRating.count})</span>
+        </p>
+      </div>
+      {editorsRating.count > 0 && (
+        <div>
+          <p className="font-cond text-xs tracking-wider text-neutral-500 uppercase">Editors&rsquo; Score</p>
+          <p className="font-display mt-1 text-3xl text-neutral-100">
+            {editorsRating.average?.toFixed(1)}{" "}
+            <span className="font-editorial text-sm font-normal text-neutral-500">({editorsRating.count})</span>
+          </p>
+        </div>
+      )}
     </>
   );
 
@@ -504,13 +530,15 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 pt-8 sm:flex-row">
         <p className={`${titleClassName} sm:hidden`}>{titleText}</p>
 
-        {/* Mobile: poster + Details sit side by side in one row (justify-center
-            is a no-op once Details' flex-1 fills the remaining width, but
-            centers the poster alone on movies with no Details data to show).
+        {/* Mobile: poster + Community/Editors' Score sit side by side in one
+            row -- scoreItems' Community Score block is unconditional (it
+            renders a "—" placeholder rather than nothing when there's no
+            rating yet), so this row always has both children; no centering
+            logic needed for a lone-poster case, because there isn't one.
             Desktop: sm:block turns this back into a plain stacked column, so
             it's the same sidebar as before -- poster, admin control, Details
             underneath, in source order. */}
-        <div className="flex justify-center gap-4 sm:block sm:w-56 sm:shrink-0">
+        <div className="flex gap-4 sm:block sm:w-56 sm:shrink-0">
           <div className="w-28 shrink-0 sm:w-full">
             <div className="relative rounded-sm border border-neutral-600 bg-neutral-800 p-2 shadow-xl">
               {/* corner accents, so the mat reads as a mounted print rather
@@ -541,7 +569,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
             )}
           </div>
 
-          {movieDetailsCard && <div className="min-w-0 flex-1 sm:hidden">{movieDetailsCard}</div>}
+          <div className="flex flex-col gap-3 sm:hidden">{scoreItems}</div>
           {movieDetailsCard && <div className="mt-4 hidden sm:block">{movieDetailsCard}</div>}
         </div>
 
@@ -594,24 +622,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
             </div>
           )}
 
-          <div className="mt-5 flex flex-wrap items-baseline gap-6 sm:gap-10">
-            <div>
-              <p className="font-cond text-xs tracking-wider text-neutral-500 uppercase">Community Score</p>
-              <p className="font-display mt-1 text-3xl text-amber-500">
-                {communityRating.average ? communityRating.average.toFixed(1) : "—"}{" "}
-                <span className="font-editorial text-sm font-normal text-neutral-500">/ 10 ({communityRating.count})</span>
-              </p>
-            </div>
-            {editorsRating.count > 0 && (
-              <div>
-                <p className="font-cond text-xs tracking-wider text-neutral-500 uppercase">Editors&rsquo; Score</p>
-                <p className="font-display mt-1 text-3xl text-neutral-100">
-                  {editorsRating.average?.toFixed(1)}{" "}
-                  <span className="font-editorial text-sm font-normal text-neutral-500">({editorsRating.count})</span>
-                </p>
-              </div>
-            )}
-          </div>
+          <div className="mt-5 hidden flex-wrap items-baseline gap-10 sm:flex">{scoreItems}</div>
 
           {RATING_CATEGORIES.some(({ key }) => subcategoryRating[key].count > 0) && (
             <div className="font-cond mt-4 flex max-w-sm flex-col gap-1.5 text-sm tracking-widest">
@@ -631,6 +642,8 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
           )}
 
           <p className="font-editorial mt-4 max-w-2xl text-neutral-300">{movie.overview}</p>
+
+          {movieDetailsCard && <div className="mt-4 max-w-2xl sm:hidden">{movieDetailsCard}</div>}
 
           <div className="mt-4 flex flex-wrap items-start gap-2">
             <ListButtons

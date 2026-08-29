@@ -3379,34 +3379,46 @@ other") instead of presenting one name as if it were the clear answer.
   the tie is disclosed either way, so neither name reads as definitively
   wrong.
 
-### Mobile Details card moved from after-overview to beside the poster
-**PR #TBD.** Revisits a placement decision from the original hero-redesign PR
-(see "Movie detail hero redesigned poster-forward, away from the generic
-media-app look" above): `movieDetailsCard` used to render after the overview
-on mobile specifically to avoid it appearing before the title, back when the
-poster came before the title in mobile source order. A later PR moved the
-title itself to a separate mobile-only block above the poster/Details row,
-which made that original constraint moot — Details showing next to the
-poster no longer means "before the title," since the title now sits above
-the whole row regardless.
+### Mobile poster narrowed, with Community/Editors' Score beside it
+**PR #TBD.** The poster on mobile used to sit alone in its own row, pinned to
+the left edge with no centering — a `flex-col` child with an explicit width
+doesn't stretch or center by default, so it left an unintentional-looking
+empty gap next to it. Went through two approaches before landing here.
 
-- **Poster narrowed on mobile (`w-40` -> `w-28`) so Details has room to sit
-  beside it.** The poster previously sat alone in its own row, pinned to the
-  left edge with no centering — a `flex-col` child with an explicit width
-  doesn't stretch or center by default, so it left an unintentional-looking
-  empty gap next to it. Rather than just centering the same-sized poster
-  (closes the gap but leaves the poster looking small and alone), Details
-  now fills that space instead: poster and Details render side by side in a
-  `flex justify-center` row, with Details taking `flex-1` of the remaining
-  width. `justify-center` is a no-op whenever Details is present (`flex-1`
-  already consumes all free space), and only "activates" — centering the
-  poster alone — on movies with no Details data to show (no
-  studio/country/language/revenue/collection info).
+- **First pass: narrow the poster (`w-40` -> `w-28`) and put
+  `movieDetailsCard` beside it**, filling the freed-up width instead of just
+  centering the same-sized poster (which closes the gap but leaves the
+  poster looking small and alone). This also revisited a placement decision
+  from the original hero-redesign PR (see "Movie detail hero redesigned
+  poster-forward, away from the generic media-app look" above):
+  `movieDetailsCard` used to render after the overview on mobile
+  specifically to avoid it appearing before the title, back when the poster
+  came before the title in mobile source order; a later PR moved the title
+  to its own mobile-only block above the poster row, which made that
+  original constraint moot. Rejected on review of the live layout: Details'
+  field values (studio names, formatted box-office currency, a
+  comma-separated collection list) are long and variable-length, and didn't
+  read well wrapping inside a ~200px-wide column next to a small poster.
+- **Landed on: Community/Editors' Score instead of Details.** A rating
+  number is short and fixed-width, so it doesn't have Details' wrapping
+  problem, and a poster with a rating badge beside it is a standard pattern
+  for movie apps generally — closer to the page's "poster-forward" identity
+  than a dense metadata table would be. `scoreItems` (the shared Community
+  Score + conditional Editors' Score block, also used in its original
+  desktop position) is unconditional — Community Score always renders, even
+  as a "—" placeholder before any ratings exist — so the mobile poster row
+  always has both children; no lone-poster centering case exists here, unlike
+  the first pass's `movieDetailsCard` (which is genuinely absent on movies
+  with no studio/country/language/revenue/collection data).
+  `movieDetailsCard` moved back to its original after-overview mobile
+  position rather than disappearing from mobile entirely.
 - **`PosterOverrideControl` (admin-only) stacks vertically on mobile now**,
   rather than the label and Remove button trying to share one row — the
-  narrower 112px column left no room for both on one line without wrapping
-  awkwardly. Unchanged at `sm:`+, where the sidebar column is wide enough
-  for the original horizontal layout.
+  narrower 112px poster column left no room for both on one line without
+  wrapping awkwardly. This holds regardless of which pass above is live,
+  since it's driven by the poster column's own width, not by what's beside
+  it. Unchanged at `sm:`+, where the sidebar column is wide enough for the
+  original horizontal layout.
 
 ## Deferred & Backlog
 
