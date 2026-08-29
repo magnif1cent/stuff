@@ -3414,6 +3414,16 @@ below; what changed each time was *what* fills that freed-up space.
   subcategory breakdown moved back to their original single position in the
   content column, always visible there (not mobile/desktop-conditional —
   they only ever had one position before the second pass).
+- **Genre pills joined the byline in that column too**, once a live
+  screenshot showed the byline (four short lines) leaving visible empty
+  space below it next to the poster (aspect-2/3, so noticeably taller than
+  four lines of text). Same reasoning as the byline itself — short,
+  fixed-width chips, not free-form text — so genres were the next-best fit
+  already sitting nearby in the content column, rather than reaching for
+  something new. Both now share one `flex-col` wrapper in that mobile
+  column so they stack as one unit rather than becoming a third
+  side-by-side item in the poster row's own flex row (caught in review
+  before this shipped).
 - **`PosterOverrideControl` (admin-only) stacks vertically on mobile**,
   rather than the label and Remove button trying to share one row — the
   narrower 112px poster column left no room for both on one line without
