@@ -29,7 +29,7 @@ export function StarRatingPicker({
         const fillPct = display >= high ? 100 : display >= low ? 50 : 0;
         return (
           <span key={i} className="relative">
-            <StarIcon fillPct={fillPct} className="h-5 w-5" fillColorClassName={fillColorClassName} />
+            <StarIcon fillPct={fillPct} className="h-7 w-7 sm:h-5 sm:w-5" fillColorClassName={fillColorClassName} />
             <button
               type="button"
               disabled={disabled}
