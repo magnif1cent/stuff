@@ -701,7 +701,7 @@ export function FightSceneSection({
                       value={startTimeDrafts[scene.id] ?? formatMmSs(scene.youtubeStartSeconds)}
                       onChange={(e) => setStartTimeDrafts((prev) => ({ ...prev, [scene.id]: e.target.value }))}
                       placeholder="mm:ss"
-                      className="w-14 border bg-transparent px-1 py-0.5 text-center focus:outline-none"
+                      className="w-16 border bg-transparent px-1 py-0.5 text-center text-base focus:outline-none"
                       style={{ borderColor: TICKET_INK, color: TICKET_INK }}
                     />
                     <button onClick={() => handleSetStartTime(scene.id)} className="underline hover:opacity-70">
@@ -819,7 +819,7 @@ export function FightSceneSection({
                     maxLength={MAX_NOTE_LENGTH}
                     placeholder="Editor's note (optional)"
                     rows={2}
-                    className="mt-2 w-full border bg-transparent px-2 py-1 text-xs focus:outline-none"
+                    className="mt-2 w-full border bg-transparent px-2 py-1 text-base focus:outline-none"
                     style={{ borderColor: TICKET_INK, color: TICKET_INK }}
                   />
                 </div>

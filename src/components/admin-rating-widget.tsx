@@ -100,7 +100,7 @@ export function AdminRatingWidget({
         value={note}
         onChange={(e) => setNote(e.target.value)}
         placeholder="Editor's note (optional)"
-        className="mb-2 w-full rounded-sm border border-neutral-700 bg-neutral-900 px-2 py-1 text-sm text-neutral-100 focus:border-amber-600 focus:outline-none"
+        className="mb-2 w-full rounded-sm border border-neutral-700 bg-neutral-900 px-2 py-1 text-base text-neutral-100 focus:border-amber-600 focus:outline-none"
         rows={2}
       />
       <button
