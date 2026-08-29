@@ -365,13 +365,23 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
   // poster -- fine on desktop's sm:flex-row layout, but on mobile's single
   // flex-col column that puts the backdrop and poster ahead of the movie's
   // own name. A second, mobile-only copy sits above the poster instead.
-  // sm:mt-2 (no bare mt-2) is safe on the shared element: whichever
+  // Only the desktop copy is a real <h1> -- the mobile copy is a <p> with
+  // identical styling, so the page never has two <h1> elements in the DOM
+  // at once (a raw-markup consumer like a crawler or a jsdom-based test
+  // doesn't resolve the responsive hidden/sm:block classes the way a real
+  // browser does, so two real <h1>s would both read as present). Plain
+  // text, not aria-hidden, on the mobile <p> -- aria-hidden can't be
+  // conditional on breakpoint, and this copy is the only one actually
+  // shown on mobile, so hiding it from assistive tech there would be worse
+  // than the duplicate-heading problem it'd be avoiding.
+  // sm:mt-2 (no bare mt-2) is safe on the shared className: whichever
   // instance is hidden at a given breakpoint doesn't have its margin
   // "count" either.
-  const titleBlock = (
-    <h1 className="font-display text-4xl text-balance text-neutral-100 sm:mt-2 sm:text-5xl">
+  const titleClassName = "font-display text-4xl text-balance text-neutral-100 sm:mt-2 sm:text-5xl";
+  const titleText = (
+    <>
       {movie.title} {year && <span className="font-editorial text-2xl font-normal text-neutral-400">({year})</span>}
-    </h1>
+    </>
   );
 
   const serializedFightScenes = fightScenes.map((scene) => {
@@ -490,7 +500,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
       </div>
 
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 pt-8 sm:flex-row">
-        <div className="sm:hidden">{titleBlock}</div>
+        <p className={`${titleClassName} sm:hidden`}>{titleText}</p>
 
         <div className="w-40 shrink-0 sm:w-56">
           <div className="relative rounded-sm border border-neutral-600 bg-neutral-800 p-2 shadow-xl">
@@ -553,7 +563,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
             )}
           </div>
 
-          <div className="hidden sm:block">{titleBlock}</div>
+          <h1 className={`hidden ${titleClassName} sm:block`}>{titleText}</h1>
 
           {movie.tagline && (
             <p className="font-editorial mt-2 text-base text-neutral-400 italic">&ldquo;{movie.tagline}&rdquo;</p>
