@@ -3434,18 +3434,45 @@ below; what changed each time was *what* fills that freed-up space.
     height via the row's default `align-items: stretch`, then
     `overflow-hidden` hard-clips at exactly that boundary regardless of
     device font size or zoom — self-adjusting if the poster's size ever
-    changes, unlike a hardcoded pixel cap. `line-clamp-8` inside that
-    wrapper still does the common-case work of a clean whole-line cutoff
-    with an ellipsis, rather than relying solely on the hard clip (which
-    could otherwise slice a line in half at the boundary).
-  - **The full, untruncated overview is now hidden on mobile**
-    (`hidden ... sm:block`), reversing the previous pass's call: this PR's
-    first version of this snippet kept the full overview visible on mobile
-    too, accepting the resulting duplication (synopsis opening shown twice
-    on the same screen) as a lesser cost than losing full-text access
-    entirely. Revisited and reversed on direct request — mobile visitors
-    now only see the clamped snippet beside the poster; the full text is
-    desktop-only, where it never duplicated anything to begin with.
+    changes, unlike a hardcoded pixel cap.
+  - **The full, untruncated overview is hidden on mobile in the content
+    column** (`hidden ... sm:block`), reversing the previous pass's call:
+    this PR's first version of this snippet kept the full overview visible
+    on mobile too, accepting the resulting duplication (synopsis opening
+    shown twice on the same screen) as a lesser cost than losing full-text
+    access entirely. Revisited and reversed on direct request. Superseded
+    by the fifth pass below, which restores full-text access on mobile a
+    different way (in place, not via the content column).
+- **Fifth pass: the clamped snippet became expandable**
+  (`MovieOverviewSnippet`, a small client component — `page.tsx` itself is
+  an async Server Component and can't hold `useState`). Feedback on the
+  fourth pass: the bare `line-clamp-8` ellipsis read as the text just
+  trailing off mid-sentence with no way to read the rest, and the actual
+  goal was "read the rest on mobile," not just a softer-looking cutoff.
+  Follows the same "Show more"/"Show less" toggle pattern already used by
+  `MemberReviewCard` (`reviews-section.tsx`) and several other components
+  (`recent-reviews-feed.tsx`, `actor-bio.tsx`, `actor-tributes-section.tsx`,
+  `news-list.tsx`) — a character-count threshold standing in for a real
+  measured line count, same approximation those all make.
+  - `line-clamp-7`, not 8: the toggle button has to live inside the same
+    `overflow-hidden` boundary as the text for the "must not exceed the
+    poster's height" guarantee to actually hold for the whole collapsed
+    state, button included — not just the paragraph. An earlier version of
+    this pass put the button outside that boundary (on an auto-height
+    inner wrapper, not the actual stretched flex item), which let it spill
+    past the poster's bottom edge on any movie whose 8-line clamp roughly
+    filled the available height; caught in review before it shipped.
+    Dropping to 7 lines deliberately reserves room within that same budget
+    for the button.
+  - Expanding removes the clip entirely, letting the full synopsis render
+    and the row grow past the poster's height as needed — the "don't
+    exceed poster height" constraint only ever applied to the default,
+    collapsed view.
+  - `key={movie.id}` on the component: without it, client-side navigation
+    between two movie detail pages (e.g. via the Cast rail or "You Might
+    Also Like") could let React reconcile it as the same instance and
+    carry an `expanded: true` state over from the previous movie — caught
+    in review, not from a live repro.
 - **`PosterOverrideControl` (admin-only) stacks vertically on mobile**,
   rather than the label and Remove button trying to share one row — the
   narrower 112px poster column left no room for both on one line without

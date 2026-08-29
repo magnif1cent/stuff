@@ -41,6 +41,7 @@ import { FightSceneSection } from "@/components/fight-scene-section";
 import { FunFactsSection } from "@/components/fun-facts-section";
 import { ReviewsSection } from "@/components/reviews-section";
 import { PosterOverrideControl } from "@/components/poster-override-control";
+import { MovieOverviewSnippet } from "@/components/movie-overview-snippet";
 import { RecommendationControl } from "@/components/recommendation-control";
 import { FightCountControl } from "@/components/fight-count-control";
 
@@ -540,19 +541,16 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
             )}
           </div>
 
-          {/* No line-clamp guess alone -- overflow-hidden on a container
-              that stretches to the poster's height (the row's default
-              align-items: stretch) hard-clips at exactly the poster's
-              bottom edge regardless of font size/zoom, so this can't
-              overflow even if the line-clamp count below turns out too
-              generous on some device. line-clamp-8 still does the
-              common-case work of a clean whole-line cutoff with an
-              ellipsis, rather than an abrupt mid-line clip. */}
-          {movie.overview && (
-            <div className="min-w-0 flex-1 overflow-hidden sm:hidden">
-              <p className="font-editorial line-clamp-8 text-xs text-neutral-400">{movie.overview}</p>
-            </div>
-          )}
+          {/* Collapsed state hard-clips at the poster's own height (the
+              row's default align-items: stretch, plus overflow-hidden
+              inside MovieOverviewSnippet) rather than guessing a fixed
+              pixel cap -- self-adjusting if the poster's size ever
+              changes. Expanding removes that clip so the full synopsis can
+              render, growing the row's height as needed; the poster's own
+              height is unaffected since flex stretch doesn't shrink a
+              sibling that already has an intrinsic (aspect-ratio-locked)
+              size. */}
+          {movie.overview && <MovieOverviewSnippet key={movie.id} overview={movie.overview} />}
           {movieDetailsCard && <div className="mt-4 hidden sm:block">{movieDetailsCard}</div>}
         </div>
 
