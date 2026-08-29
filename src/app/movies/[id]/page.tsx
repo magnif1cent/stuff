@@ -383,35 +383,6 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
     </>
   );
 
-  // Rendered twice: beside the poster on mobile, in its original spot in
-  // the content column on desktop. Score numbers didn't work well as the
-  // poster's row-mate in an earlier pass (still a good fit for the content
-  // column, just not this narrow one) -- byline items are short, already
-  // used to wrapping at narrow widths (they're a flex-wrap row even in the
-  // full-width desktop position), so no condensed variant needed here, just
-  // a different container per site (stacked on mobile, wrapped row on
-  // desktop).
-  const bylineContent = (
-    <>
-      {movie.runtime && <span>{movie.runtime} min</span>}
-      {movie.director && <span>Dir. {movie.director}</span>}
-      {movie.certification && (
-        <span className="rounded-sm border border-neutral-500 px-1.5 text-xs font-semibold text-neutral-400 normal-case">
-          {movie.certification}
-        </span>
-      )}
-      {movie.trueFightCount != null && (
-        <a
-          href="#fight-count"
-          title="Number of fights in the movie, maintained by members — click to view or edit"
-          className="underline decoration-neutral-600 underline-offset-2 hover:text-neutral-200"
-        >
-          Fight Count: {movie.trueFightCount}
-        </a>
-      )}
-    </>
-  );
-
   const serializedFightScenes = fightScenes.map((scene) => {
     const summary = fightSceneRatingSummaries.get(scene.id);
     const adminSummary = fightSceneAdminRatingSummaries.get(scene.id);
@@ -530,8 +501,11 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 pt-8 sm:flex-row">
         <p className={`${titleClassName} sm:hidden`}>{titleText}</p>
 
-        {/* Mobile: poster + the byline (runtime/director/certification/
-            fight count) sit side by side in one row. Desktop: sm:block
+        {/* Mobile: poster + a clamped movie.overview snippet sit side by
+            side in one row -- byline moved back to its original spot in
+            the content column, unconditional on every breakpoint (see
+            DECISIONS.md; overview is intentionally mobile-only here now,
+            not duplicated in the content column below). Desktop: sm:block
             turns this back into a plain stacked column, so it's the same
             sidebar as before -- poster, admin control, Details underneath,
             in source order. */}
@@ -566,14 +540,19 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
             )}
           </div>
 
-          <div className="flex flex-col gap-2 sm:hidden">
-            <div className="font-cond flex flex-col gap-1 text-xs tracking-wide text-neutral-400 uppercase">
-              {bylineContent}
+          {/* No line-clamp guess alone -- overflow-hidden on a container
+              that stretches to the poster's height (the row's default
+              align-items: stretch) hard-clips at exactly the poster's
+              bottom edge regardless of font size/zoom, so this can't
+              overflow even if the line-clamp count below turns out too
+              generous on some device. line-clamp-8 still does the
+              common-case work of a clean whole-line cutoff with an
+              ellipsis, rather than an abrupt mid-line clip. */}
+          {movie.overview && (
+            <div className="min-w-0 flex-1 overflow-hidden sm:hidden">
+              <p className="font-editorial line-clamp-8 text-xs text-neutral-400">{movie.overview}</p>
             </div>
-            {movie.overview && (
-              <p className="font-editorial line-clamp-4 text-xs text-neutral-400">{movie.overview}</p>
-            )}
-          </div>
+          )}
           {movieDetailsCard && <div className="mt-4 hidden sm:block">{movieDetailsCard}</div>}
         </div>
 
@@ -587,8 +566,23 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
             />
           </div>
 
-          <div className="font-cond hidden flex-wrap items-center gap-x-3 gap-y-1 text-sm tracking-wide text-neutral-400 uppercase sm:flex">
-            {bylineContent}
+          <div className="font-cond flex flex-wrap items-center gap-x-3 gap-y-1 text-sm tracking-wide text-neutral-400 uppercase">
+            {movie.runtime && <span>{movie.runtime} min</span>}
+            {movie.director && <span>Dir. {movie.director}</span>}
+            {movie.certification && (
+              <span className="rounded-sm border border-neutral-500 px-1.5 text-xs font-semibold text-neutral-400 normal-case">
+                {movie.certification}
+              </span>
+            )}
+            {movie.trueFightCount != null && (
+              <a
+                href="#fight-count"
+                title="Number of fights in the movie, maintained by members — click to view or edit"
+                className="underline decoration-neutral-600 underline-offset-2 hover:text-neutral-200"
+              >
+                Fight Count: {movie.trueFightCount}
+              </a>
+            )}
           </div>
 
           <h1 className={`hidden ${titleClassName} sm:block`}>{titleText}</h1>
@@ -647,7 +641,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
             </div>
           )}
 
-          <p className="font-editorial mt-4 max-w-2xl text-neutral-300">{movie.overview}</p>
+          <p className="font-editorial mt-4 hidden max-w-2xl text-neutral-300 sm:block">{movie.overview}</p>
 
           {movieDetailsCard && <div className="mt-4 max-w-2xl sm:hidden">{movieDetailsCard}</div>}
 

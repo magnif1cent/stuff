@@ -3379,12 +3379,12 @@ other") instead of presenting one name as if it were the clear answer.
   the tie is disclosed either way, so neither name reads as definitively
   wrong.
 
-### Mobile poster narrowed, with the byline beside it
+### Mobile poster narrowed, with a clamped overview snippet beside it
 **PR #TBD.** The poster on mobile used to sit alone in its own row, pinned to
 the left edge with no centering — a `flex-col` child with an explicit width
 doesn't stretch or center by default, so it left an unintentional-looking
 empty gap next to it. Narrowing the poster (`w-40` -> `w-28`) to make room
-for a row-mate was settled on early and stayed through all three passes
+for a row-mate was settled on early and stayed through all four passes
 below; what changed each time was *what* fills that freed-up space.
 
 - **First pass: `movieDetailsCard` beside the poster.** This also revisited
@@ -3405,7 +3405,7 @@ below; what changed each time was *what* fills that freed-up space.
   "Fight Choreography" doesn't fit the desktop `tracking-widest` treatment
   in that column). Also rejected on review — the numbers "didn't look good
   there," full stop, no more specific complaint than that.
-- **Landed on: the byline** (runtime, director, certification badge, Fight
+- **Third pass: the byline** (runtime, director, certification badge, Fight
   Count link). Unlike Details or Score, these are short, chip-like items
   already living in a `flex-wrap` row at the full content-column width, so
   no condensed variant was needed — just a different container per site
@@ -3413,31 +3413,39 @@ below; what changed each time was *what* fills that freed-up space.
   row in the content column on desktop). Community/Editors' Score and the
   subcategory breakdown moved back to their original single position in the
   content column, always visible there (not mobile/desktop-conditional —
-  they only ever had one position before the second pass).
-- **Genre pills joined the byline in that column briefly, then were
-  replaced by a clamped overview snippet.** A live screenshot showed the
+  they only ever had one position before the second pass). Then genre pills
+  joined the byline in that column too, after a live screenshot showed the
   byline (four short lines) leaving visible empty space below it next to
-  the poster (aspect-2/3, so noticeably taller than four lines of text).
-  Genre pills were the first fix — same reasoning as the byline itself:
-  short, fixed-width chips, not free-form text — sharing one `flex-col`
-  wrapper with the byline so both stack as one unit rather than becoming a
-  third side-by-side item in the poster row's own flex row (a real bug
-  caught in review before it shipped). Replaced shortly after by a
-  `line-clamp-4` snippet of `movie.overview` instead: unlike Details or
-  Score, prose text is meant to reflow at any width, so it doesn't need the
-  "short and fixed-width" constraint that ruled out those two — turns out
-  that constraint was about avoiding awkward wrapping, and wrapping is
-  exactly what paragraph text already does gracefully. Genres moved back to
-  their original single, unconditional position in the content column.
-  Accepted trade-off: the full, untruncated overview still renders in its
-  usual spot further down the content column on every breakpoint, so a
-  mobile visitor now sees the synopsis's opening once as a clamped preview
-  near the poster and again in full a few hundred pixels later — not
-  simultaneous duplication, but the same "teaser near the thumbnail, full
-  text below" pattern most apps use. The alternative (hiding the full
-  version on mobile) was rejected: this is the only place `movie.overview`
-  renders on the page, so mobile visitors would lose the ability to read
-  past the first four lines entirely.
+  the poster (aspect-2/3, so noticeably taller than four lines of text) —
+  same reasoning as the byline itself (short, fixed-width chips), sharing
+  one `flex-col` wrapper with it so both stack as one unit rather than
+  becoming a third side-by-side item in the poster row's own flex row (a
+  real bug caught in review before it shipped).
+- **Landed on (fourth pass): a clamped `movie.overview` snippet, alone.**
+  Genre pills turned out not to be the fix either — replaced by prose text
+  instead: unlike Details or Score, paragraph text is meant to reflow at
+  any width, so it doesn't need the "short and fixed-width" constraint that
+  ruled out those two. The byline moved back to its original single,
+  unconditional spot in the content column (no longer beside the poster at
+  all); genre pills moved back to their original spot too. The poster's
+  row-mate column is now overview text only.
+  - **Sizing avoids guessing a fixed line-clamp count.** The snippet's
+    wrapper has no explicit height, so it stretches to match the poster's
+    height via the row's default `align-items: stretch`, then
+    `overflow-hidden` hard-clips at exactly that boundary regardless of
+    device font size or zoom — self-adjusting if the poster's size ever
+    changes, unlike a hardcoded pixel cap. `line-clamp-8` inside that
+    wrapper still does the common-case work of a clean whole-line cutoff
+    with an ellipsis, rather than relying solely on the hard clip (which
+    could otherwise slice a line in half at the boundary).
+  - **The full, untruncated overview is now hidden on mobile**
+    (`hidden ... sm:block`), reversing the previous pass's call: this PR's
+    first version of this snippet kept the full overview visible on mobile
+    too, accepting the resulting duplication (synopsis opening shown twice
+    on the same screen) as a lesser cost than losing full-text access
+    entirely. Revisited and reversed on direct request — mobile visitors
+    now only see the clamped snippet beside the poster; the full text is
+    desktop-only, where it never duplicated anything to begin with.
 - **`PosterOverrideControl` (admin-only) stacks vertically on mobile**,
   rather than the label and Remove button trying to share one row — the
   narrower 112px poster column left no room for both on one line without
