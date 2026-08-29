@@ -288,11 +288,13 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
   const isFavorite = myListEntries.some((e) => e.listType === "FAVORITE");
   const isOnWatchlist = myListEntries.some((e) => e.listType === "WATCHLIST");
 
-  // Rendered twice below: alongside the poster on desktop (sm:flex-row), but
-  // after the overview on mobile -- on a single-column layout it would
-  // otherwise land between the poster and the title (same DOM order as the
-  // sidebar), showing Studio/Country/etc. before you've even seen what movie
-  // you're looking at.
+  // Rendered twice below: alongside the poster in both layouts now -- next
+  // to it in a mobile row (filling the width a smaller poster leaves empty),
+  // stacked underneath it in the desktop sidebar. The title itself is a
+  // separate mobile-only block above this whole row (see titleClassName/
+  // titleText below), so Details showing before the title is no longer a
+  // concern here the way it was when this card used to land after the
+  // overview instead.
   const movieDetailsCard = (movie.studio ||
     movie.country ||
     movie.originalLanguage ||
@@ -502,35 +504,44 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 pt-8 sm:flex-row">
         <p className={`${titleClassName} sm:hidden`}>{titleText}</p>
 
-        <div className="w-40 shrink-0 sm:w-56">
-          <div className="relative rounded-sm border border-neutral-600 bg-neutral-800 p-2 shadow-xl">
-            {/* corner accents, so the mat reads as a mounted print rather
-                than just padding around the poster */}
-            <span className="absolute top-1.5 left-1.5 h-1.5 w-1.5 rounded-full bg-neutral-500" />
-            <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-neutral-500" />
-            <span className="absolute bottom-1.5 left-1.5 h-1.5 w-1.5 rounded-full bg-neutral-500" />
-            <span className="absolute right-1.5 bottom-1.5 h-1.5 w-1.5 rounded-full bg-neutral-500" />
-            <div className="relative aspect-2/3 overflow-hidden border border-neutral-700 bg-neutral-950">
-              {posterUrl ? (
-                <Image
-                  src={posterUrl}
-                  alt={movie.title}
-                  fill
-                  unoptimized={isTmdbUrl(posterUrl)}
-                  sizes="224px"
-                  className="object-cover"
-                />
-              ) : (
-                <div className="flex h-full items-center justify-center px-2 text-center text-xs text-neutral-500">
-                  {movie.title}
-                </div>
-              )}
+        {/* Mobile: poster + Details sit side by side in one row (justify-center
+            is a no-op once Details' flex-1 fills the remaining width, but
+            centers the poster alone on movies with no Details data to show).
+            Desktop: sm:block turns this back into a plain stacked column, so
+            it's the same sidebar as before -- poster, admin control, Details
+            underneath, in source order. */}
+        <div className="flex justify-center gap-4 sm:block sm:w-56 sm:shrink-0">
+          <div className="w-28 shrink-0 sm:w-full">
+            <div className="relative rounded-sm border border-neutral-600 bg-neutral-800 p-2 shadow-xl">
+              {/* corner accents, so the mat reads as a mounted print rather
+                  than just padding around the poster */}
+              <span className="absolute top-1.5 left-1.5 h-1.5 w-1.5 rounded-full bg-neutral-500" />
+              <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-neutral-500" />
+              <span className="absolute bottom-1.5 left-1.5 h-1.5 w-1.5 rounded-full bg-neutral-500" />
+              <span className="absolute right-1.5 bottom-1.5 h-1.5 w-1.5 rounded-full bg-neutral-500" />
+              <div className="relative aspect-2/3 overflow-hidden border border-neutral-700 bg-neutral-950">
+                {posterUrl ? (
+                  <Image
+                    src={posterUrl}
+                    alt={movie.title}
+                    fill
+                    unoptimized={isTmdbUrl(posterUrl)}
+                    sizes="(min-width: 640px) 224px, 112px"
+                    className="object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full items-center justify-center px-2 text-center text-xs text-neutral-500">
+                    {movie.title}
+                  </div>
+                )}
+              </div>
             </div>
+            {session?.user?.role === "ADMIN" && (
+              <PosterOverrideControl movieId={movie.id} hasOverride={!!movie.posterOverrideUrl} />
+            )}
           </div>
-          {session?.user?.role === "ADMIN" && (
-            <PosterOverrideControl movieId={movie.id} hasOverride={!!movie.posterOverrideUrl} />
-          )}
 
+          {movieDetailsCard && <div className="min-w-0 flex-1 sm:hidden">{movieDetailsCard}</div>}
           {movieDetailsCard && <div className="mt-4 hidden sm:block">{movieDetailsCard}</div>}
         </div>
 
@@ -620,8 +631,6 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
           )}
 
           <p className="font-editorial mt-4 max-w-2xl text-neutral-300">{movie.overview}</p>
-
-          {movieDetailsCard && <div className="mt-4 max-w-2xl sm:hidden">{movieDetailsCard}</div>}
 
           <div className="mt-4 flex flex-wrap items-start gap-2">
             <ListButtons

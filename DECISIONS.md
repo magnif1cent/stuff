@@ -3379,6 +3379,35 @@ other") instead of presenting one name as if it were the clear answer.
   the tie is disclosed either way, so neither name reads as definitively
   wrong.
 
+### Mobile Details card moved from after-overview to beside the poster
+**PR #TBD.** Revisits a placement decision from the original hero-redesign PR
+(see "Movie detail hero redesigned poster-forward, away from the generic
+media-app look" above): `movieDetailsCard` used to render after the overview
+on mobile specifically to avoid it appearing before the title, back when the
+poster came before the title in mobile source order. A later PR moved the
+title itself to a separate mobile-only block above the poster/Details row,
+which made that original constraint moot — Details showing next to the
+poster no longer means "before the title," since the title now sits above
+the whole row regardless.
+
+- **Poster narrowed on mobile (`w-40` -> `w-28`) so Details has room to sit
+  beside it.** The poster previously sat alone in its own row, pinned to the
+  left edge with no centering — a `flex-col` child with an explicit width
+  doesn't stretch or center by default, so it left an unintentional-looking
+  empty gap next to it. Rather than just centering the same-sized poster
+  (closes the gap but leaves the poster looking small and alone), Details
+  now fills that space instead: poster and Details render side by side in a
+  `flex justify-center` row, with Details taking `flex-1` of the remaining
+  width. `justify-center` is a no-op whenever Details is present (`flex-1`
+  already consumes all free space), and only "activates" — centering the
+  poster alone — on movies with no Details data to show (no
+  studio/country/language/revenue/collection info).
+- **`PosterOverrideControl` (admin-only) stacks vertically on mobile now**,
+  rather than the label and Remove button trying to share one row — the
+  narrower 112px column left no room for both on one line without wrapping
+  awkwardly. Unchanged at `sm:`+, where the sidebar column is wide enough
+  for the original horizontal layout.
+
 ## Deferred & Backlog
 
 - **Drag-and-drop reordering for ranked list items** — `ListItemRows`

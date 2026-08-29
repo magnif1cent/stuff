@@ -49,7 +49,7 @@ export function PosterOverrideControl({
 
   return (
     <div className="mt-2 flex flex-col items-start gap-1">
-      <div className="flex items-center gap-2">
+      <div className="flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:gap-2">
         <label className="font-cond cursor-pointer rounded-sm border border-neutral-700 px-2 py-1 text-xs tracking-wide text-neutral-300 uppercase hover:bg-neutral-800">
           {uploading ? "Uploading…" : hasOverride ? "Replace poster" : "Upload custom poster"}
           <input
