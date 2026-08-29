@@ -3419,6 +3419,17 @@ empty gap next to it. Went through two approaches before landing here.
   since it's driven by the poster column's own width, not by what's beside
   it. Unchanged at `sm:`+, where the sidebar column is wide enough for the
   original horizontal layout.
+- **The subcategory rating breakdown (Fight Choreography/Story/Acting)
+  joined the mobile poster row too**, after review pointed out it looked
+  orphaned in the content column once Community/Editors' Score (its usual
+  neighbor) moved up beside the poster. Reused at a condensed size (`text-xs`,
+  no `tracking-widest`) rather than the desktop treatment as-is — "Fight
+  Choreography" doesn't fit the wider letter-spacing in a ~200px column. The
+  row-generation logic (filtering zero-count categories, formatting the
+  average) is factored into one `subcategoryRows()` helper parameterized by
+  the value's size class, rather than duplicated between the two call
+  sites — same drift risk as `movieDetailsCard`/`scoreItems` above, avoided
+  the same way.
 
 ## Deferred & Backlog
 
