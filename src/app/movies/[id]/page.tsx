@@ -466,7 +466,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
 
   return (
     <div className="flex flex-1 flex-col">
-      <div className="relative h-64 w-full sm:h-80">
+      <div className="relative h-40 w-full sm:h-80">
         {backdropUrl ? (
           <Image src={backdropUrl} alt="" fill priority unoptimized sizes="100vw" className="object-cover" />
         ) : (
@@ -537,7 +537,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
             )}
           </div>
 
-          <h1 className="font-display mt-2 text-5xl text-balance text-neutral-100">
+          <h1 className="font-display mt-2 text-4xl text-balance text-neutral-100 sm:text-5xl">
             {movie.title} {year && <span className="font-editorial text-2xl font-normal text-neutral-400">({year})</span>}
           </h1>
 
@@ -559,7 +559,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
             </div>
           )}
 
-          <div className="mt-5 flex flex-wrap items-baseline gap-10">
+          <div className="mt-5 flex flex-wrap items-baseline gap-6 sm:gap-10">
             <div>
               <p className="font-cond text-xs tracking-wider text-neutral-500 uppercase">Community Score</p>
               <p className="font-display mt-1 text-3xl text-amber-500">

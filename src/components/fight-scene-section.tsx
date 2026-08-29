@@ -641,7 +641,7 @@ export function FightSceneSection({
                 ) : (
                   <span>Round {scene.roundNumber}</span>
                 )}
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-2.5 sm:gap-1.5">
                   <FavoriteButton
                     movieId={movieId}
                     fightSceneId={scene.id}
