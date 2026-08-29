@@ -3379,57 +3379,48 @@ other") instead of presenting one name as if it were the clear answer.
   the tie is disclosed either way, so neither name reads as definitively
   wrong.
 
-### Mobile poster narrowed, with Community/Editors' Score beside it
+### Mobile poster narrowed, with the byline beside it
 **PR #TBD.** The poster on mobile used to sit alone in its own row, pinned to
 the left edge with no centering — a `flex-col` child with an explicit width
 doesn't stretch or center by default, so it left an unintentional-looking
-empty gap next to it. Went through two approaches before landing here.
+empty gap next to it. Narrowing the poster (`w-40` -> `w-28`) to make room
+for a row-mate was settled on early and stayed through all three passes
+below; what changed each time was *what* fills that freed-up space.
 
-- **First pass: narrow the poster (`w-40` -> `w-28`) and put
-  `movieDetailsCard` beside it**, filling the freed-up width instead of just
-  centering the same-sized poster (which closes the gap but leaves the
-  poster looking small and alone). This also revisited a placement decision
-  from the original hero-redesign PR (see "Movie detail hero redesigned
-  poster-forward, away from the generic media-app look" above):
-  `movieDetailsCard` used to render after the overview on mobile
-  specifically to avoid it appearing before the title, back when the poster
-  came before the title in mobile source order; a later PR moved the title
-  to its own mobile-only block above the poster row, which made that
+- **First pass: `movieDetailsCard` beside the poster.** This also revisited
+  a placement decision from the original hero-redesign PR (see "Movie
+  detail hero redesigned poster-forward, away from the generic media-app
+  look" above): `movieDetailsCard` used to render after the overview on
+  mobile specifically to avoid it appearing before the title, back when the
+  poster came before the title in mobile source order; a later PR moved the
+  title to its own mobile-only block above the poster row, which made that
   original constraint moot. Rejected on review of the live layout: Details'
   field values (studio names, formatted box-office currency, a
   comma-separated collection list) are long and variable-length, and didn't
   read well wrapping inside a ~200px-wide column next to a small poster.
-- **Landed on: Community/Editors' Score instead of Details.** A rating
-  number is short and fixed-width, so it doesn't have Details' wrapping
-  problem, and a poster with a rating badge beside it is a standard pattern
-  for movie apps generally — closer to the page's "poster-forward" identity
-  than a dense metadata table would be. `scoreItems` (the shared Community
-  Score + conditional Editors' Score block, also used in its original
-  desktop position) is unconditional — Community Score always renders, even
-  as a "—" placeholder before any ratings exist — so the mobile poster row
-  always has both children; no lone-poster centering case exists here, unlike
-  the first pass's `movieDetailsCard` (which is genuinely absent on movies
-  with no studio/country/language/revenue/collection data).
-  `movieDetailsCard` moved back to its original after-overview mobile
-  position rather than disappearing from mobile entirely.
-- **`PosterOverrideControl` (admin-only) stacks vertically on mobile now**,
+- **Second pass: Community/Editors' Score, plus the subcategory rating
+  breakdown** (Fight Choreography/Story/Acting — added after review pointed
+  out it looked orphaned in the content column once Score, its usual
+  neighbor, moved up beside the poster; reused at a condensed size since
+  "Fight Choreography" doesn't fit the desktop `tracking-widest` treatment
+  in that column). Also rejected on review — the numbers "didn't look good
+  there," full stop, no more specific complaint than that.
+- **Landed on: the byline** (runtime, director, certification badge, Fight
+  Count link). Unlike Details or Score, these are short, chip-like items
+  already living in a `flex-wrap` row at the full content-column width, so
+  no condensed variant was needed — just a different container per site
+  (stacked `flex-col` beside the poster on mobile, the original `flex-wrap`
+  row in the content column on desktop). Community/Editors' Score and the
+  subcategory breakdown moved back to their original single position in the
+  content column, always visible there (not mobile/desktop-conditional —
+  they only ever had one position before the second pass).
+- **`PosterOverrideControl` (admin-only) stacks vertically on mobile**,
   rather than the label and Remove button trying to share one row — the
   narrower 112px poster column left no room for both on one line without
   wrapping awkwardly. This holds regardless of which pass above is live,
   since it's driven by the poster column's own width, not by what's beside
   it. Unchanged at `sm:`+, where the sidebar column is wide enough for the
   original horizontal layout.
-- **The subcategory rating breakdown (Fight Choreography/Story/Acting)
-  joined the mobile poster row too**, after review pointed out it looked
-  orphaned in the content column once Community/Editors' Score (its usual
-  neighbor) moved up beside the poster. Reused at a condensed size (`text-xs`,
-  no `tracking-widest`) rather than the desktop treatment as-is — "Fight
-  Choreography" doesn't fit the wider letter-spacing in a ~200px column. The
-  row-generation logic (filtering zero-count categories, formatting the
-  average) is factored into one `subcategoryRows()` helper parameterized by
-  the value's size class, rather than duplicated between the two call
-  sites — same drift risk as `movieDetailsCard`/`scoreItems` above, avoided
-  the same way.
 
 ## Deferred & Backlog
 

@@ -288,11 +288,10 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
   const isFavorite = myListEntries.some((e) => e.listType === "FAVORITE");
   const isOnWatchlist = myListEntries.some((e) => e.listType === "WATCHLIST");
 
-  // Rendered twice below: after the overview on mobile (back to where it
-  // originally lived -- scoreItems below took over the poster's row-mate
-  // spot instead, since Details' long, variable-length field values didn't
-  // fit that narrow column well), alongside the poster in the desktop
-  // sidebar, unchanged.
+  // Rendered twice below: after the overview on mobile (its original spot --
+  // tried living beside the poster instead, in two different forms, but
+  // neither worked out; see DECISIONS.md), alongside the poster in the
+  // desktop sidebar, unchanged.
   const movieDetailsCard = (movie.studio ||
     movie.country ||
     movie.originalLanguage ||
@@ -384,58 +383,34 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
     </>
   );
 
-  // Also rendered twice, replacing movieDetailsCard as the mobile poster's
-  // row-mate: a fixed-width number (Community/Editors' Score) doesn't have
-  // Details' problem of long, variable-length field values (studio names,
-  // formatted currency, a comma-separated collection list) wrapping
-  // awkwardly in a ~200px column. Stacked (flex-col) beside the poster
-  // rather than reusing the wide-format side-by-side layout below, which
-  // was tuned for the full content-column width, not this narrower one.
-  const scoreItems = (
+  // Rendered twice: beside the poster on mobile, in its original spot in
+  // the content column on desktop. Score numbers didn't work well as the
+  // poster's row-mate in an earlier pass (still a good fit for the content
+  // column, just not this narrow one) -- byline items are short, already
+  // used to wrapping at narrow widths (they're a flex-wrap row even in the
+  // full-width desktop position), so no condensed variant needed here, just
+  // a different container per site (stacked on mobile, wrapped row on
+  // desktop).
+  const bylineContent = (
     <>
-      <div>
-        <p className="font-cond text-xs tracking-wider text-neutral-500 uppercase">Community Score</p>
-        <p className="font-display mt-1 text-3xl text-amber-500">
-          {communityRating.average ? communityRating.average.toFixed(1) : "—"}{" "}
-          <span className="font-editorial text-sm font-normal text-neutral-500">/ 10 ({communityRating.count})</span>
-        </p>
-      </div>
-      {editorsRating.count > 0 && (
-        <div>
-          <p className="font-cond text-xs tracking-wider text-neutral-500 uppercase">Editors&rsquo; Score</p>
-          <p className="font-display mt-1 text-3xl text-neutral-100">
-            {editorsRating.average?.toFixed(1)}{" "}
-            <span className="font-editorial text-sm font-normal text-neutral-500">({editorsRating.count})</span>
-          </p>
-        </div>
+      {movie.runtime && <span>{movie.runtime} min</span>}
+      {movie.director && <span>Dir. {movie.director}</span>}
+      {movie.certification && (
+        <span className="rounded-sm border border-neutral-500 px-1.5 text-xs font-semibold text-neutral-400 normal-case">
+          {movie.certification}
+        </span>
+      )}
+      {movie.trueFightCount != null && (
+        <a
+          href="#fight-count"
+          title="Number of fights in the movie, maintained by members — click to view or edit"
+          className="underline decoration-neutral-600 underline-offset-2 hover:text-neutral-200"
+        >
+          Fight Count: {movie.trueFightCount}
+        </a>
       )}
     </>
   );
-
-  // Shared by the two RATING_CATEGORIES render sites below, so the
-  // condition (and the reasoning behind it) lives in one place.
-  const hasSubcategoryScores = RATING_CATEGORIES.some(({ key }) => subcategoryRating[key].count > 0);
-
-  // Also shared by both sites: only the value's size differs between the
-  // compact mobile-beside-poster row and the desktop content-column one
-  // (the label's size comes from the two sites' different container
-  // classNames instead, since it has no size class of its own to override).
-  // Factored out so the count===0 filtering and average formatting can't
-  // drift between the two copies.
-  function subcategoryRows(valueClassName: string) {
-    return RATING_CATEGORIES.map(({ key, label }) => {
-      const community = subcategoryRating[key];
-      if (community.count === 0) return null;
-      return (
-        <div key={key} className="flex items-baseline justify-between uppercase">
-          <span className="text-neutral-400">{label}</span>
-          <span className={`font-semibold text-amber-500 tabular-nums ${valueClassName}`}>
-            {community.average!.toFixed(1)}
-          </span>
-        </div>
-      );
-    });
-  }
 
   const serializedFightScenes = fightScenes.map((scene) => {
     const summary = fightSceneRatingSummaries.get(scene.id);
@@ -555,16 +530,11 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 pt-8 sm:flex-row">
         <p className={`${titleClassName} sm:hidden`}>{titleText}</p>
 
-        {/* Mobile: poster + Community/Editors' Score (+ the subcategory
-            breakdown, condensed -- its "Fight Choreography" label doesn't
-            fit the desktop text-sm/tracking-widest treatment in this ~200px
-            column) sit side by side in one row. scoreItems' Community Score
-            block is unconditional (it renders a "—" placeholder rather than
-            nothing when there's no rating yet), so this row always has both
-            children; no centering logic needed for a lone-poster case,
-            because there isn't one. Desktop: sm:block turns this back into a
-            plain stacked column, so it's the same sidebar as before --
-            poster, admin control, Details underneath, in source order. */}
+        {/* Mobile: poster + the byline (runtime/director/certification/
+            fight count) sit side by side in one row. Desktop: sm:block
+            turns this back into a plain stacked column, so it's the same
+            sidebar as before -- poster, admin control, Details underneath,
+            in source order. */}
         <div className="flex gap-4 sm:block sm:w-56 sm:shrink-0">
           <div className="w-28 shrink-0 sm:w-full">
             <div className="relative rounded-sm border border-neutral-600 bg-neutral-800 p-2 shadow-xl">
@@ -596,11 +566,8 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
             )}
           </div>
 
-          <div className="flex flex-col gap-3 sm:hidden">
-            {scoreItems}
-            {hasSubcategoryScores && (
-              <div className="font-cond flex flex-col gap-1 text-xs">{subcategoryRows("")}</div>
-            )}
+          <div className="font-cond flex flex-col gap-1 text-xs tracking-wide text-neutral-400 uppercase sm:hidden">
+            {bylineContent}
           </div>
           {movieDetailsCard && <div className="mt-4 hidden sm:block">{movieDetailsCard}</div>}
         </div>
@@ -615,23 +582,8 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
             />
           </div>
 
-          <div className="font-cond flex flex-wrap items-center gap-x-3 gap-y-1 text-sm tracking-wide text-neutral-400 uppercase">
-            {movie.runtime && <span>{movie.runtime} min</span>}
-            {movie.director && <span>Dir. {movie.director}</span>}
-            {movie.certification && (
-              <span className="rounded-sm border border-neutral-500 px-1.5 text-xs font-semibold text-neutral-400 normal-case">
-                {movie.certification}
-              </span>
-            )}
-            {movie.trueFightCount != null && (
-              <a
-                href="#fight-count"
-                title="Number of fights in the movie, maintained by members — click to view or edit"
-                className="underline decoration-neutral-600 underline-offset-2 hover:text-neutral-200"
-              >
-                Fight Count: {movie.trueFightCount}
-              </a>
-            )}
+          <div className="font-cond hidden flex-wrap items-center gap-x-3 gap-y-1 text-sm tracking-wide text-neutral-400 uppercase sm:flex">
+            {bylineContent}
           </div>
 
           <h1 className={`hidden ${titleClassName} sm:block`}>{titleText}</h1>
@@ -654,11 +606,39 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
             </div>
           )}
 
-          <div className="mt-5 hidden flex-wrap items-baseline gap-10 sm:flex">{scoreItems}</div>
+          <div className="mt-5 flex flex-wrap items-baseline gap-6 sm:gap-10">
+            <div>
+              <p className="font-cond text-xs tracking-wider text-neutral-500 uppercase">Community Score</p>
+              <p className="font-display mt-1 text-3xl text-amber-500">
+                {communityRating.average ? communityRating.average.toFixed(1) : "—"}{" "}
+                <span className="font-editorial text-sm font-normal text-neutral-500">/ 10 ({communityRating.count})</span>
+              </p>
+            </div>
+            {editorsRating.count > 0 && (
+              <div>
+                <p className="font-cond text-xs tracking-wider text-neutral-500 uppercase">Editors&rsquo; Score</p>
+                <p className="font-display mt-1 text-3xl text-neutral-100">
+                  {editorsRating.average?.toFixed(1)}{" "}
+                  <span className="font-editorial text-sm font-normal text-neutral-500">({editorsRating.count})</span>
+                </p>
+              </div>
+            )}
+          </div>
 
-          {hasSubcategoryScores && (
-            <div className="font-cond mt-4 hidden max-w-sm flex-col gap-1.5 text-sm tracking-widest sm:flex">
-              {subcategoryRows("text-base")}
+          {RATING_CATEGORIES.some(({ key }) => subcategoryRating[key].count > 0) && (
+            <div className="font-cond mt-4 flex max-w-sm flex-col gap-1.5 text-sm tracking-widest">
+              {RATING_CATEGORIES.map(({ key, label }) => {
+                const community = subcategoryRating[key];
+                if (community.count === 0) return null;
+                return (
+                  <div key={key} className="flex items-baseline justify-between uppercase">
+                    <span className="text-neutral-400">{label}</span>
+                    <span className="text-base font-semibold text-amber-500 tabular-nums">
+                      {community.average!.toFixed(1)}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           )}
 
