@@ -383,26 +383,6 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
     </>
   );
 
-  // Also rendered twice, same reasoning as bylineContent below it: short,
-  // fixed-width chips rather than the free-form text that didn't work in
-  // earlier passes. Added after the poster (aspect-2/3, so noticeably
-  // taller than the byline stack alone) left visible empty space in its
-  // mobile row-mate column below the byline.
-  const hasGenres = movie.genres.length > 0;
-  const genreContent = (
-    <>
-      {movie.genres.map((genre) => (
-        <Link
-          key={genre.id}
-          href={`/search?genre=${encodeURIComponent(genre.name)}`}
-          className="rounded-full border border-neutral-700 px-2 py-0.5 text-xs text-neutral-300 underline decoration-neutral-600 underline-offset-2 hover:border-neutral-500 hover:text-neutral-100"
-        >
-          {genre.name}
-        </Link>
-      ))}
-    </>
-  );
-
   // Rendered twice: beside the poster on mobile, in its original spot in
   // the content column on desktop. Score numbers didn't work well as the
   // poster's row-mate in an earlier pass (still a good fit for the content
@@ -590,7 +570,9 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
             <div className="font-cond flex flex-col gap-1 text-xs tracking-wide text-neutral-400 uppercase">
               {bylineContent}
             </div>
-            {hasGenres && <div className="flex flex-wrap gap-2">{genreContent}</div>}
+            {movie.overview && (
+              <p className="font-editorial line-clamp-4 text-xs text-neutral-400">{movie.overview}</p>
+            )}
           </div>
           {movieDetailsCard && <div className="mt-4 hidden sm:block">{movieDetailsCard}</div>}
         </div>
@@ -615,7 +597,19 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
             <p className="font-editorial mt-2 text-base text-neutral-400 italic">&ldquo;{movie.tagline}&rdquo;</p>
           )}
 
-          {hasGenres && <div className="mt-3 hidden flex-wrap gap-2 sm:flex">{genreContent}</div>}
+          {movie.genres.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {movie.genres.map((genre) => (
+                <Link
+                  key={genre.id}
+                  href={`/search?genre=${encodeURIComponent(genre.name)}`}
+                  className="rounded-full border border-neutral-700 px-2 py-0.5 text-xs text-neutral-300 underline decoration-neutral-600 underline-offset-2 hover:border-neutral-500 hover:text-neutral-100"
+                >
+                  {genre.name}
+                </Link>
+              ))}
+            </div>
+          )}
 
           <div className="mt-5 flex flex-wrap items-baseline gap-6 sm:gap-10">
             <div>

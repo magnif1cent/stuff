@@ -3414,16 +3414,30 @@ below; what changed each time was *what* fills that freed-up space.
   subcategory breakdown moved back to their original single position in the
   content column, always visible there (not mobile/desktop-conditional —
   they only ever had one position before the second pass).
-- **Genre pills joined the byline in that column too**, once a live
-  screenshot showed the byline (four short lines) leaving visible empty
-  space below it next to the poster (aspect-2/3, so noticeably taller than
-  four lines of text). Same reasoning as the byline itself — short,
-  fixed-width chips, not free-form text — so genres were the next-best fit
-  already sitting nearby in the content column, rather than reaching for
-  something new. Both now share one `flex-col` wrapper in that mobile
-  column so they stack as one unit rather than becoming a third
-  side-by-side item in the poster row's own flex row (caught in review
-  before this shipped).
+- **Genre pills joined the byline in that column briefly, then were
+  replaced by a clamped overview snippet.** A live screenshot showed the
+  byline (four short lines) leaving visible empty space below it next to
+  the poster (aspect-2/3, so noticeably taller than four lines of text).
+  Genre pills were the first fix — same reasoning as the byline itself:
+  short, fixed-width chips, not free-form text — sharing one `flex-col`
+  wrapper with the byline so both stack as one unit rather than becoming a
+  third side-by-side item in the poster row's own flex row (a real bug
+  caught in review before it shipped). Replaced shortly after by a
+  `line-clamp-4` snippet of `movie.overview` instead: unlike Details or
+  Score, prose text is meant to reflow at any width, so it doesn't need the
+  "short and fixed-width" constraint that ruled out those two — turns out
+  that constraint was about avoiding awkward wrapping, and wrapping is
+  exactly what paragraph text already does gracefully. Genres moved back to
+  their original single, unconditional position in the content column.
+  Accepted trade-off: the full, untruncated overview still renders in its
+  usual spot further down the content column on every breakpoint, so a
+  mobile visitor now sees the synopsis's opening once as a clamped preview
+  near the poster and again in full a few hundred pixels later — not
+  simultaneous duplication, but the same "teaser near the thumbnail, full
+  text below" pattern most apps use. The alternative (hiding the full
+  version on mobile) was rejected: this is the only place `movie.overview`
+  renders on the page, so mobile visitors would lose the ability to read
+  past the first four lines entirely.
 - **`PosterOverrideControl` (admin-only) stacks vertically on mobile**,
   rather than the label and Remove button trying to share one row — the
   narrower 112px poster column left no room for both on one line without
