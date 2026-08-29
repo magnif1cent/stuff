@@ -134,7 +134,7 @@ export function AddToListControl({
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               placeholder="New list…"
-              className="min-w-0 flex-1 rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1 text-xs text-neutral-100 focus:border-red-600 focus:outline-none"
+              className="min-w-0 flex-1 rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1 text-base text-neutral-100 focus:border-red-600 focus:outline-none"
             />
             <button
               type="submit"

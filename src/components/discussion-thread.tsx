@@ -194,7 +194,7 @@ export function DiscussionThread({
             onChange={(e) => setEditContent(e.target.value)}
             rows={2}
             maxLength={MAX_CONTENT_LENGTH}
-            className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
+            className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1 text-base text-neutral-100 focus:border-red-600 focus:outline-none"
           />
           <div className="flex gap-2">
             <button
@@ -230,7 +230,7 @@ export function DiscussionThread({
             placeholder="Share your thoughts on this movie… use [spoiler]text[/spoiler] to hide spoilers"
             rows={3}
             maxLength={MAX_CONTENT_LENGTH}
-            className="w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
+            className="w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-base text-neutral-100 focus:border-red-600 focus:outline-none"
           />
           <div className="flex items-center gap-3">
             <button
@@ -285,7 +285,7 @@ export function DiscussionThread({
                   rows={2}
                   maxLength={MAX_CONTENT_LENGTH}
                   placeholder="Write a reply…"
-                  className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
+                  className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1 text-base text-neutral-100 focus:border-red-600 focus:outline-none"
                 />
                 <button
                   onClick={() => submit(replyContent, post.id)}

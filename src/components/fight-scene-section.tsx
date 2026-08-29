@@ -185,7 +185,7 @@ function FightSceneForm({
         onChange={(e) => setUrl(e.target.value)}
         onBlur={suggestTitle}
         placeholder="Paste the YouTube link to this fight scene…"
-        className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
+        className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-base text-neutral-100 focus:border-red-600 focus:outline-none"
       />
       <p className="text-xs text-neutral-500">
         {isEditing
@@ -198,7 +198,7 @@ function FightSceneForm({
         onChange={(e) => setTitle(e.target.value)}
         maxLength={MAX_TITLE_LENGTH}
         placeholder={suggestingTitle ? "Suggesting a title from YouTube…" : 'Title, e.g. "Mirror Room Finale"'}
-        className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
+        className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-base text-neutral-100 focus:border-red-600 focus:outline-none"
       />
       <div>
         <p className="mb-1 text-xs text-neutral-500">Actors in this scene (select at least one)</p>
