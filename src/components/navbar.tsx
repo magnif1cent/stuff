@@ -6,6 +6,7 @@ import { SearchBar } from "@/components/search-bar";
 import { SignOutButton } from "@/components/sign-out-button";
 import { ListsNavMenu } from "@/components/lists-nav-menu";
 import { VerifyEmailBanner } from "@/components/verify-email-banner";
+import { MobileNavToggle } from "@/components/mobile-nav-toggle";
 
 export async function Navbar() {
   const session = await auth();
@@ -19,49 +20,51 @@ export async function Navbar() {
       {needsVerification && <VerifyEmailBanner />}
       <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-4 px-4 py-3">
         <Logo />
-        <div className="order-3 w-full sm:order-2 sm:w-auto sm:flex-1">
-          <SearchBar />
-        </div>
-        <nav className="order-2 flex w-full flex-wrap items-center justify-start gap-x-3 gap-y-2 sm:order-3 sm:ml-auto sm:w-auto sm:flex-nowrap sm:gap-x-4">
-          <Link href="/search" className="text-sm whitespace-nowrap text-neutral-300 hover:text-white">
-            Movies
-          </Link>
-          <Link href="/search/fight-scenes" className="text-sm whitespace-nowrap text-neutral-300 hover:text-white">
-            Fights
-          </Link>
-          <ListsNavMenu />
-          <Link href="/movies/submit" className="text-sm whitespace-nowrap text-neutral-300 hover:text-white">
-            + Add Movie
-          </Link>
-          {session?.user ? (
-            <>
-              {(session.user.role === "ADMIN" || session.user.role === "REVIEWER") && (
-                <Link href="/admin" className="text-sm whitespace-nowrap text-neutral-300 hover:text-white">
-                  Admin
+        <MobileNavToggle>
+          <div className="order-3 w-full sm:order-2 sm:w-auto sm:flex-1">
+            <SearchBar />
+          </div>
+          <nav className="order-2 flex w-full flex-wrap items-center justify-start gap-x-3 gap-y-2 sm:order-3 sm:ml-auto sm:w-auto sm:flex-nowrap sm:gap-x-4">
+            <Link href="/search" className="text-sm whitespace-nowrap text-neutral-300 hover:text-white">
+              Movies
+            </Link>
+            <Link href="/search/fight-scenes" className="text-sm whitespace-nowrap text-neutral-300 hover:text-white">
+              Fights
+            </Link>
+            <ListsNavMenu />
+            <Link href="/movies/submit" className="text-sm whitespace-nowrap text-neutral-300 hover:text-white">
+              + Add Movie
+            </Link>
+            {session?.user ? (
+              <>
+                {(session.user.role === "ADMIN" || session.user.role === "REVIEWER") && (
+                  <Link href="/admin" className="text-sm whitespace-nowrap text-neutral-300 hover:text-white">
+                    Admin
+                  </Link>
+                )}
+                <Link
+                  href={`/members/${session.user.username}`}
+                  className="text-sm whitespace-nowrap text-neutral-500 hover:text-white"
+                >
+                  {session.user.username}
                 </Link>
-              )}
-              <Link
-                href={`/members/${session.user.username}`}
-                className="text-sm whitespace-nowrap text-neutral-500 hover:text-white"
-              >
-                {session.user.username}
-              </Link>
-              <SignOutButton />
-            </>
-          ) : (
-            <>
-              <Link href="/login" className="text-sm whitespace-nowrap text-neutral-300 hover:text-white">
-                Sign in
-              </Link>
-              <Link
-                href="/register"
-                className="rounded-md bg-red-700 px-3 py-1.5 text-sm font-medium whitespace-nowrap text-white hover:bg-red-600"
-              >
-                Join
-              </Link>
-            </>
-          )}
-        </nav>
+                <SignOutButton />
+              </>
+            ) : (
+              <>
+                <Link href="/login" className="text-sm whitespace-nowrap text-neutral-300 hover:text-white">
+                  Sign in
+                </Link>
+                <Link
+                  href="/register"
+                  className="rounded-md bg-red-700 px-3 py-1.5 text-sm font-medium whitespace-nowrap text-white hover:bg-red-600"
+                >
+                  Join
+                </Link>
+              </>
+            )}
+          </nav>
+        </MobileNavToggle>
       </div>
     </header>
   );
