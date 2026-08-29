@@ -115,7 +115,7 @@ export function AddToListControl({
         {variant === "icon" ? <BookmarkIcon /> : "+ Add to list"}
       </button>
       {open && (
-        <div className="absolute right-0 z-10 mt-2 w-64 rounded-md border border-neutral-700 bg-neutral-900 p-3 shadow-xl">
+        <div className="absolute right-0 z-10 mt-2 w-64 max-w-[calc(100vw-2rem)] rounded-md border border-neutral-700 bg-neutral-900 p-3 shadow-xl">
           {error && <p className="mb-2 text-xs text-red-500">{error}</p>}
           <ul className="mb-3 flex max-h-48 flex-col gap-1 overflow-y-auto">
             {lists.map((list) => (
@@ -134,7 +134,7 @@ export function AddToListControl({
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               placeholder="New list…"
-              className="min-w-0 flex-1 rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1 text-xs text-neutral-100 focus:border-red-600 focus:outline-none"
+              className="min-w-0 flex-1 rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1 text-base text-neutral-100 focus:border-red-600 focus:outline-none"
             />
             <button
               type="submit"

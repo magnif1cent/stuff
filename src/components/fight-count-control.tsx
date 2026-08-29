@@ -96,7 +96,7 @@ export function FightCountControl({
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             disabled={saving}
-            className="w-20 rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
+            className="w-20 rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1 text-base text-neutral-100 focus:border-red-600 focus:outline-none"
           />
           <button
             onClick={handleSave}

@@ -185,7 +185,7 @@ function FightSceneForm({
         onChange={(e) => setUrl(e.target.value)}
         onBlur={suggestTitle}
         placeholder="Paste the YouTube link to this fight scene…"
-        className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
+        className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-base text-neutral-100 focus:border-red-600 focus:outline-none"
       />
       <p className="text-xs text-neutral-500">
         {isEditing
@@ -198,7 +198,7 @@ function FightSceneForm({
         onChange={(e) => setTitle(e.target.value)}
         maxLength={MAX_TITLE_LENGTH}
         placeholder={suggestingTitle ? "Suggesting a title from YouTube…" : 'Title, e.g. "Mirror Room Finale"'}
-        className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
+        className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-base text-neutral-100 focus:border-red-600 focus:outline-none"
       />
       <div>
         <p className="mb-1 text-xs text-neutral-500">Actors in this scene (select at least one)</p>
@@ -641,7 +641,7 @@ export function FightSceneSection({
                 ) : (
                   <span>Round {scene.roundNumber}</span>
                 )}
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-2.5 sm:gap-1.5">
                   <FavoriteButton
                     movieId={movieId}
                     fightSceneId={scene.id}
@@ -701,7 +701,7 @@ export function FightSceneSection({
                       value={startTimeDrafts[scene.id] ?? formatMmSs(scene.youtubeStartSeconds)}
                       onChange={(e) => setStartTimeDrafts((prev) => ({ ...prev, [scene.id]: e.target.value }))}
                       placeholder="mm:ss"
-                      className="w-14 border bg-transparent px-1 py-0.5 text-center focus:outline-none"
+                      className="w-16 border bg-transparent px-1 py-0.5 text-center text-base focus:outline-none"
                       style={{ borderColor: TICKET_INK, color: TICKET_INK }}
                     />
                     <button onClick={() => handleSetStartTime(scene.id)} className="underline hover:opacity-70">
@@ -819,7 +819,7 @@ export function FightSceneSection({
                     maxLength={MAX_NOTE_LENGTH}
                     placeholder="Editor's note (optional)"
                     rows={2}
-                    className="mt-2 w-full border bg-transparent px-2 py-1 text-xs focus:outline-none"
+                    className="mt-2 w-full border bg-transparent px-2 py-1 text-base focus:outline-none"
                     style={{ borderColor: TICKET_INK, color: TICKET_INK }}
                   />
                 </div>

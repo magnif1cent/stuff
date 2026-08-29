@@ -244,7 +244,7 @@ export function FunFactsSection({
               placeholder="Did you know…?"
               rows={2}
               maxLength={MAX_CONTENT_LENGTH}
-              className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
+              className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-base text-neutral-100 focus:border-red-600 focus:outline-none"
             />
             <div className="flex items-center gap-3">
               <button
@@ -287,7 +287,7 @@ export function FunFactsSection({
                         onChange={(e) => setEditContent(e.target.value)}
                         rows={2}
                         maxLength={MAX_CONTENT_LENGTH}
-                        className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
+                        className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1 text-base text-neutral-100 focus:border-red-600 focus:outline-none"
                       />
                       <div className="flex gap-2">
                         <button

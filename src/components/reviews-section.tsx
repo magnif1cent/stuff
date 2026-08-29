@@ -84,7 +84,7 @@ function MemberReviewCard({
             onChange={(e) => onEditContentChange(e.target.value)}
             rows={6}
             maxLength={MAX_MEMBER_LENGTH}
-            className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
+            className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1 text-base text-neutral-100 focus:border-red-600 focus:outline-none"
           />
           <div className="flex items-center gap-2">
             <button
@@ -332,7 +332,7 @@ export function ReviewsSection({
             rows={10}
             maxLength={MAX_ADMIN_LENGTH}
             placeholder="Write the admin review…"
-            className="w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
+            className="w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-base text-neutral-100 focus:border-red-600 focus:outline-none"
           />
           <div className="flex items-center gap-3">
             <button
@@ -379,7 +379,7 @@ export function ReviewsSection({
                   rows={6}
                   maxLength={MAX_MEMBER_LENGTH}
                   placeholder="Write your review…"
-                  className="w-full max-w-2xl rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
+                  className="w-full max-w-2xl rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-base text-neutral-100 focus:border-red-600 focus:outline-none"
                 />
                 <div className="flex items-center gap-3">
                   <button
