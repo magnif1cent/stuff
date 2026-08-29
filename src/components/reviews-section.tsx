@@ -43,6 +43,49 @@ function byNetScore(a: MemberReviewData, b: MemberReviewData) {
 // down further since these cards (w-72) are narrower than that feed's grid.
 const CARD_CLAMP_THRESHOLD = 160;
 
+function AdminReviewCard({
+  review,
+  canEdit,
+  onStartEdit,
+}: {
+  review: EditorialReviewData;
+  canEdit: boolean;
+  onStartEdit: () => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const isLong = review.content.length > CARD_CLAMP_THRESHOLD;
+
+  return (
+    <div className="w-72 shrink-0 rounded-md border border-amber-800/40 bg-amber-950/10 p-3">
+      <p className={`whitespace-pre-wrap text-sm text-neutral-300 ${!expanded && isLong ? "line-clamp-4" : ""}`}>
+        {review.content}
+      </p>
+      {isLong && (
+        <button
+          onClick={() => setExpanded((e) => !e)}
+          className="mt-1 text-xs font-medium text-red-500 hover:underline"
+        >
+          {expanded ? "Show less" : "Show more"}
+        </button>
+      )}
+
+      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-neutral-500">
+        <span className="rounded border border-amber-700 px-1.5 py-0.5 font-semibold text-amber-500">
+          Admin Review
+        </span>
+        <span>
+          {review.author.username} &middot; updated {formatDate(review.updatedAt)}
+        </span>
+        {canEdit && (
+          <button onClick={onStartEdit} className="text-neutral-400 hover:text-white">
+            Edit
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function MemberReviewCard({
   review,
   canEdit,
@@ -354,19 +397,7 @@ export function ReviewsSection({
           </div>
           {adminError && <p className="text-sm text-red-500">{adminError}</p>}
         </div>
-      ) : (
-        adminReview && (
-          <div className="mb-6 rounded-md border border-amber-800/40 bg-amber-950/10 p-4">
-            <p className="max-w-2xl whitespace-pre-wrap text-neutral-300">{adminReview.content}</p>
-            <p className="mt-3 text-xs text-neutral-500">
-              <span className="mr-2 rounded border border-amber-700 px-1.5 py-0.5 font-semibold text-amber-500">
-                Admin Review
-              </span>
-              Reviewed by {adminReview.author.username} &middot; updated {formatDate(adminReview.updatedAt)}
-            </p>
-          </div>
-        )
-      )}
+      ) : null}
 
       {signedIn ? (
         !hasReviewed && (
@@ -424,9 +455,19 @@ export function ReviewsSection({
 
       {memberError && <p className="mb-4 text-sm text-red-500">{memberError}</p>}
 
-      {memberReviews.length > 0 ? (
+      {(adminReview && !editingAdmin) || memberReviews.length > 0 ? (
         <>
           <div className="rail-scrollbar flex gap-4 overflow-x-auto pb-2">
+            {adminReview && !editingAdmin && (
+              <AdminReviewCard
+                review={adminReview}
+                canEdit={isAdmin}
+                onStartEdit={() => {
+                  setAdminDraft(adminReview.content);
+                  setEditingAdmin(true);
+                }}
+              />
+            )}
             {memberReviews.map((review) => (
               <MemberReviewCard
                 key={review.id}
