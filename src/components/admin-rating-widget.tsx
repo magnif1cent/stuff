@@ -73,14 +73,20 @@ export function AdminRatingWidget({
   }
 
   return (
-    <div className="rounded-md border border-amber-800/50 bg-amber-950/20 p-3">
-      <p className="mb-2 text-sm font-semibold text-amber-500">Editors&rsquo; Score (admin only)</p>
+    <div className="rounded-md border border-amber-800/50 bg-gradient-to-b from-amber-500/10 to-transparent bg-amber-950/20 p-3">
+      <p className="font-cond mb-2 flex items-center text-sm tracking-wide text-amber-500 uppercase">
+        <span className="mr-2 inline-block h-3.5 w-3.5 rounded-full border-2 border-amber-500" />
+        Editors&rsquo; Score
+        <span className="font-cond ml-2.5 rounded-sm border border-red-700 px-1.5 py-0.5 text-[10px] tracking-wide text-red-500 uppercase">
+          Admin Only
+        </span>
+      </p>
       <div className="mb-2 flex flex-wrap gap-1">
         {SCORES.map((value) => (
           <button
             key={value}
             onClick={() => setScore(value)}
-            className={`h-8 w-8 rounded text-sm font-medium transition ${
+            className={`font-cond h-8 w-8 rounded-sm text-sm font-medium transition ${
               score !== null && value <= score
                 ? "bg-amber-500 text-neutral-950"
                 : "bg-neutral-800 text-neutral-300 hover:bg-neutral-700"
@@ -94,13 +100,13 @@ export function AdminRatingWidget({
         value={note}
         onChange={(e) => setNote(e.target.value)}
         placeholder="Editor's note (optional)"
-        className="mb-2 w-full rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1 text-sm text-neutral-100 focus:border-amber-600 focus:outline-none"
+        className="mb-2 w-full rounded-sm border border-neutral-700 bg-neutral-900 px-2 py-1 text-sm text-neutral-100 focus:border-amber-600 focus:outline-none"
         rows={2}
       />
       <button
         onClick={handleSave}
         disabled={saving || score === null}
-        className="rounded-md bg-amber-600 px-3 py-1.5 text-sm font-medium text-neutral-950 hover:bg-amber-500 disabled:opacity-50"
+        className="rounded-sm bg-amber-600 px-3 py-1.5 text-sm font-medium text-neutral-950 hover:bg-amber-500 disabled:opacity-50"
       >
         {saving ? "Saving…" : "Save editors' rating"}
       </button>
@@ -110,13 +116,17 @@ export function AdminRatingWidget({
           rows only appear once an overall score has been picked. */}
       {score !== null && (
         <>
-          <p className="mt-3 mb-1 text-xs font-semibold text-amber-500">Rate by category (optional)</p>
+          <p className="font-cond mt-3 mb-1 text-xs tracking-wide text-amber-500 uppercase">
+            Rate by category <span className="normal-case">(optional)</span>
+          </p>
           <div className="flex flex-col gap-1.5">
             {RATING_CATEGORIES.map(({ key, label }) => {
               const categoryScore = categoryScores[key] ?? null;
               return (
                 <div key={key} className="flex items-center gap-3">
-                  <p className="w-32 shrink-0 text-xs text-amber-200/70">{label}</p>
+                  <p className="font-cond w-32 shrink-0 text-xs tracking-wide text-amber-200/70 uppercase">
+                    {label}
+                  </p>
                   <StarRatingPicker
                     value={categoryScore}
                     disabled={savingCategory === key}

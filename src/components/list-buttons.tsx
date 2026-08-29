@@ -46,20 +46,20 @@ export function ListButtons({
       <div className="flex gap-2">
         <button
           onClick={() => toggle("FAVORITE")}
-          className={`rounded-md border px-3 py-1.5 text-sm font-medium transition ${
+          className={`font-cond rounded-sm border px-3 py-1.5 text-sm tracking-wide uppercase transition ${
             favorite
               ? "border-red-600 bg-red-700 text-white"
-              : "border-neutral-700 text-neutral-200 hover:bg-neutral-800"
+              : "border-neutral-700 text-neutral-300 hover:bg-neutral-800"
           }`}
         >
           {favorite ? "♥ Favorited" : "♡ Favorite"}
         </button>
         <button
           onClick={() => toggle("WATCHLIST")}
-          className={`rounded-md border px-3 py-1.5 text-sm font-medium transition ${
+          className={`font-cond rounded-sm border px-3 py-1.5 text-sm tracking-wide uppercase transition ${
             watchlist
               ? "border-blue-600 bg-blue-700 text-white"
-              : "border-neutral-700 text-neutral-200 hover:bg-neutral-800"
+              : "border-neutral-700 text-neutral-300 hover:bg-neutral-800"
           }`}
         >
           {watchlist ? "✓ On Watchlist" : "+ Watchlist"}

@@ -80,17 +80,17 @@ export function RatingWidget({
   }
 
   return (
-    <div>
-      <p className="mb-1 text-sm text-neutral-400">Your rating</p>
+    <div className="rounded-md border border-neutral-800 bg-neutral-900 p-3">
+      <p className="font-cond mb-1 text-sm tracking-wide text-neutral-400 uppercase">Your rating</p>
       <div className="flex flex-wrap gap-1">
         {SCORES.map((value) => (
           <button
             key={value}
             disabled={saving}
             onClick={() => handleRate(value)}
-            className={`h-8 w-8 rounded text-sm font-medium transition disabled:opacity-50 ${
+            className={`font-cond h-8 w-8 rounded-sm text-sm font-medium transition disabled:opacity-50 ${
               score !== null && value <= score
-                ? "bg-yellow-500 text-neutral-950"
+                ? "bg-amber-500 text-neutral-950"
                 : "bg-neutral-800 text-neutral-300 hover:bg-neutral-700"
             }`}
           >
@@ -105,13 +105,17 @@ export function RatingWidget({
           the one thing most visitors come to do. */}
       {score !== null && (
         <>
-          <p className="mt-4 mb-1 text-sm text-neutral-400">Rate by category (optional)</p>
+          <p className="font-cond mt-4 mb-1 text-sm tracking-wide text-neutral-400 uppercase">
+            Rate by category <span className="normal-case">(optional)</span>
+          </p>
           <div className="flex flex-col gap-1.5">
             {RATING_CATEGORIES.map(({ key, label }) => {
               const categoryScore = categoryScores[key] ?? null;
               return (
                 <div key={key} className="flex items-center gap-3">
-                  <p className="w-32 shrink-0 text-xs text-neutral-500">{label}</p>
+                  <p className="font-cond w-32 shrink-0 text-xs tracking-wide text-neutral-500 uppercase">
+                    {label}
+                  </p>
                   <StarRatingPicker
                     value={categoryScore}
                     disabled={savingCategory === key}

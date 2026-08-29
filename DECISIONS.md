@@ -1060,6 +1060,140 @@ catalog size and traffic. This is the structural fix.
 
 ## Feature Decisions
 
+### Movie detail hero redesigned poster-forward, away from the generic media-app look
+**PR #TBD.** Observation that the movie detail page's hero (full-bleed blurred backdrop,
+poster overlapping it, cast as a row of circular headshots) reads as generic
+streaming/media-server chrome (Plex, Jellyfin, etc.) rather than something specific to
+this site. Went through many small iterations as a design mockup before landing here;
+this entry covers the final direction, not every intermediate step tried.
+
+- **Three new display faces, used narrowly, not site-wide.** Anton (movie title),
+  Barlow Condensed (byline, labels, credit-block text), and Source Serif 4 (body copy,
+  tagline). All three are new theme tokens (`font-display`, `font-cond`,
+  `font-editorial`), deliberately not applied to the existing `font-serif` utility —
+  an earlier version of this change redefined `font-serif` itself to Source Serif 4,
+  on the reasoning that it already fell back to the browser's generic serif stack
+  everywhere it was used. That undersold the actual blast radius: `font-serif` is used
+  in ~20 files sitewide, including the navbar wordmark in `components/logo.tsx` —
+  redefining the shared token would have silently changed the site's own logo
+  typeface as a side effect of a single-page redesign. Caught before merging;
+  `font-editorial` is its own token instead, and `font-serif` is untouched.
+- **Backdrop kept, poster no longer overlaps it.** Early passes tried removing the
+  backdrop banner entirely, then muting it to a desktop-only wash, then restoring it at
+  full strength with the poster card breaking over its bottom edge (matching what the
+  real page already does via a negative top margin). Landed on: keep the backdrop
+  banner as-is, but let the poster sit in normal flow below it rather than overlapping —
+  simpler, and not dependent on hand-tuning an overlap amount against the backdrop's
+  height every time either changes. The trade-off is losing the "poster breaking the
+  frame" depth effect the overlap gave it.
+- **Community/Editors' scores no longer both amber** — an intermediate pass unified
+  them to the same color, then needed a second signal (a bordered box) to tell them
+  apart again once color stopped doing that job, then simplified to just giving each
+  its own color instead of adding a shape difference: Community Score stays amber,
+  Editors' Score is off-white (parchment, the page's default text color) — a quieter,
+  "printed page" number next to Community's warmer, crowd-sourced amber.
+- **Subcategory breakdown (Fight Choreography/Story/Acting) widened and enlarged** —
+  wider label letter-spacing and a bigger, bolder value than before, so the breakdown
+  doesn't read as an afterthought squeezed under the two headline scores. Editors'
+  per-category values were dropped from this display entirely (a later, separate
+  request) — admins can still submit them via `AdminRatingWidget`, and the aggregate
+  Editors' Score above is unaffected; only this breakdown row is community-only now.
+  Its value color was also brought in line with the headline Community Score plaque
+  (`amber-500`) — it had been left at the original `yellow-500` through several
+  earlier passes, which put two different colors on "community rating" on the same
+  page for no reason.
+- **Cast stays a horizontally-scrolling rail, not a text billing line** — explicitly
+  requested: a "STARRING Name · Name · Name" poster-style credit line was tried first,
+  but caps out around 4-5 names before it stops reading as poster copy, and this site's
+  cast lists can run longer than that. Portraits changed from circular to small framed
+  squares (matching the poster's own mat/frame treatment), but the name/character-name
+  typography was tried in Barlow Condensed uppercase first and then reverted back to
+  plain sans-serif matching `MovieCard` — Cast sits on the same page as the
+  `MovieRail`/`MovieCard`-based "You Might Also Like" rail, and two different card
+  typographic systems on one page read as an inconsistency, not an intentional
+  contrast. The framed-photo shape alone is enough of a nod to the poster treatment
+  without repeating its type as well.
+- **`RatingWidget`/`AdminRatingWidget` got a light typography pass after all** — an
+  earlier draft of this decision left them alone entirely, on the reasoning that
+  restyling component internals was a bigger follow-up. Revisited once the hero's new
+  identity (condensed-caps labels, amber accents) sat directly above these two
+  untouched, plain-Tailwind widgets — a sharper seam than the Cast/`MovieRail` one,
+  since these two sit immediately adjacent rather than a full section apart. Unlike
+  `MovieCard`, both components are used only on this one page (checked before
+  touching them), so there was no sitewide blast radius to worry about. Scope stayed
+  narrow: `font-cond` uppercase on labels, `rounded` → `rounded-sm` on the number
+  grids, and `AdminRatingWidget`'s number-grid fill unified from `yellow-500` to
+  `amber-500` (the same recurring inconsistency fixed elsewhere in this PR) — no
+  layout or logic changes, and initially no attempt to port the mockup's heavier
+  decorative devices (ring mark, bordered "certified" panel) into working, untested
+  components. Revisited later in this PR (see the mockup-vs-preview comparison entry
+  below) once it was decided that gap mattered enough to close after all: the ring
+  mark, a separate "Admin Only" tag (red-accented, distinct from the amber ring mark's
+  "this is editorial content" meaning), and a subtle amber gradient wash on the panel
+  background were all added to the real `AdminRatingWidget`.
+- **A follow-up consistency pass turned up four smaller things, fixed after the
+  rating-widget pass above rather than in the same commit:**
+  - Restyling `RatingWidget`/`AdminRatingWidget` removed the "plain UI" buffer that
+    used to sit between the new hero and the rest of the page, which exposed
+    `ListButtons` (Favorite/Watchlist) and `AddToListControl` ("+ Add to list") as the
+    next mismatched thing directly above them. `ListButtons` is movie-page-only, so it
+    got the same `font-cond` uppercase / `rounded-sm` treatment right away.
+    `AddToListControl` is shared with fight-scene cards (`fight-scene-section.tsx`,
+    `fight-scene-result-card.tsx`), so it was initially left alone on the same
+    "checked the blast radius first" reasoning as `MovieCard`. Revisited once a
+    side-by-side mockup-vs-preview comparison made the one plain button in an
+    otherwise-uppercase row look like an oversight rather than a choice — decided the
+    inconsistency was worse than the ripple, and both fight-scene call sites
+    (`fight-scene-section.tsx`, `fight-scene-result-card.tsx`) use `variant="icon"`
+    anyway, so they only pick up the `rounded-sm` corner change, not any text/case
+    change. `RecommendationControl`'s button ("+ Recommend this movie" /
+    "✓ Recommended by you") got the same treatment at the same time, since it was the
+    other shared-looking button flagged in that comparison — it's movie-page-only, so
+    no ripple concern there. `PosterOverrideControl`'s "Replace poster"/"Upload custom
+    poster" and "Remove" were caught the same way a round later — the one control
+    directly under the poster mat that never got revisited after the initial
+    "leave these alone" list, still plain `rounded-md` and mixed-case next to an
+    otherwise fully-restyled poster/action-button area. Also movie-page-only, so no
+    ripple concern. Sitewide consistency for the rest of `AddToListControl`'s callers
+    (and anything else still plain elsewhere) is intentionally deferred to a separate
+    build, not part of this PR.
+  - The Fight Count link's hover state was `amber-300`, the only place on the page
+    using that shade (everywhere else is `amber-500`) — a one-off, not a choice.
+  - The top byline (runtime/director/certification/fight count) was amber, but every
+    other small-caps label on the page (Community Score, subcategory labels,
+    "Details," "Your rating") is neutral — amber was otherwise reserved for
+    editorial/admin content (Editors' Score, the Admin-only panel, the Admin Review
+    badge). Switched the byline to neutral so amber keeps one consistent meaning
+    instead of doing double duty as both a semantic flag and a decorative accent.
+  - The certification badge was still plain `rounded` (unchanged from before this
+    PR) next to the poster mat and rating number-grids at `rounded-sm` — close enough
+    to read as an oversight. Unified to `rounded-sm`, along with `AdminRatingWidget`'s
+    note textarea and Save button, which had picked up `rounded-sm` on their number
+    grid but not on themselves in the same earlier pass.
+- **Third consistency pass, from a fresh mockup-vs-preview comparison.**
+  - The Details card's `<dt>` labels (Studio, Country, Language, Box Office,
+    Collection) were plain `text-neutral-500`, missing the `font-cond
+    uppercase tracking-wide` treatment every other label on the page (Details
+    heading itself, byline, Community Score suffix, "Your rating") already had —
+    an oversight, not a choice. Added to all five.
+  - `RatingWidget` ("Your rating") had no wrapping card at all, unlike
+    `AdminRatingWidget` right next to it — a real gap next to the mockup's
+    `.rating-console`, not a deliberate contrast with the admin panel's
+    `.editors-panel` box. Added the matching neutral
+    `rounded-md border border-neutral-800 bg-neutral-900 p-3` frame (no amber
+    wash — that's reserved for the admin/editorial panel).
+  - Checked whether the backdrop band is supposed to be viewport-gated on
+    mobile: re-read the mockup's final CSS directly rather than relying on
+    memory of earlier iterations. An early mockup pass did hide the backdrop
+    below 760px, but that version was explicitly rejected in favor of "full
+    backdrop, prod-style positioning... full strength, always visible"; the
+    final mockup's only mobile `@media` rule (`max-width: 760px`) touches the
+    hero grid, poster size, and title size, not `.backdrop-band` — it renders
+    unconditionally at every width. The real page's backdrop `<div>` already
+    matches that (no responsive `hidden`/`sm:block` gating), so no code change
+    made here; flagged back rather than adding suppression that would
+    contradict the current source-of-truth mockup and the earlier rejection.
+
 ### Leaderboard reachable from a "Lists" nav hover submenu
 **PR #TBD.** `/leaderboard` was previously only reachable by first landing
 on `/lists` (or vice versa, via their existing cross-links) — no presence
