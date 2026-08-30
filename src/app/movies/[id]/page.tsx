@@ -331,6 +331,15 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
   const hasCollection = !!(movie.collectionName && collectionSiblings.length > 0);
   const hasDetails = hasBasicDetails || hasCollection;
 
+  // Box Office is hidden on mobile (see DECISIONS.md), so a movie with
+  // only revenue set -- no studio/country/language -- would otherwise
+  // show an empty Details tab/card there even though hasBasicDetails is
+  // true. These mirror hasBasicDetails/hasDetails but exclude revenue,
+  // for gating the mobile-only card below; desktop keeps using the
+  // originals since it always shows Box Office.
+  const hasMobileBasicDetails = !!(movie.studio || movie.country || movie.originalLanguage);
+  const hasMobileDetails = hasMobileBasicDetails || hasCollection;
+
   // Shared by desktop's single boxed card (both fragments composed
   // together in one <dl>) and mobile's single tabbed card (each fragment
   // its own tab, only rendered as an actual tab bar when both exist --
@@ -366,8 +375,8 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
       )}
       {!!movie.revenue && (
         <>
-          <dt className="font-cond text-neutral-500 uppercase tracking-wide">Box Office</dt>
-          <dd className="text-right text-neutral-300">
+          <dt className="font-cond hidden text-neutral-500 uppercase tracking-wide sm:block">Box Office</dt>
+          <dd className="hidden text-right text-neutral-300 sm:block">
             {new Intl.NumberFormat("en-US", {
               style: "currency",
               currency: "USD",
@@ -709,11 +718,11 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
 
           <p className="font-editorial mt-4 hidden max-w-2xl text-neutral-300 sm:block">{movie.overview}</p>
 
-          {hasDetails && (
+          {hasMobileDetails && (
             <div className="mt-4 rounded-md bg-neutral-900 p-3 text-sm sm:hidden">
-              {hasBasicDetails && hasCollection ? (
+              {hasMobileBasicDetails && hasCollection ? (
                 <MovieDetailsTabs basicDetailsRows={basicDetailsRows} collectionContent={collectionPills} />
-              ) : hasBasicDetails ? (
+              ) : hasMobileBasicDetails ? (
                 <dl className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-1.5">{basicDetailsRows}</dl>
               ) : (
                 <>

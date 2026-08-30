@@ -3685,12 +3685,13 @@ comparison and more obvious once live on a real device.
   component to fit; the active-tab `border-b-2 border-red-600` treatment
   matches `admin-import-search.tsx`'s existing tab styling rather than
   inventing a new one.
-- **Only an actual tab bar when both `hasBasicDetails` and `hasCollection`
-  are true.** With just one of the two, the page renders that section's
-  content directly inside the same card chrome, no tabs — the "common
-  case pays no interaction cost at all" principle from the swipe-strip
-  entry still holds, just realized as "no tab bar" instead of "nothing to
-  swipe to."
+- **Only an actual tab bar when both sections are present.** With just one
+  of the two, the page renders that section's content directly inside the
+  same card chrome, no tabs — the "common case pays no interaction cost at
+  all" principle from the swipe-strip entry still holds, just realized as
+  "no tab bar" instead of "nothing to swipe to." (Originally gated on
+  `hasBasicDetails && hasCollection`; see the Box Office bullet below for
+  why that became `hasMobileBasicDetails && hasCollection` instead.)
 - **Collection's mobile content changed from inline comma-separated text
   to individual clickable pills** — a new `collectionPills` fragment,
   alongside the existing `basicDetailsRows`/`collectionContent` split, not
@@ -3701,6 +3702,24 @@ comparison and more obvious once live on a real device.
   visual consistency with the other pill row on this page, while the
   collection-name pill gets a red-accented variant so it reads as the
   "parent" entry point rather than another sibling.
+- **Box Office hidden from the Details tab/card on mobile, kept on
+  desktop.** Requested directly, no mockup — the field is the least
+  frequently populated of the four (TMDB revenue data is sparse,
+  especially for older/foreign titles) and its formatted currency string
+  is also the widest value in the `dl`, so it bought the least while
+  costing the most width in a narrow column. `basicDetailsRows` itself is
+  unchanged and still shared with desktop (its Box Office `dt`/`dd` just
+  gained `hidden sm:block`, the same pattern used elsewhere in this file
+  for a mobile/desktop split within one shared fragment) — the field is
+  still there in the DOM either way, just not painted below `sm:`. That
+  introduced a gap `hasBasicDetails` doesn't cover: a movie with revenue
+  but no studio/country/language has `hasBasicDetails` true even though
+  nothing in `basicDetailsRows` is actually visible on mobile, which would
+  render an empty Details tab or an empty-but-chromed card. Added
+  `hasMobileBasicDetails`/`hasMobileDetails` (same definitions minus
+  `movie.revenue`) to gate the mobile card specifically, leaving
+  `hasBasicDetails`/`hasDetails` untouched for desktop's gating, which
+  still needs Box Office counted.
 
 ## Deferred & Backlog
 
