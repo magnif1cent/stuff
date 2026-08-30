@@ -41,7 +41,9 @@ import { FightSceneSection } from "@/components/fight-scene-section";
 import { FunFactsSection } from "@/components/fun-facts-section";
 import { ReviewsSection } from "@/components/reviews-section";
 import { PosterOverrideControl } from "@/components/poster-override-control";
-import { RecommendationControl } from "@/components/recommendation-control";
+import { MovieOverviewSnippet } from "@/components/movie-overview-snippet";
+import { MovieDetailsTabs } from "@/components/movie-details-tabs";
+import { RecommendedBadges } from "@/components/recommended-badge";
 import { FightCountControl } from "@/components/fight-count-control";
 
 const getMovie = cache((id: string) =>
@@ -284,83 +286,160 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
 
   const backdropUrl = tmdbImageUrl(movie.backdropPath, "w1280");
   const posterUrl = resolvePosterUrl(movie, "w342");
+  const recommendedByMe =
+    session?.user?.role === "ADMIN" && movieRecommenders.some((r) => r.id === session.user.id);
+
+  // Shared by both the plain (non-admin) render and the admin one, which
+  // wraps this same markup in PosterOverrideControl instead of duplicating
+  // it -- keeps the "mat" frame in exactly one place.
+  const posterMat = (
+    <div className="relative rounded-sm border border-neutral-600 bg-neutral-800 p-2 shadow-xl">
+      {/* corner accents, so the mat reads as a mounted print rather
+          than just padding around the poster */}
+      <span className="absolute top-1.5 left-1.5 h-1.5 w-1.5 rounded-full bg-neutral-500" />
+      <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-neutral-500" />
+      <span className="absolute bottom-1.5 left-1.5 h-1.5 w-1.5 rounded-full bg-neutral-500" />
+      <span className="absolute right-1.5 bottom-1.5 h-1.5 w-1.5 rounded-full bg-neutral-500" />
+      <div className="relative aspect-2/3 overflow-hidden border border-neutral-700 bg-neutral-950">
+        {posterUrl ? (
+          <Image
+            src={posterUrl}
+            alt={movie.title}
+            fill
+            unoptimized={isTmdbUrl(posterUrl)}
+            sizes="(min-width: 640px) 224px, 112px"
+            className="object-cover"
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center px-2 text-center text-xs text-neutral-500">
+            {movie.title}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
   const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : null;
   const isFavorite = myListEntries.some((e) => e.listType === "FAVORITE");
   const isOnWatchlist = myListEntries.some((e) => e.listType === "WATCHLIST");
 
-  // Rendered twice below: alongside the poster on desktop (sm:flex-row), but
-  // after the overview on mobile -- on a single-column layout it would
-  // otherwise land between the poster and the title (same DOM order as the
-  // sidebar), showing Studio/Country/etc. before you've even seen what movie
-  // you're looking at.
-  const movieDetailsCard = (movie.studio ||
-    movie.country ||
-    movie.originalLanguage ||
-    !!movie.revenue ||
-    (movie.collectionName && collectionSiblings.length > 0)) && (
-    <div className="rounded-md border border-neutral-800 bg-neutral-900 p-3">
-      <h3 className="font-cond mb-2 text-xs tracking-widest text-neutral-500 uppercase">Details</h3>
-      <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-sm">
-        {movie.studio && (
-          <>
-            <dt className="font-cond text-neutral-500 uppercase tracking-wide">Studio</dt>
-            <dd className="text-right text-neutral-300">{movie.studio}</dd>
-          </>
-        )}
-        {movie.country && (
-          <>
-            <dt className="font-cond text-neutral-500 uppercase tracking-wide">Country</dt>
-            <dd className="text-right text-neutral-300">{movie.country}</dd>
-          </>
-        )}
-        {movie.originalLanguage && (
-          <>
-            <dt className="font-cond text-neutral-500 uppercase tracking-wide">Language</dt>
-            <dd className="text-right text-neutral-300">{movie.originalLanguage}</dd>
-          </>
-        )}
-        {!!movie.revenue && (
-          <>
-            <dt className="font-cond text-neutral-500 uppercase tracking-wide">Box Office</dt>
-            <dd className="text-right text-neutral-300">
-              {new Intl.NumberFormat("en-US", {
-                style: "currency",
-                currency: "USD",
-                maximumFractionDigits: 0,
-              }).format(movie.revenue)}
-            </dd>
-          </>
-        )}
-        {movie.collectionName && collectionSiblings.length > 0 && (
-          <>
-            <dt className="font-cond text-neutral-500 uppercase tracking-wide">Collection</dt>
-            <dd>
-              <Link
-                href={`/collections/${movie.collectionTmdbId}`}
-                className="text-red-500 underline decoration-red-800 underline-offset-2 hover:text-red-400"
-              >
-                {movie.collectionName}
-              </Link>
-              {" — "}
-              {collectionSiblings.map((sibling, i) => (
-                <span key={sibling.id}>
-                  <Link
-                    href={`/movies/${sibling.id}`}
-                    className="text-red-500 underline decoration-red-800 underline-offset-2 hover:text-red-400"
-                  >
-                    {sibling.title}
-                  </Link>
-                  {i < collectionSiblings.length - 1 ? ", " : ""}
-                </span>
-              ))}
-            </dd>
-          </>
-        )}
-      </dl>
+  // Rendered twice below: after the overview on mobile (its original spot --
+  // tried living beside the poster instead, in two different forms, but
+  // neither worked out; see DECISIONS.md), alongside the poster in the
+  // desktop sidebar, unchanged.
+  const hasBasicDetails = !!(movie.studio || movie.country || movie.originalLanguage || movie.revenue);
+  const hasCollection = !!(movie.collectionName && collectionSiblings.length > 0);
+  const hasDetails = hasBasicDetails || hasCollection;
+
+  // Box Office is hidden on mobile (see DECISIONS.md), so a movie with
+  // only revenue set -- no studio/country/language -- would otherwise
+  // show an empty Details tab/card there even though hasBasicDetails is
+  // true. These mirror hasBasicDetails/hasDetails but exclude revenue,
+  // for gating the mobile-only card below; desktop keeps using the
+  // originals since it always shows Box Office.
+  const hasMobileBasicDetails = !!(movie.studio || movie.country || movie.originalLanguage);
+  const hasMobileDetails = hasMobileBasicDetails || hasCollection;
+
+  // Shared by desktop's single boxed card (both fragments composed
+  // together in one <dl>) and mobile's single tabbed card (each fragment
+  // its own tab, only rendered as an actual tab bar when both exist --
+  // a movie with no Collection just shows basicDetailsRows directly, the
+  // common case, no tab bar with nothing to switch between). Split into
+  // two pieces rather than one, since the mobile tabs render them
+  // separately; basicDetailsRows is dt/dd pairs for a grid dl either way,
+  // but collectionContent is just the link content (not wrapped in dt/dd)
+  // so mobile's Collection tab can use the pill-format collectionPills
+  // below instead of squeezing everything into the same side-by-side grid
+  // -- that grid is what made Collection's variable-length sibling list
+  // wrap awkwardly in a narrow column in an earlier pass at this same
+  // problem.
+  const basicDetailsRows = (
+    <>
+      {movie.studio && (
+        <>
+          <dt className="font-cond text-neutral-500 uppercase tracking-wide">Studio</dt>
+          <dd className="text-right text-neutral-300">{movie.studio}</dd>
+        </>
+      )}
+      {movie.country && (
+        <>
+          <dt className="font-cond text-neutral-500 uppercase tracking-wide">Country</dt>
+          <dd className="text-right text-neutral-300">{movie.country}</dd>
+        </>
+      )}
+      {movie.originalLanguage && (
+        <>
+          <dt className="font-cond text-neutral-500 uppercase tracking-wide">Language</dt>
+          <dd className="text-right text-neutral-300">{movie.originalLanguage}</dd>
+        </>
+      )}
+      {!!movie.revenue && (
+        <>
+          <dt className="font-cond hidden text-neutral-500 uppercase tracking-wide sm:block">Box Office</dt>
+          <dd className="hidden text-right text-neutral-300 sm:block">
+            {new Intl.NumberFormat("en-US", {
+              style: "currency",
+              currency: "USD",
+              maximumFractionDigits: 0,
+            }).format(movie.revenue)}
+          </dd>
+        </>
+      )}
+    </>
+  );
+
+  const collectionContent = hasCollection && (
+    <>
+      <Link
+        href={`/collections/${movie.collectionTmdbId}`}
+        className="text-red-500 underline decoration-red-800 underline-offset-2 hover:text-red-400"
+      >
+        {movie.collectionName}
+      </Link>
+      {" — "}
+      {collectionSiblings.map((sibling, i) => (
+        <span key={sibling.id}>
+          <Link
+            href={`/movies/${sibling.id}`}
+            className="text-red-500 underline decoration-red-800 underline-offset-2 hover:text-red-400"
+          >
+            {sibling.title}
+          </Link>
+          {i < collectionSiblings.length - 1 ? ", " : ""}
+        </span>
+      ))}
+    </>
+  );
+
+  // Mobile-only alternative to collectionContent's inline comma-separated
+  // text, for the Collection tab/card: sibling titles as their own
+  // tappable pills (same rounded-full pill styling as the genre pills
+  // below) rather than a run-on sentence, since a narrow column wraps a
+  // long sibling list awkwardly as text. The collection name gets the same
+  // pill treatment but in the red accent already used for its link
+  // elsewhere, so it reads as the "parent" entry rather than another
+  // sibling. Desktop's boxed Details card keeps collectionContent as-is.
+  const collectionPills = hasCollection && (
+    <div className="flex flex-wrap gap-1.5">
+      <Link
+        href={`/collections/${movie.collectionTmdbId}`}
+        className="rounded-full border border-red-800 bg-red-950/40 px-2 py-0.5 text-xs text-red-400 hover:border-red-600 hover:text-red-300"
+      >
+        {movie.collectionName}
+      </Link>
+      {collectionSiblings.map((sibling) => (
+        <Link
+          key={sibling.id}
+          href={`/movies/${sibling.id}`}
+          className="rounded-full border border-neutral-700 px-2 py-0.5 text-xs text-neutral-300 underline decoration-neutral-600 underline-offset-2 hover:border-neutral-500 hover:text-neutral-100"
+        >
+          {sibling.title}
+        </Link>
+      ))}
     </div>
   );
 
-  // Rendered twice below, same reasoning as movieDetailsCard above: in
+  // Rendered twice below, same reasoning as basicDetailsRows/collectionContent above: in
   // source order the title sits inside the content column, after the
   // poster -- fine on desktop's sm:flex-row layout, but on mobile's single
   // flex-col column that puts the backdrop and poster ahead of the movie's
@@ -502,49 +581,65 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 pt-8 sm:flex-row">
         <p className={`${titleClassName} sm:hidden`}>{titleText}</p>
 
-        <div className="w-40 shrink-0 sm:w-56">
-          <div className="relative rounded-sm border border-neutral-600 bg-neutral-800 p-2 shadow-xl">
-            {/* corner accents, so the mat reads as a mounted print rather
-                than just padding around the poster */}
-            <span className="absolute top-1.5 left-1.5 h-1.5 w-1.5 rounded-full bg-neutral-500" />
-            <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-neutral-500" />
-            <span className="absolute bottom-1.5 left-1.5 h-1.5 w-1.5 rounded-full bg-neutral-500" />
-            <span className="absolute right-1.5 bottom-1.5 h-1.5 w-1.5 rounded-full bg-neutral-500" />
-            <div className="relative aspect-2/3 overflow-hidden border border-neutral-700 bg-neutral-950">
-              {posterUrl ? (
-                <Image
-                  src={posterUrl}
-                  alt={movie.title}
-                  fill
-                  unoptimized={isTmdbUrl(posterUrl)}
-                  sizes="224px"
-                  className="object-cover"
-                />
-              ) : (
-                <div className="flex h-full items-center justify-center px-2 text-center text-xs text-neutral-500">
-                  {movie.title}
-                </div>
-              )}
-            </div>
+        {/* Mobile: poster + a clamped movie.overview snippet sit side by
+            side on the first line of a *wrapping* flex row -- byline moved
+            back to its original spot in the content column, unconditional
+            on every breakpoint (see DECISIONS.md; overview is intentionally
+            mobile-only here now, not duplicated in the content column
+            below). PosterOverrideControl (admin-only) now wraps the poster
+            itself rather than sitting below it as its own row -- the whole
+            poster is the tap target for a Replace/Remove menu, so it costs
+            no extra layout height at all, unlike the old always-visible
+            button row it replaced (see DECISIONS.md). Desktop: sm:block
+            turns the whole thing back into a plain stacked column, so it's
+            the same sidebar as before -- poster, Details underneath, in
+            source order. */}
+        <div className="flex flex-wrap gap-4 sm:block sm:w-56 sm:shrink-0">
+          <div className="w-28 shrink-0 sm:w-full">
+            {session?.user?.role === "ADMIN" ? (
+              <PosterOverrideControl
+                key={movie.id}
+                movieId={movie.id}
+                hasOverride={!!movie.posterOverrideUrl}
+                recommendedByMe={recommendedByMe}
+              >
+                {posterMat}
+              </PosterOverrideControl>
+            ) : (
+              posterMat
+            )}
           </div>
-          {session?.user?.role === "ADMIN" && (
-            <PosterOverrideControl movieId={movie.id} hasOverride={!!movie.posterOverrideUrl} />
-          )}
 
-          {movieDetailsCard && <div className="mt-4 hidden sm:block">{movieDetailsCard}</div>}
+          {/* Collapsed state hard-clips at the poster's own height (the
+              row's default align-items: stretch, plus overflow-hidden
+              inside MovieOverviewSnippet) rather than guessing a fixed
+              pixel cap -- self-adjusting if the poster's size ever
+              changes. Expanding removes that clip so the full synopsis can
+              render, growing the row's height as needed; the poster's own
+              height is unaffected since flex stretch doesn't shrink a
+              sibling that already has an intrinsic (aspect-ratio-locked)
+              size. */}
+          {movie.overview && <MovieOverviewSnippet key={movie.id} overview={movie.overview} />}
+
+          {hasDetails && (
+            <div className="mt-4 hidden rounded-md border border-neutral-800 bg-neutral-900 p-3 sm:block">
+              <h3 className="font-cond mb-2 text-xs tracking-widest text-neutral-500 uppercase">Details</h3>
+              <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-sm">
+                {basicDetailsRows}
+                {hasCollection && (
+                  <>
+                    <dt className="font-cond text-neutral-500 uppercase tracking-wide">Collection</dt>
+                    <dd>{collectionContent}</dd>
+                  </>
+                )}
+              </dl>
+            </div>
+          )}
         </div>
 
         <div className="flex-1 pt-2">
-          <div className="mb-3">
-            <RecommendationControl
-              movieId={movie.id}
-              initialRecommenders={movieRecommenders}
-              currentAdminId={session?.user?.role === "ADMIN" ? session.user.id : null}
-              isAdmin={session?.user?.role === "ADMIN"}
-            />
-          </div>
-
           <div className="font-cond flex flex-wrap items-center gap-x-3 gap-y-1 text-sm tracking-wide text-neutral-400 uppercase">
+            <RecommendedBadges recommenders={movieRecommenders} size="sm" />
             {movie.runtime && <span>{movie.runtime} min</span>}
             {movie.director && <span>Dir. {movie.director}</span>}
             {movie.certification && (
@@ -566,7 +661,9 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
           <h1 className={`hidden ${titleClassName} sm:block`}>{titleText}</h1>
 
           {movie.tagline && (
-            <p className="font-editorial mt-2 text-base text-neutral-400 italic">&ldquo;{movie.tagline}&rdquo;</p>
+            <p className="font-editorial mt-2 hidden text-base text-neutral-400 italic sm:block">
+              &ldquo;{movie.tagline}&rdquo;
+            </p>
           )}
 
           {movie.genres.length > 0 && (
@@ -619,9 +716,22 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
             </div>
           )}
 
-          <p className="font-editorial mt-4 max-w-2xl text-neutral-300">{movie.overview}</p>
+          <p className="font-editorial mt-4 hidden max-w-2xl text-neutral-300 sm:block">{movie.overview}</p>
 
-          {movieDetailsCard && <div className="mt-4 max-w-2xl sm:hidden">{movieDetailsCard}</div>}
+          {hasMobileDetails && (
+            <div className="mt-4 rounded-md bg-neutral-900 p-3 text-sm sm:hidden">
+              {hasMobileBasicDetails && hasCollection ? (
+                <MovieDetailsTabs basicDetailsRows={basicDetailsRows} collectionContent={collectionPills} />
+              ) : hasMobileBasicDetails ? (
+                <dl className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-1.5">{basicDetailsRows}</dl>
+              ) : (
+                <>
+                  <p className="font-cond mb-1 text-xs tracking-widest text-neutral-500 uppercase">Collection</p>
+                  {collectionPills}
+                </>
+              )}
+            </div>
+          )}
 
           <div className="mt-4 flex flex-wrap items-start gap-2">
             <ListButtons

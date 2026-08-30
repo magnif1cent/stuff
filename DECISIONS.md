@@ -1149,7 +1149,11 @@ this entry covers the final direction, not every intermediate step tried.
     change. `RecommendationControl`'s button ("+ Recommend this movie" /
     "✓ Recommended by you") got the same treatment at the same time, since it was the
     other shared-looking button flagged in that comparison — it's movie-page-only, so
-    no ripple concern there. `PosterOverrideControl`'s "Replace poster"/"Upload custom
+    no ripple concern there. (`RecommendationControl` itself no longer exists — its
+    toggle was later folded into `PosterOverrideControl`'s tap-menu as a plain
+    sentence-case menu item, matching its "Replace poster"/"Remove poster" siblings
+    rather than keeping this `font-cond` uppercase treatment; see the poster-tap-menu
+    entry below.) `PosterOverrideControl`'s "Replace poster"/"Upload custom
     poster" and "Remove" were caught the same way a round later — the one control
     directly under the poster mat that never got revisited after the initial
     "leave these alone" list, still plain `rounded-md` and mixed-case next to an
@@ -3378,6 +3382,344 @@ other") instead of presenting one name as if it were the clear answer.
   which isn't obviously better for a stat framed as bragging rights — and
   the tie is disclosed either way, so neither name reads as definitively
   wrong.
+
+### Mobile poster narrowed, with a clamped overview snippet beside it
+**PR #TBD.** The poster on mobile used to sit alone in its own row, pinned to
+the left edge with no centering — a `flex-col` child with an explicit width
+doesn't stretch or center by default, so it left an unintentional-looking
+empty gap next to it. Narrowing the poster (`w-40` -> `w-28`) to make room
+for a row-mate was settled on early and stayed through all four passes
+below; what changed each time was *what* fills that freed-up space.
+
+- **First pass: `movieDetailsCard` beside the poster.** This also revisited
+  a placement decision from the original hero-redesign PR (see "Movie
+  detail hero redesigned poster-forward, away from the generic media-app
+  look" above): `movieDetailsCard` used to render after the overview on
+  mobile specifically to avoid it appearing before the title, back when the
+  poster came before the title in mobile source order; a later PR moved the
+  title to its own mobile-only block above the poster row, which made that
+  original constraint moot. Rejected on review of the live layout: Details'
+  field values (studio names, formatted box-office currency, a
+  comma-separated collection list) are long and variable-length, and didn't
+  read well wrapping inside a ~200px-wide column next to a small poster.
+- **Second pass: Community/Editors' Score, plus the subcategory rating
+  breakdown** (Fight Choreography/Story/Acting — added after review pointed
+  out it looked orphaned in the content column once Score, its usual
+  neighbor, moved up beside the poster; reused at a condensed size since
+  "Fight Choreography" doesn't fit the desktop `tracking-widest` treatment
+  in that column). Also rejected on review — the numbers "didn't look good
+  there," full stop, no more specific complaint than that.
+- **Third pass: the byline** (runtime, director, certification badge, Fight
+  Count link). Unlike Details or Score, these are short, chip-like items
+  already living in a `flex-wrap` row at the full content-column width, so
+  no condensed variant was needed — just a different container per site
+  (stacked `flex-col` beside the poster on mobile, the original `flex-wrap`
+  row in the content column on desktop). Community/Editors' Score and the
+  subcategory breakdown moved back to their original single position in the
+  content column, always visible there (not mobile/desktop-conditional —
+  they only ever had one position before the second pass). Then genre pills
+  joined the byline in that column too, after a live screenshot showed the
+  byline (four short lines) leaving visible empty space below it next to
+  the poster (aspect-2/3, so noticeably taller than four lines of text) —
+  same reasoning as the byline itself (short, fixed-width chips), sharing
+  one `flex-col` wrapper with it so both stack as one unit rather than
+  becoming a third side-by-side item in the poster row's own flex row (a
+  real bug caught in review before it shipped).
+- **Landed on (fourth pass): a clamped `movie.overview` snippet, alone.**
+  Genre pills turned out not to be the fix either — replaced by prose text
+  instead: unlike Details or Score, paragraph text is meant to reflow at
+  any width, so it doesn't need the "short and fixed-width" constraint that
+  ruled out those two. The byline moved back to its original single,
+  unconditional spot in the content column (no longer beside the poster at
+  all); genre pills moved back to their original spot too. The poster's
+  row-mate column is now overview text only.
+  - **Sizing avoids guessing a fixed line-clamp count.** The snippet's
+    wrapper has no explicit height, so it stretches to match the poster's
+    height via the row's default `align-items: stretch`, then
+    `overflow-hidden` hard-clips at exactly that boundary regardless of
+    device font size or zoom — self-adjusting if the poster's size ever
+    changes, unlike a hardcoded pixel cap.
+  - **The full, untruncated overview is hidden on mobile in the content
+    column** (`hidden ... sm:block`), reversing the previous pass's call:
+    this PR's first version of this snippet kept the full overview visible
+    on mobile too, accepting the resulting duplication (synopsis opening
+    shown twice on the same screen) as a lesser cost than losing full-text
+    access entirely. Revisited and reversed on direct request. Superseded
+    by the fifth pass below, which restores full-text access on mobile a
+    different way (in place, not via the content column).
+- **Fifth pass: the clamped snippet became expandable**
+  (`MovieOverviewSnippet`, a small client component — `page.tsx` itself is
+  an async Server Component and can't hold `useState`). Feedback on the
+  fourth pass: the bare `line-clamp-8` ellipsis read as the text just
+  trailing off mid-sentence with no way to read the rest, and the actual
+  goal was "read the rest on mobile," not just a softer-looking cutoff.
+  Follows the same "Show more"/"Show less" toggle pattern already used by
+  `MemberReviewCard` (`reviews-section.tsx`) and several other components
+  (`recent-reviews-feed.tsx`, `actor-bio.tsx`, `actor-tributes-section.tsx`,
+  `news-list.tsx`) — a character-count threshold standing in for a real
+  measured line count, same approximation those all make.
+  - `line-clamp-7`, not 8: the toggle button has to live inside the same
+    `overflow-hidden` boundary as the text for the "must not exceed the
+    poster's height" guarantee to actually hold for the whole collapsed
+    state, button included — not just the paragraph. An earlier version of
+    this pass put the button outside that boundary (on an auto-height
+    inner wrapper, not the actual stretched flex item), which let it spill
+    past the poster's bottom edge on any movie whose 8-line clamp roughly
+    filled the available height; caught in review before it shipped.
+    Dropping to 7 lines deliberately reserves room within that same budget
+    for the button.
+  - Expanding removes the clip entirely, letting the full synopsis render
+    and the row grow past the poster's height as needed — the "don't
+    exceed poster height" constraint only ever applied to the default,
+    collapsed view.
+  - `key={movie.id}` on the component: without it, client-side navigation
+    between two movie detail pages (e.g. via the Cast rail or "You Might
+    Also Like") could let React reconcile it as the same instance and
+    carry an `expanded: true` state over from the previous movie — caught
+    in review, not from a live repro.
+- **`PosterOverrideControl` (admin-only) originally stacked vertically on
+  mobile**, rather than the label and Remove button trying to share one
+  row — the narrower 112px poster column left no room for both on one line
+  without wrapping awkwardly. Went through several more layout passes after
+  that — moved out of the poster column entirely, then the internal
+  stacking removed, then replaced altogether with a tap-the-poster overlay
+  menu — see the two-card-swipe entry below for the full arc. The final
+  shape has no visible row at all: the control now overlays the poster
+  in-place rather than sitting beside or below it, so it's back to being
+  scoped to the poster's own footprint, just not via a stacked/shared
+  button row anymore.
+
+### Tagline dropped from mobile; Details card destyled there too
+**PR #TBD.** Same movie detail page, a different complaint about the content
+column below the poster row: the tagline and the Details card both felt
+"visually out of place... takes up a lot of space for its content" on
+mobile. Mocked up four side-by-side variants (same movie, same data) before
+picking a direction, rather than guessing from description alone.
+
+- **Tagline (italic quote, between byline and genres) is now `hidden`
+  below `sm:`, unconditional at `sm:`+ — no mobile counterpart added
+  elsewhere.** Explicitly confirmed: drop it from mobile outright, not
+  relocate it. The `MovieOverviewSnippet` beside the poster (see the entry
+  above) already covers the "narrative flavor" role the tagline used to
+  play on mobile, which is likely why losing it there reads as fine rather
+  than as a loss — two lines making the same pitch (tagline's punchy
+  one-liner, overview's fuller synopsis) in the same scroll session felt
+  redundant once the snippet existed, not additive.
+- **The Details card (Studio/Country/Language/Box Office/Collection) keeps
+  its bordered-card treatment on desktop, unchanged, but initially lost it
+  on mobile entirely** — no border, no background, no "Details" header,
+  just `dt`/`dd` rows directly in the content-column flow. The card's own
+  chrome (border + distinct background + padding + header label) was
+  taking as much or more visual weight than the one-or-two-field data it
+  was framing for most movies. **Superseded by the two-card swipe entry
+  below** — the mobile treatment isn't plain rows anymore, though the
+  reasoning here (the original box was too heavy for its content) is still
+  why.
+- **Considered and not used: a dashed outline calling out what changed.**
+  The comparison mockup used one to make each variant's diff from baseline
+  scannable at a glance — a mockup-only annotation device, never a real
+  design proposal. Worth noting explicitly since "no card border" was the
+  actual ask for Details at the time; the mobile treatment picked up a
+  subtle background tint again in a later pass (see below), but never a
+  dotted/dashed border.
+
+### Mobile Details card became a two-card swipe strip
+**PR #TBD.** **Superseded by the single-tabbed-card entry further below —
+the swipe layout this entry landed on (and the tabbed alternative it
+explicitly rejected in favor of it) is gone; see that entry for why the
+rejected tabbed direction was revisited and adopted after all.** Kept
+here as history, along with the still-accurate poster-control and
+recommend-toggle changes nested below that weren't about the swipe
+mechanic itself. Follow-up on the previous entry's plain-rows mobile Details,
+in the same still-unmerged branch. Explored two more directions before
+landing here, mocked up alongside the plain-rows baseline: a tabbed
+version (one field visible at a time, tap to switch) and a five-card
+swipeable strip (one field per card). Both worked mechanically but traded
+a glance for a gesture on content that's normally four or five short,
+one-line facts — tabbing or swiping through five single-field cards to
+read what a pill or a couple of plain rows already show at a glance adds
+interaction cost without saving meaningful space.
+
+- **Landed on a two-card swipe instead of five.** Card one groups
+  Studio/Country/Language/Box Office together (the "basic" fields); card
+  two, only present when the data exists, is Collection alone. Most movies
+  have no Collection, so most of the time this renders as a single static
+  card with nothing to swipe — the common case pays no interaction cost at
+  all, unlike the five-card version. `basicDetailsRows` is dt/dd pairs
+  reused as-is in both card one and the desktop card's `<dl>`;
+  `collectionContent` is just the link content (not pre-wrapped in
+  `dt`/`dd`) so mobile's Collection card can use a stacked
+  label-then-paragraph layout instead of the side-by-side grid Collection
+  used on desktop — that grid is what made its variable-length sibling
+  list wrap awkwardly in a narrow column back when Collection briefly sat
+  next to the poster too (see the entry above this one).
+- **This reintroduces a background tint (`bg-neutral-900`, `rounded-md`,
+  `p-3`) on mobile**, which the previous entry's plain-rows version had
+  deliberately removed. Not a reversal of that reasoning so much as a new
+  constraint on top of it: a swipeable strip needs some visual boundary
+  between cards for "these are separate, swipeable units" to read at all,
+  which flowed-together plain rows never needed. Still lighter than the
+  original box — no border, no "Details" header — just enough definition
+  to delineate the cards in the horizontal scroller.
+- **No dot indicator or live "which card is active" tracking, no
+  scroll-snap either.** Reuses the site's existing `rail-scrollbar`
+  utility (themed scrollbar, plain `overflow-x-auto`) exactly as the Cast
+  rail already does — neither uses scroll-snap — rather than adding a
+  client component just to track scroll position for a two-item strip.
+- **`PosterOverrideControl` moved out of the poster's own column**, caught
+  from a live device screenshot (admin view): the control's height was
+  feeding into the poster row's `align-items: stretch`, forcing
+  `MovieOverviewSnippet`'s box to match a taller boundary than its
+  (often short) text actually filled — visible dead space between the
+  snippet and whatever came next, worse for admins than everyone else
+  since the control added real height on top of the poster's own.
+  - **First attempt: render two copies** (one inside the poster column
+    gated `hidden sm:block`, a new one after the whole row gated
+    `sm:hidden`). Rejected in review before shipping: this control does a
+    real file upload with its own `uploading`/`error` state — two mounted
+    copies have two independent states, so resizing across the `sm:`
+    breakpoint mid-upload would silently swap to a copy that doesn't know
+    an upload is in flight, dropping the "Uploading…" state and any error
+    message. Every other responsive duplication in this file (title, byline,
+    Details, overview) is stateless display content, where that risk
+    doesn't exist — this was the first stateful, interactive one, and the
+    same trick doesn't carry over safely.
+  - **Landed on: a single instance, moved to be a flex sibling of the
+    poster and overview snippet instead of nested inside the poster's own
+    div**, with the row itself changed from `flex` to `flex flex-wrap` and
+    the control given `w-full`. On the poster+overview line, a 100%-width
+    item can't fit, so it wraps to its own row below — removing it from
+    that line's `align-items: stretch` calculation entirely, for admins
+    and everyone else alike — while still being one mounted component, so
+    its upload state can't split across breakpoints. At `sm:`+ the row
+    isn't `flex` anymore (back to a plain stacked column), so the
+    `flex-wrap`/`w-full` classes are inert there and the desktop layout
+    (poster, admin control, Details, in source order) is unchanged from
+    before this fix.
+  - **Follow-up, from a real-device screenshot after the above shipped:
+    "looks the same"** — the stretch-mismatch bug was genuinely fixed, but
+    the control's own second wrapped line still cost as much height
+    (~45px, from its internal mobile-vertical label/Remove-button stacking)
+    as the stretch fix had recovered, so the total footprint before the
+    content column barely moved. Since the control is now a full-width
+    `flex-wrap` sibling rather than confined to the 112px poster column
+    (the constraint that motivated the vertical stacking in the first
+    place), that stacking no longer earns its keep: changed the inner row
+    from `flex flex-col items-start gap-1 sm:flex-row sm:items-center
+    sm:gap-2` to `flex flex-wrap items-center gap-2` — horizontal by
+    default at every breakpoint now, with `flex-wrap` kept only as a
+    fallback so an unusually narrow viewport or long label text wraps
+    instead of overflowing, rather than reintroducing a hard vertical
+    split.
+  - **Final pass: dropped the always-visible button row entirely — tap the
+    poster itself to open a Replace/Remove menu.** Asked directly whether
+    the visible-row approach could be replaced by making the poster itself
+    the control, rather than continuing to shrink the row's height; yes,
+    and it removes the row's footprint altogether instead of trimming it
+    further. `PosterOverrideControl` now takes the poster markup as
+    `children` and wraps it in a `relative` box instead of rendering below
+    it: a small pencil badge (bottom-right corner, `absolute`, always
+    visible since touch has no hover) is the only visual hint it's
+    interactive, and a transparent `absolute inset-0` button behind the
+    badge makes the *entire* poster the tap target, not just the badge.
+    Tapping opens a small dropdown (`Replace poster` / `Upload custom
+    poster`, plus `Remove poster` when an override exists) anchored
+    `left-0` under the poster — anchored left rather than right because the
+    poster sits at the page's left edge on both breakpoints, and a
+    right-anchored menu wider than the 112px mobile poster column would
+    push off the left edge of the viewport instead of extending into the
+    open space to the right. Closes on an outside click (a `mousedown`
+    listener on `document` checking a container ref, matching
+    `search-bar.tsx`'s existing pattern) since there's no longer a
+    permanently visible row for a stray tap to land on instead. This
+    re-confines the control to the poster's own footprint again — the
+    "moved out of the poster column" and "no longer confined to 112px"
+    framing above no longer applies to position at all, since the control
+    isn't a layout sibling anymore, just an interactive overlay on the
+    poster in-place.
+  - **Same idea applied to the separate "+ Recommend this movie" /
+    "✓ Recommended by you" toggle: folded it into the poster's tap-menu
+    too, as a third item below a divider, and deleted the now-empty
+    `RecommendationControl` component.** That toggle was its own
+    always-visible admin-only row (`mb-3`, above the byline) for the same
+    reason the poster controls used to be — same failure mode, so same
+    fix. The read-only recommender badges (`RecommendedBadges`) are a
+    different concern from the toggle — they're visible to every visitor,
+    not just admins — so they didn't move into the (admin-only)
+    poster menu; they moved into the byline row instead (runtime/director/
+    certification/fight count), as its first item, rather than keeping
+    their own row. `PosterOverrideControl` picked up a `recommendedByMe`
+    prop (computed in the page from `movieRecommenders` + the session admin
+    id) and a `toggleRecommend` handler that mirrors `handleRemove`'s
+    shape (POST/DELETE to `/api/movies/[id]/recommend`, then
+    `router.refresh()`) — no separate client state for the recommenders
+    list is needed anymore, since `router.refresh()` re-fetches
+    `movieRecommenders` on the server and `RecommendedBadges` renders
+    straight from that server-provided prop.
+
+### Mobile Details card became a single tabbed card
+**PR #TBD.** Revisits the tabbed direction the two-card-swipe entry above
+explicitly evaluated and rejected ("trades a glance for a gesture... adds
+interaction cost without saving meaningful space"). Asked for directly
+after seeing the swipe strip live, not from a fresh side-by-side
+comparison — worth recording since it looks like a straight reversal of
+the earlier call. The two-card swipe's own cost (two separately-tinted
+card chromes taking up horizontal scroll space, one of them empty of
+content to swipe to for most movies) turned out to matter more in
+practice than the tap-to-switch cost the earlier mockup pass was
+weighing against — a tradeoff that's hard to feel from a static mockup
+comparison and more obvious once live on a real device.
+
+- **One card (`bg-neutral-900`, `rounded-md`, `p-3`, unchanged chrome from
+  the swipe-strip version), tabbed between "Details" and "Collection"
+  when both exist.** New `MovieDetailsTabs` client component
+  (`src/components/movie-details-tabs.tsx`) owns the active-tab state;
+  tab labels double as the section headers, so neither tab repeats a
+  "Details"/"Collection" heading inside its own content. Deliberately not
+  a reuse of `ProfileTabs` (`src/components/profile-tabs.tsx`) — that
+  component's `mb-6`/`px-4 py-2` sizing is built for a page-level section,
+  not a ~200px-wide card, and forcing that scale into this card would
+  either look oversized or need overriding most of its styling anyway.
+  Follows `lists-panel.tsx`'s precedent of building a lighter-weight,
+  purpose-sized alternative instead of stretching a heavier shared
+  component to fit; the active-tab `border-b-2 border-red-600` treatment
+  matches `admin-import-search.tsx`'s existing tab styling rather than
+  inventing a new one.
+- **Only an actual tab bar when both sections are present.** With just one
+  of the two, the page renders that section's content directly inside the
+  same card chrome, no tabs — the "common case pays no interaction cost at
+  all" principle from the swipe-strip entry still holds, just realized as
+  "no tab bar" instead of "nothing to swipe to." (Originally gated on
+  `hasBasicDetails && hasCollection`; see the Box Office bullet below for
+  why that became `hasMobileBasicDetails && hasCollection` instead.)
+- **Collection's mobile content changed from inline comma-separated text
+  to individual clickable pills** — a new `collectionPills` fragment,
+  alongside the existing `basicDetailsRows`/`collectionContent` split, not
+  a replacement of `collectionContent` (desktop's boxed Details card keeps
+  the original inline-text version unchanged). The collection name and
+  each sibling movie are their own pill; siblings reuse the genre pills'
+  exact styling (`rounded-full border border-neutral-700 ... text-xs`) for
+  visual consistency with the other pill row on this page, while the
+  collection-name pill gets a red-accented variant so it reads as the
+  "parent" entry point rather than another sibling.
+- **Box Office hidden from the Details tab/card on mobile, kept on
+  desktop.** Requested directly, no mockup — the field is the least
+  frequently populated of the four (TMDB revenue data is sparse,
+  especially for older/foreign titles) and its formatted currency string
+  is also the widest value in the `dl`, so it bought the least while
+  costing the most width in a narrow column. `basicDetailsRows` itself is
+  unchanged and still shared with desktop (its Box Office `dt`/`dd` just
+  gained `hidden sm:block`, the same pattern used elsewhere in this file
+  for a mobile/desktop split within one shared fragment) — the field is
+  still there in the DOM either way, just not painted below `sm:`. That
+  introduced a gap `hasBasicDetails` doesn't cover: a movie with revenue
+  but no studio/country/language has `hasBasicDetails` true even though
+  nothing in `basicDetailsRows` is actually visible on mobile, which would
+  render an empty Details tab or an empty-but-chromed card. Added
+  `hasMobileBasicDetails`/`hasMobileDetails` (same definitions minus
+  `movie.revenue`) to gate the mobile card specifically, leaving
+  `hasBasicDetails`/`hasDetails` untouched for desktop's gating, which
+  still needs Box Office counted.
 
 ## Deferred & Backlog
 
