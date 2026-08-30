@@ -3476,10 +3476,12 @@ below; what changed each time was *what* fills that freed-up space.
 - **`PosterOverrideControl` (admin-only) stacks vertically on mobile**,
   rather than the label and Remove button trying to share one row — the
   narrower 112px poster column left no room for both on one line without
-  wrapping awkwardly. This holds regardless of which pass above is live,
-  since it's driven by the poster column's own width, not by what's beside
-  it. Unchanged at `sm:`+, where the sidebar column is wide enough for the
-  original horizontal layout.
+  wrapping awkwardly. Unchanged at `sm:`+, where the sidebar column is wide
+  enough for the original horizontal layout. **Later moved out of the
+  poster column entirely** (see the two-card-swipe entry below for why) —
+  the "driven by the poster column's own width" framing above no longer
+  applies to its position, only to this internal label/button stacking,
+  which is untouched.
 
 ### Tagline dropped from mobile; Details card destyled there too
 **PR #TBD.** Same movie detail page, a different complaint about the content
@@ -3552,6 +3554,36 @@ interaction cost without saving meaningful space.
   utility (themed scrollbar, plain `overflow-x-auto`) exactly as the Cast
   rail already does — neither uses scroll-snap — rather than adding a
   client component just to track scroll position for a two-item strip.
+- **`PosterOverrideControl` moved out of the poster's own column**, caught
+  from a live device screenshot (admin view): the control's height was
+  feeding into the poster row's `align-items: stretch`, forcing
+  `MovieOverviewSnippet`'s box to match a taller boundary than its
+  (often short) text actually filled — visible dead space between the
+  snippet and whatever came next, worse for admins than everyone else
+  since the control added real height on top of the poster's own.
+  - **First attempt: render two copies** (one inside the poster column
+    gated `hidden sm:block`, a new one after the whole row gated
+    `sm:hidden`). Rejected in review before shipping: this control does a
+    real file upload with its own `uploading`/`error` state — two mounted
+    copies have two independent states, so resizing across the `sm:`
+    breakpoint mid-upload would silently swap to a copy that doesn't know
+    an upload is in flight, dropping the "Uploading…" state and any error
+    message. Every other responsive duplication in this file (title, byline,
+    Details, overview) is stateless display content, where that risk
+    doesn't exist — this was the first stateful, interactive one, and the
+    same trick doesn't carry over safely.
+  - **Landed on: a single instance, moved to be a flex sibling of the
+    poster and overview snippet instead of nested inside the poster's own
+    div**, with the row itself changed from `flex` to `flex flex-wrap` and
+    the control given `w-full`. On the poster+overview line, a 100%-width
+    item can't fit, so it wraps to its own row below — removing it from
+    that line's `align-items: stretch` calculation entirely, for admins
+    and everyone else alike — while still being one mounted component, so
+    its upload state can't split across breakpoints. At `sm:`+ the row
+    isn't `flex` anymore (back to a plain stacked column), so the
+    `flex-wrap`/`w-full` classes are inert there and the desktop layout
+    (poster, admin control, Details, in source order) is unchanged from
+    before this fix.
 
 ## Deferred & Backlog
 
