@@ -7,9 +7,9 @@ import type { FightSceneCast, FightSceneTag, Person, User } from "@/generated/pr
 import { ShareButton } from "@/components/share-button";
 import { AddToListControl, type AddToListItem } from "@/components/add-to-list-control";
 import { FavoriteButton } from "@/components/favorite-button";
+import { StarRatingPicker } from "@/components/star-rating-picker";
 import { youtubeWatchUrl } from "@/lib/youtube";
 
-const SCORES = Array.from({ length: 10 }, (_, i) => i + 1);
 const MAX_NOTE_LENGTH = 2000;
 // How many scenes render before a "Show more" click is needed — enough for
 // two full rows on the widest (3-column) layout.
@@ -250,31 +250,36 @@ function ActionChip({ onClick, children }: { onClick: () => void; children: stri
   );
 }
 
-function RatingRow({ label, score, onRate, disabled }: { label: string; score: number | null; onRate: (value: number) => void; disabled: boolean }) {
+function RatingRow({
+  label,
+  score,
+  onRate,
+  disabled,
+  fillColorClassName,
+}: {
+  label: string;
+  score: number | null;
+  onRate: (value: number) => void;
+  disabled: boolean;
+  // Ticket ink for "Your rating", ticket stamp-red for Editors' -- the same
+  // two colors already used elsewhere on this card (the ink border/text and
+  // the rating-average stamp circles), rather than RatingCard's yellow/amber,
+  // so the star picker stays inside the ticket's own ink-on-cream palette.
+  fillColorClassName: string;
+}) {
   return (
     <div className="mt-3">
       <p className="mb-1 text-[10px] uppercase tracking-wide" style={{ color: TICKET_MUTED }}>
         {label}
       </p>
-      <div className="flex flex-wrap gap-1">
-        {SCORES.map((value) => {
-          const active = score !== null && value <= score;
-          return (
-            <button
-              key={value}
-              disabled={disabled}
-              onClick={() => onRate(value)}
-              className="h-6 w-6 border text-[10px] font-bold transition disabled:opacity-50"
-              style={{
-                borderColor: TICKET_INK,
-                background: active ? TICKET_INK : "transparent",
-                color: active ? "#e8dcc4" : TICKET_INK,
-              }}
-            >
-              {value}
-            </button>
-          );
-        })}
+      <div className="flex items-center gap-2">
+        <StarRatingPicker size="lg" value={score} disabled={disabled} onSelect={onRate} fillColorClassName={fillColorClassName} />
+        <p className="text-sm font-bold" style={{ color: TICKET_INK }}>
+          {score ?? "—"}
+          <span className="text-[10px] font-normal" style={{ color: TICKET_MUTED }}>
+            /10
+          </span>
+        </p>
       </div>
     </div>
   );
@@ -348,9 +353,23 @@ export function FightSceneSection({
   // rating/note) expanded — collapsed by default so an admin's own cards
   // aren't cluttered with tools they're not currently using.
   const [expandedAdminIds, setExpandedAdminIds] = useState<Set<string>>(new Set());
+  // Which cards have their Edit/Delete/Verify chips expanded — separate from
+  // expandedAdminIds since "Manage" is available to any submitter (not just
+  // admins) and gates a different part of the card (the footer chip row, not
+  // the admin tools panel below the video).
+  const [expandedActionIds, setExpandedActionIds] = useState<Set<string>>(new Set());
 
   function toggleAdminTools(id: string) {
     setExpandedAdminIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleActions(id: string) {
+    setExpandedActionIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
@@ -713,12 +732,10 @@ export function FightSceneSection({
                       value={startTimeDrafts[scene.id] ?? formatMmSs(scene.youtubeStartSeconds)}
                       onChange={(e) => setStartTimeDrafts((prev) => ({ ...prev, [scene.id]: e.target.value }))}
                       placeholder="mm:ss"
-                      className="w-16 border bg-transparent px-1 py-0.5 text-center text-base focus:outline-none"
+                      className="min-h-8 w-16 border bg-transparent px-1 text-center text-base focus:outline-none"
                       style={{ borderColor: TICKET_INK, color: TICKET_INK }}
                     />
-                    <button onClick={() => handleSetStartTime(scene.id)} className="underline hover:opacity-70">
-                      Save
-                    </button>
+                    <ActionChip onClick={() => handleSetStartTime(scene.id)}>Save</ActionChip>
                   </div>
                 )}
               </div>
@@ -758,7 +775,7 @@ export function FightSceneSection({
                 )}
               </div>
 
-              <div className="mt-4 flex items-start justify-between gap-3">
+              <div className="mt-4 flex items-start justify-between gap-3 border-t pt-3" style={{ borderColor: "#b8ab8c" }}>
                 <div>
                   <p className="text-[10px] tracking-wide uppercase" style={{ color: TICKET_MUTED }}>
                     Submitted by
@@ -767,12 +784,21 @@ export function FightSceneSection({
                   </p>
                   {(canEdit || canDelete || canVerify || isAdmin) && (
                     <div className="mt-2 flex flex-wrap gap-1.5">
-                      {canEdit && <ActionChip onClick={() => setEditingId(scene.id)}>Edit</ActionChip>}
-                      {canDelete && <ActionChip onClick={() => handleDelete(scene.id)}>Delete</ActionChip>}
-                      {canVerify && (
-                        <ActionChip onClick={() => handleVerifyToggle(scene.id, !scene.isVerified)}>
-                          {scene.isVerified ? "Unverify" : "Verify"}
+                      {(canEdit || canDelete || canVerify) && (
+                        <ActionChip onClick={() => toggleActions(scene.id)}>
+                          {expandedActionIds.has(scene.id) ? "Close" : "Manage"}
                         </ActionChip>
+                      )}
+                      {expandedActionIds.has(scene.id) && (
+                        <>
+                          {canEdit && <ActionChip onClick={() => setEditingId(scene.id)}>Edit</ActionChip>}
+                          {canDelete && <ActionChip onClick={() => handleDelete(scene.id)}>Delete</ActionChip>}
+                          {canVerify && (
+                            <ActionChip onClick={() => handleVerifyToggle(scene.id, !scene.isVerified)}>
+                              {scene.isVerified ? "Unverify" : "Verify"}
+                            </ActionChip>
+                          )}
+                        </>
                       )}
                       {isAdmin && (
                         <ActionChip onClick={() => toggleAdminTools(scene.id)}>
@@ -812,7 +838,13 @@ export function FightSceneSection({
               </div>
 
               {signedIn && (
-                <RatingRow label="Your rating" score={ratings[scene.id] ?? null} onRate={(value) => handleRate(scene.id, value)} disabled={false} />
+                <RatingRow
+                  label="Your rating"
+                  score={ratings[scene.id] ?? null}
+                  onRate={(value) => handleRate(scene.id, value)}
+                  disabled={false}
+                  fillColorClassName={`text-[${TICKET_INK}]`}
+                />
               )}
 
               {isAdmin && expandedAdminIds.has(scene.id) && (
@@ -822,6 +854,7 @@ export function FightSceneSection({
                     score={adminRatings[scene.id] ?? null}
                     onRate={(value) => handleAdminRate(scene.id, value)}
                     disabled={false}
+                    fillColorClassName={`text-[${TICKET_STAMP}]`}
                   />
                   <textarea
                     value={adminNoteDrafts[scene.id] ?? ""}

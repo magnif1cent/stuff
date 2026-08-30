@@ -3780,6 +3780,34 @@ comparison and more obvious once live on a real device.
   `hasBasicDetails`/`hasDetails` untouched for desktop's gating, which
   still needs Box Office counted.
 
+### Fight scene rating switched from numbered ticket buttons to the shared star picker
+**PR #TBD.** `RatingRow` (`fight-scene-section.tsx`, shared by the member
+"Your rating" and admin "Editors' rating" on each fight scene ticket card)
+had been flagged in a mobile touch-target review as the card's smallest
+control — flat 24×24px numbered buttons — and deferred twice: once on a
+mistaken belief it had already been fixed by the movie-level Ratings PR,
+once as explicitly out of scope for a footer-chip fix landing the same
+day. Requested directly ("like the movies") rather than resizing the
+numbered grid in place (the fix originally mocked for it). `RatingRow`
+now renders `StarRatingPicker` — the same half-click 5-star control
+`RatingCard` uses for the movie-level overall score — instead of its own
+button grid, reusing the mechanic ("like the movies") without importing
+`RatingCard`'s yellow/amber colors: `fillColorClassName` is instead set
+to the ticket's own ink (`TICKET_INK`, member "Your rating") and stamp
+red (`TICKET_STAMP`, admin "Editors' rating" — the same red already used
+two inches away on the rating-average stamp circles), via Tailwind
+arbitrary-value classes (`text-[#1a1712]`/`text-[#a4291e]`) rather than
+touching `StarIcon`. Considered and rejected: `RatingCard`'s literal
+yellow/amber, which would have broken the ticket card's deliberately
+ink-only visual language (see "Fight Scenes introduced as a core
+feature" above, and the TICKET_INK/TICKET_MUTED/TICKET_STAMP palette
+comment in the component) by introducing two colors foreign to it. The
+star's unfilled outline (`StarIcon`'s hardcoded `text-neutral-600`,
+tuned for the site's dark theme) still isn't ticket-themed — left as-is,
+flagged rather than fixed, since it reads fine against the cream
+background and wasn't part of what was asked. The old `SCORES` (1-10)
+array was removed as dead code once nothing referenced it.
+
 ## Deferred & Backlog
 
 - **Drag-and-drop reordering for ranked list items** — `ListItemRows`
