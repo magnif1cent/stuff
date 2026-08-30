@@ -31,9 +31,8 @@ import {
   MEMBER_REVIEWS_PREVIEW_COUNT,
 } from "@/lib/member-reviews";
 import { getSimilarMovies } from "@/lib/similar-movies";
-import { RatingWidget } from "@/components/rating-widget";
+import { RatingCard } from "@/components/rating-card";
 import { MovieRail } from "@/components/movie-rail";
-import { AdminRatingWidget } from "@/components/admin-rating-widget";
 import { ListButtons } from "@/components/list-buttons";
 import { AddToListControl } from "@/components/add-to-list-control";
 import { DiscussionThread } from "@/components/discussion-thread";
@@ -748,24 +747,17 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
           </div>
 
           <div className="mt-6 max-w-sm">
-            <RatingWidget
+            <RatingCard
               movieId={movie.id}
+              signedIn={!!session?.user}
               initialScore={myRating?.score ?? null}
               initialCategoryScores={myCategoryRatingMap}
-              signedIn={!!session?.user}
+              isAdmin={session?.user?.role === "ADMIN"}
+              initialAdminScore={myAdminRating?.score ?? null}
+              initialAdminNote={myAdminRating?.note ?? null}
+              initialAdminCategoryScores={myAdminCategoryRatingMap}
             />
           </div>
-
-          {session?.user?.role === "ADMIN" && (
-            <div className="mt-6 max-w-sm">
-              <AdminRatingWidget
-                movieId={movie.id}
-                initialScore={myAdminRating?.score ?? null}
-                initialNote={myAdminRating?.note ?? null}
-                initialCategoryScores={myAdminCategoryRatingMap}
-              />
-            </div>
-          )}
         </div>
       </div>
 
