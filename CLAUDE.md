@@ -115,6 +115,22 @@ once they've explicitly said so in the conversation (e.g. "merge",
 "merge it," "go ahead and merge") — a green CI check alone is not
 authorization to merge.
 
+## Know when to stop iterating on code review
+
+Don't let a `/code-review` → fix → re-review loop run indefinitely on the
+same piece of code. If a fix made to satisfy one round's finding introduces
+new state or complexity (an ordering/sequencing mechanism, a new ref, a new
+guard flag), and the *next* round finds a bug in that new complexity, treat
+that as a signal to step back rather than patch forward again — prefer
+reverting to the simpler design over adding a third layer of guarding logic,
+even if it means accepting a minor, self-correcting edge case (e.g. a brief
+UI flicker) instead of eliminating it entirely. This matters most for
+stateful/async code (autosave, debounced writes, optimistic updates) — this
+repo already has a few such surfaces (Fight Count edits, fight scene
+ratings) where the same compounding-fix pattern could otherwise recur. As a
+rule of thumb, 3-4 rounds with no new *category* of finding is a reasonable
+place to stop and either ship or explicitly justify what's left.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 # This is NOT the Next.js you know
