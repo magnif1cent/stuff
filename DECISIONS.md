@@ -3481,6 +3481,41 @@ below; what changed each time was *what* fills that freed-up space.
   it. Unchanged at `sm:`+, where the sidebar column is wide enough for the
   original horizontal layout.
 
+### Tagline dropped from mobile; Details card destyled there too
+**PR #TBD.** Same movie detail page, a different complaint about the content
+column below the poster row: the tagline and the Details card both felt
+"visually out of place... takes up a lot of space for its content" on
+mobile. Mocked up four side-by-side variants (same movie, same data) before
+picking a direction, rather than guessing from description alone.
+
+- **Tagline (italic quote, between byline and genres) is now `hidden`
+  below `sm:`, unconditional at `sm:`+ — no mobile counterpart added
+  elsewhere.** Explicitly confirmed: drop it from mobile outright, not
+  relocate it. The `MovieOverviewSnippet` beside the poster (see the entry
+  above) already covers the "narrative flavor" role the tagline used to
+  play on mobile, which is likely why losing it there reads as fine rather
+  than as a loss — two lines making the same pitch (tagline's punchy
+  one-liner, overview's fuller synopsis) in the same scroll session felt
+  redundant once the snippet existed, not additive.
+- **The Details card (Studio/Country/Language/Box Office/Collection) keeps
+  its bordered-card treatment on desktop, unchanged, but loses it on
+  mobile** — no border, no background, no "Details" header, just the same
+  `dt`/`dd` rows directly in the content-column flow. The card's own chrome
+  (border + distinct background + padding + header label) was taking as
+  much or more visual weight than the one-or-two-field data it was framing
+  for most movies; stripped down, it reads as more content in the same
+  flow rather than a separate boxed callout. Row content and grid structure
+  (`grid-cols-[auto_1fr]`, label left/value right) are shared between both
+  versions via one `detailsRows` fragment (same pattern as
+  `bylineContent`/`scoreItems` elsewhere in this file) — only the wrapper
+  differs, so the two can't drift out of sync with each other.
+- **Considered and not used: a dashed outline calling out what changed.**
+  The comparison mockup used one to make each variant's diff from baseline
+  scannable at a glance — a mockup-only annotation device, never a real
+  design proposal. Worth noting explicitly since "no card border" was the
+  actual ask for Details; there's no dotted/dashed border anywhere in the
+  shipped version.
+
 ## Deferred & Backlog
 
 - **Drag-and-drop reordering for ranked list items** — `ListItemRows`

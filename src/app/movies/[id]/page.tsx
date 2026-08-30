@@ -293,74 +293,80 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
   // tried living beside the poster instead, in two different forms, but
   // neither worked out; see DECISIONS.md), alongside the poster in the
   // desktop sidebar, unchanged.
-  const movieDetailsCard = (movie.studio ||
+  const hasDetails = !!(
+    movie.studio ||
     movie.country ||
     movie.originalLanguage ||
-    !!movie.revenue ||
-    (movie.collectionName && collectionSiblings.length > 0)) && (
-    <div className="rounded-md border border-neutral-800 bg-neutral-900 p-3">
-      <h3 className="font-cond mb-2 text-xs tracking-widest text-neutral-500 uppercase">Details</h3>
-      <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-sm">
-        {movie.studio && (
-          <>
-            <dt className="font-cond text-neutral-500 uppercase tracking-wide">Studio</dt>
-            <dd className="text-right text-neutral-300">{movie.studio}</dd>
-          </>
-        )}
-        {movie.country && (
-          <>
-            <dt className="font-cond text-neutral-500 uppercase tracking-wide">Country</dt>
-            <dd className="text-right text-neutral-300">{movie.country}</dd>
-          </>
-        )}
-        {movie.originalLanguage && (
-          <>
-            <dt className="font-cond text-neutral-500 uppercase tracking-wide">Language</dt>
-            <dd className="text-right text-neutral-300">{movie.originalLanguage}</dd>
-          </>
-        )}
-        {!!movie.revenue && (
-          <>
-            <dt className="font-cond text-neutral-500 uppercase tracking-wide">Box Office</dt>
-            <dd className="text-right text-neutral-300">
-              {new Intl.NumberFormat("en-US", {
-                style: "currency",
-                currency: "USD",
-                maximumFractionDigits: 0,
-              }).format(movie.revenue)}
-            </dd>
-          </>
-        )}
-        {movie.collectionName && collectionSiblings.length > 0 && (
-          <>
-            <dt className="font-cond text-neutral-500 uppercase tracking-wide">Collection</dt>
-            <dd>
-              <Link
-                href={`/collections/${movie.collectionTmdbId}`}
-                className="text-red-500 underline decoration-red-800 underline-offset-2 hover:text-red-400"
-              >
-                {movie.collectionName}
-              </Link>
-              {" — "}
-              {collectionSiblings.map((sibling, i) => (
-                <span key={sibling.id}>
-                  <Link
-                    href={`/movies/${sibling.id}`}
-                    className="text-red-500 underline decoration-red-800 underline-offset-2 hover:text-red-400"
-                  >
-                    {sibling.title}
-                  </Link>
-                  {i < collectionSiblings.length - 1 ? ", " : ""}
-                </span>
-              ))}
-            </dd>
-          </>
-        )}
-      </dl>
-    </div>
+    movie.revenue ||
+    (movie.collectionName && collectionSiblings.length > 0)
   );
 
-  // Rendered twice below, same reasoning as movieDetailsCard above: in
+  // Rendered twice: boxed (border/bg/padding/"Details" header) on desktop,
+  // where it's set apart from the rest of the sidebar as its own card --
+  // plain rows with no box on mobile, where that same chrome outweighed
+  // the actual content for a movie with only one or two fields populated.
+  // Row content is identical either way, only the wrapper differs.
+  const detailsRows = (
+    <>
+      {movie.studio && (
+        <>
+          <dt className="font-cond text-neutral-500 uppercase tracking-wide">Studio</dt>
+          <dd className="text-right text-neutral-300">{movie.studio}</dd>
+        </>
+      )}
+      {movie.country && (
+        <>
+          <dt className="font-cond text-neutral-500 uppercase tracking-wide">Country</dt>
+          <dd className="text-right text-neutral-300">{movie.country}</dd>
+        </>
+      )}
+      {movie.originalLanguage && (
+        <>
+          <dt className="font-cond text-neutral-500 uppercase tracking-wide">Language</dt>
+          <dd className="text-right text-neutral-300">{movie.originalLanguage}</dd>
+        </>
+      )}
+      {!!movie.revenue && (
+        <>
+          <dt className="font-cond text-neutral-500 uppercase tracking-wide">Box Office</dt>
+          <dd className="text-right text-neutral-300">
+            {new Intl.NumberFormat("en-US", {
+              style: "currency",
+              currency: "USD",
+              maximumFractionDigits: 0,
+            }).format(movie.revenue)}
+          </dd>
+        </>
+      )}
+      {movie.collectionName && collectionSiblings.length > 0 && (
+        <>
+          <dt className="font-cond text-neutral-500 uppercase tracking-wide">Collection</dt>
+          <dd>
+            <Link
+              href={`/collections/${movie.collectionTmdbId}`}
+              className="text-red-500 underline decoration-red-800 underline-offset-2 hover:text-red-400"
+            >
+              {movie.collectionName}
+            </Link>
+            {" — "}
+            {collectionSiblings.map((sibling, i) => (
+              <span key={sibling.id}>
+                <Link
+                  href={`/movies/${sibling.id}`}
+                  className="text-red-500 underline decoration-red-800 underline-offset-2 hover:text-red-400"
+                >
+                  {sibling.title}
+                </Link>
+                {i < collectionSiblings.length - 1 ? ", " : ""}
+              </span>
+            ))}
+          </dd>
+        </>
+      )}
+    </>
+  );
+
+  // Rendered twice below, same reasoning as detailsRows above: in
   // source order the title sits inside the content column, after the
   // poster -- fine on desktop's sm:flex-row layout, but on mobile's single
   // flex-col column that puts the backdrop and poster ahead of the movie's
@@ -551,7 +557,12 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
               sibling that already has an intrinsic (aspect-ratio-locked)
               size. */}
           {movie.overview && <MovieOverviewSnippet key={movie.id} overview={movie.overview} />}
-          {movieDetailsCard && <div className="mt-4 hidden sm:block">{movieDetailsCard}</div>}
+          {hasDetails && (
+            <div className="mt-4 hidden rounded-md border border-neutral-800 bg-neutral-900 p-3 sm:block">
+              <h3 className="font-cond mb-2 text-xs tracking-widest text-neutral-500 uppercase">Details</h3>
+              <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-sm">{detailsRows}</dl>
+            </div>
+          )}
         </div>
 
         <div className="flex-1 pt-2">
@@ -586,7 +597,9 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
           <h1 className={`hidden ${titleClassName} sm:block`}>{titleText}</h1>
 
           {movie.tagline && (
-            <p className="font-editorial mt-2 text-base text-neutral-400 italic">&ldquo;{movie.tagline}&rdquo;</p>
+            <p className="font-editorial mt-2 hidden text-base text-neutral-400 italic sm:block">
+              &ldquo;{movie.tagline}&rdquo;
+            </p>
           )}
 
           {movie.genres.length > 0 && (
@@ -641,7 +654,11 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
 
           <p className="font-editorial mt-4 hidden max-w-2xl text-neutral-300 sm:block">{movie.overview}</p>
 
-          {movieDetailsCard && <div className="mt-4 max-w-2xl sm:hidden">{movieDetailsCard}</div>}
+          {hasDetails && (
+            <dl className="mt-4 grid max-w-2xl grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-sm sm:hidden">
+              {detailsRows}
+            </dl>
+          )}
 
           <div className="mt-4 flex flex-wrap items-start gap-2">
             <ListButtons
