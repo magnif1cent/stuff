@@ -622,8 +622,12 @@ export function FightSceneSection({
             : // Teaser mode is a single spotlight card (FEATURED_FIGHT_COUNT is 1),
               // not a grid cell -- plain single column regardless of breakpoint, so
               // it doesn't read as a truncated grid with implied missing neighbors.
+              // Capped to roughly a normal grid card's width on desktop (sm:max-w-sm
+              // ~= one card at lg:grid-cols-3 inside the page's max-w-6xl container)
+              // so it doesn't stretch edge-to-edge just because it's alone -- full
+              // width on mobile, where every card is full width anyway.
               viewAllHref
-              ? "grid grid-cols-1 gap-4"
+              ? "grid grid-cols-1 gap-4 sm:max-w-sm"
               : "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
         }
       >
@@ -903,7 +907,7 @@ export function FightSceneSection({
           totalSceneCount > scenes.length && (
             <Link
               href={viewAllHref}
-              className="mt-4 block w-full rounded-md border border-red-800/60 bg-gradient-to-b from-red-950/30 to-transparent py-2 text-center text-sm font-medium text-red-400 hover:border-red-700 hover:text-red-300"
+              className="mt-4 block w-full rounded-md border border-red-800/60 bg-gradient-to-b from-red-950/30 to-transparent py-2 text-center text-sm font-medium text-red-400 hover:border-red-700 hover:text-red-300 sm:max-w-sm"
             >
               View all {totalSceneCount} fights
             </Link>
