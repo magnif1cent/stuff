@@ -340,13 +340,13 @@ export function FightSceneSection({
   prevScenePath?: string | null;
   nextScenePath?: string | null;
   // Movie-page teaser mode: initialFightScenes is only a partial list (the
-  // newest few), not every scene for the movie, so the usual "Show more"
-  // in-place pagination can't work -- there's nothing further to reveal
-  // from what this component was handed. totalSceneCount is the real count
-  // (fetched cheaply server-side, e.g. from round numbers) and viewAllHref
-  // points at the full collection page; passing viewAllHref switches the
-  // footer from "Show more" to a "View all N" link and caps the grid at 2
-  // columns (never more than FEATURED_FIGHT_COUNT cards to lay out).
+  // newest one, per FEATURED_FIGHT_COUNT), not every scene for the movie, so
+  // the usual "Show more" in-place pagination can't work -- there's nothing
+  // further to reveal from what this component was handed. totalSceneCount
+  // is the real count (fetched cheaply server-side, e.g. from round numbers)
+  // and viewAllHref points at the full collection page; passing viewAllHref
+  // switches the footer from "Show more" to a "View all N" link and renders
+  // the grid as a single spotlight column instead of a multi-column grid.
   totalSceneCount?: number;
   viewAllHref?: string;
 }) {
@@ -619,11 +619,11 @@ export function FightSceneSection({
         className={
           detail
             ? "grid grid-cols-1"
-            : // Teaser mode never has more than FEATURED_FIGHT_COUNT (2) cards to
-              // lay out -- capping at 2 columns (no lg:grid-cols-3) keeps it from
-              // reading as a truncated grid with an implied missing third card.
+            : // Teaser mode is a single spotlight card (FEATURED_FIGHT_COUNT is 1),
+              // not a grid cell -- plain single column regardless of breakpoint, so
+              // it doesn't read as a truncated grid with implied missing neighbors.
               viewAllHref
-              ? "grid grid-cols-1 gap-4 sm:grid-cols-2"
+              ? "grid grid-cols-1 gap-4"
               : "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
         }
       >

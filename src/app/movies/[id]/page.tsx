@@ -49,7 +49,9 @@ import { FightCountControl } from "@/components/fight-count-control";
 // on the dedicated /movies/[id]/fights collection page, linked via "View all".
 // Kept small deliberately: this page fetches (and ships to the client) only
 // this many scenes' worth of cast/tags/ratings, not the movie's whole roster.
-const FEATURED_FIGHT_COUNT = 2;
+// At 1, FightSceneSection renders it as a single full-width spotlight card
+// rather than a grid cell -- see the viewAllHref-mode layout there.
+const FEATURED_FIGHT_COUNT = 1;
 
 const getMovie = cache((id: string) =>
   prisma.movie.findUnique({

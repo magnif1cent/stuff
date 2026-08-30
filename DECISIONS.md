@@ -3816,12 +3816,13 @@ cast/tags/ratings to the browser regardless of how many actually rendered.
 Requested as part of the broader "condense the movie page to scale" pass
 already applied to Ratings and Details.
 
-- **2 featured scenes, not 1.** Considered 1 (less mobile scroll) vs. 2
-  (fills exactly one row of the existing `sm:grid-cols-2` breakpoint). Went
-  with 2, but rendered in its own `grid-cols-1 sm:grid-cols-2` row on the
-  movie page — deliberately *not* reusing the full `sm:grid-cols-2
-  lg:grid-cols-3` grid, which would leave a visibly empty third cell at the
-  `lg:` breakpoint since there's never more than 2 items to lay out there.
+- **1 featured scene, not 2.** Considered 2 (fills exactly one row of the
+  existing `sm:grid-cols-2` breakpoint) vs. 1 (less mobile scroll, and reads
+  as a single spotlight rather than a partial list). Went with 1, rendered
+  as its own full-width column — deliberately *not* reusing the movie
+  page's multi-column grid at any breakpoint, which would leave a visibly
+  empty cell beside a single card instead of reading as a deliberate
+  spotlight.
 - **Newest scenes, not highest-rated.** `getFightScenesForMovie` gained an
   optional `{ limit }` that queries `orderBy: createdAt desc, take: limit`
   then reverses the result back to ascending — the simplest rule ("what's
