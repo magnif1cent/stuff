@@ -3498,23 +3498,60 @@ picking a direction, rather than guessing from description alone.
   one-liner, overview's fuller synopsis) in the same scroll session felt
   redundant once the snippet existed, not additive.
 - **The Details card (Studio/Country/Language/Box Office/Collection) keeps
-  its bordered-card treatment on desktop, unchanged, but loses it on
-  mobile** — no border, no background, no "Details" header, just the same
-  `dt`/`dd` rows directly in the content-column flow. The card's own chrome
-  (border + distinct background + padding + header label) was taking as
-  much or more visual weight than the one-or-two-field data it was framing
-  for most movies; stripped down, it reads as more content in the same
-  flow rather than a separate boxed callout. Row content and grid structure
-  (`grid-cols-[auto_1fr]`, label left/value right) are shared between both
-  versions via one `detailsRows` fragment (same pattern as
-  `bylineContent`/`scoreItems` elsewhere in this file) — only the wrapper
-  differs, so the two can't drift out of sync with each other.
+  its bordered-card treatment on desktop, unchanged, but initially lost it
+  on mobile entirely** — no border, no background, no "Details" header,
+  just `dt`/`dd` rows directly in the content-column flow. The card's own
+  chrome (border + distinct background + padding + header label) was
+  taking as much or more visual weight than the one-or-two-field data it
+  was framing for most movies. **Superseded by the two-card swipe entry
+  below** — the mobile treatment isn't plain rows anymore, though the
+  reasoning here (the original box was too heavy for its content) is still
+  why.
 - **Considered and not used: a dashed outline calling out what changed.**
   The comparison mockup used one to make each variant's diff from baseline
   scannable at a glance — a mockup-only annotation device, never a real
   design proposal. Worth noting explicitly since "no card border" was the
-  actual ask for Details; there's no dotted/dashed border anywhere in the
-  shipped version.
+  actual ask for Details at the time; the mobile treatment picked up a
+  subtle background tint again in a later pass (see below), but never a
+  dotted/dashed border.
+
+### Mobile Details card became a two-card swipe strip
+**PR #TBD.** Follow-up on the previous entry's plain-rows mobile Details,
+in the same still-unmerged branch. Explored two more directions before
+landing here, mocked up alongside the plain-rows baseline: a tabbed
+version (one field visible at a time, tap to switch) and a five-card
+swipeable strip (one field per card). Both worked mechanically but traded
+a glance for a gesture on content that's normally four or five short,
+one-line facts — tabbing or swiping through five single-field cards to
+read what a pill or a couple of plain rows already show at a glance adds
+interaction cost without saving meaningful space.
+
+- **Landed on a two-card swipe instead of five.** Card one groups
+  Studio/Country/Language/Box Office together (the "basic" fields); card
+  two, only present when the data exists, is Collection alone. Most movies
+  have no Collection, so most of the time this renders as a single static
+  card with nothing to swipe — the common case pays no interaction cost at
+  all, unlike the five-card version. `basicDetailsRows` is dt/dd pairs
+  reused as-is in both card one and the desktop card's `<dl>`;
+  `collectionContent` is just the link content (not pre-wrapped in
+  `dt`/`dd`) so mobile's Collection card can use a stacked
+  label-then-paragraph layout instead of the side-by-side grid Collection
+  used on desktop — that grid is what made its variable-length sibling
+  list wrap awkwardly in a narrow column back when Collection briefly sat
+  next to the poster too (see the entry above this one).
+- **This reintroduces a background tint (`bg-neutral-900`, `rounded-md`,
+  `p-3`) on mobile**, which the previous entry's plain-rows version had
+  deliberately removed. Not a reversal of that reasoning so much as a new
+  constraint on top of it: a swipeable strip needs some visual boundary
+  between cards for "these are separate, swipeable units" to read at all,
+  which flowed-together plain rows never needed. Still lighter than the
+  original box — no border, no "Details" header — just enough definition
+  to delineate the cards in the horizontal scroller.
+- **No dot indicator or live "which card is active" tracking, no
+  scroll-snap either.** Reuses the site's existing `rail-scrollbar`
+  utility (themed scrollbar, plain `overflow-x-auto`) exactly as the Cast
+  rail already does — neither uses scroll-snap — rather than adding a
+  client component just to track scroll position for a two-item strip.
 
 ## Deferred & Backlog
 

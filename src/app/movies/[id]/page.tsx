@@ -293,20 +293,22 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
   // tried living beside the poster instead, in two different forms, but
   // neither worked out; see DECISIONS.md), alongside the poster in the
   // desktop sidebar, unchanged.
-  const hasDetails = !!(
-    movie.studio ||
-    movie.country ||
-    movie.originalLanguage ||
-    movie.revenue ||
-    (movie.collectionName && collectionSiblings.length > 0)
-  );
+  const hasBasicDetails = !!(movie.studio || movie.country || movie.originalLanguage || movie.revenue);
+  const hasCollection = !!(movie.collectionName && collectionSiblings.length > 0);
+  const hasDetails = hasBasicDetails || hasCollection;
 
-  // Rendered twice: boxed (border/bg/padding/"Details" header) on desktop,
-  // where it's set apart from the rest of the sidebar as its own card --
-  // plain rows with no box on mobile, where that same chrome outweighed
-  // the actual content for a movie with only one or two fields populated.
-  // Row content is identical either way, only the wrapper differs.
-  const detailsRows = (
+  // Shared by desktop's single boxed card (both fragments composed
+  // together in one <dl>) and mobile's two-card swipe strip (each
+  // fragment its own card, so a movie with no Collection renders as one
+  // static card and nothing to swipe -- the common case). Split into two
+  // pieces rather than one, since the mobile cards group them separately;
+  // basicDetailsRows is dt/dd pairs for a grid dl either way, but
+  // collectionContent is just the link content (not wrapped in dt/dd) so
+  // mobile's narrower Collection card can use a stacked label-then-text
+  // layout instead of squeezing it into the same side-by-side grid --
+  // that grid is what made Collection's variable-length sibling list wrap
+  // awkwardly in a narrow column in an earlier pass at this same problem.
+  const basicDetailsRows = (
     <>
       {movie.studio && (
         <>
@@ -338,35 +340,33 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
           </dd>
         </>
       )}
-      {movie.collectionName && collectionSiblings.length > 0 && (
-        <>
-          <dt className="font-cond text-neutral-500 uppercase tracking-wide">Collection</dt>
-          <dd>
-            <Link
-              href={`/collections/${movie.collectionTmdbId}`}
-              className="text-red-500 underline decoration-red-800 underline-offset-2 hover:text-red-400"
-            >
-              {movie.collectionName}
-            </Link>
-            {" — "}
-            {collectionSiblings.map((sibling, i) => (
-              <span key={sibling.id}>
-                <Link
-                  href={`/movies/${sibling.id}`}
-                  className="text-red-500 underline decoration-red-800 underline-offset-2 hover:text-red-400"
-                >
-                  {sibling.title}
-                </Link>
-                {i < collectionSiblings.length - 1 ? ", " : ""}
-              </span>
-            ))}
-          </dd>
-        </>
-      )}
     </>
   );
 
-  // Rendered twice below, same reasoning as detailsRows above: in
+  const collectionContent = hasCollection && (
+    <>
+      <Link
+        href={`/collections/${movie.collectionTmdbId}`}
+        className="text-red-500 underline decoration-red-800 underline-offset-2 hover:text-red-400"
+      >
+        {movie.collectionName}
+      </Link>
+      {" — "}
+      {collectionSiblings.map((sibling, i) => (
+        <span key={sibling.id}>
+          <Link
+            href={`/movies/${sibling.id}`}
+            className="text-red-500 underline decoration-red-800 underline-offset-2 hover:text-red-400"
+          >
+            {sibling.title}
+          </Link>
+          {i < collectionSiblings.length - 1 ? ", " : ""}
+        </span>
+      ))}
+    </>
+  );
+
+  // Rendered twice below, same reasoning as basicDetailsRows/collectionContent above: in
   // source order the title sits inside the content column, after the
   // poster -- fine on desktop's sm:flex-row layout, but on mobile's single
   // flex-col column that puts the backdrop and poster ahead of the movie's
@@ -560,7 +560,15 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
           {hasDetails && (
             <div className="mt-4 hidden rounded-md border border-neutral-800 bg-neutral-900 p-3 sm:block">
               <h3 className="font-cond mb-2 text-xs tracking-widest text-neutral-500 uppercase">Details</h3>
-              <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-sm">{detailsRows}</dl>
+              <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-sm">
+                {basicDetailsRows}
+                {hasCollection && (
+                  <>
+                    <dt className="font-cond text-neutral-500 uppercase tracking-wide">Collection</dt>
+                    <dd>{collectionContent}</dd>
+                  </>
+                )}
+              </dl>
             </div>
           )}
         </div>
@@ -655,9 +663,19 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
           <p className="font-editorial mt-4 hidden max-w-2xl text-neutral-300 sm:block">{movie.overview}</p>
 
           {hasDetails && (
-            <dl className="mt-4 grid max-w-2xl grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-sm sm:hidden">
-              {detailsRows}
-            </dl>
+            <div className="rail-scrollbar mt-4 flex gap-2 overflow-x-auto pb-1 sm:hidden">
+              {hasBasicDetails && (
+                <dl className="grid w-48 shrink-0 grid-cols-[auto_1fr] gap-x-2 gap-y-1.5 rounded-md bg-neutral-900 p-3 text-sm">
+                  {basicDetailsRows}
+                </dl>
+              )}
+              {hasCollection && (
+                <div className="w-48 shrink-0 rounded-md bg-neutral-900 p-3 text-sm">
+                  <p className="font-cond mb-1 text-xs tracking-widest text-neutral-500 uppercase">Collection</p>
+                  <p className="text-neutral-300">{collectionContent}</p>
+                </div>
+              )}
+            </div>
           )}
 
           <div className="mt-4 flex flex-wrap items-start gap-2">
