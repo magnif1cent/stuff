@@ -3476,11 +3476,14 @@ below; what changed each time was *what* fills that freed-up space.
 - **`PosterOverrideControl` (admin-only) originally stacked vertically on
   mobile**, rather than the label and Remove button trying to share one
   row — the narrower 112px poster column left no room for both on one line
-  without wrapping awkwardly. **Later moved out of the poster column
-  entirely, and the internal stacking removed too** — see the two-card-swipe
-  entry below for both changes; the component is no longer confined to a
-  112px column at any breakpoint, so neither the position nor the internal
-  layout is still driven by that constraint.
+  without wrapping awkwardly. Went through several more layout passes after
+  that — moved out of the poster column entirely, then the internal
+  stacking removed, then replaced altogether with a tap-the-poster overlay
+  menu — see the two-card-swipe entry below for the full arc. The final
+  shape has no visible row at all: the control now overlays the poster
+  in-place rather than sitting beside or below it, so it's back to being
+  scoped to the poster's own footprint, just not via a stacked/shared
+  button row anymore.
 
 ### Tagline dropped from mobile; Details card destyled there too
 **PR #TBD.** Same movie detail page, a different complaint about the content
@@ -3598,6 +3601,32 @@ interaction cost without saving meaningful space.
     fallback so an unusually narrow viewport or long label text wraps
     instead of overflowing, rather than reintroducing a hard vertical
     split.
+  - **Final pass: dropped the always-visible button row entirely — tap the
+    poster itself to open a Replace/Remove menu.** Asked directly whether
+    the visible-row approach could be replaced by making the poster itself
+    the control, rather than continuing to shrink the row's height; yes,
+    and it removes the row's footprint altogether instead of trimming it
+    further. `PosterOverrideControl` now takes the poster markup as
+    `children` and wraps it in a `relative` box instead of rendering below
+    it: a small pencil badge (bottom-right corner, `absolute`, always
+    visible since touch has no hover) is the only visual hint it's
+    interactive, and a transparent `absolute inset-0` button behind the
+    badge makes the *entire* poster the tap target, not just the badge.
+    Tapping opens a small dropdown (`Replace poster` / `Upload custom
+    poster`, plus `Remove poster` when an override exists) anchored
+    `left-0` under the poster — anchored left rather than right because the
+    poster sits at the page's left edge on both breakpoints, and a
+    right-anchored menu wider than the 112px mobile poster column would
+    push off the left edge of the viewport instead of extending into the
+    open space to the right. Closes on an outside click (a `mousedown`
+    listener on `document` checking a container ref, matching
+    `search-bar.tsx`'s existing pattern) since there's no longer a
+    permanently visible row for a stray tap to land on instead. This
+    re-confines the control to the poster's own footprint again — the
+    "moved out of the poster column" and "no longer confined to 112px"
+    framing above no longer applies to position at all, since the control
+    isn't a layout sibling anymore, just an interactive overlay on the
+    poster in-place.
 
 ## Deferred & Backlog
 

@@ -285,6 +285,37 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
 
   const backdropUrl = tmdbImageUrl(movie.backdropPath, "w1280");
   const posterUrl = resolvePosterUrl(movie, "w342");
+
+  // Shared by both the plain (non-admin) render and the admin one, which
+  // wraps this same markup in PosterOverrideControl instead of duplicating
+  // it -- keeps the "mat" frame in exactly one place.
+  const posterMat = (
+    <div className="relative rounded-sm border border-neutral-600 bg-neutral-800 p-2 shadow-xl">
+      {/* corner accents, so the mat reads as a mounted print rather
+          than just padding around the poster */}
+      <span className="absolute top-1.5 left-1.5 h-1.5 w-1.5 rounded-full bg-neutral-500" />
+      <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-neutral-500" />
+      <span className="absolute bottom-1.5 left-1.5 h-1.5 w-1.5 rounded-full bg-neutral-500" />
+      <span className="absolute right-1.5 bottom-1.5 h-1.5 w-1.5 rounded-full bg-neutral-500" />
+      <div className="relative aspect-2/3 overflow-hidden border border-neutral-700 bg-neutral-950">
+        {posterUrl ? (
+          <Image
+            src={posterUrl}
+            alt={movie.title}
+            fill
+            unoptimized={isTmdbUrl(posterUrl)}
+            sizes="(min-width: 640px) 224px, 112px"
+            className="object-cover"
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center px-2 text-center text-xs text-neutral-500">
+            {movie.title}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
   const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : null;
   const isFavorite = myListEntries.some((e) => e.listType === "FAVORITE");
   const isOnWatchlist = myListEntries.some((e) => e.listType === "WATCHLIST");
@@ -513,49 +544,23 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
             back to its original spot in the content column, unconditional
             on every breakpoint (see DECISIONS.md; overview is intentionally
             mobile-only here now, not duplicated in the content column
-            below). PosterOverrideControl (admin-only) is a flex-wrap sibling
-            here, not nested inside the poster's own div -- if it were
-            nested there, its height would feed into this row's
-            align-items: stretch, forcing the overview snippet's box to
-            match a taller boundary than its (often short) text actually
-            fills. As a sibling with w-full, it can't fit on the poster+
-            overview line and wraps to its own row below instead, outside
-            that stretch calculation. (A single instance styled to work at
-            both breakpoints, not two -- this control does a real file
-            upload with its own async state; two mounted copies would each
-            have independent state, so crossing the sm breakpoint mid-upload
-            would silently swap to a copy that doesn't know an upload is in
-            flight. Caught in review before shipping the two-copy version.)
-            Desktop: sm:block turns the whole thing back into a plain
-            stacked column, so it's the same sidebar as before -- poster,
-            admin control, Details underneath, in source order (the flex-wrap
-            trick is inert there since the container isn't flex anymore). */}
+            below). PosterOverrideControl (admin-only) now wraps the poster
+            itself rather than sitting below it as its own row -- the whole
+            poster is the tap target for a Replace/Remove menu, so it costs
+            no extra layout height at all, unlike the old always-visible
+            button row it replaced (see DECISIONS.md). Desktop: sm:block
+            turns the whole thing back into a plain stacked column, so it's
+            the same sidebar as before -- poster, Details underneath, in
+            source order. */}
         <div className="flex flex-wrap gap-4 sm:block sm:w-56 sm:shrink-0">
           <div className="w-28 shrink-0 sm:w-full">
-            <div className="relative rounded-sm border border-neutral-600 bg-neutral-800 p-2 shadow-xl">
-              {/* corner accents, so the mat reads as a mounted print rather
-                  than just padding around the poster */}
-              <span className="absolute top-1.5 left-1.5 h-1.5 w-1.5 rounded-full bg-neutral-500" />
-              <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-neutral-500" />
-              <span className="absolute bottom-1.5 left-1.5 h-1.5 w-1.5 rounded-full bg-neutral-500" />
-              <span className="absolute right-1.5 bottom-1.5 h-1.5 w-1.5 rounded-full bg-neutral-500" />
-              <div className="relative aspect-2/3 overflow-hidden border border-neutral-700 bg-neutral-950">
-                {posterUrl ? (
-                  <Image
-                    src={posterUrl}
-                    alt={movie.title}
-                    fill
-                    unoptimized={isTmdbUrl(posterUrl)}
-                    sizes="(min-width: 640px) 224px, 112px"
-                    className="object-cover"
-                  />
-                ) : (
-                  <div className="flex h-full items-center justify-center px-2 text-center text-xs text-neutral-500">
-                    {movie.title}
-                  </div>
-                )}
-              </div>
-            </div>
+            {session?.user?.role === "ADMIN" ? (
+              <PosterOverrideControl key={movie.id} movieId={movie.id} hasOverride={!!movie.posterOverrideUrl}>
+                {posterMat}
+              </PosterOverrideControl>
+            ) : (
+              posterMat
+            )}
           </div>
 
           {/* Collapsed state hard-clips at the poster's own height (the
@@ -568,12 +573,6 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
               sibling that already has an intrinsic (aspect-ratio-locked)
               size. */}
           {movie.overview && <MovieOverviewSnippet key={movie.id} overview={movie.overview} />}
-
-          {session?.user?.role === "ADMIN" && (
-            <div className="w-full">
-              <PosterOverrideControl movieId={movie.id} hasOverride={!!movie.posterOverrideUrl} />
-            </div>
-          )}
 
           {hasDetails && (
             <div className="mt-4 hidden rounded-md border border-neutral-800 bg-neutral-900 p-3 sm:block">
