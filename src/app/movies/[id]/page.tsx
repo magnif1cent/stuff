@@ -42,7 +42,7 @@ import { FunFactsSection } from "@/components/fun-facts-section";
 import { ReviewsSection } from "@/components/reviews-section";
 import { PosterOverrideControl } from "@/components/poster-override-control";
 import { MovieOverviewSnippet } from "@/components/movie-overview-snippet";
-import { RecommendationControl } from "@/components/recommendation-control";
+import { RecommendedBadges } from "@/components/recommended-badge";
 import { FightCountControl } from "@/components/fight-count-control";
 
 const getMovie = cache((id: string) =>
@@ -285,6 +285,8 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
 
   const backdropUrl = tmdbImageUrl(movie.backdropPath, "w1280");
   const posterUrl = resolvePosterUrl(movie, "w342");
+  const recommendedByMe =
+    session?.user?.role === "ADMIN" && movieRecommenders.some((r) => r.id === session.user.id);
 
   // Shared by both the plain (non-admin) render and the admin one, which
   // wraps this same markup in PosterOverrideControl instead of duplicating
@@ -555,7 +557,12 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
         <div className="flex flex-wrap gap-4 sm:block sm:w-56 sm:shrink-0">
           <div className="w-28 shrink-0 sm:w-full">
             {session?.user?.role === "ADMIN" ? (
-              <PosterOverrideControl key={movie.id} movieId={movie.id} hasOverride={!!movie.posterOverrideUrl}>
+              <PosterOverrideControl
+                key={movie.id}
+                movieId={movie.id}
+                hasOverride={!!movie.posterOverrideUrl}
+                recommendedByMe={recommendedByMe}
+              >
                 {posterMat}
               </PosterOverrideControl>
             ) : (
@@ -591,16 +598,8 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
         </div>
 
         <div className="flex-1 pt-2">
-          <div className="mb-3">
-            <RecommendationControl
-              movieId={movie.id}
-              initialRecommenders={movieRecommenders}
-              currentAdminId={session?.user?.role === "ADMIN" ? session.user.id : null}
-              isAdmin={session?.user?.role === "ADMIN"}
-            />
-          </div>
-
           <div className="font-cond flex flex-wrap items-center gap-x-3 gap-y-1 text-sm tracking-wide text-neutral-400 uppercase">
+            <RecommendedBadges recommenders={movieRecommenders} size="sm" />
             {movie.runtime && <span>{movie.runtime} min</span>}
             {movie.director && <span>Dir. {movie.director}</span>}
             {movie.certification && (

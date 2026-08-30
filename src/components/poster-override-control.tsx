@@ -7,14 +7,21 @@ import { useRouter } from "next/navigation";
 // below it: the whole poster is the tap target, with a small pencil badge
 // as the only visual hint it's interactive (admin-only). Replaces the
 // earlier always-visible "Replace poster"/"Remove" row, which cost real
-// layout space year-round for a control most visitors never see.
+// layout space year-round for a control most visitors never see. The
+// recommend toggle rides along in the same menu for the same reason --
+// it's another admin-only action that used to be its own permanent row
+// (see DECISIONS.md); the recommender badges it affects stay visible to
+// everyone and live elsewhere (the byline row), since only the *toggle*
+// is admin-only.
 export function PosterOverrideControl({
   movieId,
   hasOverride,
+  recommendedByMe,
   children,
 }: {
   movieId: string;
   hasOverride: boolean;
+  recommendedByMe: boolean;
   children: React.ReactNode;
 }) {
   const router = useRouter();
@@ -22,6 +29,7 @@ export function PosterOverrideControl({
   const containerRef = useRef<HTMLDivElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [recommendSubmitting, setRecommendSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -69,6 +77,21 @@ export function PosterOverrideControl({
     router.refresh();
   }
 
+  async function toggleRecommend() {
+    setMenuOpen(false);
+    setRecommendSubmitting(true);
+    setError(null);
+    const res = await fetch(`/api/movies/${movieId}/recommend`, {
+      method: recommendedByMe ? "DELETE" : "POST",
+    });
+    setRecommendSubmitting(false);
+    if (!res.ok) {
+      setError("Something went wrong.");
+      return;
+    }
+    router.refresh();
+  }
+
   return (
     <div ref={containerRef} className="relative">
       {children}
@@ -82,7 +105,7 @@ export function PosterOverrideControl({
         disabled={uploading}
         aria-haspopup="menu"
         aria-expanded={menuOpen}
-        aria-label={uploading ? "Uploading poster…" : "Poster options"}
+        aria-label={uploading ? "Uploading poster…" : "Poster and recommendation options"}
         className="absolute inset-0 flex items-end justify-end rounded-sm"
       >
         <span className="m-1.5 flex h-6 w-6 items-center justify-center rounded-full border border-neutral-500 bg-neutral-950/80 text-neutral-300">
@@ -136,6 +159,15 @@ export function PosterOverrideControl({
               Remove poster
             </button>
           )}
+          <div className="my-1 h-px bg-neutral-700" />
+          <button
+            type="button"
+            onClick={toggleRecommend}
+            disabled={recommendSubmitting}
+            className="w-full rounded px-3 py-1.5 text-left text-sm text-neutral-100 hover:bg-neutral-700 disabled:opacity-50"
+          >
+            {recommendedByMe ? "✓ Recommended by you" : "+ Recommend this movie"}
+          </button>
         </div>
       )}
 

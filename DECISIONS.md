@@ -1149,7 +1149,11 @@ this entry covers the final direction, not every intermediate step tried.
     change. `RecommendationControl`'s button ("+ Recommend this movie" /
     "✓ Recommended by you") got the same treatment at the same time, since it was the
     other shared-looking button flagged in that comparison — it's movie-page-only, so
-    no ripple concern there. `PosterOverrideControl`'s "Replace poster"/"Upload custom
+    no ripple concern there. (`RecommendationControl` itself no longer exists — its
+    toggle was later folded into `PosterOverrideControl`'s tap-menu as a plain
+    sentence-case menu item, matching its "Replace poster"/"Remove poster" siblings
+    rather than keeping this `font-cond` uppercase treatment; see the poster-tap-menu
+    entry below.) `PosterOverrideControl`'s "Replace poster"/"Upload custom
     poster" and "Remove" were caught the same way a round later — the one control
     directly under the poster mat that never got revisited after the initial
     "leave these alone" list, still plain `rounded-md` and mixed-case next to an
@@ -3627,6 +3631,25 @@ interaction cost without saving meaningful space.
     framing above no longer applies to position at all, since the control
     isn't a layout sibling anymore, just an interactive overlay on the
     poster in-place.
+  - **Same idea applied to the separate "+ Recommend this movie" /
+    "✓ Recommended by you" toggle: folded it into the poster's tap-menu
+    too, as a third item below a divider, and deleted the now-empty
+    `RecommendationControl` component.** That toggle was its own
+    always-visible admin-only row (`mb-3`, above the byline) for the same
+    reason the poster controls used to be — same failure mode, so same
+    fix. The read-only recommender badges (`RecommendedBadges`) are a
+    different concern from the toggle — they're visible to every visitor,
+    not just admins — so they didn't move into the (admin-only)
+    poster menu; they moved into the byline row instead (runtime/director/
+    certification/fight count), as its first item, rather than keeping
+    their own row. `PosterOverrideControl` picked up a `recommendedByMe`
+    prop (computed in the page from `movieRecommenders` + the session admin
+    id) and a `toggleRecommend` handler that mirrors `handleRemove`'s
+    shape (POST/DELETE to `/api/movies/[id]/recommend`, then
+    `router.refresh()`) — no separate client state for the recommenders
+    list is needed anymore, since `router.refresh()` re-fetches
+    `movieRecommenders` on the server and `RecommendedBadges` renders
+    straight from that server-provided prop.
 
 ## Deferred & Backlog
 
