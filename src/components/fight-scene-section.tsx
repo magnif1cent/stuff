@@ -15,6 +15,7 @@ const MAX_NOTE_LENGTH = 2000;
 // two full rows on the widest (3-column) layout.
 const SCENES_PAGE_SIZE = 6;
 const MAX_TITLE_LENGTH = 200;
+const MAX_TAG_NAME_LENGTH = 40;
 
 export type CastOption = Pick<Person, "id" | "name">;
 export type TagOption = Pick<FightSceneTag, "id" | "name">;
@@ -118,6 +119,7 @@ function FightSceneForm({
   submitting,
   onCancel,
   onSubmit,
+  onCreateTag,
   isEditing = false,
 }: {
   castOptions: CastOption[];
@@ -130,6 +132,12 @@ function FightSceneForm({
   submitting: boolean;
   onCancel?: () => void;
   onSubmit: (title: string, youtubeUrl: string, personIds: string[], tagIds: string[]) => void;
+  // Members can invent a tag that isn't in tagOptions yet -- unlike cast,
+  // which is fixed to the movie's own credits. Returns the created (or, on
+  // a case-insensitive name match, the existing) tag, or null on failure;
+  // the caller owns growing the shared tagOptions list so a tag created
+  // while adding one scene is available immediately when editing another.
+  onCreateTag: (name: string) => Promise<TagOption | null>;
   isEditing?: boolean;
 }) {
   const [title, setTitle] = useState(initialTitle);
@@ -137,6 +145,8 @@ function FightSceneForm({
   const [selectedCast, setSelectedCast] = useState<Set<string>>(new Set(initialPersonIds));
   const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set(initialTagIds));
   const [suggestingTitle, setSuggestingTitle] = useState(false);
+  const [newTagName, setNewTagName] = useState("");
+  const [creatingTag, setCreatingTag] = useState(false);
   const lastSuggestedTitle = useRef("");
 
   function toggleCast(id: string) {
@@ -155,6 +165,18 @@ function FightSceneForm({
       else next.add(id);
       return next;
     });
+  }
+
+  async function handleAddTag() {
+    const trimmed = newTagName.trim();
+    if (!trimmed) return;
+    setCreatingTag(true);
+    const tag = await onCreateTag(trimmed);
+    setCreatingTag(false);
+    if (tag) {
+      setSelectedTags((prev) => new Set(prev).add(tag.id));
+      setNewTagName("");
+    }
   }
 
   async function suggestTitle() {
@@ -207,6 +229,30 @@ function FightSceneForm({
       <div>
         <p className="mb-1 text-xs text-neutral-500">Category tags (optional)</p>
         <ChipPicker options={tagOptions} selected={selectedTags} onToggle={toggleTag} tagStyle />
+        <div className="mt-1.5 flex gap-2">
+          <input
+            type="text"
+            value={newTagName}
+            onChange={(e) => setNewTagName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                handleAddTag();
+              }
+            }}
+            maxLength={MAX_TAG_NAME_LENGTH}
+            placeholder="Don't see it? Add a new tag…"
+            className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
+          />
+          <button
+            type="button"
+            onClick={handleAddTag}
+            disabled={creatingTag || !newTagName.trim()}
+            className="w-fit shrink-0 rounded-md border border-neutral-700 px-3 py-1.5 text-xs text-neutral-300 hover:bg-neutral-800 disabled:opacity-50"
+          >
+            {creatingTag ? "Adding…" : "Add"}
+          </button>
+        </div>
       </div>
       <div className="flex gap-2">
         <button
@@ -289,7 +335,7 @@ export function FightSceneSection({
   movieId,
   initialFightScenes,
   castOptions,
-  tagOptions,
+  tagOptions: initialTagOptions,
   signedIn,
   currentUserId,
   isAdmin,
@@ -352,6 +398,10 @@ export function FightSceneSection({
 }) {
   const router = useRouter();
   const [scenes, setScenes] = useState(initialFightScenes);
+  // Grows when a member creates a new tag -- lifted up here (rather than
+  // kept local to whichever FightSceneForm created it) so a tag created
+  // while adding one scene shows up immediately when editing another.
+  const [tagOptions, setTagOptions] = useState(initialTagOptions);
   const [ratings, setRatings] = useState(myRatings);
   const [adminRatings, setAdminRatings] = useState(myAdminRatings);
   const [adding, setAdding] = useState(false);
@@ -387,6 +437,25 @@ export function FightSceneSection({
       else next.add(id);
       return next;
     });
+  }
+
+  async function handleCreateTag(name: string): Promise<TagOption | null> {
+    setError(null);
+    const res = await fetch("/api/fight-scene-tags", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setError(body.error ?? "Something went wrong.");
+      return null;
+    }
+    const { tag } = await res.json();
+    setTagOptions((prev) =>
+      prev.some((t) => t.id === tag.id) ? prev : [...prev, tag].sort((a, b) => a.name.localeCompare(b.name)),
+    );
+    return tag;
   }
 
   async function handleCreate(title: string, youtubeUrl: string, personIds: string[], tagIds: string[]) {
@@ -584,6 +653,7 @@ export function FightSceneSection({
             submitting={submitting}
             onCancel={() => setAdding(false)}
             onSubmit={handleCreate}
+            onCreateTag={handleCreateTag}
           />
         </div>
       )}
@@ -607,6 +677,7 @@ export function FightSceneSection({
             submitting={submitting}
             onCancel={() => setEditingId(null)}
             onSubmit={(title, url, personIds, tagIds) => handleEdit(editingScene.id, title, url, personIds, tagIds)}
+            onCreateTag={handleCreateTag}
             isEditing
           />
         </div>
