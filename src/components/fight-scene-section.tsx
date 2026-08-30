@@ -238,6 +238,18 @@ const TICKET_INK = "#1a1712";
 const TICKET_MUTED = "#6b6148";
 const TICKET_STAMP = "#a4291e";
 
+function ActionChip({ onClick, children }: { onClick: () => void; children: string }) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex min-h-8 items-center rounded-sm border px-2.5 text-[10px] tracking-wide uppercase hover:opacity-70"
+      style={{ borderColor: TICKET_INK }}
+    >
+      {children}
+    </button>
+  );
+}
+
 function RatingRow({ label, score, onRate, disabled }: { label: string; score: number | null; onRate: (value: number) => void; disabled: boolean }) {
   return (
     <div className="mt-3">
@@ -746,32 +758,30 @@ export function FightSceneSection({
                 )}
               </div>
 
-              <div className="mt-4 flex items-end justify-between gap-3">
-                <p className="text-[10px] tracking-wide uppercase" style={{ color: TICKET_MUTED }}>
-                  Submitted by
-                  <br />
-                  {scene.submittedBy.username}
-                  {canEdit && (
-                    <button onClick={() => setEditingId(scene.id)} className="ml-2 underline hover:opacity-70">
-                      Edit
-                    </button>
+              <div className="mt-4 flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[10px] tracking-wide uppercase" style={{ color: TICKET_MUTED }}>
+                    Submitted by
+                    <br />
+                    {scene.submittedBy.username}
+                  </p>
+                  {(canEdit || canDelete || canVerify || isAdmin) && (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {canEdit && <ActionChip onClick={() => setEditingId(scene.id)}>Edit</ActionChip>}
+                      {canDelete && <ActionChip onClick={() => handleDelete(scene.id)}>Delete</ActionChip>}
+                      {canVerify && (
+                        <ActionChip onClick={() => handleVerifyToggle(scene.id, !scene.isVerified)}>
+                          {scene.isVerified ? "Unverify" : "Verify"}
+                        </ActionChip>
+                      )}
+                      {isAdmin && (
+                        <ActionChip onClick={() => toggleAdminTools(scene.id)}>
+                          {expandedAdminIds.has(scene.id) ? "Hide admin tools" : "Admin tools"}
+                        </ActionChip>
+                      )}
+                    </div>
                   )}
-                  {canDelete && (
-                    <button onClick={() => handleDelete(scene.id)} className="ml-2 underline hover:opacity-70">
-                      Delete
-                    </button>
-                  )}
-                  {canVerify && (
-                    <button onClick={() => handleVerifyToggle(scene.id, !scene.isVerified)} className="ml-2 underline hover:opacity-70">
-                      {scene.isVerified ? "Unverify" : "Verify"}
-                    </button>
-                  )}
-                  {isAdmin && (
-                    <button onClick={() => toggleAdminTools(scene.id)} className="ml-2 underline hover:opacity-70">
-                      {expandedAdminIds.has(scene.id) ? "Hide admin tools" : "Admin tools"}
-                    </button>
-                  )}
-                </p>
+                </div>
 
                 <div className="flex gap-3">
                   <div className="text-center">
