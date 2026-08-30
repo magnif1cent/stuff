@@ -3473,15 +3473,14 @@ below; what changed each time was *what* fills that freed-up space.
     Also Like") could let React reconcile it as the same instance and
     carry an `expanded: true` state over from the previous movie — caught
     in review, not from a live repro.
-- **`PosterOverrideControl` (admin-only) stacks vertically on mobile**,
-  rather than the label and Remove button trying to share one row — the
-  narrower 112px poster column left no room for both on one line without
-  wrapping awkwardly. Unchanged at `sm:`+, where the sidebar column is wide
-  enough for the original horizontal layout. **Later moved out of the
-  poster column entirely** (see the two-card-swipe entry below for why) —
-  the "driven by the poster column's own width" framing above no longer
-  applies to its position, only to this internal label/button stacking,
-  which is untouched.
+- **`PosterOverrideControl` (admin-only) originally stacked vertically on
+  mobile**, rather than the label and Remove button trying to share one
+  row — the narrower 112px poster column left no room for both on one line
+  without wrapping awkwardly. **Later moved out of the poster column
+  entirely, and the internal stacking removed too** — see the two-card-swipe
+  entry below for both changes; the component is no longer confined to a
+  112px column at any breakpoint, so neither the position nor the internal
+  layout is still driven by that constraint.
 
 ### Tagline dropped from mobile; Details card destyled there too
 **PR #TBD.** Same movie detail page, a different complaint about the content
@@ -3584,6 +3583,21 @@ interaction cost without saving meaningful space.
     `flex-wrap`/`w-full` classes are inert there and the desktop layout
     (poster, admin control, Details, in source order) is unchanged from
     before this fix.
+  - **Follow-up, from a real-device screenshot after the above shipped:
+    "looks the same"** — the stretch-mismatch bug was genuinely fixed, but
+    the control's own second wrapped line still cost as much height
+    (~45px, from its internal mobile-vertical label/Remove-button stacking)
+    as the stretch fix had recovered, so the total footprint before the
+    content column barely moved. Since the control is now a full-width
+    `flex-wrap` sibling rather than confined to the 112px poster column
+    (the constraint that motivated the vertical stacking in the first
+    place), that stacking no longer earns its keep: changed the inner row
+    from `flex flex-col items-start gap-1 sm:flex-row sm:items-center
+    sm:gap-2` to `flex flex-wrap items-center gap-2` — horizontal by
+    default at every breakpoint now, with `flex-wrap` kept only as a
+    fallback so an unusually narrow viewport or long label text wraps
+    instead of overflowing, rather than reintroducing a hard vertical
+    split.
 
 ## Deferred & Backlog
 
