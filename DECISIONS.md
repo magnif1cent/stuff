@@ -3780,6 +3780,28 @@ comparison and more obvious once live on a real device.
   `hasBasicDetails`/`hasDetails` untouched for desktop's gating, which
   still needs Box Office counted.
 
+### Fight scene rating switched from numbered ticket buttons to the shared star picker
+**PR #TBD.** `RatingRow` (`fight-scene-section.tsx`, shared by the member
+"Your rating" and admin "Editors' rating" on each fight scene ticket card)
+had been flagged in a mobile touch-target review as the card's smallest
+control — flat 24×24px numbered buttons — and deferred twice: once on a
+mistaken belief it had already been fixed by the movie-level Ratings PR,
+once as explicitly out of scope for a footer-chip fix landing the same
+day. Requested directly ("like the movies") rather than resizing the
+numbered grid in place (the fix originally mocked for it). `RatingRow`
+now renders `StarRatingPicker` — the same half-click 5-star control
+`RatingCard` uses for the movie-level overall score — instead of its own
+button grid, with the same member/admin color split (`RatingCard`'s
+member tab uses the picker's own default yellow; admin passes
+`fillColorClassName="text-amber-500"`). This is a deliberate step away
+from the ticket card's ink-only visual language (see "Fight Scenes
+introduced as a core feature" above, and the TICKET_INK/TICKET_MUTED/
+TICKET_STAMP palette comment in the component) — colored stars now
+appear inside the cream-and-ink ticket stub — traded for touch-target
+parity and one shared rating control instead of two divergent ones. The
+old `SCORES` (1-10) array was removed as dead code once nothing
+referenced it.
+
 ## Deferred & Backlog
 
 - **Drag-and-drop reordering for ranked list items** — `ListItemRows`

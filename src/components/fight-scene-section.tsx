@@ -7,9 +7,9 @@ import type { FightSceneCast, FightSceneTag, Person, User } from "@/generated/pr
 import { ShareButton } from "@/components/share-button";
 import { AddToListControl, type AddToListItem } from "@/components/add-to-list-control";
 import { FavoriteButton } from "@/components/favorite-button";
+import { StarRatingPicker } from "@/components/star-rating-picker";
 import { youtubeWatchUrl } from "@/lib/youtube";
 
-const SCORES = Array.from({ length: 10 }, (_, i) => i + 1);
 const MAX_NOTE_LENGTH = 2000;
 // How many scenes render before a "Show more" click is needed — enough for
 // two full rows on the widest (3-column) layout.
@@ -250,31 +250,35 @@ function ActionChip({ onClick, children }: { onClick: () => void; children: stri
   );
 }
 
-function RatingRow({ label, score, onRate, disabled }: { label: string; score: number | null; onRate: (value: number) => void; disabled: boolean }) {
+function RatingRow({
+  label,
+  score,
+  onRate,
+  disabled,
+  fillColorClassName,
+}: {
+  label: string;
+  score: number | null;
+  onRate: (value: number) => void;
+  disabled: boolean;
+  // Member "Your rating" leaves this at the picker's own default (yellow);
+  // the admin Editors' rating passes amber, matching RatingCard's same
+  // member/admin color split for the overall-score picker.
+  fillColorClassName?: string;
+}) {
   return (
     <div className="mt-3">
       <p className="mb-1 text-[10px] uppercase tracking-wide" style={{ color: TICKET_MUTED }}>
         {label}
       </p>
-      <div className="flex flex-wrap gap-1">
-        {SCORES.map((value) => {
-          const active = score !== null && value <= score;
-          return (
-            <button
-              key={value}
-              disabled={disabled}
-              onClick={() => onRate(value)}
-              className="h-6 w-6 border text-[10px] font-bold transition disabled:opacity-50"
-              style={{
-                borderColor: TICKET_INK,
-                background: active ? TICKET_INK : "transparent",
-                color: active ? "#e8dcc4" : TICKET_INK,
-              }}
-            >
-              {value}
-            </button>
-          );
-        })}
+      <div className="flex items-center gap-2">
+        <StarRatingPicker size="lg" value={score} disabled={disabled} onSelect={onRate} fillColorClassName={fillColorClassName} />
+        <p className="text-sm font-bold" style={{ color: TICKET_INK }}>
+          {score ?? "—"}
+          <span className="text-[10px] font-normal" style={{ color: TICKET_MUTED }}>
+            /10
+          </span>
+        </p>
       </div>
     </div>
   );
@@ -845,6 +849,7 @@ export function FightSceneSection({
                     score={adminRatings[scene.id] ?? null}
                     onRate={(value) => handleAdminRate(scene.id, value)}
                     disabled={false}
+                    fillColorClassName="text-amber-500"
                   />
                   <textarea
                     value={adminNoteDrafts[scene.id] ?? ""}
