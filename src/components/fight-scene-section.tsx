@@ -261,10 +261,11 @@ function RatingRow({
   score: number | null;
   onRate: (value: number) => void;
   disabled: boolean;
-  // Member "Your rating" leaves this at the picker's own default (yellow);
-  // the admin Editors' rating passes amber, matching RatingCard's same
-  // member/admin color split for the overall-score picker.
-  fillColorClassName?: string;
+  // Ticket ink for "Your rating", ticket stamp-red for Editors' -- the same
+  // two colors already used elsewhere on this card (the ink border/text and
+  // the rating-average stamp circles), rather than RatingCard's yellow/amber,
+  // so the star picker stays inside the ticket's own ink-on-cream palette.
+  fillColorClassName: string;
 }) {
   return (
     <div className="mt-3">
@@ -776,7 +777,7 @@ export function FightSceneSection({
                 )}
               </div>
 
-              <div className="mt-4 flex items-start justify-between gap-3">
+              <div className="mt-4 flex items-start justify-between gap-3 border-t pt-3" style={{ borderColor: "#b8ab8c" }}>
                 <div>
                   <p className="text-[10px] tracking-wide uppercase" style={{ color: TICKET_MUTED }}>
                     Submitted by
@@ -839,7 +840,13 @@ export function FightSceneSection({
               </div>
 
               {signedIn && (
-                <RatingRow label="Your rating" score={ratings[scene.id] ?? null} onRate={(value) => handleRate(scene.id, value)} disabled={false} />
+                <RatingRow
+                  label="Your rating"
+                  score={ratings[scene.id] ?? null}
+                  onRate={(value) => handleRate(scene.id, value)}
+                  disabled={false}
+                  fillColorClassName={`text-[${TICKET_INK}]`}
+                />
               )}
 
               {isAdmin && expandedAdminIds.has(scene.id) && (
@@ -849,7 +856,7 @@ export function FightSceneSection({
                     score={adminRatings[scene.id] ?? null}
                     onRate={(value) => handleAdminRate(scene.id, value)}
                     disabled={false}
-                    fillColorClassName="text-amber-500"
+                    fillColorClassName={`text-[${TICKET_STAMP}]`}
                   />
                   <textarea
                     value={adminNoteDrafts[scene.id] ?? ""}

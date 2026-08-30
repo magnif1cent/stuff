@@ -3791,16 +3791,22 @@ day. Requested directly ("like the movies") rather than resizing the
 numbered grid in place (the fix originally mocked for it). `RatingRow`
 now renders `StarRatingPicker` — the same half-click 5-star control
 `RatingCard` uses for the movie-level overall score — instead of its own
-button grid, with the same member/admin color split (`RatingCard`'s
-member tab uses the picker's own default yellow; admin passes
-`fillColorClassName="text-amber-500"`). This is a deliberate step away
-from the ticket card's ink-only visual language (see "Fight Scenes
-introduced as a core feature" above, and the TICKET_INK/TICKET_MUTED/
-TICKET_STAMP palette comment in the component) — colored stars now
-appear inside the cream-and-ink ticket stub — traded for touch-target
-parity and one shared rating control instead of two divergent ones. The
-old `SCORES` (1-10) array was removed as dead code once nothing
-referenced it.
+button grid, reusing the mechanic ("like the movies") without importing
+`RatingCard`'s yellow/amber colors: `fillColorClassName` is instead set
+to the ticket's own ink (`TICKET_INK`, member "Your rating") and stamp
+red (`TICKET_STAMP`, admin "Editors' rating" — the same red already used
+two inches away on the rating-average stamp circles), via Tailwind
+arbitrary-value classes (`text-[#1a1712]`/`text-[#a4291e]`) rather than
+touching `StarIcon`. Considered and rejected: `RatingCard`'s literal
+yellow/amber, which would have broken the ticket card's deliberately
+ink-only visual language (see "Fight Scenes introduced as a core
+feature" above, and the TICKET_INK/TICKET_MUTED/TICKET_STAMP palette
+comment in the component) by introducing two colors foreign to it. The
+star's unfilled outline (`StarIcon`'s hardcoded `text-neutral-600`,
+tuned for the site's dark theme) still isn't ticket-themed — left as-is,
+flagged rather than fixed, since it reads fine against the cream
+background and wasn't part of what was asked. The old `SCORES` (1-10)
+array was removed as dead code once nothing referenced it.
 
 ## Deferred & Backlog
 
