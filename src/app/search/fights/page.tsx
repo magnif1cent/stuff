@@ -63,7 +63,7 @@ function pageHref(params: FightSceneSearchParams, page: number) {
   if (params.sort) search.set("sort", params.sort);
   if (page > 1) search.set("page", String(page));
   const qs = search.toString();
-  return qs ? `/search/fight-scenes?${qs}` : "/search/fight-scenes";
+  return qs ? `/search/fights?${qs}` : "/search/fights";
 }
 
 export default async function FightSceneSearchPage({
@@ -150,7 +150,7 @@ export default async function FightSceneSearchPage({
   } as const;
 
   // Unlike the old behavior (nothing shown until a query/filter was set),
-  // this always fetches — "Browse fight scenes" is the page's default state,
+  // this always fetches — "Browse Fights" is the page's default state,
   // not just its title, matching how the movie catalog's homepage rails work.
   let scenes = await prisma.fightScene.findMany({
     where,
@@ -355,7 +355,7 @@ export default async function FightSceneSearchPage({
             Apply
           </button>
           {searched && (
-            <a href="/search/fight-scenes" className="text-sm text-neutral-400 hover:text-white">
+            <a href="/search/fights" className="text-sm text-neutral-400 hover:text-white">
               Clear
             </a>
           )}
@@ -364,7 +364,7 @@ export default async function FightSceneSearchPage({
 
       <div className="min-w-0 flex-1">
         <h1 className="mb-4 font-serif text-xl font-bold text-white">
-          {query ? <>Fight scene results for &ldquo;{query}&rdquo;</> : "Browse fight scenes"}
+          {query ? <>Fights matching &ldquo;{query}&rdquo;</> : "Browse Fights"}
         </h1>
 
         {/* Quick-access shortcuts into a filtered/sorted view — a faster
@@ -373,24 +373,24 @@ export default async function FightSceneSearchPage({
             actor filter stays sidebar-only since it's open-ended text,
             not a fixed set of values a bubble row can represent. */}
         <div className="mb-6 flex flex-wrap gap-2">
-          <a href="/search/fight-scenes?sort=memberRating" className={bubbleClass(sort === "memberRating")}>
+          <a href="/search/fights?sort=memberRating" className={bubbleClass(sort === "memberRating")}>
             ★ Top Rated
           </a>
-          <a href="/search/fight-scenes?sort=mostFavorited" className={bubbleClass(sort === "mostFavorited")}>
+          <a href="/search/fights?sort=mostFavorited" className={bubbleClass(sort === "mostFavorited")}>
             ♥ Most Favorited
           </a>
-          <a href="/search/fight-scenes?verified=1" className={bubbleClass(verifiedOnly)}>
+          <a href="/search/fights?verified=1" className={bubbleClass(verifiedOnly)}>
             ✓ Verified only
           </a>
           {session?.user && (
-            <a href="/search/fight-scenes?favorites=1" className={bubbleClass(favoritesOnly)}>
+            <a href="/search/fights?favorites=1" className={bubbleClass(favoritesOnly)}>
               ♥ My Favorites
             </a>
           )}
           {tags.map((t) => (
             <a
               key={t.id}
-              href={`/search/fight-scenes?tag=${encodeURIComponent(t.name)}`}
+              href={`/search/fights?tag=${encodeURIComponent(t.name)}`}
               className={bubbleClass(selectedTags.includes(t.name))}
             >
               {t.name}

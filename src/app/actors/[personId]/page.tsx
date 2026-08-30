@@ -371,7 +371,7 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
         )}
         {fightScenes.length > 0 && (
           <>
-            <dt className="text-neutral-500">Fight Scenes</dt>
+            <dt className="text-neutral-500">Fights</dt>
             <dd className="text-neutral-300">{fightScenes.length}</dd>
           </>
         )}
@@ -495,7 +495,7 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
           </div>
         )}
 
-        <h2 className="mb-4 text-xl font-bold text-white">Fight Scenes</h2>
+        <h2 className="mb-4 text-xl font-bold text-white">Fights</h2>
         {fightSceneEntries.length === 0 ? (
           <p className="text-sm text-neutral-400">No fight scenes tagged with this actor yet.</p>
         ) : (

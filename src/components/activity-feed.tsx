@@ -123,7 +123,7 @@ export function ActivityFeed({
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           {fightScenes.length > 0 && (
-            <ActivityColumn label="Fight Scenes">
+            <ActivityColumn label="Fights">
               {fightScenes.map((item) => (
                 <FightSceneCard key={item.id} item={item} />
               ))}

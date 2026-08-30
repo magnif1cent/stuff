@@ -94,7 +94,7 @@ export default async function PublicListPage({ params }: { params: Promise<{ lis
           rank: entry.rank,
           note: entry.note,
           title: scene.title,
-          href: `/movies/${scene.movieId}/fight-scenes/${scene.id}`,
+          href: `/movies/${scene.movieId}/fights/${scene.id}`,
           youtubeVideoId: scene.youtubeVideoId,
           movieId: scene.movieId,
           movieTitle: scene.movie.title,

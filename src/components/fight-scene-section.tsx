@@ -299,12 +299,14 @@ export function FightSceneSection({
   myMemberLists = [],
   mySavedListIdsByScene = {},
   myFavoriteSceneIds = [],
-  heading = "Fight Scenes",
+  heading = "Fights",
   allowAdd = true,
   detail = false,
   totalRounds,
   prevScenePath,
   nextScenePath,
+  totalSceneCount,
+  viewAllHref,
 }: {
   movieId: string;
   initialFightScenes: FightSceneItem[];
@@ -337,6 +339,16 @@ export function FightSceneSection({
   totalRounds?: number;
   prevScenePath?: string | null;
   nextScenePath?: string | null;
+  // Movie-page teaser mode: initialFightScenes is only a partial list (the
+  // newest one, per FEATURED_FIGHT_COUNT), not every scene for the movie, so
+  // the usual "Show more" in-place pagination can't work -- there's nothing
+  // further to reveal from what this component was handed. totalSceneCount
+  // is the real count (fetched cheaply server-side, e.g. from round numbers)
+  // and viewAllHref points at the full collection page; passing viewAllHref
+  // switches the footer from "Show more" to a "View all N" link and renders
+  // the grid as a single spotlight column instead of a multi-column grid.
+  totalSceneCount?: number;
+  viewAllHref?: string;
 }) {
   const router = useRouter();
   const [scenes, setScenes] = useState(initialFightScenes);
@@ -603,11 +615,22 @@ export function FightSceneSection({
       {/* detail mode is always a single scene meant to fill the page's width, not a grid
           cell sized for scanning many cards — the multi-column grid defeats the point of
           the bigger video if left on here. */}
-      <ul className={detail ? "grid grid-cols-1" : "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"}>
+      <ul
+        className={
+          detail
+            ? "grid grid-cols-1"
+            : // Teaser mode is a single spotlight card (FEATURED_FIGHT_COUNT is 1),
+              // not a grid cell -- plain single column regardless of breakpoint, so
+              // it doesn't read as a truncated grid with implied missing neighbors.
+              viewAllHref
+              ? "grid grid-cols-1 gap-4"
+              : "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+        }
+      >
         {visibleScenes.map((scene) => {
           const canEdit = currentUserId === scene.submittedById;
           const canDelete = canEdit || isAdmin;
-          const permalinkPath = `/movies/${movieId}/fight-scenes/${scene.id}`;
+          const permalinkPath = `/movies/${movieId}/fights/${scene.id}`;
 
           // Shown as its own full-width form above the grid instead
           // (see editingScene above) rather than inline here, so it
@@ -761,7 +784,7 @@ export function FightSceneSection({
                 {scene.tags.map((tag) => (
                   <Link
                     key={tag.id}
-                    href={`/search/fight-scenes?tag=${encodeURIComponent(tag.name)}`}
+                    href={`/search/fights?tag=${encodeURIComponent(tag.name)}`}
                     className="border px-2 py-0.5 text-[10px] tracking-wide uppercase underline underline-offset-2 hover:opacity-70"
                     style={{ borderColor: TICKET_INK }}
                   >
@@ -875,14 +898,24 @@ export function FightSceneSection({
           <p className="text-sm text-neutral-500">No fight scenes added yet.</p>
         )}
       </ul>
-      {remainingSceneCount > 0 && (
-        <button
-          onClick={() => setVisibleCount((prev) => prev + SCENES_PAGE_SIZE)}
-          className="mt-4 w-full rounded-md border border-neutral-700 py-2 text-sm text-neutral-300 hover:bg-neutral-800"
-        >
-          Show more ({remainingSceneCount} more)
-        </button>
-      )}
+      {viewAllHref
+        ? totalSceneCount !== undefined &&
+          totalSceneCount > scenes.length && (
+            <Link
+              href={viewAllHref}
+              className="mt-4 block w-full rounded-md border border-red-800/60 bg-gradient-to-b from-red-950/30 to-transparent py-2 text-center text-sm font-medium text-red-400 hover:border-red-700 hover:text-red-300"
+            >
+              View all {totalSceneCount} fights
+            </Link>
+          )
+        : remainingSceneCount > 0 && (
+            <button
+              onClick={() => setVisibleCount((prev) => prev + SCENES_PAGE_SIZE)}
+              className="mt-4 w-full rounded-md border border-neutral-700 py-2 text-sm text-neutral-300 hover:bg-neutral-800"
+            >
+              Show more ({remainingSceneCount} more)
+            </button>
+          )}
     </section>
   );
 }

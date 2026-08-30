@@ -17,6 +17,12 @@ import { YoutubeThumbnailImage } from "@/components/fight-scene-thumbnail";
 
 type Params = { id: string; fightSceneId: string };
 
+// How many other scenes the "More fights from this movie" rail shows before
+// pointing at the full collection page instead -- same reasoning as the
+// movie page's FEATURED_FIGHT_COUNT, just a wider cap since this rail
+// scrolls horizontally rather than stacking full ticket cards.
+const MORE_FIGHTS_RAIL_LIMIT = 8;
+
 export async function generateMetadata({ params }: { params: Promise<Params> }): Promise<Metadata> {
   const { id: movieId, fightSceneId } = await params;
   const scene = await getFightSceneById(movieId, fightSceneId);
@@ -87,7 +93,22 @@ export default async function FightScenePage({ params }: { params: Promise<Param
   const sceneIndex = movieScenes.findIndex((s) => s.id === scene.id);
   const prevScene = sceneIndex > 0 ? movieScenes[sceneIndex - 1] : null;
   const nextScene = sceneIndex >= 0 && sceneIndex < movieScenes.length - 1 ? movieScenes[sceneIndex + 1] : null;
-  const otherScenes = movieScenes.filter((s) => s.id !== scene.id);
+  // Capped and ordered by proximity to the current round -- otherwise this
+  // rail just gets longer forever as a movie accumulates scenes, the same
+  // unbounded-render problem the movie page's teaser was fixed for. Sorted
+  // back to ascending order after picking the closest MORE_FIGHTS_RAIL_LIMIT
+  // so the rail still reads left-to-right by round, not by proximity.
+  const currentRoundNumber = roundNumbers.get(scene.id) ?? 0;
+  const allOtherScenes = movieScenes.filter((s) => s.id !== scene.id);
+  const otherScenes = [...allOtherScenes]
+    .sort(
+      (a, b) =>
+        Math.abs((roundNumbers.get(a.id) ?? 0) - currentRoundNumber) -
+        Math.abs((roundNumbers.get(b.id) ?? 0) - currentRoundNumber),
+    )
+    .slice(0, MORE_FIGHTS_RAIL_LIMIT)
+    .sort((a, b) => (roundNumbers.get(a.id) ?? 0) - (roundNumbers.get(b.id) ?? 0));
+  const hiddenOtherSceneCount = allOtherScenes.length - otherScenes.length;
   const otherSceneRatings = await getFightSceneRatingSummaries(otherScenes.map((s) => s.id));
   const sceneCastPersonIds = new Set(scene.cast.map((c) => c.person.id));
 
@@ -124,7 +145,7 @@ export default async function FightScenePage({ params }: { params: Promise<Param
           {scene.movie.title}
         </Link>
         <BreadcrumbChevron />
-        <Link href={`/movies/${movieId}#fight-scenes`} className="hover:text-white">
+        <Link href={`/movies/${movieId}/fights`} className="hover:text-white">
           Fights
         </Link>
         <BreadcrumbChevron />
@@ -149,8 +170,8 @@ export default async function FightScenePage({ params }: { params: Promise<Param
         allowAdd={false}
         detail
         totalRounds={movieScenes.length}
-        prevScenePath={prevScene ? `/movies/${movieId}/fight-scenes/${prevScene.id}` : null}
-        nextScenePath={nextScene ? `/movies/${movieId}/fight-scenes/${nextScene.id}` : null}
+        prevScenePath={prevScene ? `/movies/${movieId}/fights/${prevScene.id}` : null}
+        nextScenePath={nextScene ? `/movies/${movieId}/fights/${nextScene.id}` : null}
       />
 
       {/* Demoted "exit" zone — clearly a step down from the scene above, not competing
@@ -194,7 +215,7 @@ export default async function FightScenePage({ params }: { params: Promise<Param
                 return (
                   <Link
                     key={other.id}
-                    href={`/movies/${movieId}/fight-scenes/${other.id}`}
+                    href={`/movies/${movieId}/fights/${other.id}`}
                     className="flex w-[320px] shrink-0 items-center gap-3.5 rounded-md border border-neutral-800 p-3 text-neutral-300 hover:border-neutral-600"
                   >
                     <div className="relative h-16 w-28 shrink-0 overflow-hidden rounded-sm bg-neutral-950">
@@ -214,6 +235,14 @@ export default async function FightScenePage({ params }: { params: Promise<Param
                   </Link>
                 );
               })}
+              {hiddenOtherSceneCount > 0 && (
+                <Link
+                  href={`/movies/${movieId}/fights`}
+                  className="flex w-[140px] shrink-0 items-center justify-center rounded-md border border-dashed border-neutral-700 p-3 text-center font-mono text-sm text-red-500 hover:border-red-700 hover:text-red-400"
+                >
+                  View all {allOtherScenes.length + 1} →
+                </Link>
+              )}
             </div>
           </>
         )}
