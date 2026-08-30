@@ -42,6 +42,7 @@ import { FunFactsSection } from "@/components/fun-facts-section";
 import { ReviewsSection } from "@/components/reviews-section";
 import { PosterOverrideControl } from "@/components/poster-override-control";
 import { MovieOverviewSnippet } from "@/components/movie-overview-snippet";
+import { MovieDetailsTabs } from "@/components/movie-details-tabs";
 import { RecommendedBadges } from "@/components/recommended-badge";
 import { FightCountControl } from "@/components/fight-count-control";
 
@@ -331,16 +332,18 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
   const hasDetails = hasBasicDetails || hasCollection;
 
   // Shared by desktop's single boxed card (both fragments composed
-  // together in one <dl>) and mobile's two-card swipe strip (each
-  // fragment its own card, so a movie with no Collection renders as one
-  // static card and nothing to swipe -- the common case). Split into two
-  // pieces rather than one, since the mobile cards group them separately;
-  // basicDetailsRows is dt/dd pairs for a grid dl either way, but
-  // collectionContent is just the link content (not wrapped in dt/dd) so
-  // mobile's narrower Collection card can use a stacked label-then-text
-  // layout instead of squeezing it into the same side-by-side grid --
-  // that grid is what made Collection's variable-length sibling list wrap
-  // awkwardly in a narrow column in an earlier pass at this same problem.
+  // together in one <dl>) and mobile's single tabbed card (each fragment
+  // its own tab, only rendered as an actual tab bar when both exist --
+  // a movie with no Collection just shows basicDetailsRows directly, the
+  // common case, no tab bar with nothing to switch between). Split into
+  // two pieces rather than one, since the mobile tabs render them
+  // separately; basicDetailsRows is dt/dd pairs for a grid dl either way,
+  // but collectionContent is just the link content (not wrapped in dt/dd)
+  // so mobile's Collection tab can use the pill-format collectionPills
+  // below instead of squeezing everything into the same side-by-side grid
+  // -- that grid is what made Collection's variable-length sibling list
+  // wrap awkwardly in a narrow column in an earlier pass at this same
+  // problem.
   const basicDetailsRows = (
     <>
       {movie.studio && (
@@ -397,6 +400,34 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
         </span>
       ))}
     </>
+  );
+
+  // Mobile-only alternative to collectionContent's inline comma-separated
+  // text, for the Collection tab/card: sibling titles as their own
+  // tappable pills (same rounded-full pill styling as the genre pills
+  // below) rather than a run-on sentence, since a narrow column wraps a
+  // long sibling list awkwardly as text. The collection name gets the same
+  // pill treatment but in the red accent already used for its link
+  // elsewhere, so it reads as the "parent" entry rather than another
+  // sibling. Desktop's boxed Details card keeps collectionContent as-is.
+  const collectionPills = hasCollection && (
+    <div className="flex flex-wrap gap-1.5">
+      <Link
+        href={`/collections/${movie.collectionTmdbId}`}
+        className="rounded-full border border-red-800 bg-red-950/40 px-2 py-0.5 text-xs text-red-400 hover:border-red-600 hover:text-red-300"
+      >
+        {movie.collectionName}
+      </Link>
+      {collectionSiblings.map((sibling) => (
+        <Link
+          key={sibling.id}
+          href={`/movies/${sibling.id}`}
+          className="rounded-full border border-neutral-700 px-2 py-0.5 text-xs text-neutral-300 underline decoration-neutral-600 underline-offset-2 hover:border-neutral-500 hover:text-neutral-100"
+        >
+          {sibling.title}
+        </Link>
+      ))}
+    </div>
   );
 
   // Rendered twice below, same reasoning as basicDetailsRows/collectionContent above: in
@@ -679,17 +710,16 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
           <p className="font-editorial mt-4 hidden max-w-2xl text-neutral-300 sm:block">{movie.overview}</p>
 
           {hasDetails && (
-            <div className="rail-scrollbar mt-4 flex gap-2 overflow-x-auto pb-1 sm:hidden">
-              {hasBasicDetails && (
-                <dl className="grid w-48 shrink-0 grid-cols-[auto_1fr] gap-x-2 gap-y-1.5 rounded-md bg-neutral-900 p-3 text-sm">
-                  {basicDetailsRows}
-                </dl>
-              )}
-              {hasCollection && (
-                <div className="w-48 shrink-0 rounded-md bg-neutral-900 p-3 text-sm">
+            <div className="mt-4 rounded-md bg-neutral-900 p-3 text-sm sm:hidden">
+              {hasBasicDetails && hasCollection ? (
+                <MovieDetailsTabs basicDetailsRows={basicDetailsRows} collectionContent={collectionPills} />
+              ) : hasBasicDetails ? (
+                <dl className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-1.5">{basicDetailsRows}</dl>
+              ) : (
+                <>
                   <p className="font-cond mb-1 text-xs tracking-widest text-neutral-500 uppercase">Collection</p>
-                  <p className="text-neutral-300">{collectionContent}</p>
-                </div>
+                  {collectionPills}
+                </>
               )}
             </div>
           )}

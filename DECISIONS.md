@@ -3524,7 +3524,13 @@ picking a direction, rather than guessing from description alone.
   dotted/dashed border.
 
 ### Mobile Details card became a two-card swipe strip
-**PR #TBD.** Follow-up on the previous entry's plain-rows mobile Details,
+**PR #TBD.** **Superseded by the single-tabbed-card entry further below —
+the swipe layout this entry landed on (and the tabbed alternative it
+explicitly rejected in favor of it) is gone; see that entry for why the
+rejected tabbed direction was revisited and adopted after all.** Kept
+here as history, along with the still-accurate poster-control and
+recommend-toggle changes nested below that weren't about the swipe
+mechanic itself. Follow-up on the previous entry's plain-rows mobile Details,
 in the same still-unmerged branch. Explored two more directions before
 landing here, mocked up alongside the plain-rows baseline: a tabbed
 version (one field visible at a time, tap to switch) and a five-card
@@ -3650,6 +3656,51 @@ interaction cost without saving meaningful space.
     list is needed anymore, since `router.refresh()` re-fetches
     `movieRecommenders` on the server and `RecommendedBadges` renders
     straight from that server-provided prop.
+
+### Mobile Details card became a single tabbed card
+**PR #TBD.** Revisits the tabbed direction the two-card-swipe entry above
+explicitly evaluated and rejected ("trades a glance for a gesture... adds
+interaction cost without saving meaningful space"). Asked for directly
+after seeing the swipe strip live, not from a fresh side-by-side
+comparison — worth recording since it looks like a straight reversal of
+the earlier call. The two-card swipe's own cost (two separately-tinted
+card chromes taking up horizontal scroll space, one of them empty of
+content to swipe to for most movies) turned out to matter more in
+practice than the tap-to-switch cost the earlier mockup pass was
+weighing against — a tradeoff that's hard to feel from a static mockup
+comparison and more obvious once live on a real device.
+
+- **One card (`bg-neutral-900`, `rounded-md`, `p-3`, unchanged chrome from
+  the swipe-strip version), tabbed between "Details" and "Collection"
+  when both exist.** New `MovieDetailsTabs` client component
+  (`src/components/movie-details-tabs.tsx`) owns the active-tab state;
+  tab labels double as the section headers, so neither tab repeats a
+  "Details"/"Collection" heading inside its own content. Deliberately not
+  a reuse of `ProfileTabs` (`src/components/profile-tabs.tsx`) — that
+  component's `mb-6`/`px-4 py-2` sizing is built for a page-level section,
+  not a ~200px-wide card, and forcing that scale into this card would
+  either look oversized or need overriding most of its styling anyway.
+  Follows `lists-panel.tsx`'s precedent of building a lighter-weight,
+  purpose-sized alternative instead of stretching a heavier shared
+  component to fit; the active-tab `border-b-2 border-red-600` treatment
+  matches `admin-import-search.tsx`'s existing tab styling rather than
+  inventing a new one.
+- **Only an actual tab bar when both `hasBasicDetails` and `hasCollection`
+  are true.** With just one of the two, the page renders that section's
+  content directly inside the same card chrome, no tabs — the "common
+  case pays no interaction cost at all" principle from the swipe-strip
+  entry still holds, just realized as "no tab bar" instead of "nothing to
+  swipe to."
+- **Collection's mobile content changed from inline comma-separated text
+  to individual clickable pills** — a new `collectionPills` fragment,
+  alongside the existing `basicDetailsRows`/`collectionContent` split, not
+  a replacement of `collectionContent` (desktop's boxed Details card keeps
+  the original inline-text version unchanged). The collection name and
+  each sibling movie are their own pill; siblings reuse the genre pills'
+  exact styling (`rounded-full border border-neutral-700 ... text-xs`) for
+  visual consistency with the other pill row on this page, while the
+  collection-name pill gets a red-accented variant so it reads as the
+  "parent" entry point rather than another sibling.
 
 ## Deferred & Backlog
 
