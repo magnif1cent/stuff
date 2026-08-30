@@ -348,9 +348,23 @@ export function FightSceneSection({
   // rating/note) expanded — collapsed by default so an admin's own cards
   // aren't cluttered with tools they're not currently using.
   const [expandedAdminIds, setExpandedAdminIds] = useState<Set<string>>(new Set());
+  // Which cards have their Edit/Delete/Verify chips expanded — separate from
+  // expandedAdminIds since "Manage" is available to any submitter (not just
+  // admins) and gates a different part of the card (the footer chip row, not
+  // the admin tools panel below the video).
+  const [expandedActionIds, setExpandedActionIds] = useState<Set<string>>(new Set());
 
   function toggleAdminTools(id: string) {
     setExpandedAdminIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleActions(id: string) {
+    setExpandedActionIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
@@ -767,12 +781,21 @@ export function FightSceneSection({
                   </p>
                   {(canEdit || canDelete || canVerify || isAdmin) && (
                     <div className="mt-2 flex flex-wrap gap-1.5">
-                      {canEdit && <ActionChip onClick={() => setEditingId(scene.id)}>Edit</ActionChip>}
-                      {canDelete && <ActionChip onClick={() => handleDelete(scene.id)}>Delete</ActionChip>}
-                      {canVerify && (
-                        <ActionChip onClick={() => handleVerifyToggle(scene.id, !scene.isVerified)}>
-                          {scene.isVerified ? "Unverify" : "Verify"}
+                      {(canEdit || canDelete || canVerify) && (
+                        <ActionChip onClick={() => toggleActions(scene.id)}>
+                          {expandedActionIds.has(scene.id) ? "Close" : "Manage"}
                         </ActionChip>
+                      )}
+                      {expandedActionIds.has(scene.id) && (
+                        <>
+                          {canEdit && <ActionChip onClick={() => setEditingId(scene.id)}>Edit</ActionChip>}
+                          {canDelete && <ActionChip onClick={() => handleDelete(scene.id)}>Delete</ActionChip>}
+                          {canVerify && (
+                            <ActionChip onClick={() => handleVerifyToggle(scene.id, !scene.isVerified)}>
+                              {scene.isVerified ? "Unverify" : "Verify"}
+                            </ActionChip>
+                          )}
+                        </>
                       )}
                       {isAdmin && (
                         <ActionChip onClick={() => toggleAdminTools(scene.id)}>
