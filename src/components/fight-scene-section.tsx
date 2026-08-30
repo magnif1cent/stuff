@@ -732,12 +732,10 @@ export function FightSceneSection({
                       value={startTimeDrafts[scene.id] ?? formatMmSs(scene.youtubeStartSeconds)}
                       onChange={(e) => setStartTimeDrafts((prev) => ({ ...prev, [scene.id]: e.target.value }))}
                       placeholder="mm:ss"
-                      className="w-16 border bg-transparent px-1 py-0.5 text-center text-base focus:outline-none"
+                      className="min-h-8 w-16 border bg-transparent px-1 text-center text-base focus:outline-none"
                       style={{ borderColor: TICKET_INK, color: TICKET_INK }}
                     />
-                    <button onClick={() => handleSetStartTime(scene.id)} className="underline hover:opacity-70">
-                      Save
-                    </button>
+                    <ActionChip onClick={() => handleSetStartTime(scene.id)}>Save</ActionChip>
                   </div>
                 )}
               </div>
