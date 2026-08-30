@@ -1,7 +1,7 @@
-// Split out from src/lib/ratings.ts so client components (RatingWidget,
-// AdminRatingWidget) can import the category list without pulling in
-// ratings.ts's `@/lib/prisma` import — that drags the Node-only `pg` driver
-// into the client bundle, which Next.js can't build for the browser.
+// Split out from src/lib/ratings.ts so client components (RatingCard) can
+// import the category list without pulling in ratings.ts's `@/lib/prisma`
+// import — that drags the Node-only `pg` driver into the client bundle,
+// which Next.js can't build for the browser.
 
 // Fixed, hardcoded vocabulary (not an admin-configurable taxonomy table like
 // Genre/FightSceneTag) — same convention as User.role: a small closed set

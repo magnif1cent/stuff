@@ -76,6 +76,7 @@ one.
 - [Search substring queries got their own trigram indexes, separate from the fuzzy-search ones](#search-substring-queries-got-their-own-trigram-indexes-separate-from-the-fuzzy-search-ones)
 - [Fight Count: single member-editable field, not an aggregate — with guardrails to compensate](#fight-count-single-member-editable-field-not-an-aggregate-with-guardrails-to-compensate)
 - [Subcategory rating widget: progressive reveal + star picker, now on both member and admin widgets](#subcategory-rating-widget-progressive-reveal-star-picker-now-on-both-member-and-admin-widgets)
+- [RatingCard: member and Editors' widgets merged into one tabbed card, overall score becomes a star picker too](#ratingcard-member-and-editors-widgets-merged-into-one-tabbed-card-overall-score-becomes-a-star-picker-too)
 - [Subcategory ratings: supplement the overall score, fixed category list, movies only](#subcategory-ratings-supplement-the-overall-score-fixed-category-list-movies-only)
 - [Movie/actor SEO metadata and actor-page TMDB bios](#movieactor-seo-metadata-and-actor-page-tmdb-bios)
 - [Admin Recommendations: per-admin badges, not a single shared flag](#admin-recommendations-per-admin-badges-not-a-single-shared-flag)
@@ -2162,6 +2163,64 @@ applied to the second widget.
   stale preview-deployment URL, but the missing error handling it
   surfaced was real regardless and worth closing in both widgets while
   already touching this file.
+
+### RatingCard: member and Editors' widgets merged into one tabbed card, overall score becomes a star picker too
+**PR #TBD.** Part of a mobile-and-desktop touch-target pass on the movie
+page's Ratings and Fight Scenes sections. `RatingWidget` and
+`AdminRatingWidget` were two separate `max-w-sm` boxes stacked on the page;
+folded into one `RatingCard` component with a "Your Rating" / "Editors'
+Rating" tab bar, same underline-tab convention `MovieDetailsTabs` already
+established — but shown at every breakpoint instead of mobile-only, since
+there's no separate desktop layout to fall back to here the way the Details
+card has one. The Editors' Rating tab only renders when `isAdmin`, following
+`MovieDetailsTabs`'s own rule of not showing a tab bar for a single thing —
+a non-admin never sees tabs at all, just their own rating.
+
+- **Overall score switches from ten number buttons to `StarRatingPicker`**,
+  the same component the subcategory rows already used (see the prior
+  entry above) — `size="lg"` was added to it for a bigger primary control,
+  alongside a plain numeric readout next to the stars (`"8 / 10"`) so the
+  exact 1–10 value stays legible at a glance, since five half-clickable
+  stars are harder to read precisely than ten labeled buttons were. The
+  score itself is still a plain integer 1–10, same validation, same API
+  payload shape — only the picker widget changed.
+- **`StarRatingPicker` touch-target fix, applied everywhere it's used**:
+  each star's half-click hit zone used to be exactly the icon's own
+  height (28px on mobile) — a 14px-wide sliver at that height is hard to
+  aim on glass. Added a `size` prop (`"sm"`/`"lg"`) and gave each star's
+  wrapping span an explicit height taller than the icon on mobile (44px),
+  centering the icon inside it, so the tap zone grows without changing
+  how the star looks. Width still tracks the icon exactly, so adjacent
+  stars stay edge-to-edge with no dead gap between their half-star
+  buttons.
+- **Editors' note: autosave, no more explicit save button** — the
+  member-vs-admin discussion that produced the previous entry's "reveal
+  triggers on local selection, not on save" bullet is now moot: the
+  overall admin score saves the instant a star is clicked (matching the
+  member tab), and the note debounces ~900ms after the last keystroke
+  (flushing immediately on blur as a backstop) instead of waiting for a
+  "Save editors' rating" click. *Considered:* making `AdminRating.score`
+  nullable so a note could be saved with no score at all, fully decoupling
+  the two fields — rejected as disproportionate to what was asked (a
+  schema migration, its own cross-conversation coordination per the
+  schema-PR-isolation convention, for a case — a note with literally no
+  rating — that doesn't come up in practice) in favor of gating the note
+  field on an overall score already existing, same progressive-reveal rule
+  the category rows use.
+- **Subcategory label styling matched to the read-only breakdown above
+  it**: the widget's category labels (`text-xs`, `w-32`, neutral-500) were
+  narrow and small enough that "Fight Choreography" read as cramped next
+  to the read-only Community/Editors' breakdown's `text-sm`,
+  `tracking-widest`, neutral-400 labels just above it on the same page.
+  Widened to `w-[158px]` at `13px`/`0.08em` tracking — split the difference
+  between the two rather than matching the breakdown's `text-sm` (14px)
+  exactly, since 14px read as noticeably larger than every other label on
+  the card once compared live.
+- **`postRating` helper extracted**: the four rating-mutation handlers
+  (overall/category × member/admin) were near-identical fetch/try-catch/
+  error-handling blocks differing only in URL and payload — pulled into
+  one shared function each handler calls, rather than four copies of the
+  same error handling to keep in sync.
 
 ### Subcategory ratings: supplement the overall score, fixed category list, movies only
 **PR #TBD.** Members and admins can now rate a movie by category (Fight

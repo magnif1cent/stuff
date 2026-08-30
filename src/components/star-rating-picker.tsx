@@ -12,14 +12,26 @@ export function StarRatingPicker({
   onSelect,
   disabled,
   fillColorClassName,
+  size = "sm",
 }: {
   value: number | null;
   onSelect: (score: number) => void;
   disabled?: boolean;
   fillColorClassName?: string;
+  // "sm" (default) matches the subcategory rows; "lg" is for a card's
+  // primary overall-score picker, where the star should read as the main
+  // control rather than a secondary refinement.
+  size?: "sm" | "lg";
 }) {
   const [hover, setHover] = useState<number | null>(null);
   const display = hover ?? value ?? 0;
+  const iconClassName = size === "lg" ? "h-8 w-8 sm:h-6 sm:w-6" : "h-7 w-7 sm:h-5 sm:w-5";
+  // The tap zone is taller than the star itself on mobile, so a half-star
+  // selection doesn't need pixel-precise aim -- width still tracks the icon
+  // exactly so neighboring stars stay edge-to-edge with no dead gap between
+  // their half-star buttons. Exactly matches the icon at the sm breakpoint
+  // and up, so desktop (mouse-precision) sizing is unchanged from before.
+  const cellClassName = size === "lg" ? "h-11 w-8 sm:h-6 sm:w-6" : "h-11 w-7 sm:h-5 sm:w-5";
 
   return (
     <div className={`flex ${disabled ? "opacity-50" : ""}`} onMouseLeave={() => setHover(null)}>
@@ -28,8 +40,8 @@ export function StarRatingPicker({
         const high = i * 2;
         const fillPct = display >= high ? 100 : display >= low ? 50 : 0;
         return (
-          <span key={i} className="relative">
-            <StarIcon fillPct={fillPct} className="h-7 w-7 sm:h-5 sm:w-5" fillColorClassName={fillColorClassName} />
+          <span key={i} className={`relative flex items-center justify-center ${cellClassName}`}>
+            <StarIcon fillPct={fillPct} className={iconClassName} fillColorClassName={fillColorClassName} />
             <button
               type="button"
               disabled={disabled}

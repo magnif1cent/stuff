@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdminSession } from "@/lib/require-admin";
 import { prisma } from "@/lib/prisma";
-
-const MAX_NOTE_LENGTH = 2000;
+import { MAX_ADMIN_NOTE_LENGTH } from "@/lib/admin-rating";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await requireAdminSession();
@@ -17,9 +16,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "score must be an integer between 1 and 10." }, { status: 400 });
   }
 
-  if (typeof note === "string" && note.length > MAX_NOTE_LENGTH) {
+  if (typeof note === "string" && note.length > MAX_ADMIN_NOTE_LENGTH) {
     return NextResponse.json(
-      { error: `note must be ${MAX_NOTE_LENGTH} characters or fewer.` },
+      { error: `note must be ${MAX_ADMIN_NOTE_LENGTH} characters or fewer.` },
       { status: 400 },
     );
   }
