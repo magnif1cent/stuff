@@ -48,7 +48,7 @@ export function FightSceneResultCard({
   size?: "default" | "compact";
 }) {
   const year = scene.movie.releaseDate ? new Date(scene.movie.releaseDate).getFullYear() : null;
-  const permalink = `/movies/${scene.movieId}/fight-scenes/${scene.id}`;
+  const permalink = `/movies/${scene.movieId}/fights/${scene.id}`;
   const memberLabel = scene.memberRatingAverage ? scene.memberRatingAverage.toFixed(1) : "—";
 
   if (size === "compact") {
@@ -133,7 +133,7 @@ export function FightSceneResultCard({
         {scene.tags.map((tag) => (
           <Link
             key={tag.id}
-            href={`/search/fight-scenes?tag=${encodeURIComponent(tag.name)}`}
+            href={`/search/fights?tag=${encodeURIComponent(tag.name)}`}
             className="border px-2 py-0.5 text-[10px] tracking-wide uppercase underline underline-offset-2 hover:opacity-70"
             style={{ borderColor: TICKET_INK }}
           >

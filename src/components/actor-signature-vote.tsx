@@ -183,7 +183,7 @@ export function SignatureSpotlight() {
       {scene && fightSceneLeader && (
         <SpotlightCard
           className="sm:flex-1"
-          href={`/movies/${scene.movieId}/fight-scenes/${scene.id}`}
+          href={`/movies/${scene.movieId}/fights/${scene.id}`}
           kicker="Signature Fight Scene"
           title={scene.title}
           meta={`from ${scene.movieTitle}`}

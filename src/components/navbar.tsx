@@ -28,7 +28,7 @@ export async function Navbar() {
             <Link href="/search" className="text-sm whitespace-nowrap text-neutral-300 hover:text-white">
               Movies
             </Link>
-            <Link href="/search/fight-scenes" className="text-sm whitespace-nowrap text-neutral-300 hover:text-white">
+            <Link href="/search/fights" className="text-sm whitespace-nowrap text-neutral-300 hover:text-white">
               Fights
             </Link>
             <ListsNavMenu />

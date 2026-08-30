@@ -39,6 +39,20 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  // "Fight Scenes" was renamed to "Fights" everywhere it's a page URL or
+  // label (see DECISIONS.md) -- these keep any bookmarked or search-indexed
+  // links to the old paths working instead of 404ing.
+  async redirects() {
+    return [
+      { source: "/movies/:id/fight-scenes", destination: "/movies/:id/fights", permanent: true },
+      {
+        source: "/movies/:id/fight-scenes/:fightSceneId",
+        destination: "/movies/:id/fights/:fightSceneId",
+        permanent: true,
+      },
+      { source: "/search/fight-scenes", destination: "/search/fights", permanent: true },
+    ];
+  },
 };
 
 export default nextConfig;

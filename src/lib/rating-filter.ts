@@ -1,4 +1,4 @@
-// Shared by /search and /search/fight-scenes: parses a "minimum rating"
+// Shared by /search and /search/fights: parses a "minimum rating"
 // query param into a validated number, or undefined if absent/invalid.
 // Ratings are on a 1-10 scale (see the rating API's score validation),
 // but averages can be fractional, so any number in that range is valid,

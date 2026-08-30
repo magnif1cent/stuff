@@ -45,6 +45,12 @@ import { MovieDetailsTabs } from "@/components/movie-details-tabs";
 import { RecommendedBadges } from "@/components/recommended-badge";
 import { FightCountControl } from "@/components/fight-count-control";
 
+// How many of a movie's fights the movie page itself teases -- the rest live
+// on the dedicated /movies/[id]/fights collection page, linked via "View all".
+// Kept small deliberately: this page fetches (and ships to the client) only
+// this many scenes' worth of cast/tags/ratings, not the movie's whole roster.
+const FEATURED_FIGHT_COUNT = 2;
+
 const getMovie = cache((id: string) =>
   prisma.movie.findUnique({
     where: { id },
@@ -177,7 +183,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
         })
       : [],
     getDiscussionPage(movie.id),
-    getFightScenesForMovie(movie.id),
+    getFightScenesForMovie(movie.id, { limit: FEATURED_FIGHT_COUNT }),
     getFightSceneTags(),
     prisma.editorialReview.findUnique({
       where: { movieId: movie.id },
@@ -808,7 +814,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
           signedIn={!!session?.user}
         />
 
-        <div id="fight-scenes">
+        <div id="fights">
           <FightSceneSection
             movieId={movie.id}
             initialFightScenes={serializedFightScenes}
@@ -823,6 +829,8 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
             myMemberLists={myMemberLists.map((list) => ({ id: list.id, name: list.name }))}
             mySavedListIdsByScene={mySavedFightSceneListIds}
             myFavoriteSceneIds={myFavoriteFightSceneIds}
+            totalSceneCount={fightSceneRoundNumbers.size}
+            viewAllHref={`/movies/${movie.id}/fights`}
           />
         </div>
 

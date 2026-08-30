@@ -434,7 +434,7 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
             },
             {
               key: "fight-scenes",
-              label: `Fight Scenes (${favoriteFightSceneData.length})`,
+              label: `Fights (${favoriteFightSceneData.length})`,
               content: <FightSceneRow scenes={favoriteFightSceneData} signedIn={!!session?.user} />,
             },
             {

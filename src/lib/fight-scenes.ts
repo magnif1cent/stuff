@@ -19,9 +19,22 @@ const fightSceneInclude = {
   tags: true,
 };
 
-export async function getFightScenesForMovie(movieId: string) {
+export async function getFightScenesForMovie(movieId: string, options?: { limit?: number }) {
   // Ascending so scenes render Round 1, 2, 3… left to right — matches
-  // getFightSceneRoundNumbers' own ordering below.
+  // getFightSceneRoundNumbers' own ordering below. With a limit (the movie
+  // page's teaser), that ordering would just return the *oldest* scenes, the
+  // opposite of the "newest first" the teaser wants — so a limited fetch
+  // takes the newest N by querying descending, then reverses back to
+  // ascending for display.
+  if (options?.limit) {
+    const scenes = await prisma.fightScene.findMany({
+      where: { movieId, isDeleted: false },
+      orderBy: { createdAt: "desc" },
+      take: options.limit,
+      include: fightSceneInclude,
+    });
+    return scenes.reverse();
+  }
   return prisma.fightScene.findMany({
     where: { movieId, isDeleted: false },
     orderBy: { createdAt: "asc" },

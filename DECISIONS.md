@@ -3808,7 +3808,67 @@ flagged rather than fixed, since it reads fine against the cream
 background and wasn't part of what was asked. The old `SCORES` (1-10)
 array was removed as dead code once nothing referenced it.
 
-## Deferred & Backlog
+### Movie page's fight scenes capped to a teaser, full list moved to its own page, "Fight Scenes" renamed to "Fights"
+**PR #TBD.** The movie page fetched and rendered every fight scene for the
+movie, client-side "Show more" pagination unhiding rows already sitting in
+the page's own payload — a movie with many scenes shipped every one's
+cast/tags/ratings to the browser regardless of how many actually rendered.
+Requested as part of the broader "condense the movie page to scale" pass
+already applied to Ratings and Details.
+
+- **2 featured scenes, not 1.** Considered 1 (less mobile scroll) vs. 2
+  (fills exactly one row of the existing `sm:grid-cols-2` breakpoint). Went
+  with 2, but rendered in its own `grid-cols-1 sm:grid-cols-2` row on the
+  movie page — deliberately *not* reusing the full `sm:grid-cols-2
+  lg:grid-cols-3` grid, which would leave a visibly empty third cell at the
+  `lg:` breakpoint since there's never more than 2 items to lay out there.
+- **Newest scenes, not highest-rated.** `getFightScenesForMovie` gained an
+  optional `{ limit }` that queries `orderBy: createdAt desc, take: limit`
+  then reverses the result back to ascending — the simplest rule ("what's
+  new here") requiring no new ranking/scoring logic, versus a "highlights"
+  pick by rating that would need one. All other callers (the permalink page,
+  the new collection page) call it unlimited and are unaffected.
+- **New page, not a bigger in-place expansion.** `/movies/[id]/fights` is a
+  new static route alongside the existing `[fightSceneId]` dynamic one,
+  holding the exact grid + "Show more" pagination the movie page used to
+  have — `FightSceneSection` didn't change its full-list behavior, it just
+  gained a `viewAllHref`/`totalSceneCount` pair that swaps the in-place
+  "Show more" button for a "View all N fights" link when it's only been
+  handed a partial list. The new page duplicates the movie page's
+  fight-scene-specific data-fetching (cast options, tags, ratings, my-lists,
+  favorites) rather than factoring a shared helper — matches this codebase's
+  existing convention of each fight-scene-adjacent page (the permalink page
+  already does this) doing its own independent `Promise.all` rather than a
+  shared "get everything FightSceneSection needs" function; extracting one
+  now would have meant refactoring the movie page's already-large,
+  already-tested data-fetching block for a change that doesn't actually
+  need it to keep working.
+- **"Add fight scene" stays on both pages** (the movie page teaser and the
+  new collection page) rather than moving to the collection page only — kept
+  the low-friction path for the most common action rather than adding a
+  click to reach it.
+- **The permalink page's "More Fights From This Movie" rail got the same
+  fix**, found in passing: `otherScenes.map(...)` had no cap either, and
+  would only ever show Rounds 1-6 regardless of which round you were
+  actually viewing on a movie with many scenes. Capped at 8, ordered by
+  proximity to the current round (not creation order) so the rail actually
+  surfaces scenes near what you're watching, then re-sorted back to
+  ascending round order for display; a trailing "View all N →" card appears
+  once there are more scenes than the cap.
+- **"Fight Scenes" renamed to "Fights" everywhere it's a label or a URL
+  segment**, folded into this same change since it touched the same routes:
+  `/movies/[id]/fight-scenes(/[fightSceneId])` → `/movies/[id]/fights(/...)`,
+  `/search/fight-scenes` → `/search/fights`, plus the section headings on
+  the movie page, actor page, member profile tab, Community Activity feed
+  column, and the search page's `<h1>` ("Browse fight scenes" → "Browse
+  Fights"). Scope deliberately excludes lowercase body copy ("no fight
+  scenes have been added yet") and internal-only identifiers (`fight-
+  scene-section.tsx`, the `FightScene` Prisma model, `/api/**/fight-
+  scenes/**`) — those aren't page URLs or user-visible labels, and
+  renaming them would have meant touching the schema and every API route
+  for no user-facing benefit. `next.config.ts` gained permanent redirects
+  from the three old URL patterns to their `/fights` equivalents, so
+  existing bookmarks or indexed links don't 404.
 
 - **Drag-and-drop reordering for ranked list items** — `ListItemRows`
   (`src/components/list-item-rows.tsx`) now has move-to-top/move-to-bottom
