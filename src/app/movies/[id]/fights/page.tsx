@@ -52,7 +52,7 @@ function isMovieVisible(
 }
 
 function bubbleClass(active: boolean) {
-  return `rounded-full border px-3 py-1 text-xs font-medium whitespace-nowrap ${
+  return `rounded-full border px-3.5 py-2.5 text-xs font-medium whitespace-nowrap ${
     active
       ? "border-red-600 bg-red-950/40 text-red-300"
       : "border-neutral-700 text-neutral-300 hover:border-neutral-500 hover:text-white"

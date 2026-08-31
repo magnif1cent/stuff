@@ -21,7 +21,7 @@ function entryBodyKey(target: ListTarget) {
 }
 
 const ICON_BUTTON_CLASS =
-  "flex h-8 w-8 items-center justify-center rounded-sm border border-neutral-700 text-neutral-400 hover:border-neutral-500 hover:text-neutral-100";
+  "flex h-10 w-10 items-center justify-center rounded-sm border border-neutral-700 text-neutral-400 hover:border-neutral-500 hover:text-neutral-100";
 const TEXT_BUTTON_CLASS =
   "font-cond rounded-sm border border-neutral-700 px-3 py-1.5 text-sm tracking-wide text-neutral-300 uppercase hover:bg-neutral-800";
 
