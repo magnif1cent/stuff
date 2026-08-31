@@ -378,40 +378,56 @@ export default async function FightSceneSearchPage({
 
         {/* Quick-access shortcuts into a filtered/sorted view — a faster
             path than the sidebar form for the handful of values (a sort
-            order, an era) that don't need free-text input. Tags aren't
-            repeated here since the sidebar's own Tags checkboxes already
-            cover that filter. The actor filter is otherwise sidebar-only
-            since it's open-ended text, not a fixed set of values a bubble
-            row can represent -- Jackie Chan gets a named exception as the
-            one actor prominent enough on this site to warrant his own
-            one-click shortcut. */}
+            order, an era) that don't need free-text input. Each bubble is
+            a standalone view rather than a composable filter (clicking one
+            replaces the whole query instead of layering onto whatever's
+            already selected), so an already-active bubble toggles back to
+            the plain, unfiltered page instead of just reapplying itself.
+            Tags aren't repeated here since the sidebar's own Tags
+            checkboxes already cover that filter. The actor filter is
+            otherwise sidebar-only since it's open-ended text, not a fixed
+            set of values a bubble row can represent -- Jackie Chan gets a
+            named exception as the one actor prominent enough on this site
+            to warrant his own one-click shortcut. */}
         <div className="mb-6 flex flex-wrap gap-2">
-          <a href="/search/fights?sort=memberRating" className={bubbleClass(sort === "memberRating")}>
+          <a
+            href={sort === "memberRating" ? "/search/fights" : "/search/fights?sort=memberRating"}
+            className={bubbleClass(sort === "memberRating")}
+          >
             ★ Top Rated
           </a>
-          <a href="/search/fights?sort=mostFavorited" className={bubbleClass(sort === "mostFavorited")}>
+          <a
+            href={sort === "mostFavorited" ? "/search/fights" : "/search/fights?sort=mostFavorited"}
+            className={bubbleClass(sort === "mostFavorited")}
+          >
             ♥ Most Favorited
           </a>
-          <a href="/search/fights?verified=1" className={bubbleClass(verifiedOnly)}>
+          <a href={verifiedOnly ? "/search/fights" : "/search/fights?verified=1"} className={bubbleClass(verifiedOnly)}>
             ✓ Verified only
           </a>
           {session?.user && (
-            <a href="/search/fights?favorites=1" className={bubbleClass(favoritesOnly)}>
+            <a href={favoritesOnly ? "/search/fights" : "/search/fights?favorites=1"} className={bubbleClass(favoritesOnly)}>
               ♥ My Favorites
             </a>
           )}
-          <a href="/search/fights?actor=Jackie+Chan" className={bubbleClass(actor === "Jackie Chan")}>
+          <a
+            href={actor === "Jackie Chan" ? "/search/fights" : "/search/fights?actor=Jackie+Chan"}
+            className={bubbleClass(actor === "Jackie Chan")}
+          >
             Jackie Chan
           </a>
-          {ERA_OPTIONS.map((era) => (
-            <a
-              key={era.label}
-              href={`/search/fights?yearFrom=${era.yearFrom}&yearTo=${era.yearTo}`}
-              className={bubbleClass(yearFrom === era.yearFrom && yearTo === era.yearTo)}
-            >
-              {era.label}
-            </a>
-          ))}
+          {ERA_OPTIONS.map((era) => {
+            const active = yearFrom === era.yearFrom && yearTo === era.yearTo;
+            return (
+              <a
+                key={era.label}
+                href={active ? "/search/fights" : `/search/fights?yearFrom=${era.yearFrom}&yearTo=${era.yearTo}`}
+                className={bubbleClass(active)}
+              >
+                {era.label}
+              </a>
+            );
+          })}
           {/* Sits right next to the bubbles it clears -- the sidebar form's
               own Clear link (further down, next to Apply) resets the exact
               same query but isn't visible from up here, so an active bubble
