@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 
 export interface AddToListItem {
@@ -48,6 +49,34 @@ export function AddToListControl({
   const [newName, setNewName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null);
+
+  // These "Fight Ticket" cards clip their own box (clip-path) to get the
+  // notched-corner look, which also clips any absolutely-positioned child
+  // that spills past the card's edges -- including this dropdown when the
+  // button sits near the bottom of a short card. Rendering it into a portal
+  // with viewport-fixed coordinates keeps it out of that clipped box (and
+  // out of any card's stacking context) entirely, rather than trying to
+  // out-position an ancestor we don't control here.
+  useEffect(() => {
+    if (!open) return;
+    function updatePosition() {
+      const rect = buttonRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      setMenuPos({ top: rect.bottom + 8, right: window.innerWidth - rect.right });
+    }
+    updatePosition();
+    function closeOnScrollOrResize() {
+      setOpen(false);
+    }
+    window.addEventListener("scroll", closeOnScrollOrResize, true);
+    window.addEventListener("resize", closeOnScrollOrResize);
+    return () => {
+      window.removeEventListener("scroll", closeOnScrollOrResize, true);
+      window.removeEventListener("resize", closeOnScrollOrResize);
+    };
+  }, [open]);
 
   if (!signedIn) {
     return (
@@ -111,41 +140,51 @@ export function AddToListControl({
 
   return (
     <div className="relative inline-block">
-      <button onClick={() => setOpen((v) => !v)} title="Save to list" className={variant === "icon" ? ICON_BUTTON_CLASS : TEXT_BUTTON_CLASS}>
+      <button
+        ref={buttonRef}
+        onClick={() => setOpen((v) => !v)}
+        title="Save to list"
+        className={variant === "icon" ? ICON_BUTTON_CLASS : TEXT_BUTTON_CLASS}
+      >
         {variant === "icon" ? <BookmarkIcon /> : "+ Add to list"}
       </button>
-      {open && (
-        <div className="absolute right-0 z-10 mt-2 w-64 max-w-[calc(100vw-2rem)] rounded-md border border-neutral-700 bg-neutral-900 p-3 shadow-xl">
-          {error && <p className="mb-2 text-xs text-red-500">{error}</p>}
-          <ul className="mb-3 flex max-h-48 flex-col gap-1 overflow-y-auto">
-            {lists.map((list) => (
-              <li key={list.id}>
-                <label className="flex items-center gap-2 text-sm text-neutral-200">
-                  <input type="checkbox" checked={list.hasItem} disabled={busy} onChange={() => toggle(list)} />
-                  {list.name}
-                </label>
-              </li>
-            ))}
-            {lists.length === 0 && <p className="text-xs text-neutral-500">No lists yet.</p>}
-          </ul>
-          <form onSubmit={createAndAdd} className="flex gap-1">
-            <input
-              type="text"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              placeholder="New list…"
-              className="min-w-0 flex-1 rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1 text-base text-neutral-100 focus:border-red-600 focus:outline-none"
-            />
-            <button
-              type="submit"
-              disabled={busy || !newName.trim()}
-              className="shrink-0 rounded-md bg-red-700 px-2 py-1 text-xs font-medium text-white hover:bg-red-600 disabled:opacity-50"
-            >
-              Add
-            </button>
-          </form>
-        </div>
-      )}
+      {open && menuPos &&
+        createPortal(
+          <div
+            className="fixed z-50 w-64 max-w-[calc(100vw-2rem)] rounded-md border border-neutral-700 bg-neutral-900 p-3 shadow-xl"
+            style={{ top: menuPos.top, right: menuPos.right }}
+          >
+            {error && <p className="mb-2 text-xs text-red-500">{error}</p>}
+            <ul className="mb-3 flex max-h-48 flex-col gap-1 overflow-y-auto">
+              {lists.map((list) => (
+                <li key={list.id}>
+                  <label className="flex items-center gap-2 text-sm text-neutral-200">
+                    <input type="checkbox" checked={list.hasItem} disabled={busy} onChange={() => toggle(list)} />
+                    {list.name}
+                  </label>
+                </li>
+              ))}
+              {lists.length === 0 && <p className="text-xs text-neutral-500">No lists yet.</p>}
+            </ul>
+            <form onSubmit={createAndAdd} className="flex gap-1">
+              <input
+                type="text"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder="New list…"
+                className="min-w-0 flex-1 rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1 text-base text-neutral-100 focus:border-red-600 focus:outline-none"
+              />
+              <button
+                type="submit"
+                disabled={busy || !newName.trim()}
+                className="shrink-0 rounded-md bg-red-700 px-2 py-1 text-xs font-medium text-white hover:bg-red-600 disabled:opacity-50"
+              >
+                Add
+              </button>
+            </form>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }
