@@ -217,9 +217,15 @@ export default async function FightSceneSearchPage({
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-10 sm:flex-row">
+      {/* On mobile, the sidebar naturally stacks above the results in DOM
+          order -- but this form has ten-odd fields, so a visitor would have
+          to scroll past all of them before reaching a single result or even
+          the quick-filter bubbles. `order` flips it below the results on
+          mobile without touching the side-by-side desktop layout, which
+          already reads left-to-right filters-then-results just fine. */}
       <form
         method="get"
-        className="flex w-full shrink-0 flex-col gap-4 rounded-md border border-neutral-800 bg-neutral-900 p-4 sm:w-64"
+        className="order-2 flex w-full shrink-0 flex-col gap-4 rounded-md border border-neutral-800 bg-neutral-900 p-4 sm:order-1 sm:w-64"
       >
         <div className="flex flex-col gap-1">
           <label htmlFor="q" className="text-xs text-neutral-400">
@@ -371,7 +377,7 @@ export default async function FightSceneSearchPage({
         </div>
       </form>
 
-      <div className="min-w-0 flex-1">
+      <div className="order-1 min-w-0 flex-1 sm:order-2">
         <h1 className="mb-4 font-serif text-xl font-bold text-white">
           {query ? <>Fights matching &ldquo;{query}&rdquo;</> : "Browse Fights"}
         </h1>
