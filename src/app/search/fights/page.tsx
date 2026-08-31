@@ -412,6 +412,15 @@ export default async function FightSceneSearchPage({
               {era.label}
             </a>
           ))}
+          {/* Sits right next to the bubbles it clears -- the sidebar form's
+              own Clear link (further down, next to Apply) resets the exact
+              same query but isn't visible from up here, so an active bubble
+              had no obvious way to turn itself back off. */}
+          {(searched || sort !== "newest") && (
+            <a href="/search/fights" className="self-center text-sm text-neutral-400 hover:text-white">
+              Clear
+            </a>
+          )}
         </div>
 
         {totalResults === 0 ? (
