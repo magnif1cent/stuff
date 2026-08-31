@@ -3952,6 +3952,56 @@ how many scenes actually rendered.
   scene permalink page already sets — previously this page had only a
   bare title.
 
+### `/search/fights` filter form becomes a bottom sheet on mobile
+**PR #TBD.** Below `sm:`, the sidebar form (title, tags, actor, ratings,
+genre, country, year range, sort) no longer renders inline — a **Filters**
+button in the quick-filter bubble row opens it as a bottom sheet instead.
+
+- **Chosen over the simpler "just reorder it below the results" fix already
+  shipped**: that reorder (results before the form in mobile document flow)
+  only solves the *first* scroll to the page. It does nothing for adjusting
+  a filter after scrolling through results, which still means scrolling the
+  full page length back down. A sheet keeps the trigger reachable from
+  wherever a visitor has scrolled to. Considered and rejected as
+  insufficient on its own, not wrong — it stays as the sm:+ desktop layout
+  unchanged, and as the mobile fallback if the sheet is ever pulled.
+- **One form, not two.** The obvious naive approach — render the sidebar
+  form once for desktop and a second copy inside the sheet for mobile —
+  would duplicate every `id`/`name` attribute in the DOM simultaneously
+  (both copies exist, one just `display: none`), breaking `<label
+  htmlFor>` association and giving two elements the same id. Instead
+  `FilterSheetPanel` (`components/fights-filter-sheet.tsx`) wraps the
+  single form as `children`; responsive Tailwind classes (`fixed
+  inset-x-0 bottom-0 ... sm:static sm:w-64 ...`) make that one element look
+  like a sheet below `sm:` and an ordinary sidebar box at `sm:`+, with no
+  JS-driven remount and no viewport-detection logic needed.
+- **Trigger and panel aren't DOM-adjacent, so they share state via a small
+  Context (`FilterSheetProvider`), not lifted-up `useState` in one wrapper
+  component.** The trigger has to sit next to the quick-filter bubbles
+  (reachable without scrolling) while the panel has to stay a direct child
+  of the page's flex row (to keep the sm:+ side-by-side layout intact) —
+  those two spots aren't adjacent in the JSX tree.
+- **Apply button lives outside the `<form>` element**, associated via the
+  standard HTML `form="fights-filter-form"` attribute rather than DOM
+  nesting. First tried as a `position: sticky` row *inside* the scrollable
+  field list: at the sheet's actual scroll height, sticky pinned it to the
+  bottom of the visible area immediately (the content already overflowed),
+  covering the Sort by field still sitting underneath rather than pushing
+  below it. Moving Apply to a separate non-scrolling flex sibling (a
+  standard three-part sheet layout: header / scrollable body / footer)
+  removed the overlap without any scroll-offset math.
+- **No focus trap.** Escape-to-close, backdrop-click-to-close, and an ×
+  button are implemented; a real focus trap (keeping Tab from reaching
+  content behind the sheet) is not — this codebase has no existing
+  dialog/modal primitive to reuse, and hand-rolling one correctly was
+  judged out of scope for a first version. Worth revisiting if a second
+  modal-shaped UI shows up elsewhere and justifies a shared component.
+- **Active-filter count badge** on the Filters button counts field
+  *groups* set inside the sheet (title, tags, actor, member/editor rating,
+  genre, country, year range) — deliberately excluding verified/favorites/
+  sort, which already have their own quick-filter bubbles and would
+  double-signal if counted here too.
+
 ## Deferred & Backlog
 
 - **Drag-and-drop reordering for ranked list items** — `ListItemRows`
