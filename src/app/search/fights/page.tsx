@@ -380,9 +380,11 @@ export default async function FightSceneSearchPage({
             path than the sidebar form for the handful of values (a sort
             order, an era) that don't need free-text input. Tags aren't
             repeated here since the sidebar's own Tags checkboxes already
-            cover that filter. The actor filter stays sidebar-only since
-            it's open-ended text, not a fixed set of values a bubble row
-            can represent. */}
+            cover that filter. The actor filter is otherwise sidebar-only
+            since it's open-ended text, not a fixed set of values a bubble
+            row can represent -- Jackie Chan gets a named exception as the
+            one actor prominent enough on this site to warrant his own
+            one-click shortcut. */}
         <div className="mb-6 flex flex-wrap gap-2">
           <a href="/search/fights?sort=memberRating" className={bubbleClass(sort === "memberRating")}>
             ★ Top Rated
@@ -398,6 +400,9 @@ export default async function FightSceneSearchPage({
               ♥ My Favorites
             </a>
           )}
+          <a href="/search/fights?actor=Jackie+Chan" className={bubbleClass(actor === "Jackie Chan")}>
+            Jackie Chan
+          </a>
           {ERA_OPTIONS.map((era) => (
             <a
               key={era.label}
