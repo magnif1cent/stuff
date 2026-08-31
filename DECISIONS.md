@@ -3909,6 +3909,49 @@ existing `/admin/fight-scene-tags` page, which already supports delete.
   moved from a local constant in the admin route into `lib/fight-scenes.ts`
   so both endpoints enforce the same limit from one place.
 
+### Fights collection page gets real pagination, sort, and a tag/verified filter
+**PR #TBD.** The collection page (`/movies/[id]/fights`, added alongside the
+movie-page teaser above) had inherited the exact problem the teaser was
+built to fix, just moved one page over: it fetched every scene for the
+movie unconditionally and relied on `FightSceneSection`'s client-side "Show
+more" to reveal them a page at a time, so the full payload (every scene's
+cast/tags/ratings) still shipped to the browser on first load regardless of
+how many scenes actually rendered.
+
+- **Real `?page=N` pagination, not a new `FightSceneSection` prop.** The
+  page now filters/sorts the full scene list server-side (in JS, mirroring
+  `/search/fights`'s own fetch-all-then-sort/filter/slice approach — this
+  codebase's established pattern, not a DB-level `take`/`skip`) and hands
+  `FightSceneSection` only one page's worth (`PAGE_SIZE = 6`, matching the
+  component's own `SCENES_PAGE_SIZE`). Since 6 never exceeds what the
+  component would show on one internal page anyway, its "Show more" button
+  simply never has anything left to reveal — no new prop needed, unlike the
+  teaser's `viewAllHref`/`totalSceneCount` pair.
+- **Sort and filter options are quick-filter bubbles, not a sidebar form**
+  like `/search/fights`'s. Scoped intentionally narrower than that page: no
+  actor/genre/country/year (this is already one specific movie), just Round
+  Order (default) / Newest First / Highest Rated / Most Favorited for sort,
+  and Verified-only / a tag bubble row for filtering. The tag bubbles list
+  only tags actually used on *this movie's* scenes (derived from the
+  already-fetched scene list), not the full site vocabulary `/search/fights`
+  draws from — a movie with 4 scenes doesn't need every category tag ever
+  created shown as a filter option.
+- **Known accepted rough edge**: adding a scene while sorted by something
+  other than Round Order (or while a filter is active) appends it
+  client-side via `FightSceneSection`'s existing optimistic-update logic,
+  which doesn't know about the page's server-side sort/filter — the new
+  scene can land in a visually wrong spot (e.g. bottom of a "Highest Rated"
+  page despite having no rating yet) until the next full page load
+  re-sorts it correctly. Not fixed here: doing so would mean resetting the
+  component's state from fresh server props post-add, which its "seed
+  state once from props" design doesn't support without a larger change.
+  Accepted as a minor, self-correcting (next navigation fixes it) edge case
+  rather than a reason to add a third layer of state-syncing logic.
+- **Metadata**: `generateMetadata` gained a description (scene count) and
+  the movie's poster as the OG image, matching the richer metadata the
+  scene permalink page already sets — previously this page had only a
+  bare title.
+
 ## Deferred & Backlog
 
 - **Drag-and-drop reordering for ranked list items** — `ListItemRows`
