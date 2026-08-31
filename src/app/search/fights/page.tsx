@@ -35,6 +35,15 @@ const SORT_OPTIONS = [
   { value: "mostFavorited", label: "Most Favorited" },
 ] as const;
 
+// Quick-access shortcuts into the movie year range, filtering on the same
+// yearFrom/yearTo the sidebar form already supports.
+const ERA_OPTIONS = [
+  { label: "70s Era", yearFrom: 1970, yearTo: 1979 },
+  { label: "80s Era", yearFrom: 1980, yearTo: 1989 },
+  { label: "90s Era", yearFrom: 1990, yearTo: 1999 },
+  { label: "2000s Era", yearFrom: 2000, yearTo: 2009 },
+] as const;
+
 const PAGE_SIZE = 24;
 
 function bubbleClass(active: boolean) {
@@ -369,9 +378,11 @@ export default async function FightSceneSearchPage({
 
         {/* Quick-access shortcuts into a filtered/sorted view — a faster
             path than the sidebar form for the handful of values (a sort
-            order, a single tag) that don't need free-text input. The
-            actor filter stays sidebar-only since it's open-ended text,
-            not a fixed set of values a bubble row can represent. */}
+            order, an era) that don't need free-text input. Tags aren't
+            repeated here since the sidebar's own Tags checkboxes already
+            cover that filter. The actor filter stays sidebar-only since
+            it's open-ended text, not a fixed set of values a bubble row
+            can represent. */}
         <div className="mb-6 flex flex-wrap gap-2">
           <a href="/search/fights?sort=memberRating" className={bubbleClass(sort === "memberRating")}>
             ★ Top Rated
@@ -387,13 +398,13 @@ export default async function FightSceneSearchPage({
               ♥ My Favorites
             </a>
           )}
-          {tags.map((t) => (
+          {ERA_OPTIONS.map((era) => (
             <a
-              key={t.id}
-              href={`/search/fights?tag=${encodeURIComponent(t.name)}`}
-              className={bubbleClass(selectedTags.includes(t.name))}
+              key={era.label}
+              href={`/search/fights?yearFrom=${era.yearFrom}&yearTo=${era.yearTo}`}
+              className={bubbleClass(yearFrom === era.yearFrom && yearTo === era.yearTo)}
             >
-              {t.name}
+              {era.label}
             </a>
           ))}
         </div>
