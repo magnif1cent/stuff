@@ -38,6 +38,7 @@ export const forgotPasswordLimiter = makeLimiter("forgot-password", 5, "10 m");
 // about "a script gone wrong" rather than "an attacker probing accounts."
 export const discussionPostLimiter = makeLimiter("discussion-post", 20, "10 m");
 export const fightSceneSubmitLimiter = makeLimiter("fight-scene-submit", 10, "10 m");
+export const fightSceneTagCreateLimiter = makeLimiter("fight-scene-tag-create", 10, "10 m");
 export const movieSubmitLimiter = makeLimiter("movie-submit", 10, "10 m");
 export const listCreateLimiter = makeLimiter("list-create", 10, "10 m");
 export const fightCountEditLimiter = makeLimiter("fight-count-edit", 10, "10 m");

@@ -3871,6 +3871,46 @@ already applied to Ratings and Details.
   from the three old URL patterns to their `/fights` equivalents, so
   existing bookmarks or indexed links don't 404.
 
+### Reversed: fight scene tags can be member-created, not admin-curated only
+**PR #TBD.** Reverses "Fight scene tags are an admin-curated vocabulary, not
+member-created" (PR #5, above) at explicit request. The original call
+weighed vocabulary fragmentation (near-duplicate tags accumulating) against
+letting members tag freely; the reversal's reasoning is that tags aren't
+data-hygiene-critical the way, say, cast credits are — a junk or duplicate
+tag doesn't corrupt anything, it's just noise an admin can clean up via the
+existing `/admin/fight-scene-tags` page, which already supports delete.
+
+- **Live immediately, no approval queue.** Considered gating new member
+  tags behind admin approval (a `status` field, a review queue) but went
+  with the simpler option: same bar as adding a fight scene itself (signed
+  in, verified email, rate-limited). A `FightSceneTag` status field and an
+  approval UI would have been real scope for a case the fallback (admin
+  delete) already covers.
+- **New member-facing endpoint** (`POST /api/fight-scene-tags`), not an
+  extension of `parseAndValidateFightSceneInput`'s existing `tagIds`
+  validation — a tag is created (or resolved) up front, synchronously, when
+  the member types it into the add/edit form, so by the time the scene
+  itself is submitted its id already exists and needs no special-casing in
+  the existing tag-id validation. Kept separate from
+  `/api/admin/fight-scene-tags` (list-with-counts, rename, delete) rather
+  than reusing it, since the two have different auth gates and, on a
+  duplicate name, different desired behavior (see next point).
+- **Case-insensitive duplicate check, added to both endpoints.** The
+  original admin endpoint's check was an exact-match `findUnique` —
+  already capable of admins creating "Weapon Duel" and "weapon duel" as
+  two separate rows, the exact fragmentation the original decision meant
+  to prevent. Both endpoints now do a `mode: "insensitive"` lookup first,
+  but react differently on a hit: the admin endpoint still rejects (an
+  admin is explicitly curating), while the member endpoint silently
+  returns the existing tag instead of erroring — a member's goal is
+  getting their scene tagged, not managing the vocabulary, so forcing them
+  back to the picker to find the tag they just typed would be worse UX
+  than just resolving it for them. `MAX_FIGHT_SCENE_TAG_NAME_LENGTH`
+  moved from a local constant in the admin route into `lib/fight-scenes.ts`
+  so both endpoints enforce the same limit from one place.
+
+## Deferred & Backlog
+
 - **Drag-and-drop reordering for ranked list items** — `ListItemRows`
   (`src/components/list-item-rows.tsx`) now has move-to-top/move-to-bottom
   buttons alongside up/down (see **Feature Decisions** above), covering the
