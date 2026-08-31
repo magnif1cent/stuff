@@ -49,7 +49,7 @@ export function FavoriteButton({
       <button
         onClick={toggle}
         title={favorite ? "Favorited" : "Favorite"}
-        className={`flex h-8 w-8 items-center justify-center rounded-md border text-neutral-400 hover:border-neutral-500 hover:text-white ${
+        className={`flex h-10 w-10 items-center justify-center rounded-md border text-neutral-400 hover:border-neutral-500 hover:text-white ${
           favorite ? "border-red-600 bg-red-700 text-white hover:text-white" : "border-neutral-700"
         }`}
       >

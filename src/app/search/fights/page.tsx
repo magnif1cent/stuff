@@ -6,6 +6,7 @@ import { parseRatingFilter } from "@/lib/rating-filter";
 import { FightSceneResultCard } from "@/components/fight-scene-result-card";
 import { RatingStarInput } from "@/components/rating-star-input";
 import { AutocompleteFilterInput } from "@/components/autocomplete-filter-input";
+import { FilterSheetProvider, FilterSheetTrigger, FilterSheetPanel } from "@/components/filter-sheet";
 import type { Prisma } from "@/generated/prisma/client";
 
 export const metadata: Metadata = {
@@ -35,10 +36,19 @@ const SORT_OPTIONS = [
   { value: "mostFavorited", label: "Most Favorited" },
 ] as const;
 
+// Quick-access shortcuts into the movie year range, filtering on the same
+// yearFrom/yearTo the sidebar form already supports.
+const ERA_OPTIONS = [
+  { label: "70s Era", yearFrom: 1970, yearTo: 1979 },
+  { label: "80s Era", yearFrom: 1980, yearTo: 1989 },
+  { label: "90s Era", yearFrom: 1990, yearTo: 1999 },
+  { label: "2000s Era", yearFrom: 2000, yearTo: 2009 },
+] as const;
+
 const PAGE_SIZE = 24;
 
 function bubbleClass(active: boolean) {
-  return `rounded-full border px-3 py-1 text-xs font-medium whitespace-nowrap ${
+  return `rounded-full border px-3.5 py-2.5 text-xs font-medium whitespace-nowrap ${
     active
       ? "border-red-600 bg-red-950/40 text-red-300"
       : "border-neutral-700 text-neutral-300 hover:border-neutral-500 hover:text-white"
@@ -111,6 +121,18 @@ export default async function FightSceneSearchPage({
     verifiedOnly ||
     favoritesOnly;
   const searched = query.length > 0 || hasFilters;
+  // Counts the field groups inside the sheet/sidebar specifically -- not
+  // verified/favorites/sort, which already have their own quick-filter
+  // bubbles and would double-signal if also counted here.
+  const sheetFilterCount =
+    (query.length > 0 ? 1 : 0) +
+    (selectedTags.length > 0 ? 1 : 0) +
+    (actor.length > 0 ? 1 : 0) +
+    (genre.length > 0 ? 1 : 0) +
+    (country.length > 0 ? 1 : 0) +
+    (memberRating !== undefined ? 1 : 0) +
+    (editorRating !== undefined ? 1 : 0) +
+    (yearFrom !== undefined || yearTo !== undefined ? 1 : 0);
 
   const where: Prisma.FightSceneWhereInput = { isDeleted: false };
   // Checking multiple tags is a broadening OR ("has any of these"), matching
@@ -208,252 +230,298 @@ export default async function FightSceneSearchPage({
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-10 sm:flex-row">
-      <form
-        method="get"
-        className="flex w-full shrink-0 flex-col gap-4 rounded-md border border-neutral-800 bg-neutral-900 p-4 sm:w-64"
-      >
-        <div className="flex flex-col gap-1">
-          <label htmlFor="q" className="text-xs text-neutral-400">
-            Scene or movie title
-          </label>
-          <input
-            id="q"
-            name="q"
-            type="text"
-            defaultValue={query}
-            placeholder="Search…"
-            className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
-          />
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <p className="text-xs text-neutral-400">Tags (any of)</p>
-          <div className="flex flex-wrap gap-2 rounded-md border border-neutral-700 bg-neutral-950 p-2">
-            {tags.length === 0 && <span className="text-sm text-neutral-500">No tags yet</span>}
-            {tags.map((t) => (
-              <label
-                key={t.id}
-                className="flex cursor-pointer items-center gap-1.5 rounded-full border border-neutral-700 px-2 py-1 text-xs text-neutral-300 has-checked:border-red-600 has-checked:bg-red-950/40 has-checked:text-red-300"
+      <FilterSheetProvider>
+        {/* On sm:+ this whole thing is a no-op: FilterSheetPanel renders as
+            the same static sidebar it always was. Below sm:, the sidebar
+            becomes a bottom sheet opened by FilterSheetTrigger (placed down
+            in the results column, next to the quick-filter bubbles) instead
+            of sitting in the document flow -- reachable from wherever a
+            visitor has scrolled to, not just before or after every result. */}
+        <FilterSheetPanel
+          footer={
+            <div className="flex items-center gap-3">
+              <button
+                type="submit"
+                form="fights-filter-form"
+                className="rounded-md bg-red-700 px-4 py-1.5 text-sm font-medium text-white hover:bg-red-600"
               >
-                <input
-                  type="checkbox"
-                  name="tag"
-                  value={t.name}
-                  defaultChecked={selectedTags.includes(t.name)}
-                  className="sr-only"
-                />
-                {t.name}
+                Apply
+              </button>
+              {searched && (
+                <a href="/search/fights" className="text-sm text-neutral-400 hover:text-white">
+                  Clear
+                </a>
+              )}
+            </div>
+          }
+        >
+          <form id="fights-filter-form" method="get" className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1">
+              <label htmlFor="q" className="text-xs text-neutral-400">
+                Scene or movie title
               </label>
-            ))}
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <label htmlFor="actor" className="text-xs text-neutral-400">
-            Actor
-          </label>
-          <AutocompleteFilterInput
-            id="actor"
-            name="actor"
-            initialValue={actor}
-            endpoint="/api/fight-scene-actors"
-            resultsKey="actors"
-            placeholder="Any actor"
-          />
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <p className="text-xs text-neutral-400">Member rating (min.)</p>
-          <RatingStarInput name="memberRating" initialValue={params.memberRating ?? ""} />
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <p className="text-xs text-neutral-400">Editor rating (min.)</p>
-          <RatingStarInput name="editorRating" initialValue={params.editorRating ?? ""} />
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <label htmlFor="genre" className="text-xs text-neutral-400">
-            Movie genre
-          </label>
-          <select
-            id="genre"
-            name="genre"
-            defaultValue={genre}
-            className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
-          >
-            <option value="">All genres</option>
-            {genres.map((g) => (
-              <option key={g.id} value={g.name}>
-                {g.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <label htmlFor="country" className="text-xs text-neutral-400">
-            Movie country
-          </label>
-          <select
-            id="country"
-            name="country"
-            defaultValue={country}
-            className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
-          >
-            <option value="">All countries</option>
-            {countries.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <p className="text-xs text-neutral-400">Movie year range</p>
-          <div className="flex gap-2">
-            <input
-              name="yearFrom"
-              type="number"
-              aria-label="Year from"
-              defaultValue={params.yearFrom ?? ""}
-              placeholder="1970"
-              className="w-1/2 min-w-0 rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
-            />
-            <input
-              name="yearTo"
-              type="number"
-              aria-label="Year to"
-              defaultValue={params.yearTo ?? ""}
-              placeholder="2025"
-              className="w-1/2 min-w-0 rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
-            />
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <label htmlFor="sort" className="text-xs text-neutral-400">
-            Sort by
-          </label>
-          <select
-            id="sort"
-            name="sort"
-            defaultValue={sort}
-            className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
-          >
-            {SORT_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <button type="submit" className="rounded-md bg-red-700 px-4 py-1.5 text-sm font-medium text-white hover:bg-red-600">
-            Apply
-          </button>
-          {searched && (
-            <a href="/search/fights" className="text-sm text-neutral-400 hover:text-white">
-              Clear
-            </a>
-          )}
-        </div>
-      </form>
-
-      <div className="min-w-0 flex-1">
-        <h1 className="mb-4 font-serif text-xl font-bold text-white">
-          {query ? <>Fights matching &ldquo;{query}&rdquo;</> : "Browse Fights"}
-        </h1>
-
-        {/* Quick-access shortcuts into a filtered/sorted view — a faster
-            path than the sidebar form for the handful of values (a sort
-            order, a single tag) that don't need free-text input. The
-            actor filter stays sidebar-only since it's open-ended text,
-            not a fixed set of values a bubble row can represent. */}
-        <div className="mb-6 flex flex-wrap gap-2">
-          <a href="/search/fights?sort=memberRating" className={bubbleClass(sort === "memberRating")}>
-            ★ Top Rated
-          </a>
-          <a href="/search/fights?sort=mostFavorited" className={bubbleClass(sort === "mostFavorited")}>
-            ♥ Most Favorited
-          </a>
-          <a href="/search/fights?verified=1" className={bubbleClass(verifiedOnly)}>
-            ✓ Verified only
-          </a>
-          {session?.user && (
-            <a href="/search/fights?favorites=1" className={bubbleClass(favoritesOnly)}>
-              ♥ My Favorites
-            </a>
-          )}
-          {tags.map((t) => (
-            <a
-              key={t.id}
-              href={`/search/fights?tag=${encodeURIComponent(t.name)}`}
-              className={bubbleClass(selectedTags.includes(t.name))}
-            >
-              {t.name}
-            </a>
-          ))}
-        </div>
-
-        {totalResults === 0 ? (
-          <p className="text-neutral-400">
-            {searched ? "No fight scenes matched your search." : "No fight scenes have been added yet."}
-          </p>
-        ) : (
-          <>
-            <div className="flex flex-wrap gap-4">
-              {pagedScenes.map((scene) => {
-                const memberSummary = memberSummaries.get(scene.id);
-                const editorSummary = editorSummaries.get(scene.id);
-                const initialLists = myMemberListItems.map((list) => {
-                  const listRow = myMemberLists.find((l) => l.id === list.id)!;
-                  return { ...list, hasItem: listRow.fightSceneEntries.some((e) => e.fightSceneId === scene.id) };
-                });
-                return (
-                  <FightSceneResultCard
-                    key={scene.id}
-                    scene={{
-                      ...scene,
-                      memberRatingAverage: memberSummary?.average ?? null,
-                      memberRatingCount: memberSummary?.count ?? 0,
-                      editorRatingAverage: editorSummary?.average ?? null,
-                      editorRatingCount: editorSummary?.count ?? 0,
-                    }}
-                    initialLists={initialLists}
-                    signedIn={!!session?.user}
-                    initialFavorite={myFightSceneFavorites.some((e) => e.fightSceneId === scene.id)}
-                  />
-                );
-              })}
+              <input
+                id="q"
+                name="q"
+                type="text"
+                defaultValue={query}
+                placeholder="Search…"
+                className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
+              />
             </div>
 
-            {totalPages > 1 && (
-              <div className="mt-8 flex items-center justify-center gap-4 text-sm">
-                {page > 1 ? (
-                  <a href={pageHref(params, page - 1)} className="text-red-500 hover:underline">
-                    ← Previous
-                  </a>
-                ) : (
-                  <span className="text-neutral-600">← Previous</span>
-                )}
-                <span className="text-neutral-400">
-                  Page {page} of {totalPages} ({totalResults} results)
-                </span>
-                {page < totalPages ? (
-                  <a href={pageHref(params, page + 1)} className="text-red-500 hover:underline">
-                    Next →
-                  </a>
-                ) : (
-                  <span className="text-neutral-600">Next →</span>
-                )}
+            <div className="flex flex-col gap-1">
+              <p className="text-xs text-neutral-400">Tags (any of)</p>
+              <div className="flex flex-wrap gap-2 rounded-md border border-neutral-700 bg-neutral-950 p-2">
+                {tags.length === 0 && <span className="text-sm text-neutral-500">No tags yet</span>}
+                {tags.map((t) => (
+                  <label
+                    key={t.id}
+                    className="flex cursor-pointer items-center gap-1.5 rounded-full border border-neutral-700 px-2 py-1 text-xs text-neutral-300 has-checked:border-red-600 has-checked:bg-red-950/40 has-checked:text-red-300"
+                  >
+                    <input
+                      type="checkbox"
+                      name="tag"
+                      value={t.name}
+                      defaultChecked={selectedTags.includes(t.name)}
+                      className="sr-only"
+                    />
+                    {t.name}
+                  </label>
+                ))}
               </div>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label htmlFor="actor" className="text-xs text-neutral-400">
+                Actor
+              </label>
+              <AutocompleteFilterInput
+                id="actor"
+                name="actor"
+                initialValue={actor}
+                endpoint="/api/fight-scene-actors"
+                resultsKey="actors"
+                placeholder="Any actor"
+              />
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <p className="text-xs text-neutral-400">Member rating (min.)</p>
+              <RatingStarInput name="memberRating" initialValue={params.memberRating ?? ""} />
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <p className="text-xs text-neutral-400">Editor rating (min.)</p>
+              <RatingStarInput name="editorRating" initialValue={params.editorRating ?? ""} />
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label htmlFor="genre" className="text-xs text-neutral-400">
+                Movie genre
+              </label>
+              <select
+                id="genre"
+                name="genre"
+                defaultValue={genre}
+                className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
+              >
+                <option value="">All genres</option>
+                {genres.map((g) => (
+                  <option key={g.id} value={g.name}>
+                    {g.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label htmlFor="country" className="text-xs text-neutral-400">
+                Movie country
+              </label>
+              <select
+                id="country"
+                name="country"
+                defaultValue={country}
+                className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
+              >
+                <option value="">All countries</option>
+                {countries.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <p className="text-xs text-neutral-400">Movie year range</p>
+              <div className="flex gap-2">
+                <input
+                  name="yearFrom"
+                  type="number"
+                  aria-label="Year from"
+                  defaultValue={params.yearFrom ?? ""}
+                  placeholder="1970"
+                  className="w-1/2 min-w-0 rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
+                />
+                <input
+                  name="yearTo"
+                  type="number"
+                  aria-label="Year to"
+                  defaultValue={params.yearTo ?? ""}
+                  placeholder="2025"
+                  className="w-1/2 min-w-0 rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label htmlFor="sort" className="text-xs text-neutral-400">
+                Sort by
+              </label>
+              <select
+                id="sort"
+                name="sort"
+                defaultValue={sort}
+                className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
+              >
+                {SORT_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </form>
+        </FilterSheetPanel>
+
+        <div className="order-1 min-w-0 flex-1 sm:order-2">
+          <h1 className="mb-4 font-serif text-xl font-bold text-white">
+            {query ? <>Fights matching &ldquo;{query}&rdquo;</> : "Browse Fights"}
+          </h1>
+
+          {/* Quick-access shortcuts into a filtered/sorted view — a faster
+              path than the sidebar form for the handful of values (a sort
+              order, an era) that don't need free-text input. Each bubble is
+              a standalone view rather than a composable filter (clicking one
+              replaces the whole query instead of layering onto whatever's
+              already selected), so an already-active bubble toggles back to
+              the plain, unfiltered page instead of just reapplying itself.
+              Tags aren't repeated here since the sidebar's own Tags
+              checkboxes already cover that filter. The actor filter is
+              otherwise sidebar-only since it's open-ended text, not a fixed
+              set of values a bubble row can represent -- Jackie Chan gets a
+              named exception as the one actor prominent enough on this site
+              to warrant his own one-click shortcut. */}
+          <div className="mb-6 flex flex-wrap gap-2">
+            <FilterSheetTrigger activeCount={sheetFilterCount} />
+            <a
+              href={sort === "memberRating" ? "/search/fights" : "/search/fights?sort=memberRating"}
+              className={bubbleClass(sort === "memberRating")}
+            >
+              ★ Top Rated
+            </a>
+            <a
+              href={sort === "mostFavorited" ? "/search/fights" : "/search/fights?sort=mostFavorited"}
+              className={bubbleClass(sort === "mostFavorited")}
+            >
+              ♥ Most Favorited
+            </a>
+            <a href={verifiedOnly ? "/search/fights" : "/search/fights?verified=1"} className={bubbleClass(verifiedOnly)}>
+              ✓ Verified only
+            </a>
+            {session?.user && (
+              <a href={favoritesOnly ? "/search/fights" : "/search/fights?favorites=1"} className={bubbleClass(favoritesOnly)}>
+                ♥ My Favorites
+              </a>
             )}
-          </>
-        )}
-      </div>
+            <a
+              href={actor === "Jackie Chan" ? "/search/fights" : "/search/fights?actor=Jackie+Chan"}
+              className={bubbleClass(actor === "Jackie Chan")}
+            >
+              Jackie Chan
+            </a>
+            {ERA_OPTIONS.map((era) => {
+              const active = yearFrom === era.yearFrom && yearTo === era.yearTo;
+              return (
+                <a
+                  key={era.label}
+                  href={active ? "/search/fights" : `/search/fights?yearFrom=${era.yearFrom}&yearTo=${era.yearTo}`}
+                  className={bubbleClass(active)}
+                >
+                  {era.label}
+                </a>
+              );
+            })}
+            {/* Sits right next to the bubbles it clears -- the sidebar form's
+                own Clear link (further down, next to Apply) resets the exact
+                same query but isn't visible from up here, so an active bubble
+                had no obvious way to turn itself back off. */}
+            {(searched || sort !== "newest") && (
+              <a href="/search/fights" className="self-center text-sm text-neutral-400 hover:text-white">
+                Clear
+              </a>
+            )}
+          </div>
+
+          {totalResults === 0 ? (
+            <p className="text-neutral-400">
+              {searched ? "No fight scenes matched your search." : "No fight scenes have been added yet."}
+            </p>
+          ) : (
+            <>
+              <div className="flex flex-wrap gap-4">
+                {pagedScenes.map((scene) => {
+                  const memberSummary = memberSummaries.get(scene.id);
+                  const editorSummary = editorSummaries.get(scene.id);
+                  const initialLists = myMemberListItems.map((list) => {
+                    const listRow = myMemberLists.find((l) => l.id === list.id)!;
+                    return { ...list, hasItem: listRow.fightSceneEntries.some((e) => e.fightSceneId === scene.id) };
+                  });
+                  return (
+                    <FightSceneResultCard
+                      key={scene.id}
+                      scene={{
+                        ...scene,
+                        memberRatingAverage: memberSummary?.average ?? null,
+                        memberRatingCount: memberSummary?.count ?? 0,
+                        editorRatingAverage: editorSummary?.average ?? null,
+                        editorRatingCount: editorSummary?.count ?? 0,
+                      }}
+                      initialLists={initialLists}
+                      signedIn={!!session?.user}
+                      initialFavorite={myFightSceneFavorites.some((e) => e.fightSceneId === scene.id)}
+                    />
+                  );
+                })}
+              </div>
+
+              {totalPages > 1 && (
+                <div className="mt-8 flex items-center justify-center gap-4 text-sm">
+                  {page > 1 ? (
+                    <a href={pageHref(params, page - 1)} className="text-red-500 hover:underline">
+                      ← Previous
+                    </a>
+                  ) : (
+                    <span className="text-neutral-600">← Previous</span>
+                  )}
+                  <span className="text-neutral-400">
+                    Page {page} of {totalPages} ({totalResults} results)
+                  </span>
+                  {page < totalPages ? (
+                    <a href={pageHref(params, page + 1)} className="text-red-500 hover:underline">
+                      Next →
+                    </a>
+                  ) : (
+                    <span className="text-neutral-600">Next →</span>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </FilterSheetProvider>
     </div>
   );
 }

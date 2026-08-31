@@ -70,7 +70,7 @@ export function ShareButton({
         title="Share"
         className={
           variant === "icon"
-            ? "flex h-8 w-8 items-center justify-center rounded-md border border-neutral-700 text-neutral-400 hover:border-neutral-500 hover:text-white"
+            ? "flex h-10 w-10 items-center justify-center rounded-md border border-neutral-700 text-neutral-400 hover:border-neutral-500 hover:text-white"
             : "flex items-center gap-1.5 rounded-md bg-red-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-600"
         }
       >
