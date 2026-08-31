@@ -3952,10 +3952,12 @@ how many scenes actually rendered.
   scene permalink page already sets — previously this page had only a
   bare title.
 
-### `/search/fights` filter form becomes a bottom sheet on mobile
-**PR #TBD.** Below `sm:`, the sidebar form (title, tags, actor, ratings,
-genre, country, year range, sort) no longer renders inline — a **Filters**
-button in the quick-filter bubble row opens it as a bottom sheet instead.
+### Search sidebar filter forms become a bottom sheet on mobile
+**PR #TBD.** Below `sm:`, the sidebar form on `/search/fights` (title, tags,
+actor, ratings, genre, country, year range, sort) no longer renders inline
+— a **Filters** button in the quick-filter bubble row opens it as a bottom
+sheet instead. `/search` (movies) got the same treatment shortly after,
+reusing the identical mechanism (see the last bullet below).
 
 - **Chosen over the simpler "just reorder it below the results" fix already
   shipped**: that reorder (results before the form in mobile document flow)
@@ -3970,7 +3972,7 @@ button in the quick-filter bubble row opens it as a bottom sheet instead.
   would duplicate every `id`/`name` attribute in the DOM simultaneously
   (both copies exist, one just `display: none`), breaking `<label
   htmlFor>` association and giving two elements the same id. Instead
-  `FilterSheetPanel` (`components/fights-filter-sheet.tsx`) wraps the
+  `FilterSheetPanel` (`components/filter-sheet.tsx`) wraps the
   single form as `children`; responsive Tailwind classes (`fixed
   inset-x-0 bottom-0 ... sm:static sm:w-64 ...`) make that one element look
   like a sheet below `sm:` and an ordinary sidebar box at `sm:`+, with no
@@ -3982,8 +3984,9 @@ button in the quick-filter bubble row opens it as a bottom sheet instead.
   of the page's flex row (to keep the sm:+ side-by-side layout intact) —
   those two spots aren't adjacent in the JSX tree.
 - **Apply button lives outside the `<form>` element**, associated via the
-  standard HTML `form="fights-filter-form"` attribute rather than DOM
-  nesting. First tried as a `position: sticky` row *inside* the scrollable
+  standard HTML `form="..."` attribute (each page's form has its own id --
+  `fights-filter-form`, `movies-filter-form`) rather than DOM nesting.
+  First tried as a `position: sticky` row *inside* the scrollable
   field list: at the sheet's actual scroll height, sticky pinned it to the
   bottom of the visible area immediately (the content already overflowed),
   covering the Sort by field still sitting underneath rather than pushing
@@ -4001,6 +4004,17 @@ button in the quick-filter bubble row opens it as a bottom sheet instead.
   genre, country, year range) — deliberately excluding verified/favorites/
   sort, which already have their own quick-filter bubbles and would
   double-signal if counted here too.
+- **Extended to `/search` (movies), reusing the same component as-is.**
+  Nothing about `FilterSheetProvider`/`FilterSheetTrigger`/`FilterSheetPanel`
+  was fights-specific to begin with, so the file moved from
+  `fights-filter-sheet.tsx` to `filter-sheet.tsx` rather than being copied
+  — a `/search/fights`-only name would have been actively misleading once a
+  second page depended on it. The one real difference: `/search` has no
+  quick-filter bubble row to anchor the trigger to, so its `FilterSheetTrigger`
+  sits next to the results heading instead. `/search`'s own active-filter
+  count mirrors the same field-group logic, adjusted for its filter set
+  (director instead of tags, no verified/favorites to exclude since that
+  page has no bubble row at all).
 
 ## Deferred & Backlog
 

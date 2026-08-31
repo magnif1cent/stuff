@@ -10,11 +10,14 @@ function useFilterSheet() {
   return ctx;
 }
 
+// Shared by /search and /search/fights, both of which pair a vertical
+// sidebar filter form with a results column in the same flex-row layout.
+//
 // Context rather than lifting state into a single wrapper component: the
-// trigger button needs to sit next to the quick-filter bubbles (so it's
-// reachable without scrolling), while the panel it opens has to stay a
-// direct child of the page's flex row to keep the sm:+ side-by-side layout
-// (a real sidebar there, not a sheet) -- the two aren't adjacent in the DOM.
+// trigger button needs to sit up near the results (so it's reachable
+// without scrolling), while the panel it opens has to stay a direct child
+// of the page's flex row to keep the sm:+ side-by-side layout (a real
+// sidebar there, not a sheet) -- the two aren't adjacent in the DOM.
 export function FilterSheetProvider({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
 

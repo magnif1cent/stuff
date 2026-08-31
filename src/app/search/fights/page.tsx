@@ -6,7 +6,7 @@ import { parseRatingFilter } from "@/lib/rating-filter";
 import { FightSceneResultCard } from "@/components/fight-scene-result-card";
 import { RatingStarInput } from "@/components/rating-star-input";
 import { AutocompleteFilterInput } from "@/components/autocomplete-filter-input";
-import { FilterSheetProvider, FilterSheetTrigger, FilterSheetPanel } from "@/components/fights-filter-sheet";
+import { FilterSheetProvider, FilterSheetTrigger, FilterSheetPanel } from "@/components/filter-sheet";
 import type { Prisma } from "@/generated/prisma/client";
 
 export const metadata: Metadata = {
