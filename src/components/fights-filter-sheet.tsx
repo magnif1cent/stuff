@@ -88,7 +88,7 @@ export function FilterSheetPanel({ children, footer }: { children: React.ReactNo
         role={open ? "dialog" : undefined}
         aria-modal={open ? true : undefined}
         aria-label="Filters"
-        className={`${open ? "flex" : "hidden"} fixed inset-x-0 bottom-0 z-50 max-h-[85vh] w-full flex-col rounded-t-2xl border-t border-neutral-800 bg-neutral-900 shadow-2xl sm:static sm:z-auto sm:order-1 sm:flex sm:h-auto sm:max-h-none sm:w-64 sm:shrink-0 sm:rounded-md sm:border sm:p-4 sm:shadow-none`}
+        className={`${open ? "flex" : "hidden"} fixed inset-x-0 bottom-0 z-50 max-h-[85dvh] w-full flex-col rounded-t-2xl border-t border-neutral-800 bg-neutral-900 shadow-2xl sm:static sm:z-auto sm:order-1 sm:flex sm:h-auto sm:max-h-none sm:w-64 sm:shrink-0 sm:rounded-md sm:border sm:p-4 sm:shadow-none`}
       >
         <div className="flex items-center justify-between border-b border-neutral-800 px-4 py-3 sm:hidden">
           <span className="font-serif text-sm font-bold text-white">Filters</span>
