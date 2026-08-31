@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireReviewerSession } from "@/lib/require-admin";
 import { prisma } from "@/lib/prisma";
-
-const MAX_TAG_NAME_LENGTH = 40;
+import { MAX_FIGHT_SCENE_TAG_NAME_LENGTH } from "@/lib/fight-scenes";
 
 export async function GET() {
   const session = await requireReviewerSession();
@@ -28,14 +27,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "name is required." }, { status: 400 });
   }
   const trimmedName = name.trim();
-  if (trimmedName.length > MAX_TAG_NAME_LENGTH) {
+  if (trimmedName.length > MAX_FIGHT_SCENE_TAG_NAME_LENGTH) {
     return NextResponse.json(
-      { error: `name must be ${MAX_TAG_NAME_LENGTH} characters or fewer.` },
+      { error: `name must be ${MAX_FIGHT_SCENE_TAG_NAME_LENGTH} characters or fewer.` },
       { status: 400 },
     );
   }
 
-  const existing = await prisma.fightSceneTag.findUnique({ where: { name: trimmedName } });
+  // Case-insensitive so an admin can't accidentally create "weapon duel"
+  // alongside an existing "Weapon Duel" -- same check the member-facing
+  // create endpoint uses, just rejecting instead of silently reusing since
+  // an admin is explicitly curating the vocabulary here.
+  const existing = await prisma.fightSceneTag.findFirst({
+    where: { name: { equals: trimmedName, mode: "insensitive" } },
+  });
   if (existing) {
     return NextResponse.json({ error: "A tag with that name already exists." }, { status: 400 });
   }

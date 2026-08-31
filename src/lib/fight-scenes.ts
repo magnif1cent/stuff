@@ -4,6 +4,7 @@ import { parseYoutubeUrl } from "@/lib/youtube";
 export const MAX_FIGHT_SCENE_CAST = 20;
 export const MAX_FIGHT_SCENE_TAGS = 10;
 export const MAX_FIGHT_SCENE_TITLE_LENGTH = 200;
+export const MAX_FIGHT_SCENE_TAG_NAME_LENGTH = 40;
 
 export interface FightSceneRatingSummary {
   average: number | null;
