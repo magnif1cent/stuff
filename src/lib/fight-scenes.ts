@@ -109,6 +109,41 @@ export async function getFightSceneAdminRatingSummaries(
   return map;
 }
 
+// Same shape and threshold as getTopRatedMovies in lib/ratings.ts (2 ratings
+// minimum, ranked in memory then hydrated) — kept here instead since this
+// file already owns every other fight-scene rating query, not ratings.ts
+// which is movie-only.
+const TOP_RATED_MIN_RATINGS = 2;
+
+export async function getTopRatedFightScenes(limit = 20) {
+  const grouped = await prisma.fightSceneRating.groupBy({
+    by: ["fightSceneId"],
+    _avg: { score: true },
+    _count: { _all: true },
+  });
+
+  const ranked = grouped
+    .filter((row) => row._count._all >= TOP_RATED_MIN_RATINGS)
+    .sort((a, b) => (b._avg.score ?? 0) - (a._avg.score ?? 0))
+    .slice(0, limit);
+
+  if (ranked.length === 0) return [];
+
+  const scenes = await prisma.fightScene.findMany({
+    where: { id: { in: ranked.map((r) => r.fightSceneId) }, isDeleted: false },
+    include: { movie: { select: { id: true, title: true } } },
+  });
+  const byId = new Map(scenes.map((s) => [s.id, s]));
+
+  return ranked
+    .map((r) => {
+      const scene = byId.get(r.fightSceneId);
+      if (!scene) return null;
+      return { ...scene, communityAverage: r._avg.score, communityCount: r._count._all };
+    })
+    .filter((s): s is NonNullable<typeof s> => s !== null);
+}
+
 export async function getFightSceneFavoriteCounts(fightSceneIds: string[]): Promise<Map<string, number>> {
   if (fightSceneIds.length === 0) return new Map();
 

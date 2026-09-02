@@ -15,9 +15,14 @@ export default async function LeaderboardPage() {
     <div className="mx-auto w-full max-w-6xl px-4 py-10">
       <div className="mb-6 flex items-center justify-between gap-4">
         <h1 className="text-2xl font-bold text-white">Leaderboard</h1>
-        <Link href="/lists" className="text-sm text-red-500 hover:underline">
-          Browse all lists →
-        </Link>
+        <div className="flex flex-wrap gap-4">
+          <Link href="/tops" className="text-sm text-red-500 hover:underline">
+            Top movies &amp; fights →
+          </Link>
+          <Link href="/lists" className="text-sm text-red-500 hover:underline">
+            Browse all lists →
+          </Link>
+        </div>
       </div>
 
       <section className="mb-10">

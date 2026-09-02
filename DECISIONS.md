@@ -1061,6 +1061,56 @@ catalog size and traffic. This is the structural fix.
 
 ## Feature Decisions
 
+### `/tops` added: Top 100 Movies and Top 100 Fights as their own pages
+**PR #TBD.** Requested as "a page that consists of Tops: Top 20 Movies, Top 20 Fights" —
+the count was raised to 100 in a follow-up message after the mockup/build decisions
+below were already settled, so `TOP_MOVIES_LIMIT`/`TOP_FIGHTS_LIMIT` are 100, not 20;
+nothing else about the shape of the feature changed.
+Two design/architecture calls were made explicitly before building, both via mockups
+rather than guessed:
+
+- **Kept separate from `/leaderboard`, cross-linked instead of merged in** — asked via
+  `AskUserQuestion` before building since it changes information architecture, not just
+  implementation. `/leaderboard` already exists as the site's "rankings" hub
+  (Most-Liked Lists, Top Curators, Most Beloved Actors, Top Franchises), and Top
+  Franchises already ranks by community rating, so folding two more sections in there
+  was the cheaper option. The user dismissed that question rather than answering it
+  either way, then separately asked for the poster-countdown mockup and to build it —
+  read as "build the standalone page," not as an endorsement of merging. Landed on
+  keeping `/tops` a separate route since a Top 100 Movies/Fights chart ranks individual
+  catalog items, not lists/curators/actors/franchises the way every existing
+  `/leaderboard` section does; the two pages cross-link each other instead of
+  duplicating content.
+- **Movies and fights are two standalone pages (`/tops/movies`, `/tops/fights`), not
+  one page with two sections** — explicit user correction after picking a mockup
+  option. A small `/tops` index (two link cards) is what the footer's new "Tops" link
+  and the `/leaderboard` cross-link point at, rather than either sub-page being
+  unreachable without going through it first... both are also directly linked from
+  each other's own header.
+- **"Poster Countdown" visual direction chosen over "Chart Rows"** — two full mockups
+  (phone + tablet widths) were built and shown before any code: Chart Rows extended
+  the existing `/leaderboard` row style (rank number, small thumbnail, title, score);
+  Poster Countdown uses a reflowing poster/thumbnail grid with a large rank numeral
+  stamped over each card's corner. The user picked Poster Countdown. Implementation
+  detail not in the mockup: the numeral is rendered hollow (`-webkit-text-stroke`,
+  fill matching the page background) rather than a solid color, red-outlined for the
+  top 3 — a "stamped" look consistent with the poster-forward movie-detail-hero
+  redesign (`font-display`/Anton, already a theme token, not a new font import) rather
+  than a plain numbered badge.
+- **Fight scenes get the same "Fight Ticket" card treatment used everywhere else fight
+  scenes render** (cream ticket, clip-path notched corners, serif title, stamped rank
+  badge instead of a numeral-over-poster, since a video thumbnail isn't a poster) —
+  the palette/clip-path values are duplicated inline in
+  `src/app/tops/fights/page.tsx` rather than exported from
+  `fight-scene-result-card.tsx`, matching that file's own existing comment that this
+  is kept in sync manually across call sites, not shared as a constant.
+- **Reused the existing 2-rating-minimum threshold and query shape**, not a new
+  formula — `getTopRatedFightScenes` (`src/lib/fight-scenes.ts`) mirrors
+  `getTopRatedMovies` (`src/lib/ratings.ts`, already powering the homepage's "Top
+  Rated by the Community" rail) exactly: group ratings, filter to ≥2, sort, take N,
+  hydrate. No Bayesian shrinkage here either, same "ship the simple version" call
+  already made for Top Franchises.
+
 ### Movie detail hero redesigned poster-forward, away from the generic media-app look
 **PR #TBD.** Observation that the movie detail page's hero (full-bleed blurred backdrop,
 poster overlapping it, cast as a row of circular headshots) reads as generic
