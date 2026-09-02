@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
+import { useClickOutside } from "@/hooks/use-click-outside";
 
 export interface AddToListItem {
   id: string;
@@ -50,6 +51,7 @@ export function AddToListControl({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null);
 
   // These "Fight Ticket" cards clip their own box (clip-path) to get the
@@ -77,6 +79,12 @@ export function AddToListControl({
       window.removeEventListener("resize", closeOnScrollOrResize);
     };
   }, [open]);
+
+  // The menu renders into a portal (see the comment above), so it isn't a
+  // DOM descendant of this component's own wrapper -- both the button and
+  // the portaled menu itself have to be checked, or clicking inside the
+  // menu would count as "outside" and close it before its own onClick runs.
+  useClickOutside([buttonRef, menuRef], () => setOpen(false), open);
 
   if (!signedIn) {
     return (
@@ -151,6 +159,7 @@ export function AddToListControl({
       {open && menuPos &&
         createPortal(
           <div
+            ref={menuRef}
             className="fixed z-50 w-64 max-w-[calc(100vw-2rem)] rounded-md border border-neutral-700 bg-neutral-900 p-3 shadow-xl"
             style={{ top: menuPos.top, right: menuPos.right }}
           >

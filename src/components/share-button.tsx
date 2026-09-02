@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { useClickOutside } from "@/hooks/use-click-outside";
 
 export function ShareButton({
   path,
@@ -19,6 +20,8 @@ export function ShareButton({
   const [menuOpen, setMenuOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [youtubeCopied, setYoutubeCopied] = useState(false);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  useClickOutside(wrapperRef, () => setMenuOpen(false), menuOpen);
 
   function absoluteUrl() {
     return `${window.location.origin}${path}`;
@@ -64,7 +67,7 @@ export function ShareButton({
   }
 
   return (
-    <div className="relative">
+    <div ref={wrapperRef} className="relative">
       <button
         onClick={handleClick}
         title="Share"
