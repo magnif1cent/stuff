@@ -1,20 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
+import { useClickOutside } from "@/hooks/use-click-outside";
 
 // A small chevron next to the "Lists" nav link reveals Leaderboard --
 // click-to-toggle, not hover, so it works identically on touch and
 // desktop (a hover-only menu is unreachable on mobile, where there's no
 // hover state at all). "Lists" itself stays a plain, unchanged link;
 // the chevron is a separate control so neither behavior is ambiguous.
-// Same dropdown pattern (and lack of click-outside-to-close) as
-// ShareButton, src/components/share-button.tsx.
+// Same dropdown pattern as ShareButton, src/components/share-button.tsx.
 export function ListsNavMenu() {
   const [open, setOpen] = useState(false);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  useClickOutside(wrapperRef, () => setOpen(false), open);
 
   return (
-    <div className="relative flex items-center">
+    <div ref={wrapperRef} className="relative flex items-center">
       <Link href="/lists" className="text-sm whitespace-nowrap text-neutral-300 hover:text-white">
         Lists
       </Link>
