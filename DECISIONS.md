@@ -1061,6 +1061,47 @@ catalog size and traffic. This is the structural fix.
 
 ## Feature Decisions
 
+### Profile Lists tab preview made rank-aware, closing a gap left by "Cover tiles are a browse-card-only concern"
+**PR #TBD.** Found during an honest-review pass of the shipped Lists surfaces, then
+fixed on request. A ranked list's preview on `/members/[username]`'s Lists tab
+(`getMemberListsForProfile` in `members/[username]/page.tsx`) previously ordered its
+items by `createdAt: "desc"` unconditionally — the same query the profile page used
+before ranked lists existed, never revisited when that feature shipped (unlike the
+list's own permalink page and the `/lists` browse page's RANKED/UNRANKED grouping,
+both of which did account for it). Concretely: a "Top 5" list's own page could read
+#1 → #2 → #3 while its profile preview showed a different, unrelated order, and
+nothing on the profile tab even indicated the list was ranked.
+
+- **Split into two grouped queries by `isRanked`, not one** — Prisma's nested
+  `include` correctly scopes `orderBy`/`take` per parent row already (each list
+  gets its own top-N of its own entries, that part was never broken), but it can't
+  vary the *ordering rule itself* per row based on a sibling column: one `findMany`
+  can't say "rank order for this list, recency order for that one." Fetches list
+  `id`+`isRanked` first (cheap), splits into ranked/unranked id arrays, runs one
+  grouped `memberList.findMany` per group (`rank: "asc"` vs `createdAt: "desc"`,
+  each still capped at `MEMBER_LIST_PROFILE_PREVIEW_LIMIT` per list), then
+  reassembles in the original `createdAt: "asc"` list order. Same "can't express
+  this as one Prisma call" tradeoff already accepted for `getTopFranchises`
+  (`src/lib/leaderboard.ts`).
+- **A ranked list's preview now shows its top items by rank, not its newest
+  items** — a deliberate behavior change, not just a reorder: previously "newest 6"
+  applied to every list; now a ranked list's preview shows items 1..6 by rank (what
+  a "Top 5" preview should actually lead with), while an unranked list keeps
+  showing its most recently added items, unchanged.
+- **Small "RANKED" badge added next to the list name**, reusing the exact pill
+  markup/classes from `/lists/[listId]`'s own header badge, in both
+  `MemberListManager` (owner view) and the inline non-owner render in
+  `members/[username]/page.tsx` — the one remaining spot a list's ranked state was
+  invisible without clicking in.
+- **Not done here**: unifying the profile preview's card treatment (poster
+  `MovieCard` next to a cream "Fight Ticket" `FightSceneResultCard`) with the list
+  page's own unified dark-row-with-badge look. Flagged during the same review as a
+  real inconsistency, but it's a visual redesign call, not a bug fix — left as-is
+  pending its own mockup/decision pass rather than folded into this fix. Same for
+  the browse page's cover-collage tile order (`/lists`, oldest-added-first,
+  explicitly documented above under "Browse-card cover collage and in-list search")
+  — still deliberate, not touched.
+
 ### `/tops` added: Top 100 Movies and Top 100 Fights as their own pages
 **PR #TBD.** Requested as "a page that consists of Tops: Top 20 Movies, Top 20 Fights" —
 the count was raised to 100 in a follow-up message after the mockup/build decisions

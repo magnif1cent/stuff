@@ -9,6 +9,7 @@ import type { AddToListItem } from "@/components/add-to-list-control";
 export interface MemberListData {
   id: string;
   name: string;
+  isRanked: boolean;
   movies: MovieCardData[];
   fightScenes: (FightSceneResult & { initialLists: AddToListItem[]; initialFavorite: boolean })[];
   // True totals — movies/fightScenes above are capped to
@@ -51,7 +52,15 @@ export function MemberListManager({
     }
     setLists((prev) => [
       ...prev,
-      { id: body.list.id, name: body.list.name, movies: [], fightScenes: [], totalMovieCount: 0, totalFightSceneCount: 0 },
+      {
+        id: body.list.id,
+        name: body.list.name,
+        isRanked: false,
+        movies: [],
+        fightScenes: [],
+        totalMovieCount: 0,
+        totalFightSceneCount: 0,
+      },
     ]);
     setNewName("");
   }
@@ -132,6 +141,11 @@ export function MemberListManager({
             ) : (
               <>
                 <h2 className="text-lg font-semibold text-white">{list.name}</h2>
+                {list.isRanked && (
+                  <span className="rounded-full border border-red-900 bg-red-950/60 px-2.5 py-0.5 font-mono text-[10px] tracking-wide text-red-300 uppercase">
+                    Ranked
+                  </span>
+                )}
                 <Link href={`/lists/${list.id}`} className="text-xs text-neutral-400 underline hover:text-white">
                   Public link
                 </Link>

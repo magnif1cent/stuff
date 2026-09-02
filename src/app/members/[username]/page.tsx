@@ -26,6 +26,50 @@ const fightSceneCardInclude = {
   cast: { orderBy: { order: "asc" as const }, include: { person: true } },
 } as const;
 
+// Prisma's nested `include` scopes `orderBy`/`take` correctly per parent
+// row (each list gets its own top-N of its own entries) -- but it can't
+// vary the *rule itself* per row based on a sibling field, so one query
+// can't say "rank order for this list, recency order for that one." Split
+// into two grouped queries by isRanked instead (same "can't express this
+// as one Prisma call" tradeoff as getTopFranchises in lib/leaderboard.ts),
+// each still correctly capped per list, then reassembled in the caller's
+// original createdAt-asc order. A ranked list previously showed its newest
+// MEMBER_LIST_PROFILE_PREVIEW_LIMIT items in creation order regardless of
+// its actual rank -- e.g. a "Top 5" list's profile preview not matching
+// its own permalink page's order at all.
+async function getMemberListsForProfile(userId: string) {
+  const listMeta = await prisma.memberList.findMany({
+    where: { userId },
+    select: { id: true, isRanked: true },
+    orderBy: { createdAt: "asc" },
+  });
+  const orderedIds = listMeta.map((l) => l.id);
+  const rankedIds = listMeta.filter((l) => l.isRanked).map((l) => l.id);
+  const unrankedIds = listMeta.filter((l) => !l.isRanked).map((l) => l.id);
+
+  const listInclude = (entryOrderBy: { rank: "asc" } | { createdAt: "desc" }) => ({
+    entries: { include: { movie: true }, orderBy: entryOrderBy, take: MEMBER_LIST_PROFILE_PREVIEW_LIMIT },
+    fightSceneEntries: {
+      include: { fightScene: { include: fightSceneCardInclude } },
+      orderBy: entryOrderBy,
+      take: MEMBER_LIST_PROFILE_PREVIEW_LIMIT,
+    },
+    _count: { select: { entries: true, fightSceneEntries: true } },
+  });
+
+  const [rankedLists, unrankedLists] = await Promise.all([
+    rankedIds.length > 0
+      ? prisma.memberList.findMany({ where: { id: { in: rankedIds } }, include: listInclude({ rank: "asc" }) })
+      : [],
+    unrankedIds.length > 0
+      ? prisma.memberList.findMany({ where: { id: { in: unrankedIds } }, include: listInclude({ createdAt: "desc" }) })
+      : [],
+  ]);
+
+  const byId = new Map([...rankedLists, ...unrankedLists].map((list) => [list.id, list]));
+  return orderedIds.map((id) => byId.get(id)!);
+}
+
 async function MovieRow({
   title,
   movies,
@@ -143,24 +187,10 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
       // every list a member owns in one request, so an unbounded fetch here
       // scales with (list count) × (items per list) on every profile visit.
       // `_count` carries the true totals so the UI can link out to the full
-      // list rather than silently showing a partial one.
-      prisma.memberList.findMany({
-        where: { userId: profileUser.id },
-        include: {
-          entries: {
-            include: { movie: true },
-            orderBy: { createdAt: "desc" },
-            take: MEMBER_LIST_PROFILE_PREVIEW_LIMIT,
-          },
-          fightSceneEntries: {
-            include: { fightScene: { include: fightSceneCardInclude } },
-            orderBy: { createdAt: "desc" },
-            take: MEMBER_LIST_PROFILE_PREVIEW_LIMIT,
-          },
-          _count: { select: { entries: true, fightSceneEntries: true } },
-        },
-        orderBy: { createdAt: "asc" },
-      }),
+      // list rather than silently showing a partial one. See
+      // getMemberListsForProfile above for why this is its own function
+      // rather than inline here.
+      getMemberListsForProfile(profileUser.id),
       // Which lists this member has liked — unlike lists themselves, a like
       // is never shown publicly anywhere else in the app (list permalinks
       // only ever show an aggregate count), so this stays owner-only too.
@@ -289,6 +319,7 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
   const memberListData = visibleMemberLists.map((list) => ({
     id: list.id,
     name: list.name,
+    isRanked: list.isRanked,
     movies: list.entries.map((entry) => withRatings(entry.movie)),
     fightScenes: list.fightSceneEntries.map((entry) => withSceneListState(entry.fightScene)),
     // True totals, not just what's shown — the queries above cap each
@@ -321,6 +352,11 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
           <section key={list.id} className="mb-8">
             <div className="mb-3 flex items-center gap-3">
               <h3 className="text-lg font-semibold text-white">{list.name}</h3>
+              {list.isRanked && (
+                <span className="rounded-full border border-red-900 bg-red-950/60 px-2.5 py-0.5 font-mono text-[10px] tracking-wide text-red-300 uppercase">
+                  Ranked
+                </span>
+              )}
               <Link href={`/lists/${list.id}`} className="text-xs text-neutral-400 underline hover:text-white">
                 Permalink
               </Link>
