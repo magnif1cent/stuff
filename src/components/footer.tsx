@@ -12,7 +12,7 @@ export function Footer() {
           News
         </Link>
         <Link href="/tops" className="text-sm text-neutral-400 hover:text-white">
-          Tops
+          Top 100
         </Link>
       </div>
       <BuildVersion />

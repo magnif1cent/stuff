@@ -276,7 +276,7 @@ See `DECISIONS.md` for the fuller reasoning, including the aggregation-based alt
 
 ## Tops
 
-`/tops` is a small landing page linking to two standalone charts, reachable from the footer's "Tops" link and cross-linked from `/leaderboard`:
+`/tops` is a small landing page linking to two standalone charts, reachable from the footer's "Top 100" link and cross-linked from `/leaderboard`:
 
 - **`/tops/movies`** — the 100 highest community-rated (approved) movies, each poster in a reflowing grid (2 columns on mobile up to 5 on desktop) with a large rank numeral stamped over its bottom-left corner, red-outlined for the top 3.
 - **`/tops/fights`** — the 100 highest community-rated fight scenes, same idea but as "Fight Ticket"-styled cards (the same cream ticket look used elsewhere for fight scenes) with a stamped rank badge in the corner instead of a numeral over a poster.
@@ -412,9 +412,9 @@ Each slide prefers a fight scene clip over the static TMDB backdrop:
 ## Footer & About Page
 
 Every page has a site-wide footer (`src/components/footer.tsx`) with
-`About`, `News`, and `Tops` links on the left and a build version indicator
-on the right. It's deliberately not in the main navbar — Movies/Fights/Lists
-stays focused on the core browsing links.
+`About`, `News`, and `Top 100` links on the left and a build version
+indicator on the right. It's deliberately not in the main navbar —
+Movies/Fights/Lists stays focused on the core browsing links.
 
 `/about` is a public page with four sections: what the site is, how the
 catalog is curated (echoing the TMDB keyword-search curation described

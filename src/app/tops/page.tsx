@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 // rather than two sections on one page — a fight scene's ticket card and a
 // movie's poster card don't share a grid layout, so splitting them avoids a
 // page that's really two unrelated grids stacked under one URL. This index
-// is just the landing spot the footer's "Tops" link points at.
+// is just the landing spot the footer's "Top 100" link points at.
 export default function TopsIndexPage() {
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-16 text-center">

@@ -1083,7 +1083,7 @@ rather than guessed:
   duplicating content.
 - **Movies and fights are two standalone pages (`/tops/movies`, `/tops/fights`), not
   one page with two sections** — explicit user correction after picking a mockup
-  option. A small `/tops` index (two link cards) is what the footer's new "Tops" link
+  option. A small `/tops` index (two link cards) is what the footer's new "Top 100" link
   and the `/leaderboard` cross-link point at, rather than either sub-page being
   unreachable without going through it first... both are also directly linked from
   each other's own header.
