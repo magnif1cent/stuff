@@ -11,6 +11,9 @@ export function Footer() {
         <Link href="/news" className="text-sm text-neutral-400 hover:text-white">
           News
         </Link>
+        <Link href="/tops" className="text-sm text-neutral-400 hover:text-white">
+          Top 100
+        </Link>
       </div>
       <BuildVersion />
     </footer>
