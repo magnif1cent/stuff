@@ -104,17 +104,21 @@ export async function LineageTreeBody({ tree, up, down }: { tree: LineageTree; u
               const siblingCount = group.children.length + (group.overflowCount > 0 ? 1 : 0);
               return (
                 <div key={group.parent.id} className="flex flex-col items-center gap-1.5">
-                  {/* Only needed once a row can wrap into a stack (2+ siblings,
-                      as on narrow screens) or once there's more than one
-                      parent at this level -- a lone child under a lone
-                      parent already reads unambiguously without it. */}
-                  {groups.length > 1 && (
-                    <p className="text-[10px] text-neutral-600">{group.parent.name}&rsquo;s students</p>
+                  {/* A border alone is easy to miss, especially once a row
+                      wraps into a stack on a narrow screen and could pass
+                      for a continuing chain -- name the relationship
+                      outright instead of relying on the box being noticed.
+                      Skipped only for a single child under a single parent,
+                      where "taught by" is already the only reading. */}
+                  {siblingCount > 1 && (
+                    <p className="text-[11px] font-medium text-neutral-500">
+                      {group.parent.name}&rsquo;s students ({siblingCount})
+                    </p>
                   )}
                   <div
                     className={
                       siblingCount > 1
-                        ? "flex flex-wrap justify-center gap-4 rounded-lg border border-dashed border-neutral-800 p-3"
+                        ? "flex flex-wrap justify-center gap-4 rounded-lg border border-neutral-700 bg-neutral-900/60 p-3"
                         : "flex flex-wrap justify-center gap-4"
                     }
                   >
