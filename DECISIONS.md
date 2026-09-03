@@ -125,6 +125,7 @@ one.
 - [Actor Career Highlights styled like the Signature Spotlight banner, "Sparring Partner" from existing fight-scene data](#actor-career-highlights-styled-like-the-signature-spotlight-banner-sparring-partner-from-existing-fight-scene-data)
 - [Career Highlights reverted to a plain Details card](#career-highlights-reverted-to-a-plain-details-card)
 - [Sifu Lineage: primary-sifu-plus-dotted-line, bulk chain-import over drag-and-drop](#sifu-lineage-primary-sifu-plus-dotted-line-bulk-chain-import-over-drag-and-drop)
+- [Sifu Lineage: LineageFigure introduced, reversing the Person-only restriction](#sifu-lineage-lineagefigure-introduced-reversing-the-person-only-restriction)
 
 **Deferred & Backlog**
 
@@ -4175,7 +4176,7 @@ implementation, not during it.
 - **Not implemented in this pass**: deleting a link directly from the tree
   view (the admin tree is browse-and-add only; removal still goes through the
   flat link list, since the tree API doesn't thread relation ids through its
-  ancestor/descendant structures — only person refs); zoom/pan controls on
+  ancestor/descendant structures — only figure refs); zoom/pan controls on
   the tree (discussed early on for very wide/deep lineages, but not load-
   bearing once the tree defaults to a bounded generations-up/down window
   with "show more" expand links/buttons and per-parent sibling overflow
@@ -4183,6 +4184,57 @@ implementation, not during it.
   tree, 3 up/3 down and a `?up=&down=` query-param link on the read-only
   public page). Neither blocks shipping; both are easy to add on top of the
   existing data shape if a real lineage turns out to need them.
+
+### Sifu Lineage: LineageFigure introduced, reversing the Person-only restriction
+**PR #TBD.** Reverses one specific call from the entry above ("Lineage nodes
+are restricted to actors already in the catalog") within the same feature,
+before any of it shipped — raised as soon as real examples surfaced: not
+every sifu is an actor.
+
+- **Not every sifu is an actor, and some are characters rather than real
+  people.** A historical martial artist (a real sifu who trained someone
+  famous) may never have been credited in a film at all. Harder case: a
+  figure like Ip Man is himself a real person the lineage should be able to
+  name, but the only representation of him in this catalog is as a
+  *character* — `CastCredit.characterName` — played by different actors in
+  different films (Donnie Yen, Tony Leung, Anthony Wong...). Neither case
+  fits "a lineage node is a `Person`."
+- **`LineageFigure` sits between `LineageRelation` and `Person`** — a node
+  has a name and an optional unique `personId`. An actor's figure is created
+  lazily (`resolveFigureForPerson` in `src/lib/lineage.ts`) the moment
+  they're actually linked, not up front for the whole catalog, and reused on
+  every later link to the same actor (`personId` is unique). A bare figure
+  (Ip Man, a never-credited master) is deduped by exact case-insensitive
+  name the same way, so pasting "Ip Man" into two different chains reuses
+  one figure rather than forking the lineage in two. This was buildable
+  cleanly because nothing had shipped yet — no real data to migrate, so the
+  not-yet-released `LineageRelation` migration was rewritten in place rather
+  than layered under a second one.
+- **"Who played this figure" is derived, never stored.** Rather than a field
+  on `LineageFigure` pointing at a specific actor, `getPortrayals(name)`
+  looks up `CastCredit` rows with a matching `characterName` live, on
+  render, wherever a bare figure appears in the two public tree pages (the
+  admin tree skips this — it's browsing flavor for readers, not something an
+  editor needs while linking people). A stored link would have to pick one
+  actor as *the* portrayal, which is simply false for a role recast across
+  films; a lookup can show all of them and stays correct as new movies get
+  added, with no upkeep.
+- **The figure picker (`AdminLineageFigurePicker`) searches actors and
+  existing bare figures together**, plus a trailing "add as a non-actor
+  figure" row for a name matching neither — but bulk chain-import stays
+  actor-matching only (unchanged from the entry above): a name it can't
+  resolve to an actor still shows "Not found" rather than minting a bare
+  figure automatically, so a typo in a 200-line paste doesn't quietly become
+  a permanent phantom entry. Adding a non-actor figure stays a deliberate,
+  reviewed action through the picker.
+- **Public URLs split accordingly**: an actor-linked figure's page is still
+  `/actors/[personId]/lineage` (stable, matches the rest of the site's
+  actor-centric URLs); a bare figure gets `/lineage/[figureId]` instead,
+  since it has no actor page to live under. Both render through the same
+  `LineageTreeBody` component; the figure route redirects into the actor
+  route if a figure turns out to be actor-linked after all (a stale link,
+  someone bookmarking mid-edit), so there's exactly one canonical URL per
+  figure either way.
 
 - **Drag-and-drop reordering for ranked list items** — `ListItemRows`
   (`src/components/list-item-rows.tsx`) now has move-to-top/move-to-bottom

@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { requireAdminSession } from "@/lib/require-admin";
-import { prisma } from "@/lib/prisma";
+import { searchLineageFigures } from "@/lib/lineage";
 
-const RESULT_LIMIT = 8;
-
-// Distinct from /api/actors (which returns bare names for the public search
-// bar's autocomplete): this needs real Person records -- id + profilePath --
-// since the admin picks a specific actor to link, not just a name string.
+// Two separate lists, not one merged/tagged one: an actor result hasn't
+// necessarily been turned into a LineageFigure yet (that happens lazily
+// once actually picked -- see resolve-person below), so it carries a
+// personId, while an existing bare figure result carries a figureId. The
+// two id kinds shouldn't be conflated behind one generic "id" field.
 export async function GET(request: Request) {
   const session = await requireAdminSession();
   if (!session) {
@@ -15,14 +15,9 @@ export async function GET(request: Request) {
 
   const query = new URL(request.url).searchParams.get("q")?.trim() ?? "";
   if (!query) {
-    return NextResponse.json({ people: [] });
+    return NextResponse.json({ actors: [], figures: [] });
   }
 
-  const people = await prisma.person.findMany({
-    where: { name: { contains: query, mode: "insensitive" } },
-    orderBy: { name: "asc" },
-    select: { id: true, name: true, profilePath: true },
-    take: RESULT_LIMIT,
-  });
-  return NextResponse.json({ people });
+  const results = await searchLineageFigures(query);
+  return NextResponse.json(results);
 }

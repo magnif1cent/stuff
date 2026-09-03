@@ -25,7 +25,7 @@ import { getPersonFavoriteCounts } from "@/lib/person-favorites";
 import { ActorFavoriteButton } from "@/components/actor-favorite-button";
 import { getPersonSignatureVoteSummary } from "@/lib/person-signature-votes";
 import { SignatureVoteProvider, SignatureSpotlight, SignatureVoteButton } from "@/components/actor-signature-vote";
-import { getLineageTree } from "@/lib/lineage";
+import { getLineageTree, getFigureIdForPerson } from "@/lib/lineage";
 import { ActorLineageCard } from "@/components/actor-lineage-card";
 
 // Split out from ActorPage's body so the Math.random() call it wraps isn't
@@ -102,9 +102,13 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
     notFound();
   }
 
+  // Read-only: browsing an actor's page shouldn't itself create lineage
+  // data for them just because they were looked at -- a LineageFigure only
+  // ever gets created the moment an admin actually links someone.
+  const figureId = await getFigureIdForPerson(personId);
   const [bio, lineageTree] = await Promise.all([
     getTmdbPersonDetails(person.tmdbId).catch(() => null),
-    getLineageTree(personId, { up: 1, down: 1, siblingLimit: 3 }),
+    figureId ? getLineageTree(figureId, { up: 1, down: 1, siblingLimit: 3 }) : Promise.resolve(null),
   ]);
   const lineageHasContent =
     !!lineageTree &&

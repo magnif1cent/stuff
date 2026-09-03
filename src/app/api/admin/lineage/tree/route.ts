@@ -9,16 +9,16 @@ export async function GET(request: Request) {
   }
 
   const params = new URL(request.url).searchParams;
-  const personId = params.get("personId");
-  if (!personId) {
-    return NextResponse.json({ error: "personId is required." }, { status: 400 });
+  const figureId = params.get("figureId");
+  if (!figureId) {
+    return NextResponse.json({ error: "figureId is required." }, { status: 400 });
   }
 
   const up = params.get("up") ? Number(params.get("up")) : undefined;
   const down = params.get("down") ? Number(params.get("down")) : undefined;
-  const tree = await getLineageTree(personId, { up, down });
+  const tree = await getLineageTree(figureId, { up, down });
   if (!tree) {
-    return NextResponse.json({ error: "Person not found." }, { status: 404 });
+    return NextResponse.json({ error: "Figure not found." }, { status: 404 });
   }
   return NextResponse.json({ tree });
 }

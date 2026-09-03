@@ -20,12 +20,12 @@ export function ActorLineageCard({ tree }: { tree: LineageTree }) {
       {directSifu && (
         <div className="mt-2.5">
           <p className="mb-1 text-[11px] text-neutral-500">Sifu</p>
-          <LineagePersonChip person={directSifu} size={20} />
+          <LineagePersonChip figure={directSifu} size={20} />
         </div>
       )}
       {tree.secondarySifus.map((sifu) => (
         <div key={sifu.id} className="mt-1.5">
-          <LineagePersonChip person={sifu} size={20} />
+          <LineagePersonChip figure={sifu} size={20} />
         </div>
       ))}
 
@@ -36,14 +36,14 @@ export function ActorLineageCard({ tree }: { tree: LineageTree }) {
           </p>
           <div className="flex flex-col gap-1.5">
             {directStudents.map((student) => (
-              <LineagePersonChip key={student.id} person={student} size={20} />
+              <LineagePersonChip key={student.id} figure={student} size={20} />
             ))}
           </div>
         </div>
       )}
 
       <Link
-        href={`/actors/${tree.center.id}/lineage`}
+        href={`/actors/${tree.center.personId}/lineage`}
         className="mt-3 block text-xs font-semibold text-red-500 hover:text-red-400"
       >
         View full lineage &rarr;

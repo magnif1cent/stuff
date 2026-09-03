@@ -3,29 +3,36 @@
 import { useState } from "react";
 import Image from "next/image";
 import { tmdbImageUrl } from "@/lib/tmdb";
-import { AdminLineagePersonPicker, type PersonRef } from "@/components/admin-lineage-person-picker";
+import { AdminLineageFigurePicker, type LineageFigureRef } from "@/components/admin-lineage-figure-picker";
 import { MAX_LINEAGE_NOTE_LENGTH } from "@/lib/lineage-constants";
 
 interface LineageRelationRow {
   id: string;
   isPrimary: boolean;
   note: string | null;
-  sifu: PersonRef;
-  student: PersonRef;
+  sifu: LineageFigureRef;
+  student: LineageFigureRef;
 }
 
-function Avatar({ person }: { person: PersonRef }) {
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  return ((parts[0]?.[0] ?? "") + (parts[parts.length - 1]?.[0] ?? "")).toUpperCase();
+}
+
+function Avatar({ figure }: { figure: LineageFigureRef }) {
   return (
-    <span className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full bg-neutral-800">
-      {person.profilePath && (
+    <span className="relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-neutral-800 text-[10px] font-semibold text-neutral-400">
+      {figure.profilePath ? (
         <Image
-          src={tmdbImageUrl(person.profilePath, "w200") ?? ""}
+          src={tmdbImageUrl(figure.profilePath, "w200") ?? ""}
           alt=""
           fill
           unoptimized
           sizes="32px"
           className="object-cover"
         />
+      ) : (
+        initials(figure.name)
       )}
     </span>
   );
@@ -33,8 +40,8 @@ function Avatar({ person }: { person: PersonRef }) {
 
 export function AdminLineageLinkForm({ initialRelations }: { initialRelations: LineageRelationRow[] }) {
   const [relations, setRelations] = useState(initialRelations);
-  const [sifu, setSifu] = useState<PersonRef | null>(null);
-  const [student, setStudent] = useState<PersonRef | null>(null);
+  const [sifu, setSifu] = useState<LineageFigureRef | null>(null);
+  const [student, setStudent] = useState<LineageFigureRef | null>(null);
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -81,22 +88,22 @@ export function AdminLineageLinkForm({ initialRelations }: { initialRelations: L
           <label className="mb-1.5 block text-[11px] font-semibold tracking-wide text-neutral-500 uppercase">
             Student
           </label>
-          <AdminLineagePersonPicker
+          <AdminLineageFigurePicker
             key={student?.id ?? "student-empty"}
             value={student}
             onChange={setStudent}
-            excludeId={sifu?.id}
+            exclude={sifu}
           />
         </div>
         <div>
           <label className="mb-1.5 block text-[11px] font-semibold tracking-wide text-neutral-500 uppercase">
             Sifu
           </label>
-          <AdminLineagePersonPicker
+          <AdminLineageFigurePicker
             key={sifu?.id ?? "sifu-empty"}
             value={sifu}
             onChange={setSifu}
-            excludeId={student?.id}
+            exclude={student}
           />
         </div>
         <div>
@@ -141,12 +148,12 @@ export function AdminLineageLinkForm({ initialRelations }: { initialRelations: L
               >
                 <div className="flex min-w-0 items-center gap-2">
                   <div className="flex items-center gap-2">
-                    <Avatar person={r.sifu} />
+                    <Avatar figure={r.sifu} />
                     <span className="text-sm text-neutral-100">{r.sifu.name}</span>
                   </div>
                   <span className="shrink-0 text-neutral-600">&rarr;</span>
                   <div className="flex items-center gap-2">
-                    <Avatar person={r.student} />
+                    <Avatar figure={r.student} />
                     <span className="text-sm text-neutral-100">{r.student.name}</span>
                   </div>
                   {!r.isPrimary && (

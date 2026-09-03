@@ -3,68 +3,75 @@
 import { useState } from "react";
 import Image from "next/image";
 import { tmdbImageUrl } from "@/lib/tmdb";
-import { AdminLineagePersonPicker, type PersonRef } from "@/components/admin-lineage-person-picker";
+import { AdminLineageFigurePicker, type LineageFigureRef } from "@/components/admin-lineage-figure-picker";
 import { MAX_LINEAGE_NOTE_LENGTH } from "@/lib/lineage-constants";
 
 interface DescendantGroup {
-  parent: PersonRef;
-  children: PersonRef[];
+  parent: LineageFigureRef;
+  children: LineageFigureRef[];
   overflowCount: number;
 }
 
 interface LineageTree {
-  center: PersonRef;
-  ancestors: PersonRef[];
+  center: LineageFigureRef;
+  ancestors: LineageFigureRef[];
   ancestorsTruncated: boolean;
-  secondarySifus: PersonRef[];
+  secondarySifus: LineageFigureRef[];
   descendantLevels: DescendantGroup[][];
   descendantsTruncated: boolean;
 }
 
 const DEFAULT_DEPTH = { up: 2, down: 2 };
 
-function Avatar({ person, size = 40 }: { person: PersonRef; size?: number }) {
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  return ((parts[0]?.[0] ?? "") + (parts[parts.length - 1]?.[0] ?? "")).toUpperCase();
+}
+
+function Avatar({ figure, size = 40 }: { figure: LineageFigureRef; size?: number }) {
   return (
     <span
-      className="relative shrink-0 overflow-hidden rounded-full bg-neutral-800"
-      style={{ width: size, height: size }}
+      className="relative flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-neutral-800 font-semibold text-neutral-400"
+      style={{ width: size, height: size, fontSize: size / 2.6 }}
     >
-      {person.profilePath && (
+      {figure.profilePath ? (
         <Image
-          src={tmdbImageUrl(person.profilePath, "w200") ?? ""}
+          src={tmdbImageUrl(figure.profilePath, "w200") ?? ""}
           alt=""
           fill
           unoptimized
           sizes={`${size}px`}
           className="object-cover"
         />
+      ) : (
+        initials(figure.name)
       )}
     </span>
   );
 }
 
 export function AdminLineageTree() {
-  const [selected, setSelected] = useState<PersonRef | null>(null);
+  const [selected, setSelected] = useState<LineageFigureRef | null>(null);
   const [tree, setTree] = useState<LineageTree | null>(null);
   const [depth, setDepth] = useState(DEFAULT_DEPTH);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [addMode, setAddMode] = useState<"sifu" | "student" | null>(null);
-  const [addPerson, setAddPerson] = useState<PersonRef | null>(null);
+  const [addFigure, setAddFigure] = useState<LineageFigureRef | null>(null);
   const [addNote, setAddNote] = useState("");
   const [saving, setSaving] = useState(false);
 
-  async function loadTree(person: PersonRef, nextDepth: { up: number; down: number } = DEFAULT_DEPTH) {
-    setSelected(person);
+  async function loadTree(figure: LineageFigureRef, nextDepth: { up: number; down: number } = DEFAULT_DEPTH) {
+    setSelected(figure);
     setDepth(nextDepth);
     setLoading(true);
     setError(null);
     setAddMode(null);
-    const res = await fetch(`/api/admin/lineage/tree?personId=${person.id}&up=${nextDepth.up}&down=${nextDepth.down}`);
+    const res = await fetch(`/api/admin/lineage/tree?figureId=${figure.id}&up=${nextDepth.up}&down=${nextDepth.down}`);
     setLoading(false);
     if (!res.ok) {
       setTree(null);
-      setError("Couldn't load that person's lineage.");
+      setError("Couldn't load that lineage.");
       return;
     }
     const data = await res.json();
@@ -79,13 +86,13 @@ export function AdminLineageTree() {
   }
 
   async function confirmAdd() {
-    if (!tree || !addMode || !addPerson) return;
+    if (!tree || !addMode || !addFigure) return;
     setSaving(true);
     setError(null);
     const body =
       addMode === "sifu"
-        ? { sifuId: addPerson.id, studentId: tree.center.id, note: addNote.trim() || undefined }
-        : { sifuId: tree.center.id, studentId: addPerson.id, note: addNote.trim() || undefined };
+        ? { sifuId: addFigure.id, studentId: tree.center.id, note: addNote.trim() || undefined }
+        : { sifuId: tree.center.id, studentId: addFigure.id, note: addNote.trim() || undefined };
     const res = await fetch("/api/admin/lineage/relations", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -98,7 +105,7 @@ export function AdminLineageTree() {
       return;
     }
     setAddMode(null);
-    setAddPerson(null);
+    setAddFigure(null);
     setAddNote("");
     await loadTree(tree.center, depth);
   }
@@ -107,13 +114,13 @@ export function AdminLineageTree() {
     <div>
       <div className="max-w-sm">
         <label className="mb-1.5 block text-[11px] font-semibold tracking-wide text-neutral-500 uppercase">
-          Person
+          Actor or figure
         </label>
-        <AdminLineagePersonPicker
+        <AdminLineageFigurePicker
           key={selected?.id ?? "none"}
           value={selected}
           onChange={loadTree}
-          placeholder="Search for an actor…"
+          placeholder="Search for an actor or a lineage figure…"
         />
       </div>
 
@@ -134,7 +141,7 @@ export function AdminLineageTree() {
                 onClick={() => loadTree(ancestor)}
                 className="flex flex-col items-center gap-1 rounded-md px-2 py-1 hover:bg-neutral-900"
               >
-                <Avatar person={ancestor} />
+                <Avatar figure={ancestor} />
                 <span className="text-xs text-neutral-300">{ancestor.name}</span>
               </button>
               <span className="text-neutral-700">&darr;</span>
@@ -150,7 +157,7 @@ export function AdminLineageTree() {
                   onClick={() => loadTree(s)}
                   className="flex items-center gap-1.5 rounded-full border border-dashed border-neutral-700 px-2 py-1 hover:border-neutral-500"
                 >
-                  <Avatar person={s} size={20} />
+                  <Avatar figure={s} size={20} />
                   <span className="text-neutral-300">{s.name}</span>
                 </button>
               ))}
@@ -158,15 +165,16 @@ export function AdminLineageTree() {
           )}
 
           <div className="flex flex-col items-center gap-1 rounded-md border-2 border-red-600 bg-red-950/60 px-4 py-2">
-            <Avatar person={tree.center} size={48} />
+            <Avatar figure={tree.center} size={48} />
             <span className="text-sm font-semibold text-white">{tree.center.name}</span>
+            {!tree.center.personId && <span className="text-[10px] text-neutral-500">not an actor</span>}
           </div>
 
           <div className="flex gap-2">
             <button
               onClick={() => {
                 setAddMode("sifu");
-                setAddPerson(null);
+                setAddFigure(null);
                 setAddNote("");
               }}
               className="rounded-full bg-red-700 px-3 py-1 text-[11px] font-semibold text-white uppercase hover:bg-red-600"
@@ -176,7 +184,7 @@ export function AdminLineageTree() {
             <button
               onClick={() => {
                 setAddMode("student");
-                setAddPerson(null);
+                setAddFigure(null);
                 setAddNote("");
               }}
               className="rounded-full bg-red-700 px-3 py-1 text-[11px] font-semibold text-white uppercase hover:bg-red-600"
@@ -190,11 +198,11 @@ export function AdminLineageTree() {
               <p className="mb-2 text-[11px] font-semibold text-neutral-300">
                 Add {addMode === "sifu" ? "sifu of" : "student of"} {tree.center.name}
               </p>
-              <AdminLineagePersonPicker
-                key={addPerson?.id ?? "empty"}
-                value={addPerson}
-                onChange={setAddPerson}
-                excludeId={tree.center.id}
+              <AdminLineageFigurePicker
+                key={addFigure?.id ?? "empty"}
+                value={addFigure}
+                onChange={setAddFigure}
+                exclude={tree.center}
               />
               <input
                 type="text"
@@ -213,7 +221,7 @@ export function AdminLineageTree() {
                 </button>
                 <button
                   onClick={confirmAdd}
-                  disabled={!addPerson || saving}
+                  disabled={!addFigure || saving}
                   className="rounded-md bg-red-700 px-4 py-1.5 text-xs font-semibold text-white hover:bg-red-600 disabled:opacity-50"
                 >
                   {saving ? "Saving…" : "Confirm"}
@@ -234,7 +242,7 @@ export function AdminLineageTree() {
                         onClick={() => loadTree(child)}
                         className="flex flex-col items-center gap-1 rounded-md px-2 py-1 hover:bg-neutral-900"
                       >
-                        <Avatar person={child} />
+                        <Avatar figure={child} />
                         <span className="max-w-20 truncate text-xs text-neutral-300">{child.name}</span>
                       </button>
                     ))}

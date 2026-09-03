@@ -77,12 +77,12 @@ export function AdminLineageBulkImport() {
     return rows
       .map((row, index) => {
         if (row.status !== "new" && row.status !== "ambiguous") return null;
-        const sifuId = pickedId(row.sifu, picks[index]?.sifu);
-        const studentId = pickedId(row.student, picks[index]?.student);
-        if (!sifuId || !studentId) return null;
-        return { sifuId, studentId };
+        const sifuPersonId = pickedId(row.sifu, picks[index]?.sifu);
+        const studentPersonId = pickedId(row.student, picks[index]?.student);
+        if (!sifuPersonId || !studentPersonId) return null;
+        return { sifuPersonId, studentPersonId };
       })
-      .filter((r): r is { sifuId: string; studentId: string } => r !== null);
+      .filter((r): r is { sifuPersonId: string; studentPersonId: string } => r !== null);
   }, [rows, picks]);
 
   const counts = useMemo(() => {
