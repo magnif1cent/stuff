@@ -127,6 +127,7 @@ one.
 - [Sifu Lineage: primary-sifu-plus-dotted-line, bulk chain-import over drag-and-drop](#sifu-lineage-primary-sifu-plus-dotted-line-bulk-chain-import-over-drag-and-drop)
 - [Sifu Lineage: LineageFigure introduced, reversing the Person-only restriction](#sifu-lineage-lineagefigure-introduced-reversing-the-person-only-restriction)
 - [Sifu Lineage: actor-page teaser moved from a stat card to its own tree section](#sifu-lineage-actor-page-teaser-moved-from-a-stat-card-to-its-own-tree-section)
+- [Sifu Lineage: `LineageTreeBody` rewritten as computed SVG layout, not flexbox](#sifu-lineage-lineagetreebody-rewritten-as-computed-svg-layout-not-flexbox)
 
 **Deferred & Backlog**
 
@@ -4251,6 +4252,34 @@ stat-card-sized tree would need its own cramped layout with no payoff
 besides staying in that row. The tradeoff, accepted deliberately: Known
 For/Filmography now sit one section lower on any actor page with lineage
 data.
+
+### Sifu Lineage: `LineageTreeBody` rewritten as computed SVG layout, not flexbox
+**PR #TBD.** The flexbox-and-arrow-glyphs rendering (generation rows as
+`flex-col`, siblings as a wrapped `flex-wrap` row) read ambiguously once a
+sibling row wrapped into a stack on a phone — reported directly against the
+live site (a screenshot showing Jackie Chan's two students stacked with no
+visual difference from a 3-generation chain). Two rounds of CSS patches on
+top of that rendering (a bordered "cluster" box, then a text label naming
+the relationship) still didn't read as clearly as the original wireframe
+mockup, which used real connecting lines between fixed node positions —
+fed back directly ("i like the view in mockup better... clear lines of
+linkage").
+
+Rather than keep patching the flexbox version, `LineageTreeBody` now
+computes an explicit layout (`buildLayout` in the component): every node's
+x/y in trunk-centered units (x=0 is the primary sifu/student chain, row
+index counts generations from the centered figure), shifted once into
+pixel space by the tree's actual extent, then rendered as one absolutely-
+positioned `<svg>` of connecting lines under a set of absolutely-positioned
+node elements — the same technique the original `.dc.html` wireframe used,
+ported into real Tailwind/JSX. A hand-rolled layout rather than a graph-
+layout dependency, same reasoning as the primary-sifu-plus-dotted-line call
+above: this tree has exactly one branching shape (a single chain above and
+below, fanning out per generation), not an arbitrary graph, so plain
+arithmetic covers it without pulling in dagre/elkjs. Slot width and node
+label width were both narrowed in the same pass (a long name like "Michael
+Chow Man-Kin" was pushing generation rows wider than necessary) so names
+wrap within a fixed column instead of stretching the row.
 
 - **Drag-and-drop reordering for ranked list items** — `ListItemRows`
   (`src/components/list-item-rows.tsx`) now has move-to-top/move-to-bottom
