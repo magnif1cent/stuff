@@ -28,6 +28,7 @@ An IMDB-style website for kung fu and martial arts films, built for martial arts
 - [Tops](#tops)
 - [Fun Facts](#fun-facts)
 - [Actor Pages](#actor-pages)
+- [Sifu Lineage](#sifu-lineage)
 - [Reviews](#reviews)
 - [You Might Also Like](#you-might-also-like)
 - [Admin Recommendations](#admin-recommendations)
@@ -55,6 +56,7 @@ An IMDB-style website for kung fu and martial arts films, built for martial arts
 - **Fight Count**: a member-maintained "true" fight count on every movie page, separate from the count of cataloged Fights — see [Fight Count](#fight-count) below
 - **Fun Facts**: an IMDB "Did you know"-style trivia section above the Discussion thread — members add individual entries, and other members thumbs-up/down each one, ranked by net vote score — see [Fun Facts](#fun-facts) below
 - Actor pages (`/actors/[personId]`) showing an actor's filmography and every fight scene they're tagged in, linked from a movie's cast list and a scene's "Featuring" line (see [Actor Pages](#actor-pages) below)
+- **Sifu Lineage**: admin-curated martial arts training lineages between actors already in the catalog — a compact card on the actor page (direct sifu and students) links out to a full, multi-generation tree at `/actors/[personId]/lineage` (see [Sifu Lineage](#sifu-lineage) below)
 - Member accounts via email/password (with email verification and self-service password recovery) or Google sign-in, identified publicly by a chosen username rather than their email or real name (see [Usernames](#usernames) and [Password Recovery](#password-recovery) below)
 - Member capabilities: rate movies and fight scenes, maintain a Favorites list and a Watchlist for movies (fight scenes get a Favorite only — see below), create their own public named lists on a profile page at `/members/[username]` and save both movies and fight scenes to them (see [Member Lists & Profiles](#member-lists--profiles) below), post/reply in movie discussions, submit fight scenes, and submit a movie missing from the catalog for admin review (see [Member Movie Submissions](#member-movie-submissions) below)
 - A unified `/admin` dashboard (Movies management incl. pending-submission review and permanent deletion, TMDB import incl. title search, keyword search, and bulk CSV upload, Fight Scene Tags, News & Updates, Account settings), shared by two roles &mdash; `ADMIN` (everything) and a narrower `REVIEWER` (movie-submission review, fight-scene-tag management, fight-scene verification) &mdash; plus admin actions that stay inline on regular pages (Editors' Score, editorial reviews, poster overrides, fight scene verification) &mdash; see [Admin Area & Roles](#admin-area--roles) below
@@ -321,6 +323,16 @@ Members also crowd-vote on the actor's **Signature Role** and **Signature Fight 
 
 Known For's popularity ranking and the Signature Vote banners are deliberately independent signals and won't always agree — Known For reflects TMDB's general popularity data, while Signature Vote is this site's own members answering "what defines this actor," which can land on a different, less mainstream credit.
 
+When an actor has a martial arts lineage recorded, a compact **Lineage** card sits alongside Details and Sparring Partner — see [Sifu Lineage](#sifu-lineage) below.
+
+## Sifu Lineage
+
+Martial artists often trace their training back through a chain of sifus, sometimes generations deep. Admins can record that lineage between actors already in the catalog — a person isn't created just to be a lineage entry, so a sifu who never appeared on camera can't be added until they exist as a `Person` some other way.
+
+- **Data model** — `LineageRelation` links a `sifuId` to a `studentId`, both existing `Person` records, with an optional short note (e.g. "Wing Chun", "adopted disciple"). A student can have more than one sifu recorded (it's a DAG, not a strict tree), but exactly one is `isPrimary` at a time — the first one recorded becomes primary automatically, and it's the one that positions the student in the rendered tree; any additional sifu renders as a secondary "co-sifu" line instead of an equal branch. This was a deliberate choice over full graph layout — see DECISIONS.md.
+- **Admin management** (`/admin/lineage`, `ADMIN`-only, see [Admin Area & Roles](#admin-area--roles) below) has three ways to add a link: a **bulk chain-import** box (paste one succession chain per line, `Old Master Yuen > White Crane Elder > Iron Fist Chen`, sifu first — a chain of N names becomes N−1 links, with a review step that flags names matching more than one actor or matching none before anything is saved) — the fast path for entering a whole lineage at once; a plain **single-link form** for one-off corrections; and directly on the **lineage tree** itself, via a "+ Sifu"/"+ Student" button under whichever person is centered, which searches, previews, and saves in one step. Every add path rejects a link that would create a cycle.
+- **Public view** — every actor page carries a small **Lineage** card (their direct sifu, any co-sifus, and direct students) when they have at least one link recorded, linking to a full, multi-generation tree at `/actors/[personId]/lineage`. Clicking any person in the tree re-centers it on them.
+
 ## Reviews
 
 Shown alongside the cast list on every movie page: an admin review (unchanged from the original "Editorial Reviews" feature) plus one review per verified member, both in the same section.
@@ -360,6 +372,7 @@ Three roles exist: `USER` (the default member role), `REVIEWER`, and `ADMIN`. Si
 - **Movies** (`/admin/movies`) &mdash; a **Pending Submissions** section (see [Member Movie Submissions](#member-movie-submissions) above) to approve or reject member-submitted movies, open to `REVIEWER` too. The **Catalog** section below it (browse and permanently delete any movie, cascading through everything attached to it) is `ADMIN`-only — a reviewer's reject action only ever deletes a still-`PENDING` row via a separate endpoint, never an already-approved catalog entry.
 - **Import from TMDB** (`/admin/import`, `ADMIN`-only) &mdash; search-and-import by title or by keyword (see [TMDB Import](#tmdb-import) above), plus a bulk-upload section: a CSV with a `title` column (optionally `year` to disambiguate identically-titled results, or `tmdb_id` to skip the search entirely) imports up to 25 movies in one request. Each row is resolved and imported independently, so one bad row (no TMDB match, a transient TMDB error) doesn't fail the rest of the batch &mdash; the response reports created/updated/error per row. CSV parsing uses `papaparse` rather than the `xlsx` npm package, whose published version has known unpatched advisories (SheetJS fixed them only on their own CDN, not on the npm registry).
 - **Fight Scene Tags** (`/admin/fight-scene-tags`) &mdash; manage the category vocabulary members tag fight scenes with (see [Fights](#fights) above). Open to `REVIEWER`.
+- **Lineage** (`/admin/lineage`, `ADMIN`-only) &mdash; link actors already in the catalog into martial arts training lineages, via bulk chain-paste, a single-link form, or directly on the lineage tree (see [Sifu Lineage](#sifu-lineage) above).
 - **News & Updates** (`/admin/news`, `ADMIN`-only) &mdash; publish, edit, or delete posts shown on the homepage and the `/news` archive (see [News & Updates](#news--updates) above).
 - **Account** (`/admin/account`) &mdash; change your own sign-in email or password (previously only possible via direct SQL), or sign out of every device on your account (including the current one) without changing anything, if you suspect someone else has access. Changing your email re-triggers the normal email-verification flow on the new address; changing your password requires your current one (unless you signed up via Google and have never set one, in which case you can set an initial password). Any of the three signs you out immediately, since the session is JWT-based and won't otherwise pick up the change until you sign back in. Open to `REVIEWER` too — self-managing your own credentials isn't a content-moderation power, so it follows the same "reach `/admin` at all" gate as the dashboard itself.
 

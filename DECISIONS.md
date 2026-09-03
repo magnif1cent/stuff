@@ -124,6 +124,7 @@ one.
 - [Trending carousel autoplay cap raised from 1 lap to 5](#trending-carousel-autoplay-cap-raised-from-1-lap-to-5)
 - [Actor Career Highlights styled like the Signature Spotlight banner, "Sparring Partner" from existing fight-scene data](#actor-career-highlights-styled-like-the-signature-spotlight-banner-sparring-partner-from-existing-fight-scene-data)
 - [Career Highlights reverted to a plain Details card](#career-highlights-reverted-to-a-plain-details-card)
+- [Sifu Lineage: primary-sifu-plus-dotted-line, bulk chain-import over drag-and-drop](#sifu-lineage-primary-sifu-plus-dotted-line-bulk-chain-import-over-drag-and-drop)
 
 **Deferred & Backlog**
 
@@ -4103,6 +4104,85 @@ Lists UI for mobile-friendliness rather than in response to a bug report.
   ("Ranked" / "Unranked") a card was grouped under on `/lists` — invisible
   from the card itself, and easy to lose track of once search or
   pagination scatters cards away from their heading.
+
+### Sifu Lineage: primary-sifu-plus-dotted-line, bulk chain-import over drag-and-drop
+**PR #TBD.** New feature, worked through as a long design conversation before
+any code was written — most of the actual judgment calls got made before
+implementation, not during it.
+
+- **Multiple sifus allowed (it's a DAG), but rendered as one primary chain
+  plus dotted "co-sifu" lines, not a general graph layout.** The site owner
+  confirmed a student can genuinely have more than one recognized sifu, which
+  rules out a strict tree. The alternative to a real DAG-layout library
+  (dagre/elkjs solving edge-crossing minimization — meaningfully more code,
+  harder to reason about, layouts that can shift non-obviously as data
+  changes) is the pattern standard org-chart tools already use for the same
+  "reports to two people" case: one manager is the solid-line primary that
+  sets the node's position, any others render as a dotted secondary line
+  drawn to wherever the node already sits. Chosen for the lighter build and
+  lower ongoing-maintenance cost — layout code that's isolated, deterministic,
+  and doesn't need a graph-layout dependency at all. `LineageRelation.isPrimary`
+  is a plain boolean (the first sifu recorded for a student becomes primary
+  automatically; adding another defaults to secondary), not a DB constraint —
+  a partial unique index ("at most one primary per student") isn't
+  representable in `schema.prisma` the way this repo's migrations are
+  authored, so it's enforced in `src/lib/lineage.ts` by demoting the existing
+  primary inside the same transaction. This is a reversible choice at the data
+  layer either direction — the edges are identical either way, only the
+  *rendering* differs — so switching to full DAG layout later needs no
+  migration, just a different layout component.
+- **Bulk chain-paste import, not drag-and-drop, as the primary way to
+  populate ~500 links.** Drag-and-drop (search-and-drop a person onto a tree
+  node, reposition by dragging) was the first idea raised for entering data at
+  that scale, but costs the same real engineering — an auto-layout engine,
+  drop-target detection, cycle checks on drop, re-parenting logic — whether or
+  not it's the primary entry path. What actually solves the scale problem: a
+  textarea where an admin pastes one succession chain per line
+  (`Old Master Yuen > White Crane Elder > Iron Fist Chen`, sifu first,
+  chain of N names → N−1 links), matching how this kind of lineage data
+  actually gets researched (as chains, not isolated pairs), and matching how
+  org-chart/HRIS tools are actually populated in practice (CSV/paste import,
+  with manual dragging reserved for touch-up afterward, never the primary
+  path). A review step (`previewBulkImport` in `src/lib/lineage.ts`) flags
+  each parsed pair as new / already linked / a name matching more than one
+  actor (with the ambiguous side resolved via a pick, defaulting to the first
+  match) / no match at all, before anything is written — nothing commits on a
+  guess. Drag-and-drop was dropped from scope entirely, not scaled down: the
+  on-tree "+ Sifu"/"+ Student" buttons (search, pick, Confirm) already cover
+  the one-off single-link case drag-and-drop would otherwise have served,
+  without a draft/pending state — see the next bullet.
+- **On-tree add commits immediately per pick, no separate draft/lock step.**
+  The original ask included a "lock/confirm" button for edits made directly on
+  the tree. Implemented as: picking a person from the popover's search and
+  pressing Confirm saves that one link right away — no standing "pending"
+  state spanning multiple edits. A page-wide draft-then-commit model was
+  considered and rejected as exactly the kind of compounding stateful
+  complexity this repo's own conventions (see the `/code-review` guidance on
+  autosave-style surfaces) warn against introducing for a one-off feature.
+- **Lineage nodes are restricted to actors already in the catalog (`Person`
+  records), not a separate lineage-only entity.** A historical sifu who was
+  never in a film can't be added until they exist as a `Person` some other
+  way. Considered a standalone `LineageFigure` model (optionally linked to
+  `Person`) specifically to cover that case, but rejected for now to avoid
+  touching `Person.tmdbId`'s current required-and-unique invariant, which the
+  actor-search/TMDB-import code already assumes holds everywhere.
+- **Public from the start, not admin-only.** Once it became clear actor pages
+  (`/actors/[personId]`) already exist and are public — just not linked from
+  top-level nav — keeping a public-facing feature gated behind an admin
+  screen stopped making sense as a default. The compact **Lineage** card on
+  the actor page and the full tree at `/actors/[personId]/lineage` ship
+  public immediately; there's no feature flag hiding them once data exists.
+- **Not implemented in this pass**: deleting a link directly from the tree
+  view (the admin tree is browse-and-add only; removal still goes through the
+  flat link list, since the tree API doesn't thread relation ids through its
+  ancestor/descendant structures — only person refs); zoom/pan controls on
+  the tree (discussed early on for very wide/deep lineages, but not load-
+  bearing once the tree defaults to a bounded generations-up/down window
+  with "show more" expand links/buttons and per-parent sibling overflow
+  counts, which were built — 2 up/2 down and re-fetch-with-more in the admin
+  tree, 3 up/3 down and a `?up=&down=` query-param link on the read-only
+  public page). Neither blocks shipping; both are easy to add on top of the
+  existing data shape if a real lineage turns out to need them.
 
 - **Drag-and-drop reordering for ranked list items** — `ListItemRows`
   (`src/components/list-item-rows.tsx`) now has move-to-top/move-to-bottom

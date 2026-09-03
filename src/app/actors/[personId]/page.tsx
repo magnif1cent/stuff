@@ -25,6 +25,8 @@ import { getPersonFavoriteCounts } from "@/lib/person-favorites";
 import { ActorFavoriteButton } from "@/components/actor-favorite-button";
 import { getPersonSignatureVoteSummary } from "@/lib/person-signature-votes";
 import { SignatureVoteProvider, SignatureSpotlight, SignatureVoteButton } from "@/components/actor-signature-vote";
+import { getLineageTree } from "@/lib/lineage";
+import { ActorLineageCard } from "@/components/actor-lineage-card";
 
 // Split out from ActorPage's body so the Math.random() call it wraps isn't
 // flagged as an impurity inside the page's own render function (React's
@@ -100,7 +102,15 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
     notFound();
   }
 
-  const bio = await getTmdbPersonDetails(person.tmdbId).catch(() => null);
+  const [bio, lineageTree] = await Promise.all([
+    getTmdbPersonDetails(person.tmdbId).catch(() => null),
+    getLineageTree(personId, { up: 1, down: 1, siblingLimit: 3 }),
+  ]);
+  const lineageHasContent =
+    !!lineageTree &&
+    (lineageTree.ancestors.length > 0 ||
+      lineageTree.secondarySifus.length > 0 ||
+      (lineageTree.descendantLevels[0]?.[0]?.children.length ?? 0) > 0);
 
   // A pending (not yet admin-approved) movie is excluded the same way it's
   // excluded from every other public listing.
@@ -440,10 +450,11 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
         </div>
       </div>
 
-      {(careerStatsCard || sparringPartnerCard || bio) && (
+      {(careerStatsCard || sparringPartnerCard || lineageHasContent || bio) && (
         <div className="mb-8 flex flex-col gap-6 sm:flex-row sm:items-start">
           {careerStatsCard && <div className="sm:w-72 sm:shrink-0">{careerStatsCard}</div>}
           {sparringPartnerCard}
+          {lineageHasContent && lineageTree && <ActorLineageCard tree={lineageTree} />}
           {bio && (
             <div className="min-w-0 flex-1">
               {(bio.birthday || bio.place_of_birth) && (

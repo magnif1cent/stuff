@@ -261,6 +261,8 @@ model Person {
   tributes    PersonTribute[]
   favorites   PersonFavorite[]
   signatureVotes PersonSignatureVote[]
+  sifuLinks    LineageRelation[] @relation("LineageSifu")
+  studentLinks LineageRelation[] @relation("LineageStudent")
 
   @@index([name])
   // See the matching comment on Movie above — backs the ILIKE actor-name
@@ -280,6 +282,32 @@ model CastCredit {
 
   @@unique([movieId, personId])
   @@index([movieId])
+}
+
+// Martial arts lineage: who trained whom, both actors already in the
+// catalog (Person, not a freestanding name) -- see DECISIONS.md. A student
+// can have more than one sifu (it's a DAG, not a strict tree), but exactly
+// one is `isPrimary` at a time -- that's the one that positions the node in
+// the rendered tree; any others render as a secondary "co-sifu" line. There
+// isn't a DB constraint enforcing "at most one primary per student" (a
+// partial unique index isn't representable in schema.prisma the way this
+// repo's migrations are authored) -- it's enforced in
+// src/lib/lineage.ts by demoting the existing primary inside the same
+// transaction whenever a new one is promoted.
+model LineageRelation {
+  id        String   @id @default(cuid())
+  sifuId    String
+  studentId String
+  isPrimary Boolean  @default(true)
+  note      String?
+  createdAt DateTime @default(now())
+
+  sifu    Person @relation("LineageSifu", fields: [sifuId], references: [id], onDelete: Cascade)
+  student Person @relation("LineageStudent", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([sifuId, studentId])
+  @@index([studentId])
+  @@index([sifuId])
 }
 
 // --- Ratings ---

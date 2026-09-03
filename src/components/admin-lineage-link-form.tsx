@@ -1,0 +1,178 @@
+"use client";
+
+import { useState } from "react";
+import Image from "next/image";
+import { tmdbImageUrl } from "@/lib/tmdb";
+import { AdminLineagePersonPicker, type PersonRef } from "@/components/admin-lineage-person-picker";
+import { MAX_LINEAGE_NOTE_LENGTH } from "@/lib/lineage-constants";
+
+interface LineageRelationRow {
+  id: string;
+  isPrimary: boolean;
+  note: string | null;
+  sifu: PersonRef;
+  student: PersonRef;
+}
+
+function Avatar({ person }: { person: PersonRef }) {
+  return (
+    <span className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full bg-neutral-800">
+      {person.profilePath && (
+        <Image
+          src={tmdbImageUrl(person.profilePath, "w200") ?? ""}
+          alt=""
+          fill
+          unoptimized
+          sizes="32px"
+          className="object-cover"
+        />
+      )}
+    </span>
+  );
+}
+
+export function AdminLineageLinkForm({ initialRelations }: { initialRelations: LineageRelationRow[] }) {
+  const [relations, setRelations] = useState(initialRelations);
+  const [sifu, setSifu] = useState<PersonRef | null>(null);
+  const [student, setStudent] = useState<PersonRef | null>(null);
+  const [note, setNote] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    if (!sifu || !student) return;
+    setSaving(true);
+    setError(null);
+    const res = await fetch("/api/admin/lineage/relations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sifuId: sifu.id, studentId: student.id, note: note.trim() || undefined }),
+    });
+    setSaving(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setError(body.error ?? "Something went wrong.");
+      return;
+    }
+    const { relation } = await res.json();
+    setRelations((prev) => [relation, ...prev]);
+    setSifu(null);
+    setStudent(null);
+    setNote("");
+  }
+
+  async function handleDelete(id: string) {
+    if (!window.confirm("Remove this link?")) return;
+    setError(null);
+    const res = await fetch(`/api/admin/lineage/relations/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setError(body.error ?? "Something went wrong.");
+      return;
+    }
+    setRelations((prev) => prev.filter((r) => r.id !== id));
+  }
+
+  return (
+    <div>
+      <form onSubmit={handleSave} className="grid gap-4 sm:grid-cols-3">
+        <div>
+          <label className="mb-1.5 block text-[11px] font-semibold tracking-wide text-neutral-500 uppercase">
+            Student
+          </label>
+          <AdminLineagePersonPicker
+            key={student?.id ?? "student-empty"}
+            value={student}
+            onChange={setStudent}
+            excludeId={sifu?.id}
+          />
+        </div>
+        <div>
+          <label className="mb-1.5 block text-[11px] font-semibold tracking-wide text-neutral-500 uppercase">
+            Sifu
+          </label>
+          <AdminLineagePersonPicker
+            key={sifu?.id ?? "sifu-empty"}
+            value={sifu}
+            onChange={setSifu}
+            excludeId={student?.id}
+          />
+        </div>
+        <div>
+          <label className="mb-1.5 block text-[11px] font-semibold tracking-wide text-neutral-500 uppercase">
+            Note (optional)
+          </label>
+          <input
+            type="text"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            maxLength={MAX_LINEAGE_NOTE_LENGTH}
+            placeholder='e.g. "Wing Chun", "adopted disciple"'
+            className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
+          />
+        </div>
+      </form>
+
+      <div className="mt-4 flex justify-end">
+        <button
+          onClick={handleSave}
+          disabled={saving || !sifu || !student}
+          className="rounded-md bg-red-700 px-5 py-2 text-sm font-medium text-white hover:bg-red-600 disabled:opacity-50"
+        >
+          Save link
+        </button>
+      </div>
+
+      {error && <p className="mt-3 text-sm text-red-500">{error}</p>}
+
+      <div className="mt-6 border-t border-neutral-800 pt-4">
+        <p className="mb-3 text-[11px] font-semibold tracking-wide text-neutral-500 uppercase">
+          Existing links ({relations.length})
+        </p>
+        {relations.length === 0 ? (
+          <p className="text-sm text-neutral-500">No links yet.</p>
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {relations.map((r) => (
+              <li
+                key={r.id}
+                className="flex items-center justify-between gap-3 rounded-md border border-neutral-800 bg-neutral-950 px-3 py-2"
+              >
+                <div className="flex min-w-0 items-center gap-2">
+                  <div className="flex items-center gap-2">
+                    <Avatar person={r.sifu} />
+                    <span className="text-sm text-neutral-100">{r.sifu.name}</span>
+                  </div>
+                  <span className="shrink-0 text-neutral-600">&rarr;</span>
+                  <div className="flex items-center gap-2">
+                    <Avatar person={r.student} />
+                    <span className="text-sm text-neutral-100">{r.student.name}</span>
+                  </div>
+                  {!r.isPrimary && (
+                    <span className="shrink-0 rounded-full border border-dashed border-neutral-700 px-2 py-0.5 text-[10px] text-neutral-500 uppercase">
+                      co-sifu
+                    </span>
+                  )}
+                </div>
+                <div className="flex shrink-0 items-center gap-3">
+                  {r.note && (
+                    <span className="rounded-full bg-neutral-800 px-2 py-0.5 text-[11px] text-neutral-300">
+                      {r.note}
+                    </span>
+                  )}
+                  <button
+                    onClick={() => handleDelete(r.id)}
+                    className="text-xs text-neutral-500 hover:text-red-400"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}

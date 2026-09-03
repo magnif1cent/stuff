@@ -21,6 +21,12 @@ const SECTIONS = [
     adminOnly: false,
   },
   {
+    href: "/admin/lineage",
+    title: "Lineage",
+    description: "Link actors to the sifus who trained them and browse the resulting tree.",
+    adminOnly: true,
+  },
+  {
     href: "/admin/news",
     title: "News & Updates",
     description: "Publish posts shown on /news and as a homepage teaser.",
