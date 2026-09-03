@@ -99,22 +99,40 @@ export async function LineageTreeBody({ tree, up, down }: { tree: LineageTree; u
       {tree.descendantLevels.map((groups, levelIndex) => (
         <div key={levelIndex} className="flex flex-col items-center gap-2">
           <span className="text-neutral-700">&darr;</span>
-          <div className="flex flex-wrap justify-center gap-x-8 gap-y-3">
-            {groups.map((group) => (
-              <div key={group.parent.id} className="flex flex-wrap justify-center gap-4">
-                {group.children.map((child) => (
-                  <div key={child.id} className="flex flex-col items-center">
-                    <LineagePersonChip figure={child} size={40} href={figureHref(child)} />
-                    <Portrayal figure={child} />
+          <div className="flex flex-wrap justify-center gap-x-8 gap-y-4">
+            {groups.map((group) => {
+              const siblingCount = group.children.length + (group.overflowCount > 0 ? 1 : 0);
+              return (
+                <div key={group.parent.id} className="flex flex-col items-center gap-1.5">
+                  {/* Only needed once a row can wrap into a stack (2+ siblings,
+                      as on narrow screens) or once there's more than one
+                      parent at this level -- a lone child under a lone
+                      parent already reads unambiguously without it. */}
+                  {groups.length > 1 && (
+                    <p className="text-[10px] text-neutral-600">{group.parent.name}&rsquo;s students</p>
+                  )}
+                  <div
+                    className={
+                      siblingCount > 1
+                        ? "flex flex-wrap justify-center gap-4 rounded-lg border border-dashed border-neutral-800 p-3"
+                        : "flex flex-wrap justify-center gap-4"
+                    }
+                  >
+                    {group.children.map((child) => (
+                      <div key={child.id} className="flex flex-col items-center">
+                        <LineagePersonChip figure={child} size={40} href={figureHref(child)} />
+                        <Portrayal figure={child} />
+                      </div>
+                    ))}
+                    {group.overflowCount > 0 && (
+                      <span className="flex h-10 items-center rounded-full border-2 border-dashed border-neutral-700 px-3 text-xs text-neutral-500">
+                        +{group.overflowCount} more
+                      </span>
+                    )}
                   </div>
-                ))}
-                {group.overflowCount > 0 && (
-                  <span className="flex h-10 items-center rounded-full border-2 border-dashed border-neutral-700 px-3 text-xs text-neutral-500">
-                    +{group.overflowCount} more
-                  </span>
-                )}
-              </div>
-            ))}
+                </div>
+              );
+            })}
           </div>
         </div>
       ))}
