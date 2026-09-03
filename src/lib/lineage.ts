@@ -111,6 +111,46 @@ export async function createOrReuseBareFigure(
   return { ok: true, figure: { id: figure.id, name: figure.name, profilePath: null, personId: null, isGroup: figure.isGroup } };
 }
 
+// Flips `isGroup` on an already-created bare figure -- for correcting one
+// added without the flag, without having to delete and recreate it (which
+// would also mean re-adding every link already made to it). Actor-linked
+// figures are never groups, so this refuses one with a personId rather than
+// letting a caller put it in a nonsensical state.
+export async function setFigureIsGroup(
+  figureId: string,
+  isGroup: boolean,
+): Promise<{ ok: true; figure: LineageFigureRef } | { ok: false; error: string }> {
+  const figure = await prisma.lineageFigure.findUnique({ where: { id: figureId } });
+  if (!figure) {
+    return { ok: false, error: "Figure not found." };
+  }
+  if (figure.personId) {
+    return { ok: false, error: "An actor-linked figure can't be marked as a group." };
+  }
+  const updated = await prisma.lineageFigure.update({ where: { id: figureId }, data: { isGroup } });
+  return { ok: true, figure: { id: updated.id, name: updated.name, profilePath: null, personId: null, isGroup: updated.isGroup } };
+}
+
+// Bare figures only -- an actor-linked figure is auto-managed
+// (resolveFigureForPerson upserts it whenever that actor is linked again),
+// so deleting one wouldn't stick and isn't a normal admin action anyway.
+// LineageRelation rows pointing at this figure cascade-delete with it (see
+// the onDelete: Cascade on both sides of that relation in schema.prisma),
+// so this is the one place that removes every link the figure was part of
+// in a single step -- callers should confirm with the admin before calling
+// this, the same way deleting a single link already does.
+export async function deleteBareFigure(figureId: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  const figure = await prisma.lineageFigure.findUnique({ where: { id: figureId }, select: { personId: true } });
+  if (!figure) {
+    return { ok: false, error: "Figure not found." };
+  }
+  if (figure.personId) {
+    return { ok: false, error: "An actor-linked figure can't be deleted here." };
+  }
+  await prisma.lineageFigure.delete({ where: { id: figureId } });
+  return { ok: true };
+}
+
 export interface ActorSearchResult {
   personId: string;
   name: string;

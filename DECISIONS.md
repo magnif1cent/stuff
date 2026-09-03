@@ -130,6 +130,7 @@ one.
 - [Sifu Lineage: `LineageTreeBody` rewritten as computed SVG layout, not flexbox](#sifu-lineage-lineagetreebody-rewritten-as-computed-svg-layout-not-flexbox)
 - [Lineage: "sifu"/"student" dropped from display copy, not swapped for another role term](#lineage-sifustudent-dropped-from-display-copy-not-swapped-for-another-role-term)
 - [Lineage: groups are a normal figure in the owner's own row, not a lateral position](#lineage-groups-are-a-normal-figure-in-the-owners-own-row-not-a-lateral-position)
+- [Lineage: bare figures get a delete/toggle-group escape hatch, cascade over block-if-linked](#lineage-bare-figures-get-a-deletetoggle-group-escape-hatch-cascade-over-block-if-linked)
 
 **Deferred & Backlog**
 
@@ -4350,6 +4351,28 @@ by a separate, larger `DEFAULT_GROUP_SIBLING_LIMIT` (12, vs. 6 for an
 individual) before the overflow badge kicks in, since a team's roster can
 run far larger than any one person's students — surfacing more of it by
 default is worth the extra vertical space on a group's own page.
+
+### Lineage: bare figures get a delete/toggle-group escape hatch, cascade over block-if-linked
+**PR #TBD.** Found immediately while testing groups: a figure created
+without the "this is a group" box checked (or, more generally, any bare
+figure entered wrong) had no way to fix or remove itself short of a manual
+database edit -- `deleteLineageRelation` only ever removed one link, never
+the figure it points at. Two small admin actions close that gap, both
+scoped to bare (non-actor) figures only: `setFigureIsGroup` flips the flag
+on an existing figure in place, and `deleteBareFigure` removes the figure
+outright.
+
+Delete goes straight to removing the figure rather than first requiring
+every link to it be deleted by hand -- the schema already cascades
+`LineageRelation` rows through `onDelete: Cascade` on both `sifuId` and
+`studentId`, so blocking on "has links" would just make the admin do that
+cascade manually before the button worked, for no real safety benefit; a
+`window.confirm` naming what's about to happen (same pattern the existing
+single-link delete already uses) is the actual safeguard. Both actions
+reject an actor-linked figure server-side -- it's auto-managed by
+`resolveFigureForPerson` (upserted whenever that actor is linked again), so
+deleting one wouldn't stick, and "is this actor a group" isn't a coherent
+state to put a real person's figure in.
 
 - **Drag-and-drop reordering for ranked list items** — `ListItemRows`
   (`src/components/list-item-rows.tsx`) now has move-to-top/move-to-bottom

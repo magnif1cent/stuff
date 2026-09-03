@@ -71,6 +71,7 @@ export function AdminLineageTree() {
   const [addFigure, setAddFigure] = useState<LineageFigureRef | null>(null);
   const [addNote, setAddNote] = useState("");
   const [saving, setSaving] = useState(false);
+  const [figureBusy, setFigureBusy] = useState(false);
 
   async function loadTree(figure: LineageFigureRef, nextDepth: { up: number; down: number } = DEFAULT_DEPTH) {
     setSelected(figure);
@@ -119,6 +120,48 @@ export function AdminLineageTree() {
     setAddFigure(null);
     setAddNote("");
     await loadTree(tree.center, depth);
+  }
+
+  // Corrects a bare figure's isGroup flag after the fact -- e.g. one added
+  // without checking the "this is a group" box in the picker. Re-fetches
+  // the tree afterward rather than patching local state, since the server
+  // is the source of truth for whether the change was actually accepted
+  // (an actor-linked figure, for one, always rejects this).
+  async function toggleGroup() {
+    if (!tree) return;
+    setFigureBusy(true);
+    setError(null);
+    const res = await fetch(`/api/admin/lineage/figures/${tree.center.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isGroup: !tree.center.isGroup }),
+    });
+    setFigureBusy(false);
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error ?? "Something went wrong.");
+      return;
+    }
+    await loadTree(tree.center, depth);
+  }
+
+  // Deletes the centered bare figure and, via the schema's cascade, every
+  // link it was part of -- clears the tree afterward since there's nothing
+  // left to show it centered on.
+  async function deleteFigure() {
+    if (!tree) return;
+    if (!window.confirm(`Delete "${tree.center.name}"? This removes every link it's part of.`)) return;
+    setFigureBusy(true);
+    setError(null);
+    const res = await fetch(`/api/admin/lineage/figures/${tree.center.id}`, { method: "DELETE" });
+    setFigureBusy(false);
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error ?? "Something went wrong.");
+      return;
+    }
+    setSelected(null);
+    setTree(null);
   }
 
   return (
@@ -207,6 +250,26 @@ export function AdminLineageTree() {
               + Later
             </button>
           </div>
+
+          {!tree.center.personId && (
+            <div className="flex items-center gap-3 text-[11px]">
+              <button
+                onClick={toggleGroup}
+                disabled={figureBusy}
+                className="text-neutral-500 hover:text-neutral-300 disabled:opacity-50"
+              >
+                {tree.center.isGroup ? "Unmark as group" : "Mark as group"}
+              </button>
+              <span className="text-neutral-700">&middot;</span>
+              <button
+                onClick={deleteFigure}
+                disabled={figureBusy}
+                className="text-neutral-500 hover:text-red-400 disabled:opacity-50"
+              >
+                Delete figure
+              </button>
+            </div>
+          )}
 
           {addMode && (
             <div className="w-72 rounded-md border border-neutral-700 bg-neutral-900 p-3">
