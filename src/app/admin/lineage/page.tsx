@@ -28,7 +28,9 @@ export default async function AdminLineagePage() {
         connect actors already in the catalog, but an earlier figure doesn&rsquo;t have to be one &mdash; a
         historical martial artist never credited in a film, or a character like Ip Man, can be added by name too. A
         figure can have more than one earlier link: the first one recorded is treated as primary and sets their
-        position in the tree; any others show as a secondary link.
+        position in the tree; any others show as a secondary link. A figure can also be marked as a group (a stunt
+        team, say) rather than an individual when it&rsquo;s added &mdash; it renders with its own shape wherever it
+        appears in the tree.
       </p>
 
       <div className="rounded-md border border-neutral-800 bg-neutral-900 p-5">

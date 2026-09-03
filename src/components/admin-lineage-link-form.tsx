@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { tmdbImageUrl } from "@/lib/tmdb";
 import { AdminLineageFigurePicker, type LineageFigureRef } from "@/components/admin-lineage-figure-picker";
+import { GroupIcon } from "@/components/lineage-group-icon";
 import { MAX_LINEAGE_NOTE_LENGTH } from "@/lib/lineage-constants";
 
 interface LineageRelationRow {
@@ -20,6 +21,13 @@ function initials(name: string): string {
 }
 
 function Avatar({ figure }: { figure: LineageFigureRef }) {
+  if (figure.isGroup) {
+    return (
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-amber-700 bg-amber-950/40 text-amber-600">
+        <GroupIcon className="h-4 w-4" />
+      </span>
+    );
+  }
   return (
     <span className="relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-neutral-800 text-[10px] font-semibold text-neutral-400">
       {figure.profilePath ? (

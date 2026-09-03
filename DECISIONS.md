@@ -129,6 +129,7 @@ one.
 - [Sifu Lineage: actor-page teaser moved from a stat card to its own tree section](#sifu-lineage-actor-page-teaser-moved-from-a-stat-card-to-its-own-tree-section)
 - [Sifu Lineage: `LineageTreeBody` rewritten as computed SVG layout, not flexbox](#sifu-lineage-lineagetreebody-rewritten-as-computed-svg-layout-not-flexbox)
 - [Lineage: "sifu"/"student" dropped from display copy, not swapped for another role term](#lineage-sifustudent-dropped-from-display-copy-not-swapped-for-another-role-term)
+- [Lineage: groups are a normal figure in the owner's own row, not a lateral position](#lineage-groups-are-a-normal-figure-in-the-owners-own-row-not-a-lateral-position)
 
 **Deferred & Backlog**
 
@@ -4318,6 +4319,38 @@ asked to have reworded for tone: *"'Lineage' is our tribute to the martial
 artists who built this genre, generation by generation. Hand-curated,
 always a work in progress — reach out if you spot something to fix."*
 
+### Lineage: groups are a normal figure in the owner's own row, not a lateral position
+**PR #TBD.** Some "students" belong to a collective rather than being
+trained one-on-one — a stunt team, say — and the site owner wanted a way to
+show that. The first attempt (worked through live with mockups, not
+committed) put the group beside its owner, in the same lateral lane the
+tree already uses for a secondary sifu, with the team's own members fanning
+out beneath it inline. Stress-testing that version at real production pixel
+sizes inside a 340px-wide frame (a typical phone's content width) showed
+two problems: the lateral lane has no width cap today, so it grows with
+every additional co-sifu *or* group with nothing to stop it (the mockup
+already needed ~640px for a single team at comfortable spacing); and — the
+one that actually killed it — reusing the co-sifu lane means "this figure
+trained the owner," backwards from what leading a team is. Asking what the
+tree looks like centered on a *member* of the team (not its owner) is what
+surfaced that: walking up from a member, the team has to be *above* them,
+in the ordinary ancestor position, not off to the side of whoever leads it.
+
+The shipped design instead makes a group a completely ordinary
+`LineageFigure` (`isGroup: true`) positioned exactly where any of the
+owner's other primary students would be — one entry in their descendant
+row, distinguished only by node shape (a rounded square with a group glyph,
+`GroupIcon` in `lineage-group-icon.tsx`) rather than a special position.
+Its own members are simply *its* primary students, one generation further
+down, rendered by the exact same recursive fan-out every figure already
+gets — no new positioning concept, no new width-growth risk, and centering
+on a member of the team makes the team show up for free as an ordinary
+ancestor. The one deliberate asymmetry: a group's own children are capped
+by a separate, larger `DEFAULT_GROUP_SIBLING_LIMIT` (12, vs. 6 for an
+individual) before the overflow badge kicks in, since a team's roster can
+run far larger than any one person's students — surfacing more of it by
+default is worth the extra vertical space on a group's own page.
+
 - **Drag-and-drop reordering for ranked list items** — `ListItemRows`
   (`src/components/list-item-rows.tsx`) now has move-to-top/move-to-bottom
   buttons alongside up/down (see **Feature Decisions** above), covering the
@@ -4552,3 +4585,14 @@ always a work in progress — reach out if you spot something to fix."*
   viewing-format change. Naming, vote UI, and how (or whether) results
   surface on the scene's permalink page are all still open; not scoped
   further than this concept yet.
+- **A dense member list for a large lineage group** — raised during design
+  review for groups (see **Feature Decisions** above: "Lineage: groups are
+  a normal figure in the owner's own row, not a lateral position"). A group
+  centered on its own page gets a larger sibling cap than an individual
+  (`DEFAULT_GROUP_SIBLING_LIMIT`), but a real stunt team can still run past
+  it — the same shape of problem `LineageTreeBody`'s tree fan doesn't solve
+  on its own that "Actor Filmography split into Known For + a dense list"
+  (above) already solved for a long filmography: a capped visual treatment
+  up top, a plain full list below for everything past it. Not built —
+  raised as a recommendation, not requested, and no real group in the
+  catalog has hit the current cap yet to make it pressing.

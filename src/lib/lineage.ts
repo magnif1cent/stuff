@@ -5,18 +5,25 @@ export { MAX_LINEAGE_NOTE_LENGTH, MAX_CHAIN_TEXT_LENGTH, MAX_FIGURE_NAME_LENGTH 
 const DEFAULT_UP_GENERATIONS = 2;
 const DEFAULT_DOWN_GENERATIONS = 2;
 const DEFAULT_SIBLING_LIMIT = 6;
+// A group (a stunt team, say) can run far larger than an individual's own
+// roster of students, so it gets its own, more generous cap before the
+// overflow badge kicks in -- see the per-parent limit in getLineageTree.
+const DEFAULT_GROUP_SIBLING_LIMIT = 12;
 
 // A lineage node. Not always an actor -- `personId`/`profilePath` are null
 // for a bare figure (a historical sifu never credited in a film, or a
 // character like Ip Man who's been played by more than one actor -- see
 // DECISIONS.md and getPortrayals below). When a figure IS linked to a
 // Person, its display name/photo always come from the Person record rather
-// than the figure's own (possibly stale) `name` column.
+// than the figure's own (possibly stale) `name` column. `isGroup` is always
+// false for an actor-linked figure -- a collective isn't a single trained
+// person.
 export interface LineageFigureRef {
   id: string;
   name: string;
   profilePath: string | null;
   personId: string | null;
+  isGroup: boolean;
 }
 
 interface PersonRef {
@@ -29,6 +36,7 @@ export const figureSelect = {
   id: true,
   name: true,
   personId: true,
+  isGroup: true,
   person: { select: { name: true, profilePath: true } },
 } as const;
 
@@ -36,6 +44,7 @@ type FigureRow = {
   id: string;
   name: string;
   personId: string | null;
+  isGroup: boolean;
   person: { name: string; profilePath: string | null } | null;
 };
 
@@ -45,6 +54,7 @@ export function toFigureRef(row: FigureRow): LineageFigureRef {
     name: row.person?.name ?? row.name,
     profilePath: row.person?.profilePath ?? null,
     personId: row.personId,
+    isGroup: row.isGroup,
   };
 }
 
@@ -66,7 +76,7 @@ export async function resolveFigureForPerson(personId: string): Promise<LineageF
     update: {},
     create: { name: person.name, personId },
   });
-  return { id: figure.id, name: person.name, profilePath: person.profilePath, personId: person.id };
+  return { id: figure.id, name: person.name, profilePath: person.profilePath, personId: person.id, isGroup: false };
 }
 
 // Read-only counterpart of the above -- used where creating a figure on the
@@ -79,8 +89,14 @@ export async function getFigureIdForPerson(personId: string): Promise<string | n
 
 // Bare (non-actor) figures are deduped by exact case-insensitive name so
 // typing "Ip Man" twice reuses the same figure instead of forking the
-// lineage in two.
-export async function createOrReuseBareFigure(name: string): Promise<{ ok: true; figure: LineageFigureRef } | { ok: false; error: string }> {
+// lineage in two. A name that already exists keeps its existing `isGroup`
+// value rather than being silently flipped by whatever the caller passed
+// this time -- that's a correction made explicitly, not a side effect of
+// re-adding a name.
+export async function createOrReuseBareFigure(
+  name: string,
+  isGroup = false,
+): Promise<{ ok: true; figure: LineageFigureRef } | { ok: false; error: string }> {
   const trimmed = name.trim();
   if (!trimmed) {
     return { ok: false, error: "Name is required." };
@@ -91,8 +107,8 @@ export async function createOrReuseBareFigure(name: string): Promise<{ ok: true;
   const existing = await prisma.lineageFigure.findFirst({
     where: { personId: null, name: { equals: trimmed, mode: "insensitive" } },
   });
-  const figure = existing ?? (await prisma.lineageFigure.create({ data: { name: trimmed } }));
-  return { ok: true, figure: { id: figure.id, name: figure.name, profilePath: null, personId: null } };
+  const figure = existing ?? (await prisma.lineageFigure.create({ data: { name: trimmed, isGroup } }));
+  return { ok: true, figure: { id: figure.id, name: figure.name, profilePath: null, personId: null, isGroup: figure.isGroup } };
 }
 
 export interface ActorSearchResult {
@@ -103,6 +119,7 @@ export interface ActorSearchResult {
 export interface FigureSearchResult {
   figureId: string;
   name: string;
+  isGroup: boolean;
 }
 
 // Search results are deliberately two separate lists rather than one
@@ -122,14 +139,14 @@ export async function searchLineageFigures(
     }),
     prisma.lineageFigure.findMany({
       where: { personId: null, name: { contains: query, mode: "insensitive" } },
-      select: { id: true, name: true },
+      select: { id: true, name: true, isGroup: true },
       orderBy: { name: "asc" },
       take: 8,
     }),
   ]);
   return {
     actors: people.map((p) => ({ personId: p.id, name: p.name, profilePath: p.profilePath })),
-    figures: figures.map((f) => ({ figureId: f.id, name: f.name })),
+    figures: figures.map((f) => ({ figureId: f.id, name: f.name, isGroup: f.isGroup })),
   };
 }
 
@@ -428,11 +445,12 @@ export interface LineageTree {
 
 export async function getLineageTree(
   figureId: string,
-  options?: { up?: number; down?: number; siblingLimit?: number },
+  options?: { up?: number; down?: number; siblingLimit?: number; groupSiblingLimit?: number },
 ): Promise<LineageTree | null> {
   const up = options?.up ?? DEFAULT_UP_GENERATIONS;
   const down = options?.down ?? DEFAULT_DOWN_GENERATIONS;
   const siblingLimit = options?.siblingLimit ?? DEFAULT_SIBLING_LIMIT;
+  const groupSiblingLimit = options?.groupSiblingLimit ?? DEFAULT_GROUP_SIBLING_LIMIT;
 
   const centerRow = await prisma.lineageFigure.findUnique({ where: { id: figureId }, select: figureSelect });
   if (!centerRow) return null;
@@ -477,10 +495,14 @@ export async function getLineageTree(
       });
       if (links.length === 0) continue;
       const children = links.map((l) => toFigureRef(l.student));
+      // A group's own roster is capped more generously than an
+      // individual's -- a stunt team can run far larger than any one
+      // person's students, so the default limit would undersell the page.
+      const limit = parent.isGroup ? groupSiblingLimit : siblingLimit;
       groups.push({
         parent,
-        children: children.slice(0, siblingLimit),
-        overflowCount: Math.max(0, children.length - siblingLimit),
+        children: children.slice(0, limit),
+        overflowCount: Math.max(0, children.length - limit),
       });
     }
     if (groups.length === 0) break;

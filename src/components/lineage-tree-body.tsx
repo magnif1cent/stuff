@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { tmdbImageUrl } from "@/lib/tmdb";
 import { getPortrayals, type LineageTree, type LineageFigureRef } from "@/lib/lineage";
+import { GroupIcon } from "@/components/lineage-group-icon";
 
 // A bare figure's own page (or CastCredit lookup for "portrayed by") is
 // keyed by figureId; an actor-linked figure's is keyed by their personId --
@@ -101,7 +102,7 @@ function buildLayout(tree: LineageTree) {
         slot++;
         nodes.push({
           id: `${group.parent.id}-overflow`,
-          figure: { id: "", name: `+${group.overflowCount} more`, profilePath: null, personId: null },
+          figure: { id: "", name: `+${group.overflowCount} more`, profilePath: null, personId: null, isGroup: false },
           kind: "overflow",
           x,
           y,
@@ -152,17 +153,22 @@ function TreeNode({ node }: { node: LayoutNode }) {
   const isOverflow = node.kind === "overflow";
   const isCenter = node.kind === "center";
   const isSecondary = node.kind === "secondary";
+  const isGroup = !isOverflow && node.figure.isGroup;
 
   const circle = (
     <span
-      className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-full font-semibold ${
+      className={`relative flex shrink-0 items-center justify-center overflow-hidden font-semibold ${
+        isGroup ? "rounded-xl" : "rounded-full"
+      } ${
         isCenter
           ? "border-[3px] border-red-600 bg-red-950 text-white shadow-[0_0_0_5px_rgba(212,56,44,0.18)]"
           : isOverflow
             ? "border-2 border-dashed border-neutral-700 bg-transparent text-neutral-500"
-            : isSecondary
-              ? "border-2 border-dashed border-neutral-600 bg-neutral-800 text-neutral-400"
-              : "border-2 border-neutral-700 bg-neutral-800 text-neutral-400"
+            : isGroup
+              ? "border-2 border-amber-700 bg-amber-950/40 text-amber-600"
+              : isSecondary
+                ? "border-2 border-dashed border-neutral-600 bg-neutral-800 text-neutral-400"
+                : "border-2 border-neutral-700 bg-neutral-800 text-neutral-400"
       }`}
       style={{ width: size, height: size, fontSize: isOverflow ? 11 : size / 2.8 }}
     >
@@ -177,6 +183,8 @@ function TreeNode({ node }: { node: LayoutNode }) {
           sizes={`${size}px`}
           className="object-cover"
         />
+      ) : isGroup ? (
+        <GroupIcon className="h-1/2 w-1/2" />
       ) : (
         initials(node.figure.name)
       )}
@@ -199,6 +207,7 @@ function TreeNode({ node }: { node: LayoutNode }) {
           <span className={`text-xs leading-tight ${isCenter ? "font-semibold text-white" : "text-neutral-300"}`}>
             {node.figure.name}
           </span>
+          {isCenter && isGroup && <span className="text-[9px] text-neutral-500 uppercase">Group</span>}
         </Link>
       )}
       {!isOverflow && <Portrayal figure={node.figure} />}
@@ -210,9 +219,10 @@ function TreeNode({ node }: { node: LayoutNode }) {
 // live from CastCredit.characterName, not stored anywhere (see
 // getPortrayals in lib/lineage.ts for why: more than one actor can
 // plausibly have played the same figure). Skipped for actor-linked figures,
-// which already show their own real photo.
+// which already show their own real photo, and for groups, which were
+// never a character a single actor could have played.
 async function Portrayal({ figure }: { figure: LineageFigureRef }) {
-  if (figure.personId || !figure.id) return null;
+  if (figure.personId || !figure.id || figure.isGroup) return null;
   const portrayals = await getPortrayals(figure.name);
   if (portrayals.length === 0) return null;
   return (

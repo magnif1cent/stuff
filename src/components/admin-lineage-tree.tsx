@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { tmdbImageUrl } from "@/lib/tmdb";
 import { AdminLineageFigurePicker, type LineageFigureRef } from "@/components/admin-lineage-figure-picker";
+import { GroupIcon } from "@/components/lineage-group-icon";
 import { MAX_LINEAGE_NOTE_LENGTH } from "@/lib/lineage-constants";
 
 interface DescendantGroup {
@@ -29,6 +30,16 @@ function initials(name: string): string {
 }
 
 function Avatar({ figure, size = 40 }: { figure: LineageFigureRef; size?: number }) {
+  if (figure.isGroup) {
+    return (
+      <span
+        className="relative flex shrink-0 items-center justify-center rounded-md border border-amber-700 bg-amber-950/40 text-amber-600"
+        style={{ width: size, height: size }}
+      >
+        <GroupIcon className="h-1/2 w-1/2" />
+      </span>
+    );
+  }
   return (
     <span
       className="relative flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-neutral-800 font-semibold text-neutral-400"
@@ -167,7 +178,11 @@ export function AdminLineageTree() {
           <div className="flex flex-col items-center gap-1 rounded-md border-2 border-red-600 bg-red-950/60 px-4 py-2">
             <Avatar figure={tree.center} size={48} />
             <span className="text-sm font-semibold text-white">{tree.center.name}</span>
-            {!tree.center.personId && <span className="text-[10px] text-neutral-500">not an actor</span>}
+            {tree.center.isGroup ? (
+              <span className="text-[10px] text-neutral-500">group</span>
+            ) : (
+              !tree.center.personId && <span className="text-[10px] text-neutral-500">not an actor</span>
+            )}
           </div>
 
           <div className="flex gap-2">

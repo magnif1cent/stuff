@@ -297,6 +297,14 @@ model LineageFigure {
   id       String  @id @default(cuid())
   name     String
   personId String? @unique
+  // A collective (a stunt team, say) rather than a single trained
+  // individual -- always false for an actor-linked figure. Changes how the
+  // figure renders (a distinct node shape) and how many of its own primary
+  // students show before the overflow badge kicks in (see
+  // DEFAULT_GROUP_SIBLING_LIMIT in lib/lineage.ts) -- everything else about
+  // it (cycle detection, primary-link promotion, search) is generic over
+  // any figure and doesn't need to know this flag exists.
+  isGroup  Boolean @default(false)
   person   Person? @relation(fields: [personId], references: [id], onDelete: SetNull)
 
   sifuLinks    LineageRelation[] @relation("LineageSifu")
