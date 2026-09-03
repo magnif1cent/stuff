@@ -4619,3 +4619,16 @@ state to put a real person's figure in.
   up top, a plain full list below for everything past it. Not built —
   raised as a recommendation, not requested, and no real group in the
   catalog has hit the current cap yet to make it pressing.
+- **A separate page for the entire lineage** — every existing Lineage page
+  (`/actors/[personId]/lineage`, `/lineage/[figureId]`) is figure-centric:
+  centered on one node, showing a bounded window of generations up/down
+  from it. There's no single view of the whole graph at once, so getting
+  from one figure to an unrelated-looking one (a team member over to a
+  teammate, say) means clicking node-by-node through whatever's centered
+  along the way -- raised after exactly that friction while testing groups.
+  Not scoped: whether this is a zoomable/pannable full-graph view (a real
+  departure from `LineageTreeBody`'s hand-rolled layout, which was
+  deliberately built for one predictable branching shape, not an arbitrary
+  graph -- see "LineageTreeBody rewritten as computed SVG layout" above)
+  or something simpler, like a flat searchable list of every figure with
+  links into their centered pages.
