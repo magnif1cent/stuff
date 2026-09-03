@@ -26,7 +26,7 @@ import { ActorFavoriteButton } from "@/components/actor-favorite-button";
 import { getPersonSignatureVoteSummary } from "@/lib/person-signature-votes";
 import { SignatureVoteProvider, SignatureSpotlight, SignatureVoteButton } from "@/components/actor-signature-vote";
 import { getLineageTree, getFigureIdForPerson } from "@/lib/lineage";
-import { ActorLineageCard } from "@/components/actor-lineage-card";
+import { LineageTreeBody } from "@/components/lineage-tree-body";
 
 // Split out from ActorPage's body so the Math.random() call it wraps isn't
 // flagged as an impurity inside the page's own render function (React's
@@ -454,11 +454,10 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
         </div>
       </div>
 
-      {(careerStatsCard || sparringPartnerCard || lineageHasContent || bio) && (
+      {(careerStatsCard || sparringPartnerCard || bio) && (
         <div className="mb-8 flex flex-col gap-6 sm:flex-row sm:items-start">
           {careerStatsCard && <div className="sm:w-72 sm:shrink-0">{careerStatsCard}</div>}
           {sparringPartnerCard}
-          {lineageHasContent && lineageTree && <ActorLineageCard tree={lineageTree} />}
           {bio && (
             <div className="min-w-0 flex-1">
               {(bio.birthday || bio.place_of_birth) && (
@@ -475,6 +474,18 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
               {bio.biography && <ActorBio biography={bio.biography} />}
             </div>
           )}
+        </div>
+      )}
+
+      {lineageHasContent && lineageTree && (
+        <div className="mb-10">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-xl font-bold text-white">Lineage</h2>
+            <Link href={`/actors/${personId}/lineage`} className="text-sm font-semibold text-red-500 hover:text-red-400">
+              View full lineage &rarr;
+            </Link>
+          </div>
+          <LineageTreeBody tree={lineageTree} up={1} down={1} />
         </div>
       )}
 

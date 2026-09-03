@@ -126,6 +126,7 @@ one.
 - [Career Highlights reverted to a plain Details card](#career-highlights-reverted-to-a-plain-details-card)
 - [Sifu Lineage: primary-sifu-plus-dotted-line, bulk chain-import over drag-and-drop](#sifu-lineage-primary-sifu-plus-dotted-line-bulk-chain-import-over-drag-and-drop)
 - [Sifu Lineage: LineageFigure introduced, reversing the Person-only restriction](#sifu-lineage-lineagefigure-introduced-reversing-the-person-only-restriction)
+- [Sifu Lineage: actor-page teaser moved from a stat card to its own tree section](#sifu-lineage-actor-page-teaser-moved-from-a-stat-card-to-its-own-tree-section)
 
 **Deferred & Backlog**
 
@@ -4235,6 +4236,21 @@ every sifu is an actor.
   route if a figure turns out to be actor-linked after all (a stale link,
   someone bookmarking mid-edit), so there's exactly one canonical URL per
   figure either way.
+
+### Sifu Lineage: actor-page teaser moved from a stat card to its own tree section
+**PR #TBD.** The compact **Lineage** card (sized like Details/Sparring
+Partner, in the stats row) was replaced with a full-width **Lineage**
+section further down the actor page, rendering `LineageTreeBody` — the same
+component the full `/lineage` page uses — instead of a plain list of names.
+Two options were on the table: shrink a second, bespoke tree renderer down
+to stat-card width, or move the teaser out of the card row entirely and
+reuse the existing renderer at 1 up/1 down (the same depth the card showed).
+Chosen for the same reason as most of this feature's other calls: reusing
+what's already built beats building a smaller second version of it — a
+stat-card-sized tree would need its own cramped layout with no payoff
+besides staying in that row. The tradeoff, accepted deliberately: Known
+For/Filmography now sit one section lower on any actor page with lineage
+data.
 
 - **Drag-and-drop reordering for ranked list items** — `ListItemRows`
   (`src/components/list-item-rows.tsx`) now has move-to-top/move-to-bottom
