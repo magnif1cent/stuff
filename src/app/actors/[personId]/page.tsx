@@ -494,6 +494,10 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
               View full lineage &rarr;
             </Link>
           </div>
+          <p className="mb-4 text-xs text-neutral-500">
+            This actor&rsquo;s on-screen martial arts training lineage &mdash; who trained whom, as best as it&rsquo;s
+            currently known. Links here can be corrected or expanded over time.
+          </p>
           <LineageTreeBody tree={lineageTree} up={1} down={1} />
         </div>
       )}

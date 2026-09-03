@@ -54,7 +54,10 @@ export default async function ActorLineagePage({
       </Link>
 
       <h1 className="mb-1 text-2xl font-bold text-white">{tree.center.name}&rsquo;s Lineage</h1>
-      <p className="mb-8 text-sm text-neutral-500">Sifus trace upward, students trace downward.</p>
+      <p className="mb-8 text-sm text-neutral-500">
+        Sifus trace upward, students trace downward. This martial arts training lineage is compiled to the best of
+        our knowledge and can be corrected or expanded as more comes to light.
+      </p>
 
       <LineageTreeBody tree={tree} up={up} down={down} />
     </div>
