@@ -31,7 +31,14 @@ function ListCard({ list }: { list: Awaited<ReturnType<typeof getPublicListsPage
       href={`/lists/${list.id}`}
       className="group overflow-hidden rounded-md border border-neutral-800 bg-neutral-900 hover:border-neutral-700"
     >
-      <ListCoverCollage tiles={list.coverTiles} listName={list.name} />
+      <div className="relative">
+        <ListCoverCollage tiles={list.coverTiles} listName={list.name} />
+        {list.isRanked && (
+          <span className="absolute top-1.5 left-1.5 rounded-full border border-red-600 bg-red-950/80 px-1.5 py-0.5 font-mono text-[9px] font-semibold tracking-wide text-red-300 uppercase backdrop-blur-sm">
+            Ranked
+          </span>
+        )}
+      </div>
       <div className="p-2.5">
         <h2 className="truncate text-sm font-semibold text-white group-hover:text-red-500">{list.name}</h2>
         <p className="truncate font-mono text-[11px] text-neutral-500">

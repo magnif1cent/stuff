@@ -4066,7 +4066,43 @@ reusing the identical mechanism (see the last bullet below).
   (director instead of tags, no verified/favorites to exclude since that
   page has no bubble row at all).
 
-## Deferred & Backlog
+### List row/card polish: note discoverability, mobile owner controls, collage gap, Ranked badge
+**PR #TBD.** Four small, independently-shippable fixes to `ListItemRows`,
+`ListCoverCollage`, and the `/lists` browse card, found while reviewing the
+Lists UI for mobile-friendliness rather than in response to a bug report.
+
+- **Note-edit affordance moved from the owner-controls cluster into the
+  content column, not just resized.** It was a bare ✎ icon sitting among
+  the reorder/remove buttons — easy to miss, and disconnected from where
+  the note itself renders. A row with no note now shows a **+ Add a note**
+  text link in that same spot instead (only for the owner); a row with one
+  shows the pencil right next to the note text. Considered leaving the
+  icon in place and just enlarging it, like the reorder buttons got, but
+  that doesn't fix the actual problem — it's discoverable now because it's
+  where you'd already be looking, not because it's bigger.
+- **Owner controls (reorder + remove) drop to their own line below the
+  row's content on narrow screens**, via `w-full sm:w-auto` on a
+  `flex-wrap` row — rather than the other option raised alongside this
+  (collapsing the four reorder buttons into a "⋮" overflow menu on
+  mobile). Chosen because this codebase has no dropdown/menu primitive to
+  build that on (same gap noted for the filter sheet's missing focus
+  trap, above), and because a list owner reordering items benefits from
+  every action staying visible rather than hidden behind a tap. The
+  buttons themselves went from 28px to a uniform 36px at every breakpoint
+  (not resized only on mobile) to match how tap-target fixes were already
+  applied sitewide — one size, not a size that changes at `sm:`.
+- **Cover collage's 3-tile case gets a dedicated asymmetric layout** (one
+  tile spanning both rows, two stacked beside it) instead of reusing the
+  4-tile 2x2 grid, which left an actual empty cell for exactly 3 items —
+  visible on the seeded "Essential Kung Fu" list, and the reason this pass
+  started. The component's own existing comment already explained the
+  reasoning for 1- and 2-item layouts ("doesn't read as mostly empty");
+  3 items simply hadn't been given the same treatment.
+- **A small "Ranked" badge sits directly on a list's browse-card cover**
+  now. Previously `isRanked` only showed up as which section heading
+  ("Ranked" / "Unranked") a card was grouped under on `/lists` — invisible
+  from the card itself, and easy to lose track of once search or
+  pagination scatters cards away from their heading.
 
 - **Drag-and-drop reordering for ranked list items** — `ListItemRows`
   (`src/components/list-item-rows.tsx`) now has move-to-top/move-to-bottom

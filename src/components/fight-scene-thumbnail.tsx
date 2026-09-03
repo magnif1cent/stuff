@@ -3,9 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 
-function PlayIcon() {
+export function PlayIcon({ className = "h-8 w-8" }: { className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" fill="currentColor" className="h-8 w-8 drop-shadow">
+    <svg viewBox="0 0 24 24" fill="currentColor" className={`${className} drop-shadow`}>
       <path d="M8 5v14l11-7z" />
     </svg>
   );

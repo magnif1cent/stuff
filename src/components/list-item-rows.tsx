@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { resolvePosterUrl, isTmdbUrl } from "@/lib/tmdb";
-import { YoutubeThumbnailImage } from "@/components/fight-scene-thumbnail";
+import { YoutubeThumbnailImage, PlayIcon } from "@/components/fight-scene-thumbnail";
 import { MEMBER_LIST_ENTRY_NOTE_MAX_LENGTH } from "@/lib/member-lists";
 
 export type ReelItem =
@@ -216,7 +216,7 @@ export function ListItemRows({
           return (
           <div
             key={`${item.kind}-${item.id}`}
-            className={`flex items-center gap-4 rounded-md border border-neutral-800 bg-neutral-900 p-3 border-l-4 ${
+            className={`flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md border border-neutral-800 bg-neutral-900 p-3 border-l-4 ${
               item.kind === "FIGHT_SCENE" ? "border-l-red-700" : "border-l-neutral-600"
             }`}
           >
@@ -246,7 +246,12 @@ export function ListItemRows({
                   );
                 })()
               ) : (
-                <YoutubeThumbnailImage videoId={item.youtubeVideoId} title={item.title} textClassName="text-[7px]" />
+                <>
+                  <YoutubeThumbnailImage videoId={item.youtubeVideoId} title={item.title} textClassName="text-[7px]" />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/10 text-white/90">
+                    <PlayIcon className="h-5 w-5" />
+                  </div>
+                </>
               )}
             </div>
 
@@ -319,31 +324,49 @@ export function ListItemRows({
                   </button>
                 </div>
               ) : item.note ? (
-                <p className="mt-1 text-sm text-neutral-300 italic">&ldquo;{item.note}&rdquo;</p>
+                <div className="mt-1 flex min-w-0 items-start gap-1.5">
+                  <p className="min-w-0 text-sm text-neutral-300 italic">&ldquo;{item.note}&rdquo;</p>
+                  {isOwnList && (
+                    <button
+                      onClick={() => {
+                        setEditingNoteId(item.id);
+                        setNoteDraft(item.note ?? "");
+                      }}
+                      title="Edit note"
+                      className="shrink-0 text-neutral-500 hover:text-white"
+                    >
+                      ✎
+                    </button>
+                  )}
+                </div>
+              ) : isOwnList ? (
+                <button
+                  onClick={() => {
+                    setEditingNoteId(item.id);
+                    setNoteDraft("");
+                  }}
+                  className="mt-1 text-xs text-neutral-500 hover:text-red-400 hover:underline"
+                >
+                  + Add a note
+                </button>
               ) : null}
             </div>
 
+            {/* `w-full` (with the row's own `flex-wrap`) forces this onto its
+                own line below the thumbnail/title on narrow screens, where
+                five 44px buttons alongside a thumbnail and title had no room
+                to fit on one line -- `sm:w-auto` returns it to the same row,
+                right-aligned via the content column's `flex-1` above, at
+                sm:+. */}
             {isOwnList && (
-              <div className="flex shrink-0 items-center gap-1">
-                {editingNoteId !== item.id && (
-                  <button
-                    onClick={() => {
-                      setEditingNoteId(item.id);
-                      setNoteDraft(item.note ?? "");
-                    }}
-                    title="Edit note"
-                    className="flex h-7 w-7 items-center justify-center rounded text-neutral-500 hover:bg-neutral-800 hover:text-white"
-                  >
-                    ✎
-                  </button>
-                )}
+              <div className="flex w-full shrink-0 items-center justify-end gap-2 border-t border-neutral-800 pt-2 sm:w-auto sm:border-0 sm:pt-0">
                 {isRanked && (
                   <>
                     <button
                       onClick={() => moveToEnd(index, "top")}
                       disabled={index === 0 || reordering}
                       title="Move to top"
-                      className="flex h-7 w-7 items-center justify-center rounded text-neutral-500 hover:bg-neutral-800 hover:text-white disabled:opacity-30"
+                      className="flex h-9 w-9 items-center justify-center rounded text-neutral-500 hover:bg-neutral-800 hover:text-white disabled:opacity-30"
                     >
                       ⇈
                     </button>
@@ -351,7 +374,7 @@ export function ListItemRows({
                       onClick={() => move(index, -1)}
                       disabled={index === 0 || reordering}
                       title="Move up"
-                      className="flex h-7 w-7 items-center justify-center rounded text-neutral-500 hover:bg-neutral-800 hover:text-white disabled:opacity-30"
+                      className="flex h-9 w-9 items-center justify-center rounded text-neutral-500 hover:bg-neutral-800 hover:text-white disabled:opacity-30"
                     >
                       ↑
                     </button>
@@ -359,7 +382,7 @@ export function ListItemRows({
                       onClick={() => move(index, 1)}
                       disabled={index === items.length - 1 || reordering}
                       title="Move down"
-                      className="flex h-7 w-7 items-center justify-center rounded text-neutral-500 hover:bg-neutral-800 hover:text-white disabled:opacity-30"
+                      className="flex h-9 w-9 items-center justify-center rounded text-neutral-500 hover:bg-neutral-800 hover:text-white disabled:opacity-30"
                     >
                       ↓
                     </button>
@@ -367,7 +390,7 @@ export function ListItemRows({
                       onClick={() => moveToEnd(index, "bottom")}
                       disabled={index === items.length - 1 || reordering}
                       title="Move to bottom"
-                      className="flex h-7 w-7 items-center justify-center rounded text-neutral-500 hover:bg-neutral-800 hover:text-white disabled:opacity-30"
+                      className="flex h-9 w-9 items-center justify-center rounded text-neutral-500 hover:bg-neutral-800 hover:text-white disabled:opacity-30"
                     >
                       ⇊
                     </button>
@@ -377,7 +400,7 @@ export function ListItemRows({
                   onClick={() => remove(item)}
                   disabled={busyId === item.id}
                   title="Remove"
-                  className="flex h-7 w-7 items-center justify-center rounded text-neutral-500 hover:bg-neutral-800 hover:text-red-400"
+                  className="flex h-9 w-9 items-center justify-center rounded text-neutral-500 hover:bg-neutral-800 hover:text-red-400"
                 >
                   ✕
                 </button>
