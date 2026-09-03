@@ -23,7 +23,7 @@ const SECTIONS = [
   {
     href: "/admin/lineage",
     title: "Lineage",
-    description: "Link actors to the sifus who trained them and browse the resulting tree.",
+    description: "Link actors into martial arts training lineages and browse the resulting tree.",
     adminOnly: true,
   },
   {

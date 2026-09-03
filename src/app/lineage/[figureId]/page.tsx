@@ -51,8 +51,9 @@ export default async function LineageFigurePage({
     <div className="mx-auto w-full max-w-4xl px-4 py-10">
       <h1 className="mb-1 text-2xl font-bold text-white">{tree.center.name}&rsquo;s Lineage</h1>
       <p className="mb-8 text-sm text-neutral-500">
-        Sifus trace upward, students trace downward. This martial arts training lineage is compiled to the best of
-        our knowledge and can be corrected or expanded as more comes to light.
+        Earlier generations appear above, later ones below. &ldquo;Lineage&rdquo; is our tribute to the martial
+        artists who built this genre, generation by generation. Hand-curated, always a work in progress &mdash;
+        reach out if you spot something to fix.
       </p>
 
       <LineageTreeBody tree={tree} up={up} down={down} />

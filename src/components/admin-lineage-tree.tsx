@@ -150,7 +150,7 @@ export function AdminLineageTree() {
 
           {tree.secondarySifus.length > 0 && (
             <div className="flex items-center gap-2 text-[11px] text-neutral-500">
-              Co-sifu:
+              Also:
               {tree.secondarySifus.map((s) => (
                 <button
                   key={s.id}
@@ -179,7 +179,7 @@ export function AdminLineageTree() {
               }}
               className="rounded-full bg-red-700 px-3 py-1 text-[11px] font-semibold text-white uppercase hover:bg-red-600"
             >
-              + Sifu
+              + Earlier
             </button>
             <button
               onClick={() => {
@@ -189,14 +189,14 @@ export function AdminLineageTree() {
               }}
               className="rounded-full bg-red-700 px-3 py-1 text-[11px] font-semibold text-white uppercase hover:bg-red-600"
             >
-              + Student
+              + Later
             </button>
           </div>
 
           {addMode && (
             <div className="w-72 rounded-md border border-neutral-700 bg-neutral-900 p-3">
               <p className="mb-2 text-[11px] font-semibold text-neutral-300">
-                Add {addMode === "sifu" ? "sifu of" : "student of"} {tree.center.name}
+                Add {addMode === "sifu" ? "an earlier" : "a later"} link for {tree.center.name}
               </p>
               <AdminLineageFigurePicker
                 key={addFigure?.id ?? "empty"}

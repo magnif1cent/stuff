@@ -128,6 +128,7 @@ one.
 - [Sifu Lineage: LineageFigure introduced, reversing the Person-only restriction](#sifu-lineage-lineagefigure-introduced-reversing-the-person-only-restriction)
 - [Sifu Lineage: actor-page teaser moved from a stat card to its own tree section](#sifu-lineage-actor-page-teaser-moved-from-a-stat-card-to-its-own-tree-section)
 - [Sifu Lineage: `LineageTreeBody` rewritten as computed SVG layout, not flexbox](#sifu-lineage-lineagetreebody-rewritten-as-computed-svg-layout-not-flexbox)
+- [Lineage: "sifu"/"student" dropped from display copy, not swapped for another role term](#lineage-sifustudent-dropped-from-display-copy-not-swapped-for-another-role-term)
 
 **Deferred & Backlog**
 
@@ -4280,6 +4281,42 @@ arithmetic covers it without pulling in dagre/elkjs. Slot width and node
 label width were both narrowed in the same pass (a long name like "Michael
 Chow Man-Kin" was pushing generation rows wider than necessary) so names
 wrap within a fixed column instead of stretching the row.
+
+### Lineage: "sifu"/"student" dropped from display copy, not swapped for another role term
+**PR #TBD.** Once non-actor figures could be historical martial artists or
+characters (see "LineageFigure introduced" above), the site owner flagged
+that "sifu" itself doesn't fit every relationship the feature records —
+a specific term for a specific tradition, presupposing a fit that isn't
+guaranteed. The first request read as a rename ("drop sifu and student
+wording... more generic as follows: ..."), but a follow-up clarified the
+actual ask: avoid *displaying* the terms, not replace them with a different
+role noun (a straight `sifu` → `trainer` / `student` → `trainee` swap would
+have kept the same problem — assuming a trainer/trainee relationship fits
+every entry, which is no more guaranteed than "sifu" did).
+
+Structural UI (admin form field labels, the admin tree's add buttons and
+popover, the secondary-link tag) was reworded around the tree's own
+generation axis instead of a role — "Earlier"/"Later" — reusing language
+the admin tree already used for expanding the tree itself ("show earlier
+generations"/"show more generations …"), so the new wording isn't a fresh
+vocabulary, just the existing one applied consistently. The "co-sifu" tag
+on secondary nodes in the public tree (`LineageTreeBody`) was dropped
+entirely rather than relabeled — the dashed border and line already carry
+that meaning visually, and every other node label in that tree is a plain
+name with no role annotation. Internal identifiers (`sifuId`/`studentId`
+fields, the `LineageRelation.sifu`/`student` relations, `addMode`'s
+`"sifu"`/`"student"` values) were left as-is — the request was about
+*display* copy, and renaming the data model over a wording call would risk
+another migration for no user-facing benefit (see the "Production migration
+incident" entry under Foundational Changes for what that risk actually
+costs).
+
+The public disclaimer shown on every actor/figure lineage view was rewritten
+in the same pass, replacing wording that leaned on "training lineage/who
+trained whom" with role-neutral framing the site owner drafted and then
+asked to have reworded for tone: *"'Lineage' is our tribute to the martial
+artists who built this genre, generation by generation. Hand-curated,
+always a work in progress — reach out if you spot something to fix."*
 
 - **Drag-and-drop reordering for ranked list items** — `ListItemRows`
   (`src/components/list-item-rows.tsx`) now has move-to-top/move-to-bottom

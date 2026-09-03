@@ -129,7 +129,7 @@ export function AdminLineageBulkImport() {
       />
       <p className="mt-2 text-[11px] text-neutral-500">
         Separate names with <code className="rounded bg-neutral-800 px-1 py-0.5 text-neutral-300">&gt;</code>, one
-        chain per line, sifu first. Names are matched against actors already in the catalog.
+        chain per line, earliest first. Names are matched against actors already in the catalog.
       </p>
 
       <div className="mt-3 flex justify-end">

@@ -191,7 +191,7 @@ function TreeNode({ node }: { node: LayoutNode }) {
       {isOverflow ? (
         <>
           {circle}
-          <span className="text-[10px] text-neutral-500">more students</span>
+          <span className="text-[10px] text-neutral-500">more</span>
         </>
       ) : (
         <Link href={figureHref(node.figure)} className="flex flex-col items-center gap-1 hover:opacity-80">
@@ -199,7 +199,6 @@ function TreeNode({ node }: { node: LayoutNode }) {
           <span className={`text-xs leading-tight ${isCenter ? "font-semibold text-white" : "text-neutral-300"}`}>
             {node.figure.name}
           </span>
-          {isSecondary && <span className="text-[9px] text-neutral-600 uppercase">co-sifu</span>}
         </Link>
       )}
       {!isOverflow && <Portrayal figure={node.figure} />}

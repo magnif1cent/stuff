@@ -86,7 +86,7 @@ export function AdminLineageLinkForm({ initialRelations }: { initialRelations: L
       <form onSubmit={handleSave} className="grid gap-4 sm:grid-cols-3">
         <div>
           <label className="mb-1.5 block text-[11px] font-semibold tracking-wide text-neutral-500 uppercase">
-            Student
+            Later
           </label>
           <AdminLineageFigurePicker
             key={student?.id ?? "student-empty"}
@@ -97,7 +97,7 @@ export function AdminLineageLinkForm({ initialRelations }: { initialRelations: L
         </div>
         <div>
           <label className="mb-1.5 block text-[11px] font-semibold tracking-wide text-neutral-500 uppercase">
-            Sifu
+            Earlier
           </label>
           <AdminLineageFigurePicker
             key={sifu?.id ?? "sifu-empty"}
@@ -158,7 +158,7 @@ export function AdminLineageLinkForm({ initialRelations }: { initialRelations: L
                   </div>
                   {!r.isPrimary && (
                     <span className="shrink-0 rounded-full border border-dashed border-neutral-700 px-2 py-0.5 text-[10px] text-neutral-500 uppercase">
-                      co-sifu
+                      secondary
                     </span>
                   )}
                 </div>
