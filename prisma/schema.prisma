@@ -261,6 +261,7 @@ model Person {
   tributes    PersonTribute[]
   favorites   PersonFavorite[]
   signatureVotes PersonSignatureVote[]
+  lineageFigure LineageFigure?
 
   @@index([name])
   // See the matching comment on Movie above — backs the ILIKE actor-name
@@ -280,6 +281,60 @@ model CastCredit {
 
   @@unique([movieId, personId])
   @@index([movieId])
+}
+
+// Martial arts lineage: who trained whom. A lineage node (LineageFigure) is
+// not always an actor -- some sifus are historical martial artists who were
+// never credited in a film, and some are characters (Ip Man) played by
+// different actors across different films, so the node can't just *be* a
+// cast credit either. `personId` links a figure to an actor when there is
+// one; it's null for a bare name-only figure. There's no separate "resolve
+// the character to whichever actor played them" field -- src/lib/lineage.ts
+// derives that live from CastCredit.characterName for display, since more
+// than one actor can plausibly have played the same figure (see
+// DECISIONS.md).
+model LineageFigure {
+  id       String  @id @default(cuid())
+  name     String
+  personId String? @unique
+  // A collective (a stunt team, say) rather than a single trained
+  // individual -- always false for an actor-linked figure. Changes how the
+  // figure renders (a distinct node shape) and how many of its own primary
+  // students show before the overflow badge kicks in (see
+  // DEFAULT_GROUP_SIBLING_LIMIT in lib/lineage.ts) -- everything else about
+  // it (cycle detection, primary-link promotion, search) is generic over
+  // any figure and doesn't need to know this flag exists.
+  isGroup  Boolean @default(false)
+  person   Person? @relation(fields: [personId], references: [id], onDelete: SetNull)
+
+  sifuLinks    LineageRelation[] @relation("LineageSifu")
+  studentLinks LineageRelation[] @relation("LineageStudent")
+
+  @@index([name])
+}
+
+// A student can have more than one sifu (it's a DAG, not a strict tree), but
+// exactly one is `isPrimary` at a time -- that's the one that positions the
+// node in the rendered tree; any others render as a secondary "co-sifu"
+// line. There isn't a DB constraint enforcing "at most one primary per
+// student" (a partial unique index isn't representable in schema.prisma the
+// way this repo's migrations are authored) -- it's enforced in
+// src/lib/lineage.ts by demoting the existing primary inside the same
+// transaction whenever a new one is promoted.
+model LineageRelation {
+  id        String   @id @default(cuid())
+  sifuId    String
+  studentId String
+  isPrimary Boolean  @default(true)
+  note      String?
+  createdAt DateTime @default(now())
+
+  sifu    LineageFigure @relation("LineageSifu", fields: [sifuId], references: [id], onDelete: Cascade)
+  student LineageFigure @relation("LineageStudent", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([sifuId, studentId])
+  @@index([studentId])
+  @@index([sifuId])
 }
 
 // --- Ratings ---

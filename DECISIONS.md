@@ -124,6 +124,13 @@ one.
 - [Trending carousel autoplay cap raised from 1 lap to 5](#trending-carousel-autoplay-cap-raised-from-1-lap-to-5)
 - [Actor Career Highlights styled like the Signature Spotlight banner, "Sparring Partner" from existing fight-scene data](#actor-career-highlights-styled-like-the-signature-spotlight-banner-sparring-partner-from-existing-fight-scene-data)
 - [Career Highlights reverted to a plain Details card](#career-highlights-reverted-to-a-plain-details-card)
+- [Sifu Lineage: primary-sifu-plus-dotted-line, bulk chain-import over drag-and-drop](#sifu-lineage-primary-sifu-plus-dotted-line-bulk-chain-import-over-drag-and-drop)
+- [Sifu Lineage: LineageFigure introduced, reversing the Person-only restriction](#sifu-lineage-lineagefigure-introduced-reversing-the-person-only-restriction)
+- [Sifu Lineage: actor-page teaser moved from a stat card to its own tree section](#sifu-lineage-actor-page-teaser-moved-from-a-stat-card-to-its-own-tree-section)
+- [Sifu Lineage: `LineageTreeBody` rewritten as computed SVG layout, not flexbox](#sifu-lineage-lineagetreebody-rewritten-as-computed-svg-layout-not-flexbox)
+- [Lineage: "sifu"/"student" dropped from display copy, not swapped for another role term](#lineage-sifustudent-dropped-from-display-copy-not-swapped-for-another-role-term)
+- [Lineage: groups are a normal figure in the owner's own row, not a lateral position](#lineage-groups-are-a-normal-figure-in-the-owners-own-row-not-a-lateral-position)
+- [Lineage: bare figures get a delete/toggle-group escape hatch, cascade over block-if-linked](#lineage-bare-figures-get-a-deletetoggle-group-escape-hatch-cascade-over-block-if-linked)
 
 **Deferred & Backlog**
 
@@ -4104,6 +4111,269 @@ Lists UI for mobile-friendliness rather than in response to a bug report.
   from the card itself, and easy to lose track of once search or
   pagination scatters cards away from their heading.
 
+### Sifu Lineage: primary-sifu-plus-dotted-line, bulk chain-import over drag-and-drop
+**PR #TBD.** New feature, worked through as a long design conversation before
+any code was written — most of the actual judgment calls got made before
+implementation, not during it.
+
+- **Multiple sifus allowed (it's a DAG), but rendered as one primary chain
+  plus dotted "co-sifu" lines, not a general graph layout.** The site owner
+  confirmed a student can genuinely have more than one recognized sifu, which
+  rules out a strict tree. The alternative to a real DAG-layout library
+  (dagre/elkjs solving edge-crossing minimization — meaningfully more code,
+  harder to reason about, layouts that can shift non-obviously as data
+  changes) is the pattern standard org-chart tools already use for the same
+  "reports to two people" case: one manager is the solid-line primary that
+  sets the node's position, any others render as a dotted secondary line
+  drawn to wherever the node already sits. Chosen for the lighter build and
+  lower ongoing-maintenance cost — layout code that's isolated, deterministic,
+  and doesn't need a graph-layout dependency at all. `LineageRelation.isPrimary`
+  is a plain boolean (the first sifu recorded for a student becomes primary
+  automatically; adding another defaults to secondary), not a DB constraint —
+  a partial unique index ("at most one primary per student") isn't
+  representable in `schema.prisma` the way this repo's migrations are
+  authored, so it's enforced in `src/lib/lineage.ts` by demoting the existing
+  primary inside the same transaction. This is a reversible choice at the data
+  layer either direction — the edges are identical either way, only the
+  *rendering* differs — so switching to full DAG layout later needs no
+  migration, just a different layout component.
+- **Bulk chain-paste import, not drag-and-drop, as the primary way to
+  populate ~500 links.** Drag-and-drop (search-and-drop a person onto a tree
+  node, reposition by dragging) was the first idea raised for entering data at
+  that scale, but costs the same real engineering — an auto-layout engine,
+  drop-target detection, cycle checks on drop, re-parenting logic — whether or
+  not it's the primary entry path. What actually solves the scale problem: a
+  textarea where an admin pastes one succession chain per line
+  (`Old Master Yuen > White Crane Elder > Iron Fist Chen`, sifu first,
+  chain of N names → N−1 links), matching how this kind of lineage data
+  actually gets researched (as chains, not isolated pairs), and matching how
+  org-chart/HRIS tools are actually populated in practice (CSV/paste import,
+  with manual dragging reserved for touch-up afterward, never the primary
+  path). A review step (`previewBulkImport` in `src/lib/lineage.ts`) flags
+  each parsed pair as new / already linked / a name matching more than one
+  actor (with the ambiguous side resolved via a pick, defaulting to the first
+  match) / no match at all, before anything is written — nothing commits on a
+  guess. Drag-and-drop was dropped from scope entirely, not scaled down: the
+  on-tree "+ Sifu"/"+ Student" buttons (search, pick, Confirm) already cover
+  the one-off single-link case drag-and-drop would otherwise have served,
+  without a draft/pending state — see the next bullet.
+- **On-tree add commits immediately per pick, no separate draft/lock step.**
+  The original ask included a "lock/confirm" button for edits made directly on
+  the tree. Implemented as: picking a person from the popover's search and
+  pressing Confirm saves that one link right away — no standing "pending"
+  state spanning multiple edits. A page-wide draft-then-commit model was
+  considered and rejected as exactly the kind of compounding stateful
+  complexity this repo's own conventions (see the `/code-review` guidance on
+  autosave-style surfaces) warn against introducing for a one-off feature.
+- **Lineage nodes are restricted to actors already in the catalog (`Person`
+  records), not a separate lineage-only entity.** A historical sifu who was
+  never in a film can't be added until they exist as a `Person` some other
+  way. Considered a standalone `LineageFigure` model (optionally linked to
+  `Person`) specifically to cover that case, but rejected for now to avoid
+  touching `Person.tmdbId`'s current required-and-unique invariant, which the
+  actor-search/TMDB-import code already assumes holds everywhere.
+- **Public from the start, not admin-only.** Once it became clear actor pages
+  (`/actors/[personId]`) already exist and are public — just not linked from
+  top-level nav — keeping a public-facing feature gated behind an admin
+  screen stopped making sense as a default. The compact **Lineage** card on
+  the actor page and the full tree at `/actors/[personId]/lineage` ship
+  public immediately; there's no feature flag hiding them once data exists.
+- **Not implemented in this pass**: deleting a link directly from the tree
+  view (the admin tree is browse-and-add only; removal still goes through the
+  flat link list, since the tree API doesn't thread relation ids through its
+  ancestor/descendant structures — only figure refs); zoom/pan controls on
+  the tree (discussed early on for very wide/deep lineages, but not load-
+  bearing once the tree defaults to a bounded generations-up/down window
+  with "show more" expand links/buttons and per-parent sibling overflow
+  counts, which were built — 2 up/2 down and re-fetch-with-more in the admin
+  tree, 3 up/3 down and a `?up=&down=` query-param link on the read-only
+  public page). Neither blocks shipping; both are easy to add on top of the
+  existing data shape if a real lineage turns out to need them.
+
+### Sifu Lineage: LineageFigure introduced, reversing the Person-only restriction
+**PR #TBD.** Reverses one specific call from the entry above ("Lineage nodes
+are restricted to actors already in the catalog") within the same feature,
+before any of it shipped — raised as soon as real examples surfaced: not
+every sifu is an actor.
+
+- **Not every sifu is an actor, and some are characters rather than real
+  people.** A historical martial artist (a real sifu who trained someone
+  famous) may never have been credited in a film at all. Harder case: a
+  figure like Ip Man is himself a real person the lineage should be able to
+  name, but the only representation of him in this catalog is as a
+  *character* — `CastCredit.characterName` — played by different actors in
+  different films (Donnie Yen, Tony Leung, Anthony Wong...). Neither case
+  fits "a lineage node is a `Person`."
+- **`LineageFigure` sits between `LineageRelation` and `Person`** — a node
+  has a name and an optional unique `personId`. An actor's figure is created
+  lazily (`resolveFigureForPerson` in `src/lib/lineage.ts`) the moment
+  they're actually linked, not up front for the whole catalog, and reused on
+  every later link to the same actor (`personId` is unique). A bare figure
+  (Ip Man, a never-credited master) is deduped by exact case-insensitive
+  name the same way, so pasting "Ip Man" into two different chains reuses
+  one figure rather than forking the lineage in two. This was buildable
+  cleanly because nothing had shipped yet — no real data to migrate, so the
+  not-yet-released `LineageRelation` migration was rewritten in place rather
+  than layered under a second one.
+- **"Who played this figure" is derived, never stored.** Rather than a field
+  on `LineageFigure` pointing at a specific actor, `getPortrayals(name)`
+  looks up `CastCredit` rows with a matching `characterName` live, on
+  render, wherever a bare figure appears in the two public tree pages (the
+  admin tree skips this — it's browsing flavor for readers, not something an
+  editor needs while linking people). A stored link would have to pick one
+  actor as *the* portrayal, which is simply false for a role recast across
+  films; a lookup can show all of them and stays correct as new movies get
+  added, with no upkeep.
+- **The figure picker (`AdminLineageFigurePicker`) searches actors and
+  existing bare figures together**, plus a trailing "add as a non-actor
+  figure" row for a name matching neither — but bulk chain-import stays
+  actor-matching only (unchanged from the entry above): a name it can't
+  resolve to an actor still shows "Not found" rather than minting a bare
+  figure automatically, so a typo in a 200-line paste doesn't quietly become
+  a permanent phantom entry. Adding a non-actor figure stays a deliberate,
+  reviewed action through the picker.
+- **Public URLs split accordingly**: an actor-linked figure's page is still
+  `/actors/[personId]/lineage` (stable, matches the rest of the site's
+  actor-centric URLs); a bare figure gets `/lineage/[figureId]` instead,
+  since it has no actor page to live under. Both render through the same
+  `LineageTreeBody` component; the figure route redirects into the actor
+  route if a figure turns out to be actor-linked after all (a stale link,
+  someone bookmarking mid-edit), so there's exactly one canonical URL per
+  figure either way.
+
+### Sifu Lineage: actor-page teaser moved from a stat card to its own tree section
+**PR #TBD.** The compact **Lineage** card (sized like Details/Sparring
+Partner, in the stats row) was replaced with a full-width **Lineage**
+section further down the actor page, rendering `LineageTreeBody` — the same
+component the full `/lineage` page uses — instead of a plain list of names.
+Two options were on the table: shrink a second, bespoke tree renderer down
+to stat-card width, or move the teaser out of the card row entirely and
+reuse the existing renderer at 1 up/1 down (the same depth the card showed).
+Chosen for the same reason as most of this feature's other calls: reusing
+what's already built beats building a smaller second version of it — a
+stat-card-sized tree would need its own cramped layout with no payoff
+besides staying in that row. The tradeoff, accepted deliberately: Known
+For/Filmography now sit one section lower on any actor page with lineage
+data.
+
+### Sifu Lineage: `LineageTreeBody` rewritten as computed SVG layout, not flexbox
+**PR #TBD.** The flexbox-and-arrow-glyphs rendering (generation rows as
+`flex-col`, siblings as a wrapped `flex-wrap` row) read ambiguously once a
+sibling row wrapped into a stack on a phone — reported directly against the
+live site (a screenshot showing Jackie Chan's two students stacked with no
+visual difference from a 3-generation chain). Two rounds of CSS patches on
+top of that rendering (a bordered "cluster" box, then a text label naming
+the relationship) still didn't read as clearly as the original wireframe
+mockup, which used real connecting lines between fixed node positions —
+fed back directly ("i like the view in mockup better... clear lines of
+linkage").
+
+Rather than keep patching the flexbox version, `LineageTreeBody` now
+computes an explicit layout (`buildLayout` in the component): every node's
+x/y in trunk-centered units (x=0 is the primary sifu/student chain, row
+index counts generations from the centered figure), shifted once into
+pixel space by the tree's actual extent, then rendered as one absolutely-
+positioned `<svg>` of connecting lines under a set of absolutely-positioned
+node elements — the same technique the original `.dc.html` wireframe used,
+ported into real Tailwind/JSX. A hand-rolled layout rather than a graph-
+layout dependency, same reasoning as the primary-sifu-plus-dotted-line call
+above: this tree has exactly one branching shape (a single chain above and
+below, fanning out per generation), not an arbitrary graph, so plain
+arithmetic covers it without pulling in dagre/elkjs. Slot width and node
+label width were both narrowed in the same pass (a long name like "Michael
+Chow Man-Kin" was pushing generation rows wider than necessary) so names
+wrap within a fixed column instead of stretching the row.
+
+### Lineage: "sifu"/"student" dropped from display copy, not swapped for another role term
+**PR #TBD.** Once non-actor figures could be historical martial artists or
+characters (see "LineageFigure introduced" above), the site owner flagged
+that "sifu" itself doesn't fit every relationship the feature records —
+a specific term for a specific tradition, presupposing a fit that isn't
+guaranteed. The first request read as a rename ("drop sifu and student
+wording... more generic as follows: ..."), but a follow-up clarified the
+actual ask: avoid *displaying* the terms, not replace them with a different
+role noun (a straight `sifu` → `trainer` / `student` → `trainee` swap would
+have kept the same problem — assuming a trainer/trainee relationship fits
+every entry, which is no more guaranteed than "sifu" did).
+
+Structural UI (admin form field labels, the admin tree's add buttons and
+popover, the secondary-link tag) was reworded around the tree's own
+generation axis instead of a role — "Earlier"/"Later" — reusing language
+the admin tree already used for expanding the tree itself ("show earlier
+generations"/"show more generations …"), so the new wording isn't a fresh
+vocabulary, just the existing one applied consistently. The "co-sifu" tag
+on secondary nodes in the public tree (`LineageTreeBody`) was dropped
+entirely rather than relabeled — the dashed border and line already carry
+that meaning visually, and every other node label in that tree is a plain
+name with no role annotation. Internal identifiers (`sifuId`/`studentId`
+fields, the `LineageRelation.sifu`/`student` relations, `addMode`'s
+`"sifu"`/`"student"` values) were left as-is — the request was about
+*display* copy, and renaming the data model over a wording call would risk
+another migration for no user-facing benefit (see the "Production migration
+incident" entry under Foundational Changes for what that risk actually
+costs).
+
+The public disclaimer shown on every actor/figure lineage view was rewritten
+in the same pass, replacing wording that leaned on "training lineage/who
+trained whom" with role-neutral framing the site owner drafted and then
+asked to have reworded for tone: *"'Lineage' is our tribute to the martial
+artists who built this genre, generation by generation. Hand-curated,
+always a work in progress — reach out if you spot something to fix."*
+
+### Lineage: groups are a normal figure in the owner's own row, not a lateral position
+**PR #TBD.** Some "students" belong to a collective rather than being
+trained one-on-one — a stunt team, say — and the site owner wanted a way to
+show that. The first attempt (worked through live with mockups, not
+committed) put the group beside its owner, in the same lateral lane the
+tree already uses for a secondary sifu, with the team's own members fanning
+out beneath it inline. Stress-testing that version at real production pixel
+sizes inside a 340px-wide frame (a typical phone's content width) showed
+two problems: the lateral lane has no width cap today, so it grows with
+every additional co-sifu *or* group with nothing to stop it (the mockup
+already needed ~640px for a single team at comfortable spacing); and — the
+one that actually killed it — reusing the co-sifu lane means "this figure
+trained the owner," backwards from what leading a team is. Asking what the
+tree looks like centered on a *member* of the team (not its owner) is what
+surfaced that: walking up from a member, the team has to be *above* them,
+in the ordinary ancestor position, not off to the side of whoever leads it.
+
+The shipped design instead makes a group a completely ordinary
+`LineageFigure` (`isGroup: true`) positioned exactly where any of the
+owner's other primary students would be — one entry in their descendant
+row, distinguished only by node shape (a rounded square with a group glyph,
+`GroupIcon` in `lineage-group-icon.tsx`) rather than a special position.
+Its own members are simply *its* primary students, one generation further
+down, rendered by the exact same recursive fan-out every figure already
+gets — no new positioning concept, no new width-growth risk, and centering
+on a member of the team makes the team show up for free as an ordinary
+ancestor. The one deliberate asymmetry: a group's own children are capped
+by a separate, larger `DEFAULT_GROUP_SIBLING_LIMIT` (12, vs. 6 for an
+individual) before the overflow badge kicks in, since a team's roster can
+run far larger than any one person's students — surfacing more of it by
+default is worth the extra vertical space on a group's own page.
+
+### Lineage: bare figures get a delete/toggle-group escape hatch, cascade over block-if-linked
+**PR #TBD.** Found immediately while testing groups: a figure created
+without the "this is a group" box checked (or, more generally, any bare
+figure entered wrong) had no way to fix or remove itself short of a manual
+database edit -- `deleteLineageRelation` only ever removed one link, never
+the figure it points at. Two small admin actions close that gap, both
+scoped to bare (non-actor) figures only: `setFigureIsGroup` flips the flag
+on an existing figure in place, and `deleteBareFigure` removes the figure
+outright.
+
+Delete goes straight to removing the figure rather than first requiring
+every link to it be deleted by hand -- the schema already cascades
+`LineageRelation` rows through `onDelete: Cascade` on both `sifuId` and
+`studentId`, so blocking on "has links" would just make the admin do that
+cascade manually before the button worked, for no real safety benefit; a
+`window.confirm` naming what's about to happen (same pattern the existing
+single-link delete already uses) is the actual safeguard. Both actions
+reject an actor-linked figure server-side -- it's auto-managed by
+`resolveFigureForPerson` (upserted whenever that actor is linked again), so
+deleting one wouldn't stick, and "is this actor a group" isn't a coherent
+state to put a real person's figure in.
+
 - **Drag-and-drop reordering for ranked list items** — `ListItemRows`
   (`src/components/list-item-rows.tsx`) now has move-to-top/move-to-bottom
   buttons alongside up/down (see **Feature Decisions** above), covering the
@@ -4338,3 +4608,14 @@ Lists UI for mobile-friendliness rather than in response to a bug report.
   viewing-format change. Naming, vote UI, and how (or whether) results
   surface on the scene's permalink page are all still open; not scoped
   further than this concept yet.
+- **A dense member list for a large lineage group** — raised during design
+  review for groups (see **Feature Decisions** above: "Lineage: groups are
+  a normal figure in the owner's own row, not a lateral position"). A group
+  centered on its own page gets a larger sibling cap than an individual
+  (`DEFAULT_GROUP_SIBLING_LIMIT`), but a real stunt team can still run past
+  it — the same shape of problem `LineageTreeBody`'s tree fan doesn't solve
+  on its own that "Actor Filmography split into Known For + a dense list"
+  (above) already solved for a long filmography: a capped visual treatment
+  up top, a plain full list below for everything past it. Not built —
+  raised as a recommendation, not requested, and no real group in the
+  catalog has hit the current cap yet to make it pressing.

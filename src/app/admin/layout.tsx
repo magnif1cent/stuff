@@ -18,6 +18,7 @@ const NAV_LINKS = [
   { href: "/admin/movies", label: "Movies", adminOnly: false },
   { href: "/admin/import", label: "Import from TMDB", adminOnly: true },
   { href: "/admin/fight-scene-tags", label: "Fight Scene Tags", adminOnly: false },
+  { href: "/admin/lineage", label: "Lineage", adminOnly: true },
   { href: "/admin/news", label: "News & Updates", adminOnly: true },
   { href: "/admin/account", label: "Account", adminOnly: false },
 ];
