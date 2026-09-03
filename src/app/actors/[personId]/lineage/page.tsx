@@ -10,9 +10,9 @@ export async function generateMetadata({
   params: Promise<{ personId: string }>;
 }): Promise<Metadata> {
   const { personId } = await params;
-  const figureId = await getFigureIdForPerson(personId);
+  const figureId = await getFigureIdForPerson(personId).catch(() => null);
   if (!figureId) return {};
-  const tree = await getLineageTree(figureId, { up: 0, down: 0 });
+  const tree = await getLineageTree(figureId, { up: 0, down: 0 }).catch(() => null);
   if (!tree) return {};
   return { title: `${tree.center.name} — Lineage` };
 }
@@ -38,11 +38,11 @@ export default async function ActorLineagePage({
   const up = Number(upParam) || DEFAULT_UP;
   const down = Number(downParam) || DEFAULT_DOWN;
 
-  const figureId = await getFigureIdForPerson(personId);
+  const figureId = await getFigureIdForPerson(personId).catch(() => null);
   if (!figureId) {
     notFound();
   }
-  const tree = await getLineageTree(figureId, { up, down, siblingLimit: 8 });
+  const tree = await getLineageTree(figureId, { up, down, siblingLimit: 8 }).catch(() => null);
   if (!tree) {
     notFound();
   }

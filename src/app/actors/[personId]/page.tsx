@@ -105,10 +105,19 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
   // Read-only: browsing an actor's page shouldn't itself create lineage
   // data for them just because they were looked at -- a LineageFigure only
   // ever gets created the moment an admin actually links someone.
-  const figureId = await getFigureIdForPerson(personId);
+  //
+  // Caught the same way `bio` below already tolerates TMDB being
+  // unreachable: Lineage is supplementary content on this page (same "no
+  // signal, no row" footing as Details/Sparring Partner), so a lookup
+  // failure here -- most likely the LineageFigure/LineageRelation
+  // migration not having been applied to this database yet -- should hide
+  // the section, not take down the whole actor page.
+  const figureId = await getFigureIdForPerson(personId).catch(() => null);
   const [bio, lineageTree] = await Promise.all([
     getTmdbPersonDetails(person.tmdbId).catch(() => null),
-    figureId ? getLineageTree(figureId, { up: 1, down: 1, siblingLimit: 3 }) : Promise.resolve(null),
+    figureId
+      ? getLineageTree(figureId, { up: 1, down: 1, siblingLimit: 3 }).catch(() => null)
+      : Promise.resolve(null),
   ]);
   const lineageHasContent =
     !!lineageTree &&
