@@ -27,8 +27,14 @@ import { getPersonSignatureVoteSummary } from "@/lib/person-signature-votes";
 import { SignatureVoteProvider, SignatureSpotlight, SignatureVoteButton } from "@/components/actor-signature-vote";
 import { getLineageTree, getFigureIdForPerson } from "@/lib/lineage";
 import { LineageTreeBody } from "@/components/lineage-tree-body";
-import { getTopCollaborators } from "@/lib/collaborators";
-import { ActorCollaboratorsSection } from "@/components/actor-collaborators-section";
+
+// Split out from ActorPage's body so the Math.random() call it wraps isn't
+// flagged as an impurity inside the page's own render function (React's
+// purity rules apply to the component body itself, not to plain helpers it
+// calls) -- see the Sparring Partner tie-break below.
+function pickRandom<T>(items: T[]): T {
+  return items[Math.floor(Math.random() * items.length)];
+}
 
 const getPerson = cache((personId: string) =>
   prisma.person.findUnique({
@@ -102,11 +108,10 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
   //
   // Caught the same way `bio` below already tolerates TMDB being
   // unreachable: Lineage is supplementary content on this page (same "no
-  // signal, no row" footing as the Details card and the Collaborators
-  // section below), so a lookup failure here -- most likely the
-  // LineageFigure/LineageRelation migration not having been applied to this
-  // database yet -- should hide the section, not take down the whole actor
-  // page.
+  // signal, no row" footing as Details/Sparring Partner), so a lookup
+  // failure here -- most likely the LineageFigure/LineageRelation
+  // migration not having been applied to this database yet -- should hide
+  // the section, not take down the whole actor page.
   const figureId = await getFigureIdForPerson(personId).catch(() => null);
   const [bio, lineageTree] = await Promise.all([
     getTmdbPersonDetails(person.tmdbId).catch(() => null),
@@ -330,16 +335,40 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
         })()
       : null;
 
-  // Ranked list of this actor's collaborators, blending shared movies and
-  // shared fight scenes -- replaces the old single "Sparring Partner" card,
-  // which only looked at fight-scene tagging and so showed nothing for an
-  // actor with a rich filmography but few tagged fight scenes. See
-  // DECISIONS.md.
-  const collaborators = await getTopCollaborators(
-    person.id,
-    movies.map((m) => m.id),
-    fightScenes.map((s) => s.id),
-  );
+  // "Sparring partner" -- the co-star this actor shares the most distinct
+  // fight scenes with. Requires at least 2 shared scenes so one coincidental
+  // scene together doesn't crown a "partner" (same minimum-sample-size
+  // reasoning as TOP_RATED_MIN_RATINGS in src/lib/ratings.ts). Genuinely
+  // sparse -- most actor pairs never clear the threshold -- so most actors
+  // simply won't have this stat, same "no signal, no row" rule the rest of
+  // this block and the You Might Also Like rails already follow.
+  //
+  // A tie at the top count is picked at random (not deterministically, e.g.
+  // by insertion order) and disclosed via tieCount, rather than silently
+  // crowning whichever candidate happened to be encountered first -- a
+  // visitor who's counted the scenes themselves should never see this card
+  // name someone else with no indication the pick wasn't clear-cut. Note
+  // this means the shown partner can differ between page loads when a tie
+  // exists, since there's no caching keying the pick to a stable seed.
+  const MIN_SPARRING_SCENES = 2;
+  const sparringCounts = new Map<string, { name: string; count: number }>();
+  for (const scene of fightScenes) {
+    for (const castMember of scene.cast) {
+      if (castMember.personId === person.id) continue;
+      const existing = sparringCounts.get(castMember.personId);
+      sparringCounts.set(castMember.personId, {
+        name: castMember.person.name,
+        count: (existing?.count ?? 0) + 1,
+      });
+    }
+  }
+  const eligiblePartners = [...sparringCounts.entries()]
+    .map(([id, partner]) => ({ id, ...partner }))
+    .filter((p) => p.count >= MIN_SPARRING_SCENES);
+  const topCount = eligiblePartners.length > 0 ? Math.max(...eligiblePartners.map((p) => p.count)) : 0;
+  const topPartners = eligiblePartners.filter((p) => p.count === topCount);
+  const sparringPartner: { id: string; name: string; count: number; tieCount: number } | null =
+    topPartners.length > 0 ? { ...pickRandom(topPartners), tieCount: topPartners.length } : null;
 
   // Plain bordered dt/dd "Details" card, same treatment as the movie page's
   // Studio/Country/etc. box -- rolled back from an earlier gold/Spotlight-styled
@@ -385,6 +414,29 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
     </div>
   );
 
+  // A relational fact, not a computed/voted "highlight" -- kept out of the
+  // Career Highlights grid (mixing a linked name in with quantitative stats
+  // was a category error) and out of its gold Spotlight styling (nothing
+  // here was earned by a vote). Plain neutral card, same footing as the
+  // movie page's Details box. Small today on purpose: this is the seed of a
+  // possible future collaboration/pairings section (see DECISIONS.md), not
+  // a final design for one.
+  const sparringPartnerCard = sparringPartner && (
+    <div className="w-56 shrink-0 rounded-md border border-neutral-800 bg-neutral-900 p-4">
+      <h3 className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">Sparring Partner</h3>
+      <p className="mt-2 truncate text-lg font-bold text-white">
+        <Link href={`/actors/${sparringPartner.id}`} className="hover:text-red-500">
+          {sparringPartner.name}
+        </Link>
+      </p>
+      <p className="text-xs text-neutral-500">
+        {sparringPartner.count} shared fight scenes
+        {sparringPartner.tieCount > 1 &&
+          ` · tied with ${sparringPartner.tieCount - 1} other${sparringPartner.tieCount - 1 === 1 ? "" : "s"}`}
+      </p>
+    </div>
+  );
+
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-10">
       <div className="mb-6 flex items-center gap-4">
@@ -411,9 +463,10 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
         </div>
       </div>
 
-      {(careerStatsCard || bio) && (
+      {(careerStatsCard || sparringPartnerCard || bio) && (
         <div className="mb-8 flex flex-col gap-6 sm:flex-row sm:items-start">
           {careerStatsCard && <div className="sm:w-72 sm:shrink-0">{careerStatsCard}</div>}
+          {sparringPartnerCard}
           {bio && (
             <div className="min-w-0 flex-1">
               {(bio.birthday || bio.place_of_birth) && (
@@ -448,8 +501,6 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
           <LineageTreeBody tree={lineageTree} up={1} down={1} />
         </div>
       )}
-
-      <ActorCollaboratorsSection personId={person.id} collaborators={collaborators} />
 
       <SignatureVoteProvider
         personId={person.id}
