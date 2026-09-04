@@ -131,7 +131,6 @@ one.
 - [Lineage: "sifu"/"student" dropped from display copy, not swapped for another role term](#lineage-sifustudent-dropped-from-display-copy-not-swapped-for-another-role-term)
 - [Lineage: groups are a normal figure in the owner's own row, not a lateral position](#lineage-groups-are-a-normal-figure-in-the-owners-own-row-not-a-lateral-position)
 - [Lineage: bare figures get a delete/toggle-group escape hatch, cascade over block-if-linked](#lineage-bare-figures-get-a-deletetoggle-group-escape-hatch-cascade-over-block-if-linked)
-- [Sparring Partner replaced by a ranked Collaborators section, styled after Lineage's connecting lines](#sparring-partner-replaced-by-a-ranked-collaborators-section-styled-after-lineages-connecting-lines)
 
 **Deferred & Backlog**
 
@@ -4375,73 +4374,6 @@ reject an actor-linked figure server-side -- it's auto-managed by
 deleting one wouldn't stick, and "is this actor a group" isn't a coherent
 state to put a real person's figure in.
 
-### Sparring Partner replaced by a ranked Collaborators section, styled after Lineage's connecting lines
-**PR #TBD.** The single "Sparring Partner" card (see "Actor Career Highlights..."
-and "Sparring Partner tie-breaking..." above) only ever looked at fight-scene
-tagging, and required 2+ shared fight scenes before naming anyone — most
-actors, including ones with a substantial filmography, showed nothing at all
-under that design. Revisiting the "expand actor-to-actor collaboration data"
-backlog item (see Deferred & Backlog below) replaced it with a ranked
-**Collaborators** section, `getTopCollaborators` in `src/lib/collaborators.ts`.
-
-Ranked by shared `APPROVED` movies first, then shared fight scenes, then name
-— deliberately not a blended single score. This app avoids composite/weighted
-stats elsewhere (the unweighted Community Rating, see above), and a blended
-number here would be a black box a visitor can't audit ("why is X ranked above
-Y?"). No minimum-count threshold either, unlike the old card: naming one
-person as *the* partner off a single coincidence was misleading, but a ranked
-top-N list carries no such claim, so an actor with a small filmography can
-show a collaborator with just one shared movie.
-
-The visual design went through an unusually large number of candidates before
-landing — a portrait card grid, leaderboard-style rows, a leaderboard/table
-hybrid, a minimal "facepile" folded into the Details card, a movie-poster-
-anchored rail, tabbed movies/fights lenses, the site's own Fight Ticket
-ink-on-cream motif, a trading-card treatment, a photo-scrapbook collage, a
-plain data table, an inline accordion, a scatter plot (shared movies vs.
-shared fight scenes as X/Y axes), and several matrix/heatmap variants
-(movie × collaborator, with dot markers, intensity shading, and split cells).
-Landed on drawing collaborators as nodes on a connecting trunk line branching
-off the actor's own portrait, reusing `LineageTreeBody`'s line/node visual
-language — collaboration is the same kind of relational fact Lineage already
-draws, just co-starring instead of training. The top-ranked match's connector
-and avatar ring pick up the accent red, echoing how Lineage distinguishes a
-confirmed line from a dashed one, except here it marks the strongest match
-rather than certainty. The gold Signature Spotlight treatment was ruled out
-without a mockup, since an existing decision already keeps collaboration data
-out of that styling ("nothing here was earned by a vote" — see "Actor Career
-Highlights..." above).
-
-Two whole categories got eliminated outright rather than refined further.
-**Timeline-shaped layouts** (a literal career timeline, a year-based calendar
-matrix, and a per-row sparkline strip) all index by year, which cannot
-represent a collaborator who worked with the actor more than once without
-either a bracket that misleadingly implies continuity, or lane assignment
-(a Gantt-chart layout) once two repeat collaborators' ranges overlap — a
-disproportionate amount of UI for a section meant to stay lightweight. The
-**orbital network** (collaborators arranged radially around the actor, closer
-= stronger) has a hard node-count ceiling around 15-20 unrelated to actual
-demand for it — worse, this catalog's real actors can have up to ~20
-collaborators, which is exactly the case that breaks it. Movie-indexed matrix
-variants survived this cut because they scale by adding rows, the same way
-`FilmographyList` already does at any length.
-
-Every collaborator links to a new pairwise page,
-`/actors/[personId]/with/[otherPersonId]` (`getSharedCollaborations`, same
-file), listing every shared movie (with each side's character name where
-recorded) and shared fight scene between the two actors.
-
-A separate, richer "Fight Analytics" page — surfacing `FightSceneTag`/
-`FightSceneCast` patterns site-wide (tag distribution, most frequent
-fight-scene pairings, maybe a site-wide co-occurrence matrix) — was
-considered as the home for the chart-heavy candidates from this same
-exploration (the scatter plot, the matrix/heatmap variants, a proportional
-bar chart) rather than cramming them into a single actor's small dataset,
-where they'd mostly be sparse and unconvincing. Explicitly not building it
-now: a hard blocker on there being enough fight-scene data in the catalog to
-make those visualizations meaningful rather than empty. See Deferred &
-Backlog below.
-
 - **Drag-and-drop reordering for ranked list items** — `ListItemRows`
   (`src/components/list-item-rows.tsx`) now has move-to-top/move-to-bottom
   buttons alongside up/down (see **Feature Decisions** above), covering the
@@ -4499,22 +4431,17 @@ Backlog below.
   no poster/rating fields to render) — then pulled back out before merge, not
   ready to ship yet. The design above is the starting point for whoever
   revisits this, not a from-scratch redesign.
-- **Fight Analytics page** — a dedicated site-wide analytics page leveraging
-  `FightSceneTag` and `FightSceneCast` data specifically (tag-category
-  distribution, most frequent cast pairings *within fight scenes* rather than
-  movie co-starring, maybe a site-wide fight-scene co-occurrence matrix once
-  there's enough volume for one to be dense rather than sparse). Considered
-  as the home for the chart-heavy treatments explored while building the
-  actor page's Collaborators section (see "Sparring Partner replaced by a
-  ranked Collaborators section..." above) — a scatter plot, matrix/heatmap
-  variants, a proportional bar chart — none of which were convincing against
-  one actor's small dataset but could be with cross-catalog data. Explicitly
-  a hard blocker, not just deprioritized: not enough fight scenes/tags exist
-  in the catalog yet to make these visualizations meaningful. Once there's
-  more data, some resulting highlights (e.g. "this pairing ranks in the
-  site's top 5 most-tagged fight duos") could get surfaced back onto
-  individual actor pages, sourced from this page rather than recomputed
-  there.
+- **Expand actor-to-actor collaboration data beyond the single "Sparring
+  Partner" stat** — that stat (top co-star by shared fight scenes, min. 2 to
+  qualify) and the shelved co-starring signal above (see the previous bullet)
+  both compute pairwise actor relationships already, but only surface a single
+  number/name each. Worth exploring as its own feature once the similar-actors
+  rail (or something like it) ships: a ranked list of an actor's top
+  collaborators (blending movie co-starring and fight-scene pairings, not just
+  the single top match), a dedicated pairwise view ("every scene/movie X and Y
+  share"), or a site-wide "most frequent pairings" leaderboard. No schema
+  change needed — same underlying `CastCredit`/`FightSceneCast` data, just
+  more of it surfaced and packaged differently.
 - **Toggle to a compact table view for the Filmography list** — a full IMDb-style
   decade-grouped text table (no poster thumbnails, ~3x the density of the shipped
   rows-with-posters view) was prototyped alongside it and works; not shipped as a

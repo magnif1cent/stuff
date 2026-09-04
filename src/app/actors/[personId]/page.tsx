@@ -449,10 +449,7 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
         </div>
       )}
 
-      <ActorCollaboratorsSection
-        person={{ id: person.id, name: person.name, profilePath: person.profilePath }}
-        collaborators={collaborators}
-      />
+      <ActorCollaboratorsSection personId={person.id} collaborators={collaborators} />
 
       <SignatureVoteProvider
         personId={person.id}
