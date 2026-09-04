@@ -836,7 +836,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
         />
 
         <div className="mb-4 rounded-md border border-neutral-800 bg-neutral-900 p-4">
-          <h3 className="font-cond mb-3 text-xs tracking-widest text-neutral-500 uppercase">Community Data</h3>
+          <h3 className="font-cond mb-3 text-xs tracking-widest text-neutral-500 uppercase">Movie Data</h3>
           <FightCountControl
             movieId={movie.id}
             initialCount={movie.trueFightCount}
