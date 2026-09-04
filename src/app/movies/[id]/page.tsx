@@ -44,6 +44,8 @@ import { MovieOverviewSnippet } from "@/components/movie-overview-snippet";
 import { MovieDetailsTabs } from "@/components/movie-details-tabs";
 import { RecommendedBadges } from "@/components/recommended-badge";
 import { FightCountControl } from "@/components/fight-count-control";
+import { EraSettingControl } from "@/components/era-setting-control";
+import { eraSettingLabel } from "@/lib/era-settings";
 
 // How many of a movie's fights the movie page itself teases -- the rest live
 // on the dedicated /movies/[id]/fights collection page, linked via "View all".
@@ -149,6 +151,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
     myMemberReview,
     movieRecommenders,
     recentFightCountEdits,
+    recentEraSettingEdits,
     funFacts,
     collectionSiblings,
     similarMovies,
@@ -200,6 +203,12 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
       : null,
     getMovieRecommenders(movie.id),
     prisma.fightCountEdit.findMany({
+      where: { movieId: movie.id },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+      include: { editedBy: { select: { username: true } } },
+    }),
+    prisma.eraSettingEdit.findMany({
       where: { movieId: movie.id },
       orderBy: { createdAt: "desc" },
       take: 5,
@@ -532,6 +541,14 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
     editedBy: edit.editedBy,
   }));
 
+  const serializedEraSettingEdits = recentEraSettingEdits.map((edit) => ({
+    id: edit.id,
+    previousValue: edit.previousValue,
+    newValue: edit.newValue,
+    createdAt: edit.createdAt.toISOString(),
+    editedBy: edit.editedBy,
+  }));
+
   const myFunFactVoteMap = new Map(myFunFactVotes.map((v) => [v.factId, v.value as 1 | -1]));
   const serializedFunFacts = funFacts
     .map((fact) => {
@@ -661,6 +678,15 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
                 className="underline decoration-neutral-600 underline-offset-2 hover:text-neutral-200"
               >
                 Fight Count: {movie.trueFightCount}
+              </a>
+            )}
+            {movie.eraSetting != null && (
+              <a
+                href="#era-setting"
+                title="Historical period the movie is set in, maintained by members — click to view or edit"
+                className="underline decoration-neutral-600 underline-offset-2 hover:text-neutral-200"
+              >
+                Era: {eraSettingLabel(movie.eraSetting)}
               </a>
             )}
           </div>
@@ -813,6 +839,13 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
           movieId={movie.id}
           initialCount={movie.trueFightCount}
           recentEdits={serializedFightCountEdits}
+          signedIn={!!session?.user}
+        />
+
+        <EraSettingControl
+          movieId={movie.id}
+          initialEra={movie.eraSetting}
+          recentEdits={serializedEraSettingEdits}
           signedIn={!!session?.user}
         />
 

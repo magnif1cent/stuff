@@ -60,6 +60,7 @@ one.
 
 **Feature Decisions**
 
+- [Era Setting: a Fight-Count-style field for the historical period a movie is set in](#era-setting-a-fight-count-style-field-for-the-historical-period-a-movie-is-set-in)
 - [Admin sidebar nav grouped by domain, not build order](#admin-sidebar-nav-grouped-by-domain-not-build-order)
 - [Meme Generator added as an admin tab, not a member feature](#meme-generator-added-as-an-admin-tab-not-a-member-feature)
 - [Leaderboard reachable from a "Lists" nav hover submenu](#leaderboard-reachable-from-a-lists-nav-hover-submenu)
@@ -1069,6 +1070,35 @@ catalog size and traffic. This is the structural fix.
   Vercel's resizing wasn't buying anything — marked `unoptimized` too.
 
 ## Feature Decisions
+
+### Era Setting: a Fight-Count-style field for the historical period a movie is set in
+**PR #TBD.** Requested as "expand the Fight Count section to collect more
+user entries for different data" — narrowed down to one field (the
+historical period/dynasty a movie is *set in*, not its real-world release
+date) via two explicit choices: what data (an open-ended pick from
+candidates), and what editing model. This also happens to close the data
+gap the "Historical timeline page" backlog item was blocked on (see
+Deferred & Backlog below) — not the original ask, but the same underlying
+attribute, so `Movie.eraSetting` covers both.
+
+- **Copies Fight Count's model exactly, by explicit request over the
+  Ratings alternative** — single shared value, any verified member can
+  overwrite it, last-edit-wins, no consensus step, `EraSettingEdit` as the
+  same kind of accountability trail `FightCountEdit` is (not a second source
+  of truth). Same guardrails too: verified email (staff exempt), rate
+  limiting, full public edit history. Reuses the identical page placement
+  (byline link up top, full control right above it) and component shape —
+  `era-setting-control.tsx` is `fight-count-control.tsx` with a `<select>`
+  in place of the number input.
+- **Fixed dropdown, not free text** — the one real deviation from Fight
+  Count's shape (a bounded number vs. a closed vocabulary). `ERA_SETTINGS`
+  in `src/lib/era-settings.ts` is a hardcoded key/label list, same pattern
+  as `RATING_CATEGORIES`: a small closed set with app-level validation, not
+  an admin-configurable taxonomy table like `Genre`/`FightSceneTag`. Chosen
+  specifically so the still-unbuilt timeline page doesn't inherit unbounded
+  spelling variants of the same dynasty from a free-text field — the same
+  reasoning the backlog entry had already worked out, just executed as
+  member-editable instead of admin-curated.
 
 ### Admin sidebar nav grouped by domain, not build order
 **PR #TBD.** Eight tabs deep once Meme Generator shipped, and the nav
@@ -4591,22 +4621,25 @@ state to put a real person's figure in.
 - **Historical timeline page** — a page visually plotting movies along a
   timeline of Chinese historical periods/dynasties each movie is *set in*
   (not its real-world release date, which `Movie.releaseDate` already
-  covers). The real gap: no source has this data. TMDB doesn't track a
-  film's in-story historical setting, so it'd need a new admin-curated
-  attribute — likely a fixed period/dynasty taxonomy (mirroring the
-  `Genre`/`FightSceneTag` pattern) rather than free text, to keep the
-  timeline groupable/orderable. The timeline visualization itself (not
-  just the data model) is also a real, non-trivial UI build, not a
-  reskin of an existing list/grid view.
+  covers). The data gap this was blocked on is now closed: `Movie.eraSetting`
+  (see "Era Setting: Fight-Count-style field for the historical period a
+  movie is set in" under Feature Decisions) is exactly that fixed
+  period/dynasty attribute — built member-editable (Fight Count's model)
+  rather than admin-curated as originally guessed here, but still a closed
+  vocabulary (`ERA_SETTINGS`), so it's still groupable/orderable. What's
+  still not built: the timeline visualization itself, a real, non-trivial UI
+  in its own right, not a reskin of an existing list/grid view — and most
+  movies don't have an era set yet, since it's opt-in per movie like Fight
+  Count.
 - **Fun facts / history section per movie** — admin-curated trivia or
   historical context shown on the movie page, likely alongside (or as an
-  extension of) the existing Editorial Review. Real overlap with the
-  "Historical timeline page" item above worth resolving before either is
-  built: if "history" here means the film's *in-story* historical
-  setting (what dynasty/period it's set in), that's the same underlying
-  data gap the timeline page needs; if it means real-world trivia
-  (production history, behind-the-scenes facts), it's a simpler,
-  unrelated content field. Scope that distinction first.
+  extension of) the existing Editorial Review. Previously flagged as
+  overlapping the "Historical timeline page" item above until it was clear
+  whether "history" meant the film's in-story setting or real-world trivia
+  — that in-story-setting half is now `Movie.eraSetting` (see "Era Setting"
+  under Feature Decisions), so if this is still wanted, it's specifically
+  the real-world-trivia half: production history, behind-the-scenes facts,
+  a simpler content field unrelated to the timeline/era work.
 - **Expand member profile** — tabbed reorganization, a member-editable
   `bio` field, an Activity tab, a Liked Lists tab (merged into the Lists
   tab's "My Lists" / "Liked" toggle), and a stats strip have all shipped

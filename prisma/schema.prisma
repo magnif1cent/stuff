@@ -64,6 +64,7 @@ model User {
   memberListLikes     MemberListLike[]
   movieRecommendations MovieRecommendation[]
   fightCountEdits     FightCountEdit[]
+  eraSettingEdits     EraSettingEdit[]
   funFacts            FunFact[]
   funFactVotes        FunFactVote[]
   memberReviews       MemberReview[]
@@ -184,6 +185,14 @@ model Movie {
   // not as a second source of truth.
   trueFightCount Int?
 
+  // Member-maintained historical period/dynasty the movie is *set in* (not
+  // its real-world release date — see releaseDate above). Same shared-value,
+  // last-edit-wins model as trueFightCount, for the same reason: no built-in
+  // resistance to a bad edit, so paired with the same guardrails and an
+  // EraSettingEdit accountability trail rather than left unprotected.
+  // Stores an ERA_SETTINGS key (src/lib/era-settings.ts), not free text.
+  eraSetting String?
+
   // "PENDING" | "APPROVED" — member-submitted movies (see submittedBy below)
   // start PENDING and are hidden from every public listing/search until an
   // admin approves them; admin imports (single-title, keyword, bulk CSV) go
@@ -205,6 +214,7 @@ model Movie {
   memberListEntries MemberListEntry[]
   recommendations MovieRecommendation[]
   fightCountEdits FightCountEdit[]
+  eraSettingEdits EraSettingEdit[]
   funFacts        FunFact[]
   memberReviews   MemberReview[]
   signatureVotes  PersonSignatureVote[]
@@ -234,6 +244,23 @@ model FightCountEdit {
   editedById    String
   previousValue Int?
   newValue      Int
+  createdAt     DateTime @default(now())
+
+  movie    Movie @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  editedBy User  @relation(fields: [editedById], references: [id], onDelete: Cascade)
+
+  @@index([movieId])
+}
+
+// Accountability trail for Movie.eraSetting edits — same shape and same
+// reasoning as FightCountEdit above, just String values (ERA_SETTINGS keys)
+// instead of Int.
+model EraSettingEdit {
+  id            String   @id @default(cuid())
+  movieId       String
+  editedById    String
+  previousValue String?
+  newValue      String
   createdAt     DateTime @default(now())
 
   movie    Movie @relation(fields: [movieId], references: [id], onDelete: Cascade)

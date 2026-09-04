@@ -25,6 +25,7 @@ An IMDB-style website for kung fu and martial arts films, built for martial arts
 - [Member Movie Submissions](#member-movie-submissions)
 - [Fights](#fights)
 - [Fight Count](#fight-count)
+- [Era Setting](#era-setting)
 - [Tops](#tops)
 - [Fun Facts](#fun-facts)
 - [Actor Pages](#actor-pages)
@@ -54,6 +55,7 @@ An IMDB-style website for kung fu and martial arts films, built for martial arts
 - Movie pages with cast, synopsis, a community rating, a separate admin-only "Editors' Score", an admin-authored editorial review, and a per-movie discussion thread (with spoiler tags, edit/delete on your own posts, and admin moderation). Members and admins can also rate a movie by category (Fight Choreography, Story, Acting) alongside the overall score, shown as a per-category average when at least one rating exists — see [Ratings](#ratings) below
 - **Fights**: members tag specific fight scenes within a movie — YouTube clip (with an optional start timestamp), the actors involved (picked from that movie's cast), and category tags (e.g. "Weapon Duel", "One vs. Many") — with their own member rating, a separate admin rating, admin verification, and a shareable permalink page (see [Fights](#fights) below)
 - **Fight Count**: a member-maintained "true" fight count on every movie page, separate from the count of cataloged Fights — see [Fight Count](#fight-count) below
+- **Era Setting**: a member-maintained historical period/dynasty the movie is set in, picked from a fixed list — see [Era Setting](#era-setting) below
 - **Fun Facts**: an IMDB "Did you know"-style trivia section above the Discussion thread — members add individual entries, and other members thumbs-up/down each one, ranked by net vote score — see [Fun Facts](#fun-facts) below
 - Actor pages (`/actors/[personId]`) showing an actor's filmography and every fight scene they're tagged in, linked from a movie's cast list and a scene's "Featuring" line (see [Actor Pages](#actor-pages) below)
 - **Lineage**: admin-curated martial arts training lineages, connecting actors already in the catalog and non-actor figures alike — its own tree-view section on the actor page (direct links, one generation each way) links out to a full, multi-generation tree (see [Lineage](#lineage) below)
@@ -275,6 +277,12 @@ This is deliberately a single shared value, not an aggregate of individual membe
 - **Full edit history**, visible to everyone on the movie page (not just admins) — who changed it, from what value to what, and when. The value itself has no approval step, so this history is the only accountability trail; anyone can use it to spot and revert a bad edit, not just moderators.
 
 See `DECISIONS.md` for the fuller reasoning, including the aggregation-based alternative (à la ratings) that was considered and explicitly rejected in favor of this simpler model.
+
+## Era Setting
+
+An **Era** — the historical period/dynasty the movie is *set in*, not its real-world release date — shows up the same two places and follows the exact same model as Fight Count directly above: a byline link up top, a full editable control (value, Edit, edit history) sitting under it, single shared value with last-edit-wins and the identical guardrails (verified email, rate limiting, full public edit history).
+
+The one difference from Fight Count: this is a fixed dropdown of periods (`ERA_SETTINGS` in `src/lib/era-settings.ts`), not a free-typed value — chosen so a future page grouping/ordering movies by period (see `DECISIONS.md`) doesn't have to deal with unbounded spelling variants of the same dynasty. It's a hardcoded vocabulary like `RATING_CATEGORIES`, not an admin-configurable taxonomy table like Genre/Fight Scene Tags.
 
 ## Tops
 
