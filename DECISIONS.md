@@ -1101,6 +1101,14 @@ narrowing to admin-only sidesteps two of them entirely.
   matching the traditional meme format rather than a freeform text-box
   editor. A freeform editor is more UI/state for a v1 nobody has used yet;
   revisit if the fixed layout turns out too limiting.
+- **CSP's `img-src` widened to allow `blob:`** — the dropped-screenshot path
+  loads the file via `URL.createObjectURL()` into an `<img>`/`<canvas>`,
+  which the existing nonce-based CSP (see "Security headers and a
+  nonce-based CSP added" above) silently blocked before this PR — `blob:`
+  wasn't in `img-src`, so drop-a-screenshot rendered nothing. Caught by
+  actually running the feature in a browser rather than just `next build`;
+  `blob:` URLs are page-local (never fetched over the network), so this
+  doesn't meaningfully widen the app's real attack surface.
 - **`ADMIN`-only, not open to `REVIEWER`** — doesn't fit `REVIEWER`'s
   existing scope (movie-submission approval, fight-scene-tag management,
   fight-scene verification), so it follows the same default as
