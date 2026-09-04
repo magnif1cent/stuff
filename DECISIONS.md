@@ -60,6 +60,8 @@ one.
 
 **Feature Decisions**
 
+- [Admin sidebar nav grouped by domain, not build order](#admin-sidebar-nav-grouped-by-domain-not-build-order)
+- [Meme Generator added as an admin tab, not a member feature](#meme-generator-added-as-an-admin-tab-not-a-member-feature)
 - [Leaderboard reachable from a "Lists" nav hover submenu](#leaderboard-reachable-from-a-lists-nav-hover-submenu)
 - [Top Franchises leaderboard and collection pages](#top-franchises-leaderboard-and-collection-pages)
 - [List cloning](#list-cloning)
@@ -1067,6 +1069,111 @@ catalog size and traffic. This is the structural fix.
   Vercel's resizing wasn't buying anything — marked `unoptimized` too.
 
 ## Feature Decisions
+
+### Admin sidebar nav grouped by domain, not build order
+**PR #TBD.** Eight tabs deep once Meme Generator shipped, and the nav
+(`src/app/admin/layout.tsx`) had just been growing in whatever order each
+was added — no relation between adjacent items. Grouped into three: a
+`Dashboard` anchor, **Catalog** (Movies, Import from TMDB, Fight Scene
+Tags, Lineage — everything that shapes the data other pages read from),
+**Site Content** (News & Updates, Meme Generator — things published
+straight to visitors), and an `Account` anchor. Mocked up as an artifact
+before building (desktop grouped list + the real mobile behavior) so the
+grouping was agreed on before touching the component.
+
+- **Mobile gets a divider, not a label** — below the `sm` breakpoint this
+  nav isn't a sidebar at all; it's a horizontal scrolling strip
+  (`overflow-x-auto`, row not column). Stacked uppercase group labels don't
+  fit that shape, so mobile keeps the flat scroll and only gains a thin
+  vertical rule at each group boundary — visually consistent with desktop
+  without adding text width to an already-tight strip.
+- **One `NAV_GROUPS` render path for both breakpoints, via `sm:contents`**
+  — rather than two different markup trees, each group renders as a
+  wrapper `<div>` that's a real flex row on mobile (so its divider/links
+  size against the row) and becomes `display: contents` at `sm:` (so its
+  children join the outer nav's own `flex-col` list directly, picking up
+  its `gap-1` uniformly). Same divider element renders as a vertical rule
+  in row mode and a horizontal one in column mode purely through
+  breakpoint-prefixed width/height classes, not two separate elements.
+- **Empty groups render nothing, dividers included** — links are filtered
+  by `adminOnly` per group first, then a group with zero visible links
+  (e.g. Site Content for a `REVIEWER`, who can't reach either link in it)
+  is dropped entirely before the divider-index logic runs, so a `REVIEWER`
+  never sees a stray rule with nothing under it. Verified by screenshotting
+  the actual `reviewer@example.com` seed account, not just the `ADMIN`
+  view.
+
+### Meme Generator added as an admin tab, not a member feature
+**PR #TBD.** Built the backlog item tracked in both this file (see the old
+"Meme generator" bullet, now removed from Deferred & Backlog below) and
+GitHub issue #25 — scoped down from "a member-facing remix tool" to a plain
+`/admin/memes` tab, since the open design questions (image source, output
+handling, editor scope) hadn't been resolved for a public-facing feature and
+narrowing to admin-only sidesteps two of them entirely.
+
+- **Image source: proxied video thumbnail, with a dropped screenshot as an
+  explicit override** — searching a fight scene suggests
+  `youtubeThumbnailUrl()`'s video-level thumbnail (same caveat as always:
+  it's the *video's* thumbnail, not necessarily a frame at
+  `youtubeStartSeconds`), but the admin can drag-and-drop or browse for their
+  own screenshot instead, which always wins over the suggested thumbnail when
+  present. This answers the three-way "thumbnail vs. per-scene upload vs.
+  poster fallback" question from the original backlog entry without
+  committing to any one of them exclusively, and without new schema or Blob
+  storage for a per-scene canonical still. The thumbnail itself is proxied
+  through a new `/api/admin/memes/thumbnail` route rather than pointed at
+  `img.youtube.com` directly — that host doesn't send permissive CORS
+  headers, so drawing it into a `<canvas>` cross-origin would taint the
+  canvas and block `canvas.toBlob()` on export.
+- **Download-only, nothing persisted** — the meme is composited entirely
+  client-side on a `<canvas>` and downloaded as a PNG; no new Prisma model,
+  no server-side image storage. Keeps the feature's whole surface to two thin
+  API routes (search, thumbnail proxy) plus one client component. Shareable
+  meme storage is a real follow-up if this gets used, not a v1 requirement.
+- **Classic top/bottom caption only** — two fixed text fields, fixed
+  font/position (Impact-style, white fill, black stroke, uppercase),
+  matching the traditional meme format rather than a freeform text-box
+  editor. A freeform editor is more UI/state for a v1 nobody has used yet;
+  revisit if the fixed layout turns out too limiting.
+- **CSP's `img-src` widened to allow `blob:`** — the dropped-screenshot path
+  loads the file via `URL.createObjectURL()` into an `<img>`/`<canvas>`,
+  which the existing nonce-based CSP (see "Security headers and a
+  nonce-based CSP added" above) silently blocked before this PR — `blob:`
+  wasn't in `img-src`, so drop-a-screenshot rendered nothing. Caught by
+  actually running the feature in a browser rather than just `next build`;
+  `blob:` URLs are page-local (never fetched over the network), so this
+  doesn't meaningfully widen the app's real attack surface.
+- **Copy to Clipboard added alongside Download, feature-detected rather than
+  always shown** — `navigator.clipboard.write([new ClipboardItem(...)])`
+  reuses the exact same `canvas.toBlob()` call the download button already
+  makes. Support for writing an *image* (not just text) to the clipboard is
+  newer and less universal than `navigator.clipboard` itself, so the button
+  only renders once `clipboard.write` and `ClipboardItem` are both confirmed
+  to exist, checked with a lazy `useState` initializer at mount (matching
+  `hero-carousel.tsx`'s `reducedMotion` pattern) rather than an effect that
+  sets state after the fact — support doesn't change mid-session, so there's
+  nothing to subscribe to. The "Copied!" label swap on click mirrors
+  `share-button.tsx`'s existing `copyLink` pattern.
+- **`ADMIN`-only, not open to `REVIEWER`** — doesn't fit `REVIEWER`'s
+  existing scope (movie-submission approval, fight-scene-tag management,
+  fight-scene verification), so it follows the same default as
+  Import/Lineage/News rather than opening a new carve-out.
+- **Deferred: animated GIF preserved as output, not flattened to a static
+  PNG** — a dropped GIF is currently decoded, composited, and downloaded as
+  a single-frame PNG (`canvas.toBlob()` has no concept of animation), so any
+  motion is silently lost. Scoped but explicitly not built: it needs a GIF
+  *decoder* (`gifuct-js`) to pull out each frame plus its disposal method
+  (GIF frames are often small delta patches against the previous frame, not
+  standalone images — compositing them correctly needs an accumulator
+  canvas, not a fresh draw per frame), the existing caption-drawing code
+  reused per decoded frame, a GIF *encoder* (`gifenc` over `gif.js` — no
+  separate worker-script asset to wire into the Next.js build) to re-stitch
+  the result, a frame-count/dimension cap before encoding (cost scales with
+  pixels × frames, and `gifenc` runs on the main thread with no worker), and
+  an async "Generating…" button state since encoding is no longer
+  instant. Estimated at roughly half a day to a day, not attempted here —
+  deliberately kept light for v1. Revisit if animated output turns out to
+  matter in practice.
 
 ### `/tops` added: Top 100 Movies and Top 100 Fights as their own pages
 **PR #TBD.** Requested as "a page that consists of Tops: Top 20 Movies, Top 20 Fights" —
@@ -4491,25 +4598,6 @@ state to put a real person's figure in.
   timeline groupable/orderable. The timeline visualization itself (not
   just the data model) is also a real, non-trivial UI build, not a
   reskin of an existing list/grid view.
-- **Meme generator** — a tool letting members caption/remix an image into
-  a meme, seeded from a fight scene or movie. Image-sourcing was already
-  scoped: `youtubeThumbnailUrl()` (`src/lib/youtube.ts`) gives a free,
-  ToS-safe still today, already proven via the fight-scene permalink
-  pages' Open Graph previews, but it's the *video's* thumbnail, not a
-  frame at that scene's `youtubeStartSeconds` — for a long/compilation
-  video the thumbnail may not show the tagged fight at all. Explicitly
-  ruled out: extracting a real frame at that timestamp server-side
-  (yt-dlp/ffmpeg or similar), since downloading YouTube video content
-  violates their ToS and adds a fragile dependency YouTube could break at
-  any time. Three options on the table, undecided: (1) use the
-  video-level thumbnail as-is, simple but sometimes inaccurate; (2) let
-  the fight-scene submitter/admin attach their own still per scene,
-  mirroring the existing admin poster-override pattern (manual upload to
-  Vercel Blob) — more accurate, more UI, needs someone to actually
-  screenshot it; (3) fall back to the movie's poster/backdrop if neither
-  of the above feels reliable enough. Also undecided: the
-  caption/text-overlay editor itself, and whether generated memes get
-  stored/shared or are download-only.
 - **Fun facts / history section per movie** — admin-curated trivia or
   historical context shown on the movie page, likely alongside (or as an
   extension of) the existing Editorial Review. Real overlap with the
