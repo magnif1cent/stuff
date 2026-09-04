@@ -45,7 +45,6 @@ import { MovieDetailsTabs } from "@/components/movie-details-tabs";
 import { RecommendedBadges } from "@/components/recommended-badge";
 import { FightCountControl } from "@/components/fight-count-control";
 import { EraSettingControl } from "@/components/era-setting-control";
-import { eraSettingName } from "@/lib/era-settings";
 
 // How many of a movie's fights the movie page itself teases -- the rest live
 // on the dedicated /movies/[id]/fights collection page, linked via "View all".
@@ -678,15 +677,6 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
                 className="underline decoration-neutral-600 underline-offset-2 hover:text-neutral-200"
               >
                 Fight Count: {movie.trueFightCount}
-              </a>
-            )}
-            {movie.eraSetting != null && (
-              <a
-                href="#era-setting"
-                title="Historical period the movie is set in, maintained by members — click to view or edit"
-                className="underline decoration-neutral-600 underline-offset-2 hover:text-neutral-200"
-              >
-                Era: {eraSettingName(movie.eraSetting)}
               </a>
             )}
           </div>
