@@ -86,12 +86,12 @@ export function EraSettingControl({
       </div>
 
       {editing && (
-        <div className="mt-1 flex items-center gap-2">
+        <div className="mt-1 flex flex-wrap items-center gap-2">
           <select
             value={selected}
             onChange={(e) => setSelected(e.target.value)}
             disabled={saving}
-            className="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
+            className="w-full min-w-0 rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1 text-sm text-neutral-100 focus:border-red-600 focus:outline-none sm:w-auto"
           >
             <option value="" disabled>
               Select an era…
