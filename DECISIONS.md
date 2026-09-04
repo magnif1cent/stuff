@@ -1113,6 +1113,22 @@ narrowing to admin-only sidesteps two of them entirely.
   existing scope (movie-submission approval, fight-scene-tag management,
   fight-scene verification), so it follows the same default as
   Import/Lineage/News rather than opening a new carve-out.
+- **Deferred: animated GIF preserved as output, not flattened to a static
+  PNG** — a dropped GIF is currently decoded, composited, and downloaded as
+  a single-frame PNG (`canvas.toBlob()` has no concept of animation), so any
+  motion is silently lost. Scoped but explicitly not built: it needs a GIF
+  *decoder* (`gifuct-js`) to pull out each frame plus its disposal method
+  (GIF frames are often small delta patches against the previous frame, not
+  standalone images — compositing them correctly needs an accumulator
+  canvas, not a fresh draw per frame), the existing caption-drawing code
+  reused per decoded frame, a GIF *encoder* (`gifenc` over `gif.js` — no
+  separate worker-script asset to wire into the Next.js build) to re-stitch
+  the result, a frame-count/dimension cap before encoding (cost scales with
+  pixels × frames, and `gifenc` runs on the main thread with no worker), and
+  an async "Generating…" button state since encoding is no longer
+  instant. Estimated at roughly half a day to a day, not attempted here —
+  deliberately kept light for v1. Revisit if animated output turns out to
+  matter in practice.
 
 ### `/tops` added: Top 100 Movies and Top 100 Fights as their own pages
 **PR #TBD.** Requested as "a page that consists of Tops: Top 20 Movies, Top 20 Fights" —
