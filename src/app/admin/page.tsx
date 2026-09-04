@@ -33,6 +33,12 @@ const SECTIONS = [
     adminOnly: true,
   },
   {
+    href: "/admin/memes",
+    title: "Meme Generator",
+    description: "Caption an image from a fight scene's video or your own screenshot, download as a PNG.",
+    adminOnly: true,
+  },
+  {
     href: "/admin/account",
     title: "Account",
     description: "Change your own sign-in email or password.",
