@@ -835,19 +835,22 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
           isAdmin={session?.user?.role === "ADMIN"}
         />
 
-        <FightCountControl
-          movieId={movie.id}
-          initialCount={movie.trueFightCount}
-          recentEdits={serializedFightCountEdits}
-          signedIn={!!session?.user}
-        />
+        <div className="mb-4 rounded-md border border-neutral-800 bg-neutral-900 p-4">
+          <h3 className="font-cond mb-3 text-xs tracking-widest text-neutral-500 uppercase">Community Data</h3>
+          <FightCountControl
+            movieId={movie.id}
+            initialCount={movie.trueFightCount}
+            recentEdits={serializedFightCountEdits}
+            signedIn={!!session?.user}
+          />
 
-        <EraSettingControl
-          movieId={movie.id}
-          initialEra={movie.eraSetting}
-          recentEdits={serializedEraSettingEdits}
-          signedIn={!!session?.user}
-        />
+          <EraSettingControl
+            movieId={movie.id}
+            initialEra={movie.eraSetting}
+            recentEdits={serializedEraSettingEdits}
+            signedIn={!!session?.user}
+          />
+        </div>
 
         <div id="fights">
           <FightSceneSection
