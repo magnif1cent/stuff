@@ -60,6 +60,7 @@ one.
 
 **Feature Decisions**
 
+- [Admin sidebar nav grouped by domain, not build order](#admin-sidebar-nav-grouped-by-domain-not-build-order)
 - [Meme Generator added as an admin tab, not a member feature](#meme-generator-added-as-an-admin-tab-not-a-member-feature)
 - [Leaderboard reachable from a "Lists" nav hover submenu](#leaderboard-reachable-from-a-lists-nav-hover-submenu)
 - [Top Franchises leaderboard and collection pages](#top-franchises-leaderboard-and-collection-pages)
@@ -1068,6 +1069,39 @@ catalog size and traffic. This is the structural fix.
   Vercel's resizing wasn't buying anything — marked `unoptimized` too.
 
 ## Feature Decisions
+
+### Admin sidebar nav grouped by domain, not build order
+**PR #TBD.** Eight tabs deep once Meme Generator shipped, and the nav
+(`src/app/admin/layout.tsx`) had just been growing in whatever order each
+was added — no relation between adjacent items. Grouped into three: a
+`Dashboard` anchor, **Catalog** (Movies, Import from TMDB, Fight Scene
+Tags, Lineage — everything that shapes the data other pages read from),
+**Site Content** (News & Updates, Meme Generator — things published
+straight to visitors), and an `Account` anchor. Mocked up as an artifact
+before building (desktop grouped list + the real mobile behavior) so the
+grouping was agreed on before touching the component.
+
+- **Mobile gets a divider, not a label** — below the `sm` breakpoint this
+  nav isn't a sidebar at all; it's a horizontal scrolling strip
+  (`overflow-x-auto`, row not column). Stacked uppercase group labels don't
+  fit that shape, so mobile keeps the flat scroll and only gains a thin
+  vertical rule at each group boundary — visually consistent with desktop
+  without adding text width to an already-tight strip.
+- **One `NAV_GROUPS` render path for both breakpoints, via `sm:contents`**
+  — rather than two different markup trees, each group renders as a
+  wrapper `<div>` that's a real flex row on mobile (so its divider/links
+  size against the row) and becomes `display: contents` at `sm:` (so its
+  children join the outer nav's own `flex-col` list directly, picking up
+  its `gap-1` uniformly). Same divider element renders as a vertical rule
+  in row mode and a horizontal one in column mode purely through
+  breakpoint-prefixed width/height classes, not two separate elements.
+- **Empty groups render nothing, dividers included** — links are filtered
+  by `adminOnly` per group first, then a group with zero visible links
+  (e.g. Site Content for a `REVIEWER`, who can't reach either link in it)
+  is dropped entirely before the divider-index logic runs, so a `REVIEWER`
+  never sees a stray rule with nothing under it. Verified by screenshotting
+  the actual `reviewer@example.com` seed account, not just the `ADMIN`
+  view.
 
 ### Meme Generator added as an admin tab, not a member feature
 **PR #TBD.** Built the backlog item tracked in both this file (see the old
