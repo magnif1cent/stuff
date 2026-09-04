@@ -1143,6 +1143,17 @@ narrowing to admin-only sidesteps two of them entirely.
   actually running the feature in a browser rather than just `next build`;
   `blob:` URLs are page-local (never fetched over the network), so this
   doesn't meaningfully widen the app's real attack surface.
+- **Copy to Clipboard added alongside Download, feature-detected rather than
+  always shown** — `navigator.clipboard.write([new ClipboardItem(...)])`
+  reuses the exact same `canvas.toBlob()` call the download button already
+  makes. Support for writing an *image* (not just text) to the clipboard is
+  newer and less universal than `navigator.clipboard` itself, so the button
+  only renders once `clipboard.write` and `ClipboardItem` are both confirmed
+  to exist, checked with a lazy `useState` initializer at mount (matching
+  `hero-carousel.tsx`'s `reducedMotion` pattern) rather than an effect that
+  sets state after the fact — support doesn't change mid-session, so there's
+  nothing to subscribe to. The "Copied!" label swap on click mirrors
+  `share-button.tsx`'s existing `copyLink` pattern.
 - **`ADMIN`-only, not open to `REVIEWER`** — doesn't fit `REVIEWER`'s
   existing scope (movie-submission approval, fight-scene-tag management,
   fight-scene verification), so it follows the same default as

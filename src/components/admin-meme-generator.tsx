@@ -32,6 +32,22 @@ export function AdminMemeGenerator() {
   const [bottomCaption, setBottomCaption] = useState("");
   const [imageError, setImageError] = useState<string | null>(null);
   const [hasImage, setHasImage] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [copyError, setCopyError] = useState<string | null>(null);
+  // Feature-detected once at mount, matching hero-carousel.tsx's
+  // reducedMotion pattern -- Safari/Firefox support for writing images (not
+  // just text) to the clipboard is newer and less universal than
+  // navigator.clipboard itself, so the button only renders once we know
+  // ClipboardItem + clipboard.write actually exist. Doesn't need to react
+  // to later changes the way prefers-reduced-motion does, so no subscribing
+  // effect -- support isn't something that flips mid-session.
+  const [clipboardSupported] = useState(
+    () =>
+      typeof navigator !== "undefined" &&
+      !!navigator.clipboard &&
+      typeof navigator.clipboard.write === "function" &&
+      typeof window.ClipboardItem !== "undefined",
+  );
 
   const containerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -105,6 +121,7 @@ export function AdminMemeGenerator() {
     };
   }, []);
 
+
   const imageSrc =
     customImageUrl ?? (selectedScene ? `/api/admin/memes/thumbnail?videoId=${selectedScene.youtubeVideoId}` : null);
 
@@ -154,6 +171,21 @@ export function AdminMemeGenerator() {
       a.click();
       URL.revokeObjectURL(url);
     }, "image/png");
+  }
+
+  async function handleCopy() {
+    const canvas = canvasRef.current;
+    if (!canvas || !hasImage) return;
+    setCopyError(null);
+    try {
+      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
+      if (!blob) throw new Error("Canvas produced no image data.");
+      await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      setCopyError("Couldn't copy — try Download instead.");
+    }
   }
 
   const showDropdown = open && visibleResults.length > 0;
@@ -267,15 +299,28 @@ export function AdminMemeGenerator() {
         </div>
 
         {imageError && <p className="text-xs text-red-500">{imageError}</p>}
+        {copyError && <p className="text-xs text-red-500">{copyError}</p>}
 
-        <button
-          type="button"
-          onClick={handleDownload}
-          disabled={!hasImage}
-          className="rounded-md bg-red-700 px-4 py-2 text-sm font-semibold text-white hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          Download PNG
-        </button>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={handleDownload}
+            disabled={!hasImage}
+            className="rounded-md bg-red-700 px-4 py-2 text-sm font-semibold text-white hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Download PNG
+          </button>
+          {clipboardSupported && (
+            <button
+              type="button"
+              onClick={handleCopy}
+              disabled={!hasImage}
+              className="rounded-md border border-neutral-700 bg-neutral-900 px-4 py-2 text-sm font-semibold text-neutral-100 hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {copied ? "Copied!" : "Copy to Clipboard"}
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="flex items-start justify-center rounded-md border border-neutral-800 bg-neutral-950 p-4">
