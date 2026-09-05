@@ -26,7 +26,7 @@ export function MovieDataSection({
   const [editing, setEditing] = useState(false);
 
   return (
-    <div className="max-w-sm rounded-md border border-neutral-800 p-3">
+    <div className="rounded-md border border-neutral-800 p-3">
       <div className="mb-3 flex items-center justify-between gap-2">
         <p className="font-cond text-xs tracking-wider text-neutral-500 uppercase">Movie Data</p>
         {signedIn ? (
@@ -43,21 +43,28 @@ export function MovieDataSection({
         )}
       </div>
 
-      <FightCountControl
-        movieId={movieId}
-        initialCount={initialCount}
-        recentEdits={fightCountEdits}
-        editing={editing}
-      />
+      {/* A row of attribute cells rather than a single narrow stacked
+          card -- as more member-maintained attributes get added here
+          beyond Fight Count and Historical Setting, each one is just
+          another cell appended to this row instead of the box growing
+          taller (which previously fought for vertical space against
+          Your Rating/Details in the two-column hero -- see
+          DECISIONS.md). */}
+      <div className="flex flex-wrap gap-x-10 gap-y-4">
+        <FightCountControl
+          movieId={movieId}
+          initialCount={initialCount}
+          recentEdits={fightCountEdits}
+          editing={editing}
+        />
 
-      <div className="my-4 border-t border-neutral-800" />
-
-      <EraSettingControl
-        movieId={movieId}
-        initialEra={initialEra}
-        recentEdits={eraSettingEdits}
-        editing={editing}
-      />
+        <EraSettingControl
+          movieId={movieId}
+          initialEra={initialEra}
+          recentEdits={eraSettingEdits}
+          editing={editing}
+        />
+      </div>
     </div>
   );
 }

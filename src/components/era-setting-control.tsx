@@ -76,7 +76,7 @@ export function EraSettingControl({
   }
 
   return (
-    <div id="era-setting" className="mb-4 scroll-mt-20 text-sm text-neutral-400">
+    <div id="era-setting" className="min-w-[180px] scroll-mt-20 text-sm text-neutral-400">
       <div>
         <span>
           Historical Setting: <span className="font-medium text-neutral-200">{eraSettingName(era) ?? "—"}</span>
