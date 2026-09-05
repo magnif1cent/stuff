@@ -50,3 +50,10 @@ export function eraSettingLabel(key: string | null): string | null {
 export function eraSettingName(key: string | null): string | null {
   return ERA_SETTINGS.find((e) => e.key === key)?.name ?? null;
 }
+
+// Just the year range, shown as a muted secondary line under the name
+// rather than inline after it — inline "Name (years)" is what wrapped
+// awkwardly in the first place.
+export function eraSettingYears(key: string | null): string | null {
+  return ERA_SETTINGS.find((e) => e.key === key)?.years ?? null;
+}

@@ -34,6 +34,25 @@ export function FightCountControl({
   const [showHistory, setShowHistory] = useState(false);
   const router = useRouter();
 
+  // Reset the draft input from the current (already-saved) `count` whenever
+  // edit mode opens, without an effect -- React's documented pattern for
+  // "adjust state when a prop changes": compare against the previous value
+  // during render and setState conditionally, rather than after commit.
+  // Deriving from `count` (this component's own local state) rather than
+  // `initialCount` (the server-rendered prop) matters here: `count` is
+  // already correct the instant handleSave resolves, while `initialCount`
+  // only catches up once router.refresh()'s background re-fetch lands --
+  // keying a remount to `editing` instead of this would occasionally reset
+  // a just-saved value back to stale data if "Done" was clicked quickly.
+  const [prevEditing, setPrevEditing] = useState(editing);
+  if (editing !== prevEditing) {
+    setPrevEditing(editing);
+    if (editing) {
+      setInputValue(count != null ? String(count) : "");
+      setError(null);
+    }
+  }
+
   async function handleSave() {
     const parsed = Number(inputValue);
     if (!Number.isInteger(parsed) || parsed < 0 || parsed > MAX_FIGHT_COUNT) {

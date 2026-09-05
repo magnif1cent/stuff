@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { ERA_SETTINGS, eraSettingLabel, eraSettingName } from "@/lib/era-settings";
+import { ERA_SETTINGS, eraSettingLabel, eraSettingName, eraSettingYears } from "@/lib/era-settings";
 
 export interface EraSettingEditEntry {
   id: string;
@@ -33,6 +33,21 @@ export function EraSettingControl({
   const [showHistory, setShowHistory] = useState(false);
   const router = useRouter();
 
+  // Reset the draft select from the current (already-saved) `era` whenever
+  // edit mode opens, without an effect -- same reasoning as
+  // FightCountControl: deriving from local state `era` rather than the
+  // `initialEra` prop avoids a just-saved value flashing back to stale
+  // data if edit mode is toggled before router.refresh()'s background
+  // re-fetch lands.
+  const [prevEditing, setPrevEditing] = useState(editing);
+  if (editing !== prevEditing) {
+    setPrevEditing(editing);
+    if (editing) {
+      setSelected(era ?? "");
+      setError(null);
+    }
+  }
+
   async function handleSave() {
     if (!selected) {
       setError("Pick an era from the list.");
@@ -62,12 +77,12 @@ export function EraSettingControl({
 
   return (
     <div id="era-setting" className="mb-4 scroll-mt-20 text-sm text-neutral-400">
-      <span>
-        Historical Setting:{" "}
-        <span className="font-medium text-neutral-200" title={eraSettingLabel(era) ?? undefined}>
-          {eraSettingName(era) ?? "—"}
+      <div>
+        <span>
+          Historical Setting: <span className="font-medium text-neutral-200">{eraSettingName(era) ?? "—"}</span>
         </span>
-      </span>
+        {eraSettingYears(era) && <p className="text-xs text-neutral-500">{eraSettingYears(era)}</p>}
+      </div>
 
       {editing && (
         <div className="mt-1 flex flex-wrap items-center gap-2">

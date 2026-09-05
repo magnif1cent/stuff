@@ -43,12 +43,7 @@ export function MovieDataSection({
         )}
       </div>
 
-      {/* Keyed on `editing` so each control's local draft state (the
-          number input, the era select) re-initializes fresh from current
-          props whenever edit mode opens or closes, instead of an effect
-          syncing state on top of state. */}
       <FightCountControl
-        key={`fight-count-${editing}`}
         movieId={movieId}
         initialCount={initialCount}
         recentEdits={fightCountEdits}
@@ -58,7 +53,6 @@ export function MovieDataSection({
       <div className="my-4 border-t border-neutral-800" />
 
       <EraSettingControl
-        key={`era-setting-${editing}`}
         movieId={movieId}
         initialEra={initialEra}
         recentEdits={eraSettingEdits}
