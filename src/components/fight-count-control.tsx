@@ -17,15 +17,17 @@ export function FightCountControl({
   movieId,
   initialCount,
   recentEdits,
-  signedIn,
+  editing,
 }: {
   movieId: string;
   initialCount: number | null;
   recentEdits: FightCountEditEntry[];
-  signedIn: boolean;
+  // Controlled by a shared "Edit" toggle one level up (see MovieDataSection)
+  // rather than owned locally, so one button can put both Fight Count and
+  // Historical Setting into edit mode together.
+  editing: boolean;
 }) {
   const [count, setCount] = useState(initialCount);
-  const [editing, setEditing] = useState(false);
   const [inputValue, setInputValue] = useState(initialCount != null ? String(initialCount) : "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,7 +50,6 @@ export function FightCountControl({
       });
       if (res.ok) {
         setCount(parsed);
-        setEditing(false);
         router.refresh();
       } else {
         const body = await res.json().catch(() => ({}));
@@ -63,29 +64,9 @@ export function FightCountControl({
 
   return (
     <div id="fight-count" className="mb-4 scroll-mt-20 text-sm text-neutral-400">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <span>
-          Fight Count: <span className="font-medium text-neutral-200">{count ?? "—"}</span>
-        </span>
-        {signedIn ? (
-          !editing && (
-            <button
-              onClick={() => {
-                setInputValue(count != null ? String(count) : "");
-                setError(null);
-                setEditing(true);
-              }}
-              className="text-xs text-neutral-500 underline hover:text-neutral-300"
-            >
-              Edit
-            </button>
-          )
-        ) : (
-          <a href="/login" className="text-xs text-red-500 hover:underline">
-            Sign in to edit
-          </a>
-        )}
-      </div>
+      <span>
+        Fight Count: <span className="font-medium text-neutral-200">{count ?? "—"}</span>
+      </span>
 
       {editing && (
         <div className="mt-1 flex items-center gap-2">
@@ -104,16 +85,6 @@ export function FightCountControl({
             className="rounded-md bg-red-700 px-2 py-1 text-xs font-medium text-white hover:bg-red-600 disabled:opacity-50"
           >
             {saving ? "Saving…" : "Save"}
-          </button>
-          <button
-            onClick={() => {
-              setEditing(false);
-              setError(null);
-            }}
-            disabled={saving}
-            className="text-xs text-neutral-500 hover:text-neutral-300"
-          >
-            Cancel
           </button>
         </div>
       )}

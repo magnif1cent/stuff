@@ -16,15 +16,17 @@ export function EraSettingControl({
   movieId,
   initialEra,
   recentEdits,
-  signedIn,
+  editing,
 }: {
   movieId: string;
   initialEra: string | null;
   recentEdits: EraSettingEditEntry[];
-  signedIn: boolean;
+  // Controlled by a shared "Edit" toggle one level up (see MovieDataSection)
+  // rather than owned locally, so one button can put both Fight Count and
+  // Historical Setting into edit mode together.
+  editing: boolean;
 }) {
   const [era, setEra] = useState(initialEra);
-  const [editing, setEditing] = useState(false);
   const [selected, setSelected] = useState(initialEra ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,7 +48,6 @@ export function EraSettingControl({
       });
       if (res.ok) {
         setEra(selected);
-        setEditing(false);
         router.refresh();
       } else {
         const body = await res.json().catch(() => ({}));
@@ -61,32 +62,12 @@ export function EraSettingControl({
 
   return (
     <div id="era-setting" className="mb-4 scroll-mt-20 text-sm text-neutral-400">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <span>
-          Historical Setting:{" "}
-          <span className="font-medium text-neutral-200" title={eraSettingLabel(era) ?? undefined}>
-            {eraSettingName(era) ?? "—"}
-          </span>
+      <span>
+        Historical Setting:{" "}
+        <span className="font-medium text-neutral-200" title={eraSettingLabel(era) ?? undefined}>
+          {eraSettingName(era) ?? "—"}
         </span>
-        {signedIn ? (
-          !editing && (
-            <button
-              onClick={() => {
-                setSelected(era ?? "");
-                setError(null);
-                setEditing(true);
-              }}
-              className="text-xs text-neutral-500 underline hover:text-neutral-300"
-            >
-              Edit
-            </button>
-          )
-        ) : (
-          <a href="/login" className="text-xs text-red-500 hover:underline">
-            Sign in to edit
-          </a>
-        )}
-      </div>
+      </span>
 
       {editing && (
         <div className="mt-1 flex flex-wrap items-center gap-2">
@@ -111,16 +92,6 @@ export function EraSettingControl({
             className="rounded-md bg-red-700 px-2 py-1 text-xs font-medium text-white hover:bg-red-600 disabled:opacity-50"
           >
             {saving ? "Saving…" : "Save"}
-          </button>
-          <button
-            onClick={() => {
-              setEditing(false);
-              setError(null);
-            }}
-            disabled={saving}
-            className="text-xs text-neutral-500 hover:text-neutral-300"
-          >
-            Cancel
           </button>
         </div>
       )}

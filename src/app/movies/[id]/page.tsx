@@ -43,8 +43,7 @@ import { PosterOverrideControl } from "@/components/poster-override-control";
 import { MovieOverviewSnippet } from "@/components/movie-overview-snippet";
 import { MovieDetailsTabs } from "@/components/movie-details-tabs";
 import { RecommendedBadges } from "@/components/recommended-badge";
-import { FightCountControl } from "@/components/fight-count-control";
-import { EraSettingControl } from "@/components/era-setting-control";
+import { MovieDataSection } from "@/components/movie-data-section";
 
 // How many of a movie's fights the movie page itself teases -- the rest live
 // on the dedicated /movies/[id]/fights collection page, linked via "View all".
@@ -783,22 +782,14 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
             />
           </div>
 
-          <div className="mt-6 max-w-sm rounded-md border border-neutral-800 p-3">
-            <p className="font-cond mb-2 text-xs tracking-wider text-neutral-500 uppercase">Movie Data</p>
-            <FightCountControl
-              movieId={movie.id}
-              initialCount={movie.trueFightCount}
-              recentEdits={serializedFightCountEdits}
-              signedIn={!!session?.user}
-            />
-
-            <EraSettingControl
-              movieId={movie.id}
-              initialEra={movie.eraSetting}
-              recentEdits={serializedEraSettingEdits}
-              signedIn={!!session?.user}
-            />
-          </div>
+          <MovieDataSection
+            movieId={movie.id}
+            initialCount={movie.trueFightCount}
+            fightCountEdits={serializedFightCountEdits}
+            initialEra={movie.eraSetting}
+            eraSettingEdits={serializedEraSettingEdits}
+            signedIn={!!session?.user}
+          />
         </div>
       </div>
 
