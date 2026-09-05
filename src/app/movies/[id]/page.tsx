@@ -769,6 +769,15 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
             />
           </div>
 
+          <MovieDataSection
+            movieId={movie.id}
+            initialCount={movie.trueFightCount}
+            fightCountEdits={serializedFightCountEdits}
+            initialEra={movie.eraSetting}
+            eraSettingEdits={serializedEraSettingEdits}
+            signedIn={!!session?.user}
+          />
+
           <div className="mt-6 max-w-sm">
             <RatingCard
               movieId={movie.id}
@@ -781,15 +790,6 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
               initialAdminCategoryScores={myAdminCategoryRatingMap}
             />
           </div>
-
-          <MovieDataSection
-            movieId={movie.id}
-            initialCount={movie.trueFightCount}
-            fightCountEdits={serializedFightCountEdits}
-            initialEra={movie.eraSetting}
-            eraSettingEdits={serializedEraSettingEdits}
-            signedIn={!!session?.user}
-          />
         </div>
       </div>
 
