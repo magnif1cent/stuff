@@ -25,7 +25,7 @@ An IMDB-style website for kung fu and martial arts films, built for martial arts
 - [Member Movie Submissions](#member-movie-submissions)
 - [Fights](#fights)
 - [Fight Count](#fight-count)
-- [Era Setting](#era-setting)
+- [Historical Setting](#historical-setting)
 - [Tops](#tops)
 - [Fun Facts](#fun-facts)
 - [Actor Pages](#actor-pages)
@@ -55,7 +55,7 @@ An IMDB-style website for kung fu and martial arts films, built for martial arts
 - Movie pages with cast, synopsis, a community rating, a separate admin-only "Editors' Score", an admin-authored editorial review, and a per-movie discussion thread (with spoiler tags, edit/delete on your own posts, and admin moderation). Members and admins can also rate a movie by category (Fight Choreography, Story, Acting) alongside the overall score, shown as a per-category average when at least one rating exists — see [Ratings](#ratings) below
 - **Fights**: members tag specific fight scenes within a movie — YouTube clip (with an optional start timestamp), the actors involved (picked from that movie's cast), and category tags (e.g. "Weapon Duel", "One vs. Many") — with their own member rating, a separate admin rating, admin verification, and a shareable permalink page (see [Fights](#fights) below)
 - **Fight Count**: a member-maintained "true" fight count on every movie page, separate from the count of cataloged Fights — see [Fight Count](#fight-count) below
-- **Era Setting**: a member-maintained historical period/dynasty the movie is set in, picked from a fixed list — see [Era Setting](#era-setting) below
+- **Historical Setting**: a member-maintained historical period/dynasty the movie is set in, picked from a fixed list — see [Historical Setting](#historical-setting) below
 - **Fun Facts**: an IMDB "Did you know"-style trivia section above the Discussion thread — members add individual entries, and other members thumbs-up/down each one, ranked by net vote score — see [Fun Facts](#fun-facts) below
 - Actor pages (`/actors/[personId]`) showing an actor's filmography and every fight scene they're tagged in, linked from a movie's cast list and a scene's "Featuring" line (see [Actor Pages](#actor-pages) below)
 - **Lineage**: admin-curated martial arts training lineages, connecting actors already in the catalog and non-actor figures alike — its own tree-view section on the actor page (direct links, one generation each way) links out to a full, multi-generation tree (see [Lineage](#lineage) below)
@@ -267,7 +267,7 @@ Below the cast list on every movie page, members can catalog individual fight sc
 
 ## Fight Count
 
-A **Fight Count** — a member-maintained "true" number of fights in the movie — shows up two places on a movie page: a plain "N fights" fact alongside runtime/director/country up top (grouped with the rest of the movie's info, not tucked away), which links down to the full editable control (value, Edit, and edit history), grouped with Era Setting (below) in a bordered "Movie Data" card sitting directly above the Fights list. This is independent of the Fights listed below (an admin-verifiable, individually clipped/tagged catalog) — Fight Count is a simpler, single number for "how many fights does this movie actually have," which will often be higher than what's been individually cataloged, since not every fight gets clipped and tagged. There's no separate "N scenes cataloged" count shown — with submission volume this low per movie, that's easy enough to see at a glance in the list itself.
+A **Fight Count** — a member-maintained "true" number of fights in the movie — shows up two places on a movie page: a plain "N fights" fact alongside runtime/director up top (grouped with the rest of the movie's info, not tucked away), which links down to the full editable control (value, Edit, and edit history) sitting directly under the Your Rating widget, unboxed — plain text rows, not a bordered card, so it doesn't compete visually with Details/Your Rating/Admin Review's boxes right above it. This is independent of the Fights listed below (an admin-verifiable, individually clipped/tagged catalog) — Fight Count is a simpler, single number for "how many fights does this movie actually have," which will often be higher than what's been individually cataloged, since not every fight gets clipped and tagged. There's no separate "N scenes cataloged" count shown — with submission volume this low per movie, that's easy enough to see at a glance in the list itself.
 
 This is deliberately a single shared value, not an aggregate of individual member submissions like ratings are: any verified member can overwrite it directly, last edit wins, no consensus step. That simplicity trades away any built-in resistance to a bad-faith edit, so it's paired with guardrails rather than left unprotected:
 
@@ -278,11 +278,11 @@ This is deliberately a single shared value, not an aggregate of individual membe
 
 See `DECISIONS.md` for the fuller reasoning, including the aggregation-based alternative (à la ratings) that was considered and explicitly rejected in favor of this simpler model.
 
-## Era Setting
+## Historical Setting
 
-An **Era** — the historical period/dynasty the movie is *set in*, not its real-world release date — shows up the same two places and follows the exact same model as Fight Count directly above: a byline link up top, a full editable control (value, Edit, edit history) sharing the same "Movie Data" card as Fight Count, single shared value with last-edit-wins and the identical guardrails (verified email, rate limiting, full public edit history).
+A **Historical Setting** — the historical period/dynasty the movie is *set in*, not its real-world release date — sits right under Fight Count (same unboxed row treatment) and follows the same editing model: a full editable control (value, Edit, edit history), single shared value with last-edit-wins and the identical guardrails (verified email, rate limiting, full public edit history). Unlike Fight Count it has no byline badge of its own — "Historical Setting: Modern Day / Contemporary (1949–present)" is long enough that duplicating it into the compact byline row made that row noticeably heavier than its neighbors, so it's surfaced in this one place instead.
 
-The one difference from Fight Count: this is a fixed dropdown of periods (`ERA_SETTINGS` in `src/lib/era-settings.ts`), not a free-typed value — chosen so a future page grouping/ordering movies by period (see `DECISIONS.md`) doesn't have to deal with unbounded spelling variants of the same dynasty. It's a hardcoded vocabulary like `RATING_CATEGORIES`, not an admin-configurable taxonomy table like Genre/Fight Scene Tags.
+The one real difference from Fight Count: this is a fixed dropdown of periods (`ERA_SETTINGS` in `src/lib/era-settings.ts`, one entry per period/dynasty with an approximate year range baked into its label), not a free-typed value — chosen so a future page grouping/ordering movies by period (see `DECISIONS.md`) doesn't have to deal with unbounded spelling variants of the same dynasty. It's a hardcoded vocabulary like `RATING_CATEGORIES`, not an admin-configurable taxonomy table like Genre/Fight Scene Tags. (The underlying field/model/component names still say `eraSetting` — only the user-facing label changed, to avoid a schema-touching rename for what was a wording fix.)
 
 ## Tops
 

@@ -60,6 +60,7 @@ one.
 
 **Feature Decisions**
 
+- [Historical Setting: renamed from Era, unboxed from its own card](#historical-setting-renamed-from-era-unboxed-from-its-own-card)
 - [Era Setting: a Fight-Count-style field for the historical period a movie is set in](#era-setting-a-fight-count-style-field-for-the-historical-period-a-movie-is-set-in)
 - [Admin sidebar nav grouped by domain, not build order](#admin-sidebar-nav-grouped-by-domain-not-build-order)
 - [Meme Generator added as an admin tab, not a member feature](#meme-generator-added-as-an-admin-tab-not-a-member-feature)
@@ -1070,6 +1071,14 @@ catalog size and traffic. This is the structural fix.
   Vercel's resizing wasn't buying anything — marked `unoptimized` too.
 
 ## Feature Decisions
+
+### Historical Setting: renamed from Era, unboxed from its own card
+**PR #TBD.** A round of post-launch UI review on the movie page (screenshotting real rendered states, not just reading the JSX) surfaced problems with how "Era Setting" shipped, worked through in a few steps rather than one:
+
+- **"Era" renamed to "Historical Setting"** — "Era" alone reads as the movie's own production era ("an 80s movie"), the opposite of what the field means: the historical period the story is *set in*. Only the display label and edit-history copy changed; `eraSetting`/`EraSettingControl`/etc. keep their names, since renaming those is a schema-touching change disproportionate to a wording fix.
+- **Byline badge trimmed, then dropped entirely** — the year-range labels added right after launch (e.g. "Modern Day / Contemporary (1949–present)") made the byline noticeably heavier than neighbors like "102 min" and wrapped to its own line on mobile. First tried showing just the short name in the byline (keeping the full "(years)" label everywhere else); ultimately removed the byline badge altogether rather than carry two label forms for one field. Fight Count's byline badge is unaffected.
+- **The shared "Movie Data" card was cut, not just relocated.** It first moved from "after Reviews, before Fights" (where it read as an orphaned box on a movie with no reviews and no fight scenes yet — the empty state made it look like a mistake) to right under the Your Rating widget. That fixed the orphaning, but introduced a new problem: as one bordered box spanning the *combined* width of the Details+Your Rating row above it, it broke the two-column rhythm (two side-by-side boxes → one wide bar) and added a fourth similar-looking dark box to a page that already has Details, Your Rating, and often an Admin Review card. Fight Count and Historical Setting now render as plain unboxed rows directly under Your Rating, in that same `max-w-sm` column — no card, no heading, matching the original pre-"Movie Data" Fight Count treatment.
+- **Deliberately not folded into the Details card**, despite both being short factual displays: Details is static, admin/TMDB-sourced catalog record; Fight Count/Historical Setting are member-editable, revisable, with a public edit-history trail — closer kin to Ratings/Fun Facts than to Details. That distinction, plus Details' ~200px sidebar width being too narrow for Historical Setting's dropdown/edit UI (already confirmed tight at 375px mobile), ruled out tabbing or merging them.
 
 ### Era Setting: a Fight-Count-style field for the historical period a movie is set in
 **PR #TBD.** Requested as "expand the Fight Count section to collect more
