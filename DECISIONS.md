@@ -60,6 +60,7 @@ one.
 
 **Feature Decisions**
 
+- [Movie Data card reintroduced with a shared Edit button, relocated to a full-width section above Fights](#movie-data-card-reintroduced-with-a-shared-edit-button-relocated-to-a-full-width-section-above-fights)
 - [Historical Setting: renamed from Era, unboxed from its own card](#historical-setting-renamed-from-era-unboxed-from-its-own-card)
 - [Era Setting: a Fight-Count-style field for the historical period a movie is set in](#era-setting-a-fight-count-style-field-for-the-historical-period-a-movie-is-set-in)
 - [Admin sidebar nav grouped by domain, not build order](#admin-sidebar-nav-grouped-by-domain-not-build-order)
@@ -1071,6 +1072,55 @@ catalog size and traffic. This is the structural fix.
   Vercel's resizing wasn't buying anything — marked `unoptimized` too.
 
 ## Feature Decisions
+
+### Movie Data card reintroduced with a shared Edit button, relocated to a full-width section above Fights
+**PR #136.** Reverses part of the entry directly below this one ("Historical
+Setting: renamed from Era, unboxed from its own card"), which had cut the
+shared "Movie Data" card and left Fight Count/Historical Setting as plain
+unboxed rows. This PR re-introduces the card — grouping both fields under one
+bordered box with a single shared Edit/Done toggle instead of two separate
+ones, so clicking it puts both fields into edit mode together (each still
+saves independently, since they hit different API routes).
+
+- **A real race condition was found and fixed in the shared toggle.** The
+  first implementation keyed a remount to `editing`, resetting each control's
+  local state from its `initial*` prop whenever edit mode opened. Those props
+  only reflect the server's data once `router.refresh()`'s background re-fetch
+  lands — clicking Save then immediately Done, before that refresh landed,
+  could revert a just-saved value back to stale data. Fixed with React's
+  documented "adjust state during render" pattern: compare `editing` against
+  its previous value during render and reset from the component's own
+  already-correct local state, not the lagging prop.
+- **Placement went through several rounds, driven by live screenshot review
+  across signed-out, signed-in, and admin-with-ratings states** (each renders
+  a different column height in the movie page's two-column hero):
+  - First inside the hero, directly under Your Rating — this made Movie Data
+    the last thing before the full-width Cast section, and a small
+    utility-data box sitting right against Cast's much larger heading read as
+    an abrupt break in the page's visual flow.
+  - Tried moving it into the left sidebar, next to Details — closed that gap
+    for signed-out visitors, but flipped the imbalance for signed-in/admin
+    views, where Your Rating's own box (with category sliders, an Editors'
+    Rating tab) makes the right column shorter than the sidebar instead of
+    taller. The two columns' relative height depends on session state; no
+    single static placement in the hero wins in every case.
+  - Tried a side-by-side row with Your Rating in the hero — better (the two
+    end together instead of Movie Data trailing alone), but still imperfect:
+    the two cards aren't the same height so their bottoms don't quite align,
+    and it looks lopsided when signed out, since Your Rating renders as a
+    bare "Sign in to rate this movie" text link rather than a box in that
+    state — a full card next to a bare line of text.
+  - Landed on: Movie Data as its own full-width section, placed between
+    Reviews and Fights — matching the full-width treatment Cast/Reviews/
+    Fights already use, rather than living in the narrow two-column hero at
+    all. This sidesteps the column-balancing problem entirely instead of
+    continuing to patch it.
+- **Fight Count and Historical Setting render as a flex-wrap row of cells,
+  not a stacked list with a divider** — chosen anticipating more
+  member-maintained attributes being added here later. A new attribute is
+  just another cell appended to the row; the previous stacked layout would
+  have made the card taller with each addition, which is exactly what kept
+  re-tipping the hero's column balance before the card was moved out.
 
 ### Historical Setting: renamed from Era, unboxed from its own card
 **PR #TBD.** A round of post-launch UI review on the movie page (screenshotting real rendered states, not just reading the JSX) surfaced problems with how "Era Setting" shipped, worked through in a few steps rather than one:
