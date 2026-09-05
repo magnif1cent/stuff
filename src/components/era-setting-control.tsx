@@ -63,7 +63,7 @@ export function EraSettingControl({
     <div id="era-setting" className="mb-4 scroll-mt-20 text-sm text-neutral-400">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <span>
-          Era: <span className="font-medium text-neutral-200">{eraSettingLabel(era) ?? "—"}</span>
+          Historical Setting: <span className="font-medium text-neutral-200">{eraSettingLabel(era) ?? "—"}</span>
         </span>
         {signedIn ? (
           !editing && (
