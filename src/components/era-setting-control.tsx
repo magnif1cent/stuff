@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { ERA_SETTINGS, eraSettingLabel } from "@/lib/era-settings";
+import { ERA_SETTINGS, eraSettingLabel, eraSettingName } from "@/lib/era-settings";
 
 export interface EraSettingEditEntry {
   id: string;
@@ -63,7 +63,10 @@ export function EraSettingControl({
     <div id="era-setting" className="mb-4 scroll-mt-20 text-sm text-neutral-400">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <span>
-          Historical Setting: <span className="font-medium text-neutral-200">{eraSettingLabel(era) ?? "—"}</span>
+          Historical Setting:{" "}
+          <span className="font-medium text-neutral-200" title={eraSettingLabel(era) ?? undefined}>
+            {eraSettingName(era) ?? "—"}
+          </span>
         </span>
         {signedIn ? (
           !editing && (
