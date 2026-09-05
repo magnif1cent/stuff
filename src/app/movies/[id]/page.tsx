@@ -783,7 +783,8 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
             />
           </div>
 
-          <div className="mt-6 max-w-sm">
+          <div className="mt-6 max-w-sm rounded-md border border-neutral-800 p-3">
+            <p className="font-cond mb-2 text-xs tracking-wider text-neutral-500 uppercase">Movie Data</p>
             <FightCountControl
               movieId={movie.id}
               initialCount={movie.trueFightCount}
