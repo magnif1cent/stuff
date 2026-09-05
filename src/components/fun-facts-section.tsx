@@ -380,9 +380,7 @@ export function FunFactsSection({
             );
           })()
         ) : (
-          <p className="border-b border-neutral-800 p-5 text-center text-sm text-neutral-500">
-            No fun facts yet. Be the first to add one.
-          </p>
+          <p className="p-3 text-center text-sm text-neutral-500">No fun facts yet. Be the first to add one.</p>
         )}
 
         {facts.length > 1 && (
