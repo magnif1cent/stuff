@@ -769,25 +769,27 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
             />
           </div>
 
-          <MovieDataSection
-            movieId={movie.id}
-            initialCount={movie.trueFightCount}
-            fightCountEdits={serializedFightCountEdits}
-            initialEra={movie.eraSetting}
-            eraSettingEdits={serializedEraSettingEdits}
-            signedIn={!!session?.user}
-          />
+          <div className="mt-6 flex flex-col items-start gap-6 sm:flex-row sm:flex-wrap">
+            <div className="max-w-sm">
+              <RatingCard
+                movieId={movie.id}
+                signedIn={!!session?.user}
+                initialScore={myRating?.score ?? null}
+                initialCategoryScores={myCategoryRatingMap}
+                isAdmin={session?.user?.role === "ADMIN"}
+                initialAdminScore={myAdminRating?.score ?? null}
+                initialAdminNote={myAdminRating?.note ?? null}
+                initialAdminCategoryScores={myAdminCategoryRatingMap}
+              />
+            </div>
 
-          <div className="mt-6 max-w-sm">
-            <RatingCard
+            <MovieDataSection
               movieId={movie.id}
+              initialCount={movie.trueFightCount}
+              fightCountEdits={serializedFightCountEdits}
+              initialEra={movie.eraSetting}
+              eraSettingEdits={serializedEraSettingEdits}
               signedIn={!!session?.user}
-              initialScore={myRating?.score ?? null}
-              initialCategoryScores={myCategoryRatingMap}
-              isAdmin={session?.user?.role === "ADMIN"}
-              initialAdminScore={myAdminRating?.score ?? null}
-              initialAdminNote={myAdminRating?.note ?? null}
-              initialAdminCategoryScores={myAdminCategoryRatingMap}
             />
           </div>
         </div>
