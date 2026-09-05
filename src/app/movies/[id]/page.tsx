@@ -824,17 +824,6 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
           isAdmin={session?.user?.role === "ADMIN"}
         />
 
-        <div className="mb-8">
-          <MovieDataSection
-            movieId={movie.id}
-            initialCount={movie.trueFightCount}
-            fightCountEdits={serializedFightCountEdits}
-            initialEra={movie.eraSetting}
-            eraSettingEdits={serializedEraSettingEdits}
-            signedIn={!!session?.user}
-          />
-        </div>
-
         <div id="fights">
           <FightSceneSection
             movieId={movie.id}
@@ -852,6 +841,17 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
             myFavoriteSceneIds={myFavoriteFightSceneIds}
             totalSceneCount={fightSceneRoundNumbers.size}
             viewAllHref={`/movies/${movie.id}/fights`}
+          />
+        </div>
+
+        <div className="mb-8">
+          <MovieDataSection
+            movieId={movie.id}
+            initialCount={movie.trueFightCount}
+            fightCountEdits={serializedFightCountEdits}
+            initialEra={movie.eraSetting}
+            eraSettingEdits={serializedEraSettingEdits}
+            signedIn={!!session?.user}
           />
         </div>
 
