@@ -786,6 +786,23 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
       </div>
 
       <div className="mx-auto w-full max-w-6xl px-4 py-8">
+        <div className="mb-8 rounded-md border border-neutral-800 bg-neutral-900 p-4">
+          <h3 className="font-cond mb-3 text-xs tracking-widest text-neutral-500 uppercase">Movie Data</h3>
+          <FightCountControl
+            movieId={movie.id}
+            initialCount={movie.trueFightCount}
+            recentEdits={serializedFightCountEdits}
+            signedIn={!!session?.user}
+          />
+
+          <EraSettingControl
+            movieId={movie.id}
+            initialEra={movie.eraSetting}
+            recentEdits={serializedEraSettingEdits}
+            signedIn={!!session?.user}
+          />
+        </div>
+
         {movie.cast.length > 0 && (
           <section className="mb-8">
             <h2 className="font-serif mb-4 text-xl font-bold text-white">Cast</h2>
@@ -824,23 +841,6 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
           currentUserId={session?.user?.id ?? null}
           isAdmin={session?.user?.role === "ADMIN"}
         />
-
-        <div className="mb-4 rounded-md border border-neutral-800 bg-neutral-900 p-4">
-          <h3 className="font-cond mb-3 text-xs tracking-widest text-neutral-500 uppercase">Movie Data</h3>
-          <FightCountControl
-            movieId={movie.id}
-            initialCount={movie.trueFightCount}
-            recentEdits={serializedFightCountEdits}
-            signedIn={!!session?.user}
-          />
-
-          <EraSettingControl
-            movieId={movie.id}
-            initialEra={movie.eraSetting}
-            recentEdits={serializedEraSettingEdits}
-            signedIn={!!session?.user}
-          />
-        </div>
 
         <div id="fights">
           <FightSceneSection
