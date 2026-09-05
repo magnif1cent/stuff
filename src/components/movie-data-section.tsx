@@ -28,7 +28,7 @@ export function MovieDataSection({
   return (
     <div className="mt-6 max-w-sm rounded-md border border-neutral-800 p-3">
       <div className="mb-3 flex items-center justify-between gap-2">
-        <h3 className="font-serif text-xl font-bold text-white">Movie Data</h3>
+        <p className="font-cond text-xs tracking-wider text-neutral-500 uppercase">Movie Data</p>
         {signedIn ? (
           <button
             onClick={() => setEditing((prev) => !prev)}
