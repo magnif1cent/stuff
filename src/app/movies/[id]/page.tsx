@@ -43,7 +43,7 @@ import { PosterOverrideControl } from "@/components/poster-override-control";
 import { MovieOverviewSnippet } from "@/components/movie-overview-snippet";
 import { MovieDetailsTabs } from "@/components/movie-details-tabs";
 import { RecommendedBadges } from "@/components/recommended-badge";
-import { FightCountControl } from "@/components/fight-count-control";
+import { MovieDataSection } from "@/components/movie-data-section";
 
 // How many of a movie's fights the movie page itself teases -- the rest live
 // on the dedicated /movies/[id]/fights collection page, linked via "View all".
@@ -149,6 +149,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
     myMemberReview,
     movieRecommenders,
     recentFightCountEdits,
+    recentEraSettingEdits,
     funFacts,
     collectionSiblings,
     similarMovies,
@@ -200,6 +201,12 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
       : null,
     getMovieRecommenders(movie.id),
     prisma.fightCountEdit.findMany({
+      where: { movieId: movie.id },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+      include: { editedBy: { select: { username: true } } },
+    }),
+    prisma.eraSettingEdit.findMany({
       where: { movieId: movie.id },
       orderBy: { createdAt: "desc" },
       take: 5,
@@ -532,6 +539,14 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
     editedBy: edit.editedBy,
   }));
 
+  const serializedEraSettingEdits = recentEraSettingEdits.map((edit) => ({
+    id: edit.id,
+    previousValue: edit.previousValue,
+    newValue: edit.newValue,
+    createdAt: edit.createdAt.toISOString(),
+    editedBy: edit.editedBy,
+  }));
+
   const myFunFactVoteMap = new Map(myFunFactVotes.map((v) => [v.factId, v.value as 1 | -1]));
   const serializedFunFacts = funFacts
     .map((fact) => {
@@ -809,13 +824,6 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
           isAdmin={session?.user?.role === "ADMIN"}
         />
 
-        <FightCountControl
-          movieId={movie.id}
-          initialCount={movie.trueFightCount}
-          recentEdits={serializedFightCountEdits}
-          signedIn={!!session?.user}
-        />
-
         <div id="fights">
           <FightSceneSection
             movieId={movie.id}
@@ -833,6 +841,17 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
             myFavoriteSceneIds={myFavoriteFightSceneIds}
             totalSceneCount={fightSceneRoundNumbers.size}
             viewAllHref={`/movies/${movie.id}/fights`}
+          />
+        </div>
+
+        <div className="mt-10">
+          <MovieDataSection
+            movieId={movie.id}
+            initialCount={movie.trueFightCount}
+            fightCountEdits={serializedFightCountEdits}
+            initialEra={movie.eraSetting}
+            eraSettingEdits={serializedEraSettingEdits}
+            signedIn={!!session?.user}
           />
         </div>
 

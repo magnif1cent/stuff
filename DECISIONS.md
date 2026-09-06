@@ -60,6 +60,9 @@ one.
 
 **Feature Decisions**
 
+- [Movie Data card reintroduced with a shared Edit button, relocated to a full-width section above Fights](#movie-data-card-reintroduced-with-a-shared-edit-button-relocated-to-a-full-width-section-above-fights)
+- [Historical Setting: renamed from Era, unboxed from its own card](#historical-setting-renamed-from-era-unboxed-from-its-own-card)
+- [Era Setting: a Fight-Count-style field for the historical period a movie is set in](#era-setting-a-fight-count-style-field-for-the-historical-period-a-movie-is-set-in)
 - [Admin sidebar nav grouped by domain, not build order](#admin-sidebar-nav-grouped-by-domain-not-build-order)
 - [Meme Generator added as an admin tab, not a member feature](#meme-generator-added-as-an-admin-tab-not-a-member-feature)
 - [Leaderboard reachable from a "Lists" nav hover submenu](#leaderboard-reachable-from-a-lists-nav-hover-submenu)
@@ -1069,6 +1072,92 @@ catalog size and traffic. This is the structural fix.
   Vercel's resizing wasn't buying anything — marked `unoptimized` too.
 
 ## Feature Decisions
+
+### Movie Data card reintroduced with a shared Edit button, relocated to a full-width section above Fights
+**PR #136.** Reverses part of the entry directly below this one ("Historical
+Setting: renamed from Era, unboxed from its own card"), which had cut the
+shared "Movie Data" card and left Fight Count/Historical Setting as plain
+unboxed rows. This PR re-introduces the card — grouping both fields under one
+bordered box with a single shared Edit/Done toggle instead of two separate
+ones, so clicking it puts both fields into edit mode together (each still
+saves independently, since they hit different API routes).
+
+- **A real race condition was found and fixed in the shared toggle.** The
+  first implementation keyed a remount to `editing`, resetting each control's
+  local state from its `initial*` prop whenever edit mode opened. Those props
+  only reflect the server's data once `router.refresh()`'s background re-fetch
+  lands — clicking Save then immediately Done, before that refresh landed,
+  could revert a just-saved value back to stale data. Fixed with React's
+  documented "adjust state during render" pattern: compare `editing` against
+  its previous value during render and reset from the component's own
+  already-correct local state, not the lagging prop.
+- **Placement went through several rounds, driven by live screenshot review
+  across signed-out, signed-in, and admin-with-ratings states** (each renders
+  a different column height in the movie page's two-column hero):
+  - First inside the hero, directly under Your Rating — this made Movie Data
+    the last thing before the full-width Cast section, and a small
+    utility-data box sitting right against Cast's much larger heading read as
+    an abrupt break in the page's visual flow.
+  - Tried moving it into the left sidebar, next to Details — closed that gap
+    for signed-out visitors, but flipped the imbalance for signed-in/admin
+    views, where Your Rating's own box (with category sliders, an Editors'
+    Rating tab) makes the right column shorter than the sidebar instead of
+    taller. The two columns' relative height depends on session state; no
+    single static placement in the hero wins in every case.
+  - Tried a side-by-side row with Your Rating in the hero — better (the two
+    end together instead of Movie Data trailing alone), but still imperfect:
+    the two cards aren't the same height so their bottoms don't quite align,
+    and it looks lopsided when signed out, since Your Rating renders as a
+    bare "Sign in to rate this movie" text link rather than a box in that
+    state — a full card next to a bare line of text.
+  - Landed on: Movie Data as its own full-width section, placed between
+    Reviews and Fights — matching the full-width treatment Cast/Reviews/
+    Fights already use, rather than living in the narrow two-column hero at
+    all. This sidesteps the column-balancing problem entirely instead of
+    continuing to patch it.
+- **Fight Count and Historical Setting render as a flex-wrap row of cells,
+  not a stacked list with a divider** — chosen anticipating more
+  member-maintained attributes being added here later. A new attribute is
+  just another cell appended to the row; the previous stacked layout would
+  have made the card taller with each addition, which is exactly what kept
+  re-tipping the hero's column balance before the card was moved out.
+
+### Historical Setting: renamed from Era, unboxed from its own card
+**PR #TBD.** A round of post-launch UI review on the movie page (screenshotting real rendered states, not just reading the JSX) surfaced problems with how "Era Setting" shipped, worked through in a few steps rather than one:
+
+- **"Era" renamed to "Historical Setting"** — "Era" alone reads as the movie's own production era ("an 80s movie"), the opposite of what the field means: the historical period the story is *set in*. Only the display label and edit-history copy changed; `eraSetting`/`EraSettingControl`/etc. keep their names, since renaming those is a schema-touching change disproportionate to a wording fix.
+- **Byline badge trimmed, then dropped entirely** — the year-range labels added right after launch (e.g. "Modern Day / Contemporary (1949–present)") made the byline noticeably heavier than neighbors like "102 min" and wrapped to its own line on mobile. First tried showing just the short name in the byline (keeping the full "(years)" label everywhere else); ultimately removed the byline badge altogether rather than carry two label forms for one field. Fight Count's byline badge is unaffected.
+- **The shared "Movie Data" card was cut, not just relocated.** It first moved from "after Reviews, before Fights" (where it read as an orphaned box on a movie with no reviews and no fight scenes yet — the empty state made it look like a mistake) to right under the Your Rating widget. That fixed the orphaning, but introduced a new problem: as one bordered box spanning the *combined* width of the Details+Your Rating row above it, it broke the two-column rhythm (two side-by-side boxes → one wide bar) and added a fourth similar-looking dark box to a page that already has Details, Your Rating, and often an Admin Review card. Fight Count and Historical Setting now render as plain unboxed rows directly under Your Rating, in that same `max-w-sm` column — no card, no heading, matching the original pre-"Movie Data" Fight Count treatment.
+- **Deliberately not folded into the Details card**, despite both being short factual displays: Details is static, admin/TMDB-sourced catalog record; Fight Count/Historical Setting are member-editable, revisable, with a public edit-history trail — closer kin to Ratings/Fun Facts than to Details. That distinction, plus Details' ~200px sidebar width being too narrow for Historical Setting's dropdown/edit UI (already confirmed tight at 375px mobile), ruled out tabbing or merging them.
+
+### Era Setting: a Fight-Count-style field for the historical period a movie is set in
+**PR #TBD.** Requested as "expand the Fight Count section to collect more
+user entries for different data" — narrowed down to one field (the
+historical period/dynasty a movie is *set in*, not its real-world release
+date) via two explicit choices: what data (an open-ended pick from
+candidates), and what editing model. This also happens to close the data
+gap the "Historical timeline page" backlog item was blocked on (see
+Deferred & Backlog below) — not the original ask, but the same underlying
+attribute, so `Movie.eraSetting` covers both.
+
+- **Copies Fight Count's model exactly, by explicit request over the
+  Ratings alternative** — single shared value, any verified member can
+  overwrite it, last-edit-wins, no consensus step, `EraSettingEdit` as the
+  same kind of accountability trail `FightCountEdit` is (not a second source
+  of truth). Same guardrails too: verified email (staff exempt), rate
+  limiting, full public edit history. Reuses the identical page placement
+  (byline link up top, full control right above it) and component shape —
+  `era-setting-control.tsx` is `fight-count-control.tsx` with a `<select>`
+  in place of the number input.
+- **Fixed dropdown, not free text** — the one real deviation from Fight
+  Count's shape (a bounded number vs. a closed vocabulary). `ERA_SETTINGS`
+  in `src/lib/era-settings.ts` is a hardcoded key/label list, same pattern
+  as `RATING_CATEGORIES`: a small closed set with app-level validation, not
+  an admin-configurable taxonomy table like `Genre`/`FightSceneTag`. Chosen
+  specifically so the still-unbuilt timeline page doesn't inherit unbounded
+  spelling variants of the same dynasty from a free-text field — the same
+  reasoning the backlog entry had already worked out, just executed as
+  member-editable instead of admin-curated.
 
 ### Admin sidebar nav grouped by domain, not build order
 **PR #TBD.** Eight tabs deep once Meme Generator shipped, and the nav
@@ -4591,22 +4680,25 @@ state to put a real person's figure in.
 - **Historical timeline page** — a page visually plotting movies along a
   timeline of Chinese historical periods/dynasties each movie is *set in*
   (not its real-world release date, which `Movie.releaseDate` already
-  covers). The real gap: no source has this data. TMDB doesn't track a
-  film's in-story historical setting, so it'd need a new admin-curated
-  attribute — likely a fixed period/dynasty taxonomy (mirroring the
-  `Genre`/`FightSceneTag` pattern) rather than free text, to keep the
-  timeline groupable/orderable. The timeline visualization itself (not
-  just the data model) is also a real, non-trivial UI build, not a
-  reskin of an existing list/grid view.
+  covers). The data gap this was blocked on is now closed: `Movie.eraSetting`
+  (see "Era Setting: Fight-Count-style field for the historical period a
+  movie is set in" under Feature Decisions) is exactly that fixed
+  period/dynasty attribute — built member-editable (Fight Count's model)
+  rather than admin-curated as originally guessed here, but still a closed
+  vocabulary (`ERA_SETTINGS`), so it's still groupable/orderable. What's
+  still not built: the timeline visualization itself, a real, non-trivial UI
+  in its own right, not a reskin of an existing list/grid view — and most
+  movies don't have an era set yet, since it's opt-in per movie like Fight
+  Count.
 - **Fun facts / history section per movie** — admin-curated trivia or
   historical context shown on the movie page, likely alongside (or as an
-  extension of) the existing Editorial Review. Real overlap with the
-  "Historical timeline page" item above worth resolving before either is
-  built: if "history" here means the film's *in-story* historical
-  setting (what dynasty/period it's set in), that's the same underlying
-  data gap the timeline page needs; if it means real-world trivia
-  (production history, behind-the-scenes facts), it's a simpler,
-  unrelated content field. Scope that distinction first.
+  extension of) the existing Editorial Review. Previously flagged as
+  overlapping the "Historical timeline page" item above until it was clear
+  whether "history" meant the film's in-story setting or real-world trivia
+  — that in-story-setting half is now `Movie.eraSetting` (see "Era Setting"
+  under Feature Decisions), so if this is still wanted, it's specifically
+  the real-world-trivia half: production history, behind-the-scenes facts,
+  a simpler content field unrelated to the timeline/era work.
 - **Expand member profile** — tabbed reorganization, a member-editable
   `bio` field, an Activity tab, a Liked Lists tab (merged into the Lists
   tab's "My Lists" / "Liked" toggle), and a stats strip have all shipped
