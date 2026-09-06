@@ -844,7 +844,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
           />
         </div>
 
-        <div className="mb-8">
+        <div className="mt-10">
           <MovieDataSection
             movieId={movie.id}
             initialCount={movie.trueFightCount}

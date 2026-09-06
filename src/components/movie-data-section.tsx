@@ -26,7 +26,7 @@ export function MovieDataSection({
   const [editing, setEditing] = useState(false);
 
   return (
-    <div className="rounded-md border border-neutral-800 p-3">
+    <div>
       <div className="mb-4 flex items-center justify-between gap-2">
         <h2 className="font-serif text-xl font-bold text-white">Movie Data</h2>
         {signedIn ? (
@@ -43,27 +43,32 @@ export function MovieDataSection({
         )}
       </div>
 
-      {/* A row of attribute cells rather than a single narrow stacked
-          card -- as more member-maintained attributes get added here
-          beyond Fight Count and Historical Setting, each one is just
-          another cell appended to this row instead of the box growing
-          taller (which previously fought for vertical space against
-          Your Rating/Details in the two-column hero -- see
-          DECISIONS.md). */}
-      <div className="flex flex-wrap gap-x-10 gap-y-4">
-        <FightCountControl
-          movieId={movieId}
-          initialCount={initialCount}
-          recentEdits={fightCountEdits}
-          editing={editing}
-        />
+      {/* Header sits outside the box, flush with Cast/Reviews/Fights/Fun
+          Facts's headers -- matches their pattern of boxing only the
+          content (review cards, fight cards), not the section header. */}
+      <div className="rounded-md border border-neutral-800 p-3">
+        {/* A row of attribute cells rather than a single narrow stacked
+            card -- as more member-maintained attributes get added here
+            beyond Fight Count and Historical Setting, each one is just
+            another cell appended to this row instead of the box growing
+            taller (which previously fought for vertical space against
+            Your Rating/Details in the two-column hero -- see
+            DECISIONS.md). */}
+        <div className="flex flex-wrap gap-x-10 gap-y-4">
+          <FightCountControl
+            movieId={movieId}
+            initialCount={initialCount}
+            recentEdits={fightCountEdits}
+            editing={editing}
+          />
 
-        <EraSettingControl
-          movieId={movieId}
-          initialEra={initialEra}
-          recentEdits={eraSettingEdits}
-          editing={editing}
-        />
+          <EraSettingControl
+            movieId={movieId}
+            initialEra={initialEra}
+            recentEdits={eraSettingEdits}
+            editing={editing}
+          />
+        </div>
       </div>
     </div>
   );
