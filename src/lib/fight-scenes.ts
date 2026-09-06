@@ -3,8 +3,12 @@ import { parseYoutubeUrl } from "@/lib/youtube";
 
 export const MAX_FIGHT_SCENE_CAST = 20;
 export const MAX_FIGHT_SCENE_TAGS = 10;
+export const MAX_FIGHT_SCENE_STYLES = 5;
+export const MAX_FIGHT_SCENE_MOVES = 10;
 export const MAX_FIGHT_SCENE_TITLE_LENGTH = 200;
 export const MAX_FIGHT_SCENE_TAG_NAME_LENGTH = 40;
+export const MAX_FIGHT_SCENE_STYLE_NAME_LENGTH = 40;
+export const MAX_FIGHT_SCENE_MOVE_NAME_LENGTH = 40;
 
 export interface FightSceneRatingSummary {
   average: number | null;
@@ -18,6 +22,8 @@ const fightSceneInclude = {
     include: { person: true },
   },
   tags: true,
+  styles: true,
+  moves: true,
 };
 
 export async function getFightScenesForMovie(movieId: string, options?: { limit?: number }) {
@@ -69,6 +75,14 @@ export async function getFightSceneRoundNumbers(movieId: string): Promise<Map<st
 
 export function getFightSceneTags() {
   return prisma.fightSceneTag.findMany({ orderBy: { name: "asc" } });
+}
+
+export function getFightSceneStyles() {
+  return prisma.fightSceneStyle.findMany({ orderBy: { name: "asc" } });
+}
+
+export function getFightSceneMoves() {
+  return prisma.fightSceneMove.findMany({ orderBy: { name: "asc" } });
 }
 
 export async function getFightSceneRatingSummaries(
@@ -199,17 +213,19 @@ interface ValidatedFightSceneInput {
   startSeconds: number | null;
   personIds: string[];
   tagIds: string[];
+  styleIds: string[];
+  moveIds: string[];
 }
 
 // Shared by the create and edit routes: parses/validates title, YouTube link,
-// actors (must be in the movie's cast), and tags (must exist) from a raw
-// request body. Returns either the validated fields or a {error, status} to
-// send straight back to the client.
+// actors (must be in the movie's cast), tags, styles, and moves (must exist)
+// from a raw request body. Returns either the validated fields or a {error,
+// status} to send straight back to the client.
 export async function parseAndValidateFightSceneInput(
   movieId: string,
   body: unknown,
 ): Promise<ValidatedFightSceneInput | { error: string; status: number }> {
-  const { title, youtubeUrl, personIds, tagIds } = (body ?? {}) as Record<string, unknown>;
+  const { title, youtubeUrl, personIds, tagIds, styleIds, moveIds } = (body ?? {}) as Record<string, unknown>;
 
   if (typeof title !== "string" || title.trim().length === 0) {
     return { error: "title is required.", status: 400 };
@@ -256,11 +272,45 @@ export async function parseAndValidateFightSceneInput(
     }
   }
 
+  // Style/Move stay admin-curated (see DECISIONS.md) — unlike tags, a member
+  // can only pick from ids that already exist, never invent one here.
+  const rawStyleIds = styleIds ?? [];
+  if (!Array.isArray(rawStyleIds) || !rawStyleIds.every((s) => typeof s === "string")) {
+    return { error: "styleIds must be an array of style ids.", status: 400 };
+  }
+  const uniqueStyleIds = [...new Set(rawStyleIds)];
+  if (uniqueStyleIds.length > MAX_FIGHT_SCENE_STYLES) {
+    return { error: `A fight scene can have at most ${MAX_FIGHT_SCENE_STYLES} styles.`, status: 400 };
+  }
+  if (uniqueStyleIds.length > 0) {
+    const styleCount = await prisma.fightSceneStyle.count({ where: { id: { in: uniqueStyleIds } } });
+    if (styleCount !== uniqueStyleIds.length) {
+      return { error: "One or more styles don't exist.", status: 400 };
+    }
+  }
+
+  const rawMoveIds = moveIds ?? [];
+  if (!Array.isArray(rawMoveIds) || !rawMoveIds.every((m) => typeof m === "string")) {
+    return { error: "moveIds must be an array of move ids.", status: 400 };
+  }
+  const uniqueMoveIds = [...new Set(rawMoveIds)];
+  if (uniqueMoveIds.length > MAX_FIGHT_SCENE_MOVES) {
+    return { error: `A fight scene can have at most ${MAX_FIGHT_SCENE_MOVES} moves.`, status: 400 };
+  }
+  if (uniqueMoveIds.length > 0) {
+    const moveCount = await prisma.fightSceneMove.count({ where: { id: { in: uniqueMoveIds } } });
+    if (moveCount !== uniqueMoveIds.length) {
+      return { error: "One or more moves don't exist.", status: 400 };
+    }
+  }
+
   return {
     title: trimmedTitle,
     videoId: parsed.videoId,
     startSeconds: parsed.startSeconds,
     personIds: uniquePersonIds,
     tagIds: uniqueTagIds,
+    styleIds: uniqueStyleIds,
+    moveIds: uniqueMoveIds,
   };
 }

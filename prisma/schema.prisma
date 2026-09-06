@@ -790,6 +790,8 @@ model FightScene {
   submittedBy User                    @relation(fields: [submittedById], references: [id], onDelete: Cascade)
   cast        FightSceneCast[]
   tags        FightSceneTag[]
+  styles      FightSceneStyle[]
+  moves       FightSceneMove[]
   ratings     FightSceneRating[]
   adminRatings FightSceneAdminRating[]
   memberListEntries MemberListFightSceneEntry[]
@@ -810,6 +812,25 @@ model FightScene {
 // shape as Genre <-> Movie above, since there's nothing extra to store per
 // assignment.
 model FightSceneTag {
+  id   String @id @default(cuid())
+  name String @unique
+
+  fightScenes FightScene[]
+}
+
+// Unlike FightSceneTag above (member-creatable since PR #126 — see
+// DECISIONS.md), Style and Move stay admin/reviewer-curated only: members
+// pick from what's already here when submitting a scene, and ask an admin to
+// add anything missing. Deliberately not reusing the tags precedent yet —
+// see DECISIONS.md for why. Same plain many-to-many shape either way.
+model FightSceneStyle {
+  id   String @id @default(cuid())
+  name String @unique
+
+  fightScenes FightScene[]
+}
+
+model FightSceneMove {
   id   String @id @default(cuid())
   name String @unique
 

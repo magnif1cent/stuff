@@ -11,6 +11,8 @@ import {
   getFightSceneAdminRatingSummaries,
   getFightSceneFavoriteCounts,
   getFightSceneTags,
+  getFightSceneStyles,
+  getFightSceneMoves,
   getFightSceneRoundNumbers,
 } from "@/lib/fight-scenes";
 import { FightSceneSection } from "@/components/fight-scene-section";
@@ -122,11 +124,13 @@ export default async function MovieFightsPage({
   const selectedTag = sp.tag?.trim() ?? "";
   const hasFilters = verifiedOnly || selectedTag.length > 0;
 
-  const [movieCast, allFightScenes, tagOptions, myMemberLists, myFightSceneFavorites, fightSceneRoundNumbers] =
+  const [movieCast, allFightScenes, tagOptions, styleOptions, moveOptions, myMemberLists, myFightSceneFavorites, fightSceneRoundNumbers] =
     await Promise.all([
       prisma.castCredit.findMany({ where: { movieId }, include: { person: true }, orderBy: { order: "asc" } }),
       getFightScenesForMovie(movieId),
       getFightSceneTags(),
+      getFightSceneStyles(),
+      getFightSceneMoves(),
       session?.user
         ? prisma.memberList.findMany({
             where: { userId: session.user.id },
@@ -211,6 +215,8 @@ export default async function MovieFightsPage({
       submittedBy: scene.submittedBy,
       cast: scene.cast,
       tags: scene.tags,
+      styles: scene.styles,
+      moves: scene.moves,
       ratingAverage: summary?.average ?? null,
       ratingCount: summary?.count ?? 0,
       adminRatingAverage: adminSummary?.average ?? null,
@@ -274,6 +280,8 @@ export default async function MovieFightsPage({
         initialFightScenes={serializedFightScenes}
         castOptions={castOptions}
         tagOptions={tagOptions}
+        styleOptions={styleOptions}
+        moveOptions={moveOptions}
         signedIn={!!session?.user}
         currentUserId={session?.user?.id ?? null}
         isAdmin={session?.user?.role === "ADMIN"}

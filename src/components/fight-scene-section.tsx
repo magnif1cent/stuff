@@ -3,11 +3,12 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { FightSceneCast, FightSceneTag, Person, User } from "@/generated/prisma/client";
+import type { FightSceneCast, FightSceneTag, FightSceneStyle, FightSceneMove, Person, User } from "@/generated/prisma/client";
 import { ShareButton } from "@/components/share-button";
 import { AddToListControl, type AddToListItem } from "@/components/add-to-list-control";
 import { FavoriteButton } from "@/components/favorite-button";
 import { StarRatingPicker } from "@/components/star-rating-picker";
+import { AutocompleteChipPicker } from "@/components/autocomplete-chip-picker";
 import { youtubeWatchUrl } from "@/lib/youtube";
 
 const MAX_NOTE_LENGTH = 2000;
@@ -19,6 +20,14 @@ const MAX_TAG_NAME_LENGTH = 40;
 
 export type CastOption = Pick<Person, "id" | "name">;
 export type TagOption = Pick<FightSceneTag, "id" | "name">;
+export type StyleOption = Pick<FightSceneStyle, "id" | "name">;
+export type MoveOption = Pick<FightSceneMove, "id" | "name">;
+
+// Style pill color; Tags/cast use the neutral+red "checked" look, but Style
+// and Move get their own accent (mirroring the read-only ticket card) so a
+// member can tell the three vocabularies apart in the same form.
+const STYLE_PILL_CLASS = "border border-red-800 bg-red-950/40 text-red-300";
+const MOVE_PILL_CLASS = "border border-[#5c6b3f] bg-[#3a4429]/40 text-[#a9c48b]";
 
 type FightSceneSubmitter = Pick<User, "username" | "image">;
 type FightSceneCastPerson = Pick<Person, "id" | "name" | "profilePath">;
@@ -43,6 +52,8 @@ export type FightSceneItem = {
   submittedBy: FightSceneSubmitter;
   cast: FightSceneCastItem[];
   tags: TagOption[];
+  styles: StyleOption[];
+  moves: MoveOption[];
   ratingAverage: number | null;
   ratingCount: number;
   adminRatingAverage: number | null;
@@ -111,10 +122,14 @@ function ChipPicker({
 function FightSceneForm({
   castOptions,
   tagOptions,
+  styleOptions,
+  moveOptions,
   initialTitle = "",
   initialUrl = "",
   initialPersonIds = [],
   initialTagIds = [],
+  initialStyleIds = [],
+  initialMoveIds = [],
   submitLabel,
   submitting,
   onCancel,
@@ -124,19 +139,33 @@ function FightSceneForm({
 }: {
   castOptions: CastOption[];
   tagOptions: TagOption[];
+  styleOptions: StyleOption[];
+  moveOptions: MoveOption[];
   initialTitle?: string;
   initialUrl?: string;
   initialPersonIds?: string[];
   initialTagIds?: string[];
+  initialStyleIds?: string[];
+  initialMoveIds?: string[];
   submitLabel: string;
   submitting: boolean;
   onCancel?: () => void;
-  onSubmit: (title: string, youtubeUrl: string, personIds: string[], tagIds: string[]) => void;
+  onSubmit: (
+    title: string,
+    youtubeUrl: string,
+    personIds: string[],
+    tagIds: string[],
+    styleIds: string[],
+    moveIds: string[],
+  ) => void;
   // Members can invent a tag that isn't in tagOptions yet -- unlike cast,
   // which is fixed to the movie's own credits. Returns the created (or, on
   // a case-insensitive name match, the existing) tag, or null on failure;
   // the caller owns growing the shared tagOptions list so a tag created
   // while adding one scene is available immediately when editing another.
+  // Style/Move have no equivalent -- they're admin/reviewer-curated only
+  // (see DECISIONS.md), so a member can only pick from styleOptions/
+  // moveOptions as already given, never create a new one here.
   onCreateTag: (name: string) => Promise<TagOption | null>;
   isEditing?: boolean;
 }) {
@@ -144,6 +173,8 @@ function FightSceneForm({
   const [url, setUrl] = useState(initialUrl);
   const [selectedCast, setSelectedCast] = useState<Set<string>>(new Set(initialPersonIds));
   const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set(initialTagIds));
+  const [selectedStyles, setSelectedStyles] = useState<Set<string>>(new Set(initialStyleIds));
+  const [selectedMoves, setSelectedMoves] = useState<Set<string>>(new Set(initialMoveIds));
   const [suggestingTitle, setSuggestingTitle] = useState(false);
   const [newTagName, setNewTagName] = useState("");
   const [creatingTag, setCreatingTag] = useState(false);
@@ -160,6 +191,24 @@ function FightSceneForm({
 
   function toggleTag(id: string) {
     setSelectedTags((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleStyle(id: string) {
+    setSelectedStyles((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleMove(id: string) {
+    setSelectedMoves((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
@@ -254,9 +303,33 @@ function FightSceneForm({
           </button>
         </div>
       </div>
+      <div>
+        <p className="mb-1 text-xs text-neutral-500">Martial arts style (optional)</p>
+        <AutocompleteChipPicker
+          id={isEditing ? "fight-scene-edit-style" : "fight-scene-style"}
+          options={styleOptions}
+          selected={selectedStyles}
+          onToggle={toggleStyle}
+          placeholder="Search styles…"
+          pillClassName={STYLE_PILL_CLASS}
+        />
+        <p className="mt-1 text-xs text-neutral-600">Don&rsquo;t see it? An admin can add new styles to the list.</p>
+      </div>
+      <div>
+        <p className="mb-1 text-xs text-neutral-500">Martial arts move (optional)</p>
+        <AutocompleteChipPicker
+          id={isEditing ? "fight-scene-edit-move" : "fight-scene-move"}
+          options={moveOptions}
+          selected={selectedMoves}
+          onToggle={toggleMove}
+          placeholder="Search moves…"
+          pillClassName={MOVE_PILL_CLASS}
+        />
+        <p className="mt-1 text-xs text-neutral-600">Don&rsquo;t see it? An admin can add new moves to the list.</p>
+      </div>
       <div className="flex gap-2">
         <button
-          onClick={() => onSubmit(title, url, [...selectedCast], [...selectedTags])}
+          onClick={() => onSubmit(title, url, [...selectedCast], [...selectedTags], [...selectedStyles], [...selectedMoves])}
           disabled={submitting || !url.trim() || !title.trim() || selectedCast.size === 0}
           className="w-fit rounded-md bg-red-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-600 disabled:opacity-50"
         >
@@ -283,6 +356,10 @@ function FightSceneForm({
 const TICKET_INK = "#1a1712";
 const TICKET_MUTED = "#6b6148";
 const TICKET_STAMP = "#a4291e";
+// Move's own accent, distinct from Style's TICKET_STAMP red -- same two-color
+// split as the card's badge row (see fight-scene-result-card.tsx, kept in
+// sync manually).
+const TICKET_MOVE = "#4a5a3a";
 
 function ActionChip({ onClick, children }: { onClick: () => void; children: string }) {
   return (
@@ -336,6 +413,8 @@ export function FightSceneSection({
   initialFightScenes,
   castOptions,
   tagOptions: initialTagOptions,
+  styleOptions,
+  moveOptions,
   signedIn,
   currentUserId,
   isAdmin,
@@ -358,6 +437,11 @@ export function FightSceneSection({
   initialFightScenes: FightSceneItem[];
   castOptions: CastOption[];
   tagOptions: TagOption[];
+  // Closed vocab, admin/reviewer-curated only -- unlike tagOptions above,
+  // this component never grows these lists itself (see onCreateTag's
+  // comment on FightSceneForm), so it's passed straight through as given.
+  styleOptions: StyleOption[];
+  moveOptions: MoveOption[];
   signedIn: boolean;
   currentUserId: string | null;
   // Full admin powers: delete any scene, adjust start-time, set the
@@ -458,13 +542,20 @@ export function FightSceneSection({
     return tag;
   }
 
-  async function handleCreate(title: string, youtubeUrl: string, personIds: string[], tagIds: string[]) {
+  async function handleCreate(
+    title: string,
+    youtubeUrl: string,
+    personIds: string[],
+    tagIds: string[],
+    styleIds: string[],
+    moveIds: string[],
+  ) {
     setSubmitting(true);
     setError(null);
     const res = await fetch(`/api/movies/${movieId}/fight-scenes`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, youtubeUrl, personIds, tagIds }),
+      body: JSON.stringify({ title, youtubeUrl, personIds, tagIds, styleIds, moveIds }),
     });
     setSubmitting(false);
     if (!res.ok) {
@@ -490,13 +581,21 @@ export function FightSceneSection({
     setVisibleCount((prev) => prev + 1);
   }
 
-  async function handleEdit(id: string, title: string, youtubeUrl: string, personIds: string[], tagIds: string[]) {
+  async function handleEdit(
+    id: string,
+    title: string,
+    youtubeUrl: string,
+    personIds: string[],
+    tagIds: string[],
+    styleIds: string[],
+    moveIds: string[],
+  ) {
     setSubmitting(true);
     setError(null);
     const res = await fetch(`/api/movies/${movieId}/fight-scenes/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, youtubeUrl, personIds, tagIds }),
+      body: JSON.stringify({ title, youtubeUrl, personIds, tagIds, styleIds, moveIds }),
     });
     setSubmitting(false);
     if (!res.ok) {
@@ -649,6 +748,8 @@ export function FightSceneSection({
           <FightSceneForm
             castOptions={castOptions}
             tagOptions={tagOptions}
+            styleOptions={styleOptions}
+            moveOptions={moveOptions}
             submitLabel="Add fight scene"
             submitting={submitting}
             onCancel={() => setAdding(false)}
@@ -669,14 +770,20 @@ export function FightSceneSection({
           <FightSceneForm
             castOptions={castOptions}
             tagOptions={tagOptions}
+            styleOptions={styleOptions}
+            moveOptions={moveOptions}
             initialTitle={editingScene.title}
             initialUrl={`https://www.youtube.com/watch?v=${editingScene.youtubeVideoId}`}
             initialPersonIds={editingScene.cast.map((c) => c.person.id)}
             initialTagIds={editingScene.tags.map((t) => t.id)}
+            initialStyleIds={editingScene.styles.map((s) => s.id)}
+            initialMoveIds={editingScene.moves.map((m) => m.id)}
             submitLabel="Save"
             submitting={submitting}
             onCancel={() => setEditingId(null)}
-            onSubmit={(title, url, personIds, tagIds) => handleEdit(editingScene.id, title, url, personIds, tagIds)}
+            onSubmit={(title, url, personIds, tagIds, styleIds, moveIds) =>
+              handleEdit(editingScene.id, title, url, personIds, tagIds, styleIds, moveIds)
+            }
             onCreateTag={handleCreateTag}
             isEditing
           />
@@ -853,6 +960,29 @@ export function FightSceneSection({
                     </span>
                   ))}
                 </p>
+              )}
+
+              {(scene.styles.length > 0 || scene.moves.length > 0) && (
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {scene.styles.map((style) => (
+                    <span
+                      key={style.id}
+                      className="px-2 py-0.5 text-[10px] font-bold tracking-wide uppercase"
+                      style={{ border: `1px solid ${TICKET_STAMP}`, color: TICKET_STAMP }}
+                    >
+                      {style.name}
+                    </span>
+                  ))}
+                  {scene.moves.map((move) => (
+                    <span
+                      key={move.id}
+                      className="px-2 py-0.5 text-[10px] font-bold tracking-wide uppercase"
+                      style={{ border: `1px solid ${TICKET_MOVE}`, color: TICKET_MOVE }}
+                    >
+                      {move.name}
+                    </span>
+                  ))}
+                </div>
               )}
 
               <div className="mt-3 flex flex-wrap gap-1.5">
