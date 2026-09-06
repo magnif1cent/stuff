@@ -32,7 +32,7 @@ export function MovieDataSection({
         {signedIn ? (
           <button
             onClick={() => setEditing((prev) => !prev)}
-            className="text-xs text-neutral-500 underline hover:text-neutral-300"
+            className="rounded-md border border-neutral-700 px-3 py-1 text-xs text-neutral-300 hover:bg-neutral-800"
           >
             {editing ? "Done" : "Edit"}
           </button>
