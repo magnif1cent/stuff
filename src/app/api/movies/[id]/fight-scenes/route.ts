@@ -28,7 +28,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if ("error" in result) {
     return NextResponse.json({ error: result.error }, { status: result.status });
   }
-  const { title, videoId, startSeconds, personIds, tagIds } = result;
+  const { title, videoId, startSeconds, personIds, tagIds, styleIds, moveIds } = result;
 
   const fightScene = await prisma.fightScene.create({
     data: {
@@ -39,11 +39,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       youtubeStartSeconds: startSeconds,
       cast: { create: personIds.map((personId, order) => ({ personId, order })) },
       tags: { connect: tagIds.map((id) => ({ id })) },
+      styles: { connect: styleIds.map((id) => ({ id })) },
+      moves: { connect: moveIds.map((id) => ({ id })) },
     },
     include: {
       submittedBy: { select: { username: true, image: true } },
       cast: { orderBy: { order: "asc" }, include: { person: true } },
       tags: true,
+      styles: true,
+      moves: true,
     },
   });
 

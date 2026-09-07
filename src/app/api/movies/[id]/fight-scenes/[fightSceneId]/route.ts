@@ -26,7 +26,7 @@ export async function PATCH(
   if ("error" in result) {
     return NextResponse.json({ error: result.error }, { status: result.status });
   }
-  const { title, videoId, personIds, tagIds } = result;
+  const { title, videoId, personIds, tagIds, styleIds, moveIds } = result;
 
   const fightScene = await prisma.$transaction(async (tx) => {
     await tx.fightSceneCast.deleteMany({ where: { fightSceneId } });
@@ -43,11 +43,15 @@ export async function PATCH(
         isVerified: false,
         cast: { create: personIds.map((personId, order) => ({ personId, order })) },
         tags: { set: tagIds.map((id) => ({ id })) },
+        styles: { set: styleIds.map((id) => ({ id })) },
+        moves: { set: moveIds.map((id) => ({ id })) },
       },
       include: {
         submittedBy: { select: { username: true, image: true } },
         cast: { orderBy: { order: "asc" }, include: { person: true } },
         tags: true,
+        styles: true,
+        moves: true,
       },
     });
   });
