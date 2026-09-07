@@ -1076,7 +1076,7 @@ catalog size and traffic. This is the structural fix.
 ## Feature Decisions
 
 ### Member-created fight scene tags get a profanity check, member-facing only
-**PR #TBD.** Since "Let members create their own fight scene tags" (below)
+**PR #138.** Since "Let members create their own fight scene tags" (below)
 made tag creation open rather than admin-curated, nothing stopped a member
 from typing an explicit-profanity tag and having it go live immediately,
 visible on the scene until an admin happened to notice and delete it via
