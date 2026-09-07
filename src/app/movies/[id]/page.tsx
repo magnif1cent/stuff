@@ -21,6 +21,8 @@ import {
   getFightSceneRatingSummaries,
   getFightSceneAdminRatingSummaries,
   getFightSceneTags,
+  getFightSceneStyles,
+  getFightSceneMoves,
   getFightSceneRoundNumbers,
 } from "@/lib/fight-scenes";
 import { getFunFactsForMovie, getFunFactVoteSummaries } from "@/lib/fun-facts";
@@ -143,6 +145,8 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
     discussionPage,
     fightScenes,
     fightSceneTags,
+    fightSceneStyles,
+    fightSceneMoves,
     editorialReview,
     topMemberReviews,
     memberReviewsCount,
@@ -188,6 +192,8 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
     getDiscussionPage(movie.id),
     getFightScenesForMovie(movie.id, { limit: FEATURED_FIGHT_COUNT }),
     getFightSceneTags(),
+    getFightSceneStyles(),
+    getFightSceneMoves(),
     prisma.editorialReview.findUnique({
       where: { movieId: movie.id },
       include: { author: { select: { username: true } } },
@@ -493,6 +499,8 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
       submittedBy: scene.submittedBy,
       cast: scene.cast,
       tags: scene.tags,
+      styles: scene.styles,
+      moves: scene.moves,
       ratingAverage: summary?.average ?? null,
       ratingCount: summary?.count ?? 0,
       adminRatingAverage: adminSummary?.average ?? null,
@@ -830,6 +838,8 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
             initialFightScenes={serializedFightScenes}
             castOptions={castOptions}
             tagOptions={fightSceneTags}
+            styleOptions={fightSceneStyles}
+            moveOptions={fightSceneMoves}
             signedIn={!!session?.user}
             currentUserId={session?.user?.id ?? null}
             isAdmin={session?.user?.role === "ADMIN"}

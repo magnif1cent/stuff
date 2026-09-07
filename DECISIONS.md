@@ -60,6 +60,7 @@ one.
 
 **Feature Decisions**
 
+- [Fight scenes gain two new data points: martial arts Style and Move, kept closed-vocabulary against the tags precedent](#fight-scenes-gain-two-new-data-points-martial-arts-style-and-move-kept-closed-vocabulary-against-the-tags-precedent)
 - [Movie Data card reintroduced with a shared Edit button, relocated to a full-width section above Fights](#movie-data-card-reintroduced-with-a-shared-edit-button-relocated-to-a-full-width-section-above-fights)
 - [Historical Setting: renamed from Era, unboxed from its own card](#historical-setting-renamed-from-era-unboxed-from-its-own-card)
 - [Era Setting: a Fight-Count-style field for the historical period a movie is set in](#era-setting-a-fight-count-style-field-for-the-historical-period-a-movie-is-set-in)
@@ -1072,6 +1073,56 @@ catalog size and traffic. This is the structural fix.
   Vercel's resizing wasn't buying anything — marked `unoptimized` too.
 
 ## Feature Decisions
+
+### Fight scenes gain two new data points: martial arts Style and Move, kept closed-vocabulary against the tags precedent
+**PR #137.** Adds `FightSceneStyle` and `FightSceneMove` — two more many-to-many
+facets a member can attach to a fight scene alongside the existing category
+Tags, cast, and rating. Schema-wise each is a straight copy of
+`FightSceneTag` (its own table, plain implicit m2m join).
+
+- **Deliberately not following the tags precedent (member-creatable, see
+  "`Let members create their own fight scene tags`" below) despite it being
+  the most recent, most relevant prior decision on this exact codebase.**
+  That reversal's own stated reasoning — "tags aren't data-hygiene-critical,
+  and admin delete is an adequate fallback" — was raised explicitly as a
+  reason to reconsider Style/Move too, and rejected on request: Style/Move
+  stay admin/reviewer-curated only (`/admin/fight-scene-styles`,
+  `/admin/fight-scene-moves`, mirroring `/admin/fight-scene-tags`), a member
+  can only pick from what already exists. The schema carries no cost either
+  way — "closed" vs. "open" is purely which UI/API path can create a new
+  row — so this is cheaply reversible later if it turns out to be too
+  restrictive, the same way tags themselves were once reversed.
+- **Submission form uses a new `AutocompleteChipPicker` (search-to-narrow,
+  multi-select, removable colored chips) instead of the checkbox-grid
+  `ChipPicker` tags/cast already use** — chosen explicitly over reusing
+  `ChipPicker`, on the reasoning that Style/Move vocab could grow long
+  enough that scrolling a checkbox grid stops being the fastest way to find
+  one entry. Filters the already-loaded `styleOptions`/`moveOptions` array
+  client-side (no per-keystroke network call) rather than hitting an
+  endpoint per keystroke like `AutocompleteFilterInput` (actor/director on
+  `/search`) does — a deliberate difference, not an oversight: those lists
+  are effectively unbounded and can't be shipped to the client up front,
+  Style/Move are a bounded admin-curated vocabulary and already are.
+- **Card display: a dedicated badge row, own accent color per facet, above
+  the existing Tags row** (style in the rating-stamp red `#a4291e`, move in a
+  new olive `#4a5a3a`) — one of six mocked-up options (blended into the tags
+  row with no visual distinction; a merged single "Style → Move" pill; an
+  icon-prefixed neutral badge; a plain muted-caption text line; a
+  ticket-stub vertical side rail). The color-coded own-row option won on
+  scan-ability without introducing a third visual language to the card
+  beyond ink + one accent — the two new colors both read as "the same kind
+  of thing, a different flavor," while still being tell-apart-able from
+  category tags' plain underlined-link styling.
+- **Display scope is deliberately limited to the two primary browsing
+  surfaces** — `/search/fights` and the movie-page/collection-page
+  `FightSceneSection` view — not every place a fight scene card can render
+  (member lists, `/tops/fights`, a member profile's saved-scenes grid).
+  `FightSceneResultCard`'s `styles`/`moves` fields are optional rather than
+  required for exactly this reason: those other call sites keep
+  type-checking and rendering correctly (just without the new badge row)
+  without being forced to add the extra Prisma `include` just to satisfy a
+  type. Wiring the remaining surfaces is a small, schema-free follow-up
+  whenever it's worth doing, not deferred for a hard reason.
 
 ### Movie Data card reintroduced with a shared Edit button, relocated to a full-width section above Fights
 **PR #136.** Reverses part of the entry directly below this one ("Historical

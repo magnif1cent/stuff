@@ -8,12 +8,12 @@ export const metadata: Metadata = {
 };
 
 // REVIEWER only gets Movies (pending-submission review, not the full
-// catalog — see AdminMoviesPage) and Fight Scene Tags, plus the same
-// self-service Account page ADMIN gets. TMDB import, Lineage, News &
-// Updates, and Meme Generator stay full-admin-only, so they're marked
-// adminOnly rather than left off this list entirely — omitting them here
-// would mean re-declaring the same nav shape twice instead of filtering one
-// list.
+// catalog — see AdminMoviesPage), Fight Scene Tags, Fight Scene Styles, and
+// Fight Scene Moves, plus the same self-service Account page ADMIN gets.
+// TMDB import, Lineage, News & Updates, and Meme Generator stay
+// full-admin-only, so they're marked adminOnly rather than left off this
+// list entirely — omitting them here would mean re-declaring the same nav
+// shape twice instead of filtering one list.
 //
 // Grouped by domain rather than build order: Dashboard and Account are
 // ungrouped anchors (overview / self-service, not catalog or content work),
@@ -30,6 +30,8 @@ const NAV_GROUPS: { label: string | null; links: { href: string; label: string; 
       { href: "/admin/movies", label: "Movies", adminOnly: false },
       { href: "/admin/import", label: "Import from TMDB", adminOnly: true },
       { href: "/admin/fight-scene-tags", label: "Fight Scene Tags", adminOnly: false },
+      { href: "/admin/fight-scene-styles", label: "Fight Scene Styles", adminOnly: false },
+      { href: "/admin/fight-scene-moves", label: "Fight Scene Moves", adminOnly: false },
       { href: "/admin/lineage", label: "Lineage", adminOnly: true },
     ],
   },

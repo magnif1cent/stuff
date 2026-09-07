@@ -10,6 +10,8 @@ import {
   getFightSceneRatingSummaries,
   getFightSceneAdminRatingSummaries,
   getFightSceneTags,
+  getFightSceneStyles,
+  getFightSceneMoves,
   getFightSceneRoundNumbers,
 } from "@/lib/fight-scenes";
 import { FightSceneSection } from "@/components/fight-scene-section";
@@ -54,10 +56,12 @@ export default async function FightScenePage({ params }: { params: Promise<Param
     notFound();
   }
 
-  const [movieCast, tagOptions, ratingSummaries, adminRatingSummaries, myRating, myAdminRating, roundNumbers, myMemberLists, myFightSceneFavorites, movieScenes] =
+  const [movieCast, tagOptions, styleOptions, moveOptions, ratingSummaries, adminRatingSummaries, myRating, myAdminRating, roundNumbers, myMemberLists, myFightSceneFavorites, movieScenes] =
     await Promise.all([
       prisma.castCredit.findMany({ where: { movieId }, include: { person: true }, orderBy: { order: "asc" } }),
       getFightSceneTags(),
+      getFightSceneStyles(),
+      getFightSceneMoves(),
       getFightSceneRatingSummaries([scene.id]),
       getFightSceneAdminRatingSummaries([scene.id]),
       session?.user
@@ -125,6 +129,8 @@ export default async function FightScenePage({ params }: { params: Promise<Param
     submittedBy: scene.submittedBy,
     cast: scene.cast,
     tags: scene.tags,
+    styles: scene.styles,
+    moves: scene.moves,
     ratingAverage: summary?.average ?? null,
     ratingCount: summary?.count ?? 0,
     adminRatingAverage: adminSummary?.average ?? null,
@@ -157,6 +163,8 @@ export default async function FightScenePage({ params }: { params: Promise<Param
         initialFightScenes={[serializedScene]}
         castOptions={castOptions}
         tagOptions={tagOptions}
+        styleOptions={styleOptions}
+        moveOptions={moveOptions}
         signedIn={!!session?.user}
         currentUserId={session?.user?.id ?? null}
         isAdmin={session?.user?.role === "ADMIN"}
