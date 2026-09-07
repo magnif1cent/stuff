@@ -60,6 +60,7 @@ one.
 
 **Feature Decisions**
 
+- [Member-created fight scene tags get a profanity check, member-facing only](#member-created-fight-scene-tags-get-a-profanity-check-member-facing-only)
 - [Fight scenes gain two new data points: martial arts Style and Move, kept closed-vocabulary against the tags precedent](#fight-scenes-gain-two-new-data-points-martial-arts-style-and-move-kept-closed-vocabulary-against-the-tags-precedent)
 - [Movie Data card reintroduced with a shared Edit button, relocated to a full-width section above Fights](#movie-data-card-reintroduced-with-a-shared-edit-button-relocated-to-a-full-width-section-above-fights)
 - [Historical Setting: renamed from Era, unboxed from its own card](#historical-setting-renamed-from-era-unboxed-from-its-own-card)
@@ -1073,6 +1074,42 @@ catalog size and traffic. This is the structural fix.
   Vercel's resizing wasn't buying anything — marked `unoptimized` too.
 
 ## Feature Decisions
+
+### Member-created fight scene tags get a profanity check, member-facing only
+**PR #TBD.** Since "Let members create their own fight scene tags" (below)
+made tag creation open rather than admin-curated, nothing stopped a member
+from typing an explicit-profanity tag and having it go live immediately,
+visible on the scene until an admin happened to notice and delete it via
+`/admin/fight-scene-tags`. Added a check at `POST /api/fight-scene-tags`
+(the member-facing create endpoint) that rejects the create outright when
+the name is profane.
+
+- **Reject, don't silently censor.** The alternative — accepting the tag but
+  replacing the profanity with asterisks (`bad-words`' own `.clean()`
+  method) — would leave a half-blanked-out tag live on the scene, a worse
+  outcome than asking the member to pick a different name. `isProfane()`
+  plus a plain 400 error was chosen over `.clean()` for that reason.
+- **Depends on the `bad-words` npm package rather than a hand-written word
+  list.** A hand-maintained list means either committing an explicit slur
+  list into the repo (unpleasant to review/diff, and a list nobody's
+  actively curating goes stale) or under-covering real cases. `bad-words`
+  is a small, widely-used, MIT-licensed package with its own maintained
+  list (`badwords-list`) — the same tradeoff as depending on any other
+  vetted library instead of reinventing it.
+- **Explicit scope: catches profanity/slurs, not "unserious."** This does
+  nothing about a merely silly, junk, or joke tag ("asdf", a meme phrase) —
+  word-list matching can't tell "unserious" from "serious," only "explicit"
+  from "not." Admin delete at `/admin/fight-scene-tags` remains the actual
+  backstop for that broader class, unchanged from before this PR.
+- **Member-facing only — `/api/admin/fight-scene-tags` (the admin create
+  endpoint) doesn't run this check.** An admin is already trusted to curate
+  the vocabulary directly; gating their own tag creation behind a
+  word-list filter would only get in the way of a legitimate edgy-but-real
+  tag an admin chooses to add on purpose.
+- Bypassable by design, not by oversight — spacing, leetspeak, and unlisted
+  slurs all slip through a word-list check. Accepted as "raises the bar
+  for the worst, most obvious cases" rather than a claim of completeness;
+  a determined troll was never going to be stopped by this alone.
 
 ### Fight scenes gain two new data points: martial arts Style and Move, kept closed-vocabulary against the tags precedent
 **PR #137.** Adds `FightSceneStyle` and `FightSceneMove` — two more many-to-many

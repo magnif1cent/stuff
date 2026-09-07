@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { isEmailVerified } from "@/lib/verification";
 import { MAX_FIGHT_SCENE_TAG_NAME_LENGTH } from "@/lib/fight-scenes";
 import { checkRateLimit, fightSceneTagCreateLimiter } from "@/lib/rate-limit";
+import { isBlockedContent } from "@/lib/content-moderation";
 
 // Member-facing tag creation -- separate from /api/admin/fight-scene-tags,
 // which is the admin management surface (list with usage counts, rename,
@@ -38,6 +39,13 @@ export async function POST(request: Request) {
       { error: `name must be ${MAX_FIGHT_SCENE_TAG_NAME_LENGTH} characters or fewer.` },
       { status: 400 },
     );
+  }
+  // Member-facing only -- the admin create endpoint doesn't run this check,
+  // since an admin is trusted to curate the vocabulary directly. Doesn't
+  // catch merely silly/joke tags, only explicit profanity/slurs; admin
+  // delete at /admin/fight-scene-tags stays the fallback for those.
+  if (isBlockedContent(trimmedName)) {
+    return NextResponse.json({ error: "That name isn't allowed." }, { status: 400 });
   }
 
   // Case-insensitive: reuse an existing tag ("Weapon Duel"/"weapon duel")
