@@ -86,20 +86,42 @@ function buildLayout(tree: LineageTree) {
 
   tree.descendantLevels.forEach((groups, levelIndex) => {
     const y = (levelIndex + 1) * ROW_H;
-    const totalSlots = groups.reduce((sum, g) => sum + g.children.length + (g.overflowCount > 0 ? 1 : 0), 0);
-    let slot = 0;
-    for (const group of groups) {
+
+    // Each parent's own children are centered directly under that parent,
+    // not packed as one flat left-to-right sequence across the whole row.
+    // With several siblings where only some branch further (two of four
+    // children having their own students, say), a flat pack drifts a
+    // parent's children off onto a neighboring sibling's column instead --
+    // the connecting line is still technically correct, but the crossing
+    // reads as backwards. Overlap between two adjacent clusters (needs two
+    // branching parents close together, each with several children of
+    // their own) is resolved by nudging the later one right just enough to
+    // clear the earlier one.
+    const widths = groups.map((g) => g.children.length + (g.overflowCount > 0 ? 1 : 0));
+    const centers: number[] = [];
+    groups.forEach((group, i) => {
+      const desired = (posById.get(group.parent.id) ?? { x: 0, y: y - ROW_H }).x;
+      if (i === 0) {
+        centers.push(desired);
+      } else {
+        const minCenter = centers[i - 1] + ((widths[i - 1] + widths[i]) / 2) * SLOT_W;
+        centers.push(Math.max(desired, minCenter));
+      }
+    });
+
+    groups.forEach((group, i) => {
       const parentPos = posById.get(group.parent.id) ?? { x: 0, y: y - ROW_H };
+      const w = widths[i];
+      let slot = 0;
       for (const child of group.children) {
-        const x = (slot - (totalSlots - 1) / 2) * SLOT_W;
+        const x = centers[i] + (slot - (w - 1) / 2) * SLOT_W;
         slot++;
         nodes.push({ id: child.id, figure: child, kind: "child", x, y });
         posById.set(child.id, { x, y });
         lines.push({ x1: parentPos.x, y1: parentPos.y, x2: x, y2: y, dashed: false });
       }
       if (group.overflowCount > 0) {
-        const x = (slot - (totalSlots - 1) / 2) * SLOT_W;
-        slot++;
+        const x = centers[i] + (slot - (w - 1) / 2) * SLOT_W;
         nodes.push({
           id: `${group.parent.id}-overflow`,
           figure: { id: "", name: `+${group.overflowCount} more`, profilePath: null, personId: null, isGroup: false },
@@ -110,7 +132,7 @@ function buildLayout(tree: LineageTree) {
         });
         lines.push({ x1: parentPos.x, y1: parentPos.y, x2: x, y2: y, dashed: true });
       }
-    }
+    });
   });
 
   const xs = nodes.map((n) => n.x);
