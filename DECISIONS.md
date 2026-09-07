@@ -1075,7 +1075,7 @@ catalog size and traffic. This is the structural fix.
 ## Feature Decisions
 
 ### Fight scenes gain two new data points: martial arts Style and Move, kept closed-vocabulary against the tags precedent
-**PR #TBD.** Adds `FightSceneStyle` and `FightSceneMove` — two more many-to-many
+**PR #137.** Adds `FightSceneStyle` and `FightSceneMove` — two more many-to-many
 facets a member can attach to a fight scene alongside the existing category
 Tags, cast, and rating. Schema-wise each is a straight copy of
 `FightSceneTag` (its own table, plain implicit m2m join).
