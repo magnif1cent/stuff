@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import { LoginForm } from "./login-form";
 
 export default async function LoginPage({
@@ -6,5 +7,6 @@ export default async function LoginPage({
   searchParams: Promise<{ callbackUrl?: string }>;
 }) {
   const { callbackUrl } = await searchParams;
-  return <LoginForm callbackUrl={callbackUrl ?? "/"} />;
+  const nonce = (await headers()).get("x-nonce");
+  return <LoginForm callbackUrl={callbackUrl ?? "/"} nonce={nonce} />;
 }

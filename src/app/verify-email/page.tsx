@@ -1,6 +1,8 @@
+import { headers } from "next/headers";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
+import { ResendVerificationForm } from "@/components/resend-verification-form";
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
@@ -12,11 +14,12 @@ export default async function VerifyEmailPage({
   searchParams: Promise<{ token?: string }>;
 }) {
   const { token } = await searchParams;
+  const nonce = (await headers()).get("x-nonce");
 
   if (!token) {
     return (
       <Message title="Invalid link">
-        This verification link is missing its token. Check that you copied the full URL from your email.
+        <p>This verification link is missing its token. Check that you copied the full URL from your email.</p>
       </Message>
     );
   }
@@ -24,13 +27,17 @@ export default async function VerifyEmailPage({
   const record = await prisma.verificationToken.findUnique({ where: { token } });
 
   if (!record || record.expires < new Date()) {
+    // record.identifier (the email this link was for) is still available
+    // here, right up until the delete below — worth prefilling even though
+    // it's already gone from the client's perspective once this renders.
+    const expiredEmail = record?.identifier;
     if (record) {
       await prisma.verificationToken.delete({ where: { token } }).catch(() => {});
     }
     return (
       <Message title="Link expired">
-        This verification link is invalid or has expired. Sign in and use the &ldquo;Resend email&rdquo;
-        button to get a new one.
+        <p>This verification link is invalid or has expired. Request a new one below.</p>
+        <ResendVerificationForm email={expiredEmail} nonce={nonce} />
       </Message>
     );
   }
@@ -39,7 +46,7 @@ export default async function VerifyEmailPage({
   if (!user) {
     return (
       <Message title="Account not found">
-        We couldn&rsquo;t find an account for this verification link.
+        <p>We couldn&rsquo;t find an account for this verification link.</p>
       </Message>
     );
   }
@@ -49,7 +56,13 @@ export default async function VerifyEmailPage({
 
   return (
     <Message title="Email verified">
-      Your email is verified. You can now rate movies, manage your lists, and join discussions.
+      <p>
+        Your email is verified.{" "}
+        <Link href="/login" className="text-red-500 hover:underline">
+          Sign in
+        </Link>{" "}
+        to rate movies, manage your lists, and join discussions.
+      </p>
     </Message>
   );
 }
@@ -58,7 +71,7 @@ function Message({ title, children }: { title: string; children: React.ReactNode
   return (
     <div className="mx-auto flex w-full max-w-sm flex-1 flex-col items-center justify-center px-4 py-16 text-center">
       <h1 className="mb-3 text-2xl font-bold text-white">{title}</h1>
-      <p className="mb-6 text-neutral-400">{children}</p>
+      <div className="mb-6 flex flex-col items-center gap-3 text-neutral-400">{children}</div>
       <Link href="/" className="text-red-500 hover:underline">
         Back to the homepage
       </Link>

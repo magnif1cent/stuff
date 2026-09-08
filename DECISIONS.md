@@ -59,6 +59,7 @@ one.
 - [TMDB-hosted images marked `unoptimized`, removing them from the Image Optimization quota entirely](#tmdb-hosted-images-marked-unoptimized-removing-them-from-the-image-optimization-quota-entirely)
 - [Reversed: registration no longer auto-signs the member in](#reversed-registration-no-longer-auto-signs-the-member-in)
 - [Minimum password length lowered back to 8, per explicit request](#minimum-password-length-lowered-back-to-8-per-explicit-request)
+- [Sign-in itself now requires a verified email, closing the gap the auto-login reversal deliberately left open](#sign-in-itself-now-requires-a-verified-email-closing-the-gap-the-auto-login-reversal-deliberately-left-open)
 
 **Feature Decisions**
 
@@ -1128,6 +1129,65 @@ plain text in `register-form.tsx` and `reset-password/page.tsx` (rather
 than importing `MIN_PASSWORD_LENGTH`, same as before this change) were
 updated to match by hand — worth revisiting if this number moves a third
 time.
+
+### Sign-in itself now requires a verified email, closing the gap the auto-login reversal deliberately left open
+Follow-up to "Reversed: registration no longer auto-signs the member in"
+(above), which explicitly scoped itself to *only* removing the automatic
+sign-in at registration time and left `authorize()` untouched — an
+unverified account could still deliberately sign in via `/login` with a
+correct password. Asked directly whether that was intentional; on
+reflection, gating sign-in itself (not just contribution) is the more
+standard shape for double opt-in registration, so this closes that gap
+rather than leaving it as a documented accepted gap.
+
+- **Where the check lives**: `Credentials.authorize()` in `src/lib/auth.ts`
+  now throws a new `EmailNotVerifiedSignInError` (a `CredentialsSignin`
+  subclass with `code = "email_not_verified"`) when the password is correct
+  but `user.emailVerified` is null — checked *after* the password
+  comparison, not before, so a wrong-password attempt on an unverified
+  account still gets the same generic `code=credentials` response as any
+  other wrong password. Verified directly against `@auth/core`'s callback
+  source that a thrown `authorize()` error propagates through a
+  server-action `signIn()` call as the exact instance thrown (not rewrapped
+  into a generic `CredentialsSignin`), so `code` survives into
+  `login/actions.ts`'s catch block — confirmed with live requests against a
+  local Postgres instance (register → blocked login with
+  `code=email_not_verified` and no session cookie → verify → login now
+  succeeds with a real session), not just by reading the source.
+- **The resend dead-end this created, and the fix**: the existing
+  `VerifyEmailBanner`/`/api/resend-verification` resend path requires an
+  active session — fine when unverified members could still sign in, a
+  trap once they can't. A member who loses/never gets the first email would
+  have had no way back in. New `/api/resend-verification-public` closes
+  that: same anti-enumeration shape as `/api/forgot-password` (always the
+  same response; only actually sends when there's a real unverified
+  credentials account behind the address), IP-keyed rate limit
+  (`resendVerificationPublicLimiter`, matching `forgotPasswordLimiter`'s
+  reasoning), and its own Turnstile widget. Reused as
+  `ResendVerificationForm` (moved to `src/components/`, not kept
+  login-page-local) in two places: under the login form once
+  `authenticate()` reports `code=email_not_verified` (email prefilled from
+  the failed attempt), and on `/verify-email`'s "link expired" state (email
+  prefilled from the expired token's `identifier`, still editable) — the
+  latter was quietly broken by this change too, since its old copy ("Sign
+  in and use the Resend email button") assumed a signed-in-but-unverified
+  member could still reach the banner, which is no longer true.
+- **`/verify-email`'s success copy updated to match**: previously assumed
+  continuity of an existing session ("You can now rate movies…"); most
+  members reaching that page now have no session at all, since they
+  couldn't sign in before verifying. Now says "Sign in to rate movies…"
+  with a link to `/login`.
+- **Not touched**: Google sign-in (auto-verified via `profile.email_verified`
+  at first sign-in, bypasses `Credentials.authorize()` entirely), the
+  per-route `isEmailVerified()` write-action gating, and the authenticated
+  `/api/resend-verification` + `VerifyEmailBanner` — those still matter for
+  the case this change doesn't cover: an already-signed-in account whose
+  email gets un-verified later (an admin changing their own sign-in email
+  resets `emailVerified` to `null` without touching their live session).
+  Existing sessions issued before this shipped are also unaffected — this
+  only gates future `authorize()` calls, not the `jwt` callback, so it's
+  not a forced global sign-out the way the `passwordChangedAt` check
+  (above) was.
 
 ## Feature Decisions
 
