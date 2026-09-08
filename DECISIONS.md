@@ -57,6 +57,10 @@ one.
 - [Preview database made static across PRs, trading back the migration-collision risk to stop re-seeding every branch](#preview-database-made-static-across-prs-trading-back-the-migration-collision-risk-to-stop-re-seeding-every-branch)
 - [`images.imageSizes` narrowed to match actual usage, after the free tier's Image Optimization quota was hit](#imagesimagesizes-narrowed-to-match-actual-usage-after-the-free-tiers-image-optimization-quota-was-hit)
 - [TMDB-hosted images marked `unoptimized`, removing them from the Image Optimization quota entirely](#tmdb-hosted-images-marked-unoptimized-removing-them-from-the-image-optimization-quota-entirely)
+- [Reversed: registration no longer auto-signs the member in](#reversed-registration-no-longer-auto-signs-the-member-in)
+- [Minimum password length lowered back to 8, per explicit request](#minimum-password-length-lowered-back-to-8-per-explicit-request)
+- [Sign-in itself now requires a verified email, closing the gap the auto-login reversal deliberately left open](#sign-in-itself-now-requires-a-verified-email-closing-the-gap-the-auto-login-reversal-deliberately-left-open)
+- [Registration enumeration finally closed, reversing the earlier "not doing" call](#registration-enumeration-finally-closed-reversing-the-earlier-not-doing-call)
 
 **Feature Decisions**
 
@@ -1072,6 +1076,157 @@ catalog size and traffic. This is the structural fix.
   exposed to the same 402 failures whenever the quota was exhausted. Since
   it's a tiny, fixed-size, developer-controlled file that never changes,
   Vercel's resizing wasn't buying anything — marked `unoptimized` too.
+
+### Reversed: registration no longer auto-signs the member in
+Reversal of a call made in "Forgot-password added, CAPTCHA added,
+registration enumeration closed as 'not doing'" (above), which explicitly
+considered "drop auto-login-after-registration for everyone, permanently"
+and closed it as not worth doing once CAPTCHA neutralized the enumeration
+threat that fix was aimed at.
+
+Revisited after a report that a brand-new account was fully signed in the
+moment `/register`'s form submitted, before the member had any chance to
+open the verification email — reasonable behavior for the enumeration
+angle, but not for what "verify your email" is supposed to mean at
+registration time. `register-form.tsx` called `signIn("credentials", ...)`
+immediately after a successful `POST /api/register` and hard-navigated to
+`/`; nothing in the `Credentials` provider's `authorize()` (`src/lib/
+auth.ts`) ever checked `emailVerified` either. Fixed by dropping that
+`signIn` call — the form now shows a "check your email" state with a link
+to `/login` instead of navigating away.
+
+Deliberately narrow in scope: this only removes the *automatic* sign-in
+that used to happen at the moment of registration. It does not touch
+`authorize()` to block credential login for an unverified account
+afterward, and does not touch Google sign-in (auto-verified via
+`profile.email_verified`, unaffected). The rest of the verification model
+is untouched on purpose — `isEmailVerified()` still gates rating,
+reviewing, list-editing, and other write actions per-route, the
+`VerifyEmailBanner` still nudges an already-signed-in unverified member,
+and `/verify-email`'s "sign in and use Resend" copy still assumes a
+signed-in-but-unverified member is a normal, supported state (it's reached
+by a returning member logging in manually before verifying, or by an
+older account created before this change). A member who registers can
+still choose to sign in right away without verifying, the same as any
+other unverified account — what changed is that this no longer happens
+*for* them, invisibly, as part of clicking "Create account".
+
+### Minimum password length lowered back to 8, per explicit request
+Reversal of half of "Password strength requirements: length over
+composition, plus a breach check" (above) — that entry raised the minimum
+from 8 to 12; the site owner asked to lower it back to 8, in the interest
+of signup/login friction. Same reasoning pattern as "Breach-password check
+removed, per explicit request" (also above): the site holds no PII, so the
+owner is weighing account-security friction against ease of use
+differently than a default OWASP/NIST reading would, and has now made
+that call twice.
+
+Only `MIN_PASSWORD_LENGTH` in `src/lib/password.ts` changed, from 12 back
+to 8 — everything else from the original change is untouched: no
+composition rules (still length-only, on purpose, per that entry's
+reasoning), the 72-byte/bcrypt-truncation cap, and bcrypt cost factor 12.
+The two hardcoded "min N characters" placeholders that had drifted into
+plain text in `register-form.tsx` and `reset-password/page.tsx` (rather
+than importing `MIN_PASSWORD_LENGTH`, same as before this change) were
+updated to match by hand — worth revisiting if this number moves a third
+time.
+
+### Sign-in itself now requires a verified email, closing the gap the auto-login reversal deliberately left open
+Follow-up to "Reversed: registration no longer auto-signs the member in"
+(above), which explicitly scoped itself to *only* removing the automatic
+sign-in at registration time and left `authorize()` untouched — an
+unverified account could still deliberately sign in via `/login` with a
+correct password. Asked directly whether that was intentional; on
+reflection, gating sign-in itself (not just contribution) is the more
+standard shape for double opt-in registration, so this closes that gap
+rather than leaving it as a documented accepted gap.
+
+- **Where the check lives**: `Credentials.authorize()` in `src/lib/auth.ts`
+  now throws a new `EmailNotVerifiedSignInError` (a `CredentialsSignin`
+  subclass with `code = "email_not_verified"`) when the password is correct
+  but `user.emailVerified` is null — checked *after* the password
+  comparison, not before, so a wrong-password attempt on an unverified
+  account still gets the same generic `code=credentials` response as any
+  other wrong password. Verified directly against `@auth/core`'s callback
+  source that a thrown `authorize()` error propagates through a
+  server-action `signIn()` call as the exact instance thrown (not rewrapped
+  into a generic `CredentialsSignin`), so `code` survives into
+  `login/actions.ts`'s catch block — confirmed with live requests against a
+  local Postgres instance (register → blocked login with
+  `code=email_not_verified` and no session cookie → verify → login now
+  succeeds with a real session), not just by reading the source.
+- **The resend dead-end this created, and the fix**: the existing
+  `VerifyEmailBanner`/`/api/resend-verification` resend path requires an
+  active session — fine when unverified members could still sign in, a
+  trap once they can't. A member who loses/never gets the first email would
+  have had no way back in. New `/api/resend-verification-public` closes
+  that: same anti-enumeration shape as `/api/forgot-password` (always the
+  same response; only actually sends when there's a real unverified
+  credentials account behind the address), IP-keyed rate limit
+  (`resendVerificationPublicLimiter`, matching `forgotPasswordLimiter`'s
+  reasoning), and its own Turnstile widget. Reused as
+  `ResendVerificationForm` (moved to `src/components/`, not kept
+  login-page-local) in two places: under the login form once
+  `authenticate()` reports `code=email_not_verified` (email prefilled from
+  the failed attempt), and on `/verify-email`'s "link expired" state (email
+  prefilled from the expired token's `identifier`, still editable) — the
+  latter was quietly broken by this change too, since its old copy ("Sign
+  in and use the Resend email button") assumed a signed-in-but-unverified
+  member could still reach the banner, which is no longer true.
+- **`/verify-email`'s success copy updated to match**: previously assumed
+  continuity of an existing session ("You can now rate movies…"); most
+  members reaching that page now have no session at all, since they
+  couldn't sign in before verifying. Now says "Sign in to rate movies…"
+  with a link to `/login`.
+- **Not touched**: Google sign-in (auto-verified via `profile.email_verified`
+  at first sign-in, bypasses `Credentials.authorize()` entirely), the
+  per-route `isEmailVerified()` write-action gating, and the authenticated
+  `/api/resend-verification` + `VerifyEmailBanner` — those still matter for
+  the case this change doesn't cover: an already-signed-in account whose
+  email gets un-verified later (an admin changing their own sign-in email
+  resets `emailVerified` to `null` without touching their live session).
+  Existing sessions issued before this shipped are also unaffected — this
+  only gates future `authorize()` calls, not the `jwt` callback, so it's
+  not a forced global sign-out the way the `passwordChangedAt` check
+  (above) was.
+
+### Registration enumeration finally closed, reversing the earlier "not doing" call
+Reversal of "Forgot-password added, CAPTCHA added, registration
+enumeration closed as 'not doing'" (above), triggered by a screenshot of
+`/register`'s `"An account with that email already exists."` error and a
+request to make it "more discrete." Asked directly how far to take that;
+the site owner chose full anti-enumeration — the same response whether or
+not the email is registered — over just softening the wording, which
+would have kept the actual leak.
+
+The original "not doing" call reasoned that CAPTCHA already neutralized
+the bulk-harvesting threat, so the UX cost of hiding account existence
+wasn't worth paying. That reasoning didn't change; the owner's tolerance
+for the tradeoff did — same pattern as the two password-friction calls
+above (min length, breach check), where the site holds no PII and the
+owner has repeatedly weighed a security/privacy property against product
+polish differently than a default-security reading would.
+
+- **`/api/register` now mirrors `/api/forgot-password`'s and
+  `/api/resend-verification-public`'s shape**: an already-registered email
+  gets the exact same `{ ok: true }` response a real registration gets —
+  no new account row, no email sent, nothing to distinguish the two cases
+  from the response alone. `register-form.tsx`'s success copy was hedged
+  to match ("If `{email}` isn't already registered, we've sent a
+  verification link to it…"), the same wording pattern
+  `forgot-password-form.tsx` already used for its own generic response.
+- **Username collisions are a deliberate exception, not an oversight**:
+  `/api/register` still returns an immediate `"That username is already
+  taken"` error, checked *before* the (now-silent) email lookup so a taken
+  username is never masked by the generic response. Usernames are public
+  handles — profile URLs, attribution on every post/rating — not
+  information to protect, and a member needs to know to pick another one
+  before "usernameLower" uniqueness rejects it later.
+- **Not touched**: `/verify-email`'s and `/login`'s error copy (an
+  unverified or wrong-password sign-in attempt still requires already
+  knowing the account's password to reach the code that admits its
+  existence — see "Sign-in itself now requires a verified email" above),
+  and `/api/forgot-password`, which already had this shape from the start.
 
 ## Feature Decisions
 
