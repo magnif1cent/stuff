@@ -159,7 +159,7 @@ Members are identified publicly by a username, not their email or real name — 
 
 ## Email Verification
 
-Registering with email/password creates the account immediately and sends a verification link — you can sign in and browse right away, but rating movies, managing lists, and posting in discussions require a verified email (a banner with a "Resend email" button appears until you verify). Google sign-ins are auto-verified, since Google already confirmed that address.
+Registering with email/password creates the account and sends a verification link, but does not sign you in — click the link first, then sign in from `/login`. Once signed in, rating movies, managing lists, and posting in discussions still require a verified email (a banner with a "Resend email" button appears until you verify); the gate matters for an already-existing account whose password changes or whose email gets un-verified by an admin, not just at registration. Google sign-ins are auto-verified, since Google already confirmed that address, and are signed in immediately as before.
 
 Without `RESEND_API_KEY` configured, the verification link is logged to the server console instead of emailed (`[email:dev] Verification link for ...`) — grab it from there for local testing. To send real emails:
 

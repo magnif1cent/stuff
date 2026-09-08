@@ -57,6 +57,7 @@ one.
 - [Preview database made static across PRs, trading back the migration-collision risk to stop re-seeding every branch](#preview-database-made-static-across-prs-trading-back-the-migration-collision-risk-to-stop-re-seeding-every-branch)
 - [`images.imageSizes` narrowed to match actual usage, after the free tier's Image Optimization quota was hit](#imagesimagesizes-narrowed-to-match-actual-usage-after-the-free-tiers-image-optimization-quota-was-hit)
 - [TMDB-hosted images marked `unoptimized`, removing them from the Image Optimization quota entirely](#tmdb-hosted-images-marked-unoptimized-removing-them-from-the-image-optimization-quota-entirely)
+- [Reversed: registration no longer auto-signs the member in](#reversed-registration-no-longer-auto-signs-the-member-in)
 
 **Feature Decisions**
 
@@ -1073,7 +1074,39 @@ catalog size and traffic. This is the structural fix.
   it's a tiny, fixed-size, developer-controlled file that never changes,
   Vercel's resizing wasn't buying anything — marked `unoptimized` too.
 
-## Feature Decisions
+### Reversed: registration no longer auto-signs the member in
+Reversal of a call made in "Forgot-password added, CAPTCHA added,
+registration enumeration closed as 'not doing'" (above), which explicitly
+considered "drop auto-login-after-registration for everyone, permanently"
+and closed it as not worth doing once CAPTCHA neutralized the enumeration
+threat that fix was aimed at.
+
+Revisited after a report that a brand-new account was fully signed in the
+moment `/register`'s form submitted, before the member had any chance to
+open the verification email — reasonable behavior for the enumeration
+angle, but not for what "verify your email" is supposed to mean at
+registration time. `register-form.tsx` called `signIn("credentials", ...)`
+immediately after a successful `POST /api/register` and hard-navigated to
+`/`; nothing in the `Credentials` provider's `authorize()` (`src/lib/
+auth.ts`) ever checked `emailVerified` either. Fixed by dropping that
+`signIn` call — the form now shows a "check your email" state with a link
+to `/login` instead of navigating away.
+
+Deliberately narrow in scope: this only removes the *automatic* sign-in
+that used to happen at the moment of registration. It does not touch
+`authorize()` to block credential login for an unverified account
+afterward, and does not touch Google sign-in (auto-verified via
+`profile.email_verified`, unaffected). The rest of the verification model
+is untouched on purpose — `isEmailVerified()` still gates rating,
+reviewing, list-editing, and other write actions per-route, the
+`VerifyEmailBanner` still nudges an already-signed-in unverified member,
+and `/verify-email`'s "sign in and use Resend" copy still assumes a
+signed-in-but-unverified member is a normal, supported state (it's reached
+by a returning member logging in manually before verifying, or by an
+older account created before this change). A member who registers can
+still choose to sign in right away without verifying, the same as any
+other unverified account — what changed is that this no longer happens
+*for* them, invisibly, as part of clicking "Create account".
 
 ### Member-created fight scene tags get a profanity check, member-facing only
 **PR #138.** Since "Let members create their own fight scene tags" (below)

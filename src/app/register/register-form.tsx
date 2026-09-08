@@ -14,6 +14,7 @@ export function RegisterForm({ nonce }: { nonce: string | null }) {
   const [loading, setLoading] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [captchaResetKey, setCaptchaResetKey] = useState(0);
+  const [registered, setRegistered] = useState(false);
 
   const captchaRequired = !!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
@@ -44,20 +45,26 @@ export function RegisterForm({ nonce }: { nonce: string | null }) {
       return;
     }
 
-    const result = await signIn("credentials", { email, password, redirect: false });
+    // No auto sign-in here: registration only creates the account and sends
+    // the verification email. Signing the member in immediately let anyone
+    // start using the account before proving they own the email address —
+    // completing verification is a separate, deliberate step now.
     setLoading(false);
-    if (result?.error) {
-      setError("Account created, but sign-in failed. Try signing in.");
-      return;
-    }
-    // A hard navigation, not router.push()+router.refresh(): those two are
-    // unawaited and can race — if "/" was already prefetched while signed
-    // out, push() can paint that stale cached page before refresh()'s
-    // background RSC re-fetch catches up, flashing the signed-out header
-    // for a moment. A full navigation re-renders "/" from scratch against
-    // the now-set session cookie, so there's nothing stale to flash.
-    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-    window.location.href = "/";
+    setRegistered(true);
+  }
+
+  if (registered) {
+    return (
+      <div className="mx-auto flex w-full max-w-sm flex-1 flex-col items-center justify-center px-4 py-16 text-center">
+        <h1 className="mb-3 text-2xl font-bold text-white">Check your email</h1>
+        <p className="mb-6 text-neutral-400">
+          We sent a verification link to {email}. Click it to verify your account, then sign in.
+        </p>
+        <Link href="/login" className="text-red-500 hover:underline">
+          Go to sign in
+        </Link>
+      </div>
+    );
   }
 
   return (
