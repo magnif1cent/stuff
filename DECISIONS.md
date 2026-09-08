@@ -58,6 +58,7 @@ one.
 - [`images.imageSizes` narrowed to match actual usage, after the free tier's Image Optimization quota was hit](#imagesimagesizes-narrowed-to-match-actual-usage-after-the-free-tiers-image-optimization-quota-was-hit)
 - [TMDB-hosted images marked `unoptimized`, removing them from the Image Optimization quota entirely](#tmdb-hosted-images-marked-unoptimized-removing-them-from-the-image-optimization-quota-entirely)
 - [Reversed: registration no longer auto-signs the member in](#reversed-registration-no-longer-auto-signs-the-member-in)
+- [Minimum password length lowered back to 8, per explicit request](#minimum-password-length-lowered-back-to-8-per-explicit-request)
 
 **Feature Decisions**
 
@@ -1107,6 +1108,28 @@ older account created before this change). A member who registers can
 still choose to sign in right away without verifying, the same as any
 other unverified account — what changed is that this no longer happens
 *for* them, invisibly, as part of clicking "Create account".
+
+### Minimum password length lowered back to 8, per explicit request
+Reversal of half of "Password strength requirements: length over
+composition, plus a breach check" (above) — that entry raised the minimum
+from 8 to 12; the site owner asked to lower it back to 8, in the interest
+of signup/login friction. Same reasoning pattern as "Breach-password check
+removed, per explicit request" (also above): the site holds no PII, so the
+owner is weighing account-security friction against ease of use
+differently than a default OWASP/NIST reading would, and has now made
+that call twice.
+
+Only `MIN_PASSWORD_LENGTH` in `src/lib/password.ts` changed, from 12 back
+to 8 — everything else from the original change is untouched: no
+composition rules (still length-only, on purpose, per that entry's
+reasoning), the 72-byte/bcrypt-truncation cap, and bcrypt cost factor 12.
+The two hardcoded "min N characters" placeholders that had drifted into
+plain text in `register-form.tsx` and `reset-password/page.tsx` (rather
+than importing `MIN_PASSWORD_LENGTH`, same as before this change) were
+updated to match by hand — worth revisiting if this number moves a third
+time.
+
+## Feature Decisions
 
 ### Member-created fight scene tags get a profanity check, member-facing only
 **PR #138.** Since "Let members create their own fight scene tags" (below)
