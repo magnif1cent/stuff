@@ -60,6 +60,7 @@ one.
 - [Reversed: registration no longer auto-signs the member in](#reversed-registration-no-longer-auto-signs-the-member-in)
 - [Minimum password length lowered back to 8, per explicit request](#minimum-password-length-lowered-back-to-8-per-explicit-request)
 - [Sign-in itself now requires a verified email, closing the gap the auto-login reversal deliberately left open](#sign-in-itself-now-requires-a-verified-email-closing-the-gap-the-auto-login-reversal-deliberately-left-open)
+- [Registration enumeration finally closed, reversing the earlier "not doing" call](#registration-enumeration-finally-closed-reversing-the-earlier-not-doing-call)
 
 **Feature Decisions**
 
@@ -1188,6 +1189,44 @@ rather than leaving it as a documented accepted gap.
   only gates future `authorize()` calls, not the `jwt` callback, so it's
   not a forced global sign-out the way the `passwordChangedAt` check
   (above) was.
+
+### Registration enumeration finally closed, reversing the earlier "not doing" call
+Reversal of "Forgot-password added, CAPTCHA added, registration
+enumeration closed as 'not doing'" (above), triggered by a screenshot of
+`/register`'s `"An account with that email already exists."` error and a
+request to make it "more discrete." Asked directly how far to take that;
+the site owner chose full anti-enumeration — the same response whether or
+not the email is registered — over just softening the wording, which
+would have kept the actual leak.
+
+The original "not doing" call reasoned that CAPTCHA already neutralized
+the bulk-harvesting threat, so the UX cost of hiding account existence
+wasn't worth paying. That reasoning didn't change; the owner's tolerance
+for the tradeoff did — same pattern as the two password-friction calls
+above (min length, breach check), where the site holds no PII and the
+owner has repeatedly weighed a security/privacy property against product
+polish differently than a default-security reading would.
+
+- **`/api/register` now mirrors `/api/forgot-password`'s and
+  `/api/resend-verification-public`'s shape**: an already-registered email
+  gets the exact same `{ ok: true }` response a real registration gets —
+  no new account row, no email sent, nothing to distinguish the two cases
+  from the response alone. `register-form.tsx`'s success copy was hedged
+  to match ("If `{email}` isn't already registered, we've sent a
+  verification link to it…"), the same wording pattern
+  `forgot-password-form.tsx` already used for its own generic response.
+- **Username collisions are a deliberate exception, not an oversight**:
+  `/api/register` still returns an immediate `"That username is already
+  taken"` error, checked *before* the (now-silent) email lookup so a taken
+  username is never masked by the generic response. Usernames are public
+  handles — profile URLs, attribution on every post/rating — not
+  information to protect, and a member needs to know to pick another one
+  before "usernameLower" uniqueness rejects it later.
+- **Not touched**: `/verify-email`'s and `/login`'s error copy (an
+  unverified or wrong-password sign-in attempt still requires already
+  knowing the account's password to reach the code that admits its
+  existence — see "Sign-in itself now requires a verified email" above),
+  and `/api/forgot-password`, which already had this shape from the start.
 
 ## Feature Decisions
 

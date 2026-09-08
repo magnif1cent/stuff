@@ -58,7 +58,8 @@ export function RegisterForm({ nonce }: { nonce: string | null }) {
       <div className="mx-auto flex w-full max-w-sm flex-1 flex-col items-center justify-center px-4 py-16 text-center">
         <h1 className="mb-3 text-2xl font-bold text-white">Check your email</h1>
         <p className="mb-6 text-neutral-400">
-          We sent a verification link to {email}. Click it to verify your account, then sign in.
+          If {email} isn&rsquo;t already registered, we&rsquo;ve sent a verification link to it. Click it to
+          verify your account, then sign in.
         </p>
         <Link href="/login" className="text-red-500 hover:underline">
           Go to sign in
