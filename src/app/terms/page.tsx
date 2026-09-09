@@ -12,10 +12,7 @@ export default function TermsPage() {
       <h1 className="mb-4 font-serif text-2xl font-bold text-white">Terms of Service</h1>
 
       <div className="mb-8 rounded-md border border-amber-800/60 bg-amber-950/30 px-4 py-3 text-sm leading-relaxed text-amber-200">
-        <strong className="font-semibold text-amber-100">Working draft.</strong> Kung Fu Sauce is preparing for a
-        commercial transition, and this page describes current practice as accurately as we can while a few
-        details — a dedicated legal contact address, and final entity/jurisdiction details once formally
-        incorporated — are still being finalized. Check back as the site formalizes.
+        <strong className="font-semibold text-amber-100">Working draft.</strong>
       </div>
 
       <p className="mb-8 text-sm leading-relaxed text-neutral-300">Last updated: [date to be finalized].</p>
