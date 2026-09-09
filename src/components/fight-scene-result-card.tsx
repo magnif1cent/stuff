@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { FightScene, FightSceneTag, Movie, Person } from "@/generated/prisma/client";
+import type { FightScene, FightSceneTag, FightSceneStyle, FightSceneMove, Movie, Person } from "@/generated/prisma/client";
 import { AddToListControl, type AddToListItem } from "@/components/add-to-list-control";
 import { FavoriteButton } from "@/components/favorite-button";
 import { FightSceneThumbnail } from "@/components/fight-scene-thumbnail";
@@ -14,6 +14,7 @@ const MAX_FEATURED_CAST = 2;
 const TICKET_INK = "#1a1712";
 const TICKET_MUTED = "#6b6148";
 const TICKET_STAMP = "#a4291e";
+const TICKET_MOVE = "#4a5a3a";
 
 export type FightSceneResult = Pick<
   FightScene,
@@ -21,6 +22,12 @@ export type FightSceneResult = Pick<
 > & {
   movie: Pick<Movie, "id" | "title" | "releaseDate">;
   tags: Pick<FightSceneTag, "id" | "name">[];
+  // Optional so existing call sites that haven't been wired to fetch these
+  // yet (lists, tops, member profiles — see DECISIONS.md) keep type-checking
+  // without a badge row rather than being forced to fetch them just to
+  // satisfy this type.
+  styles?: Pick<FightSceneStyle, "id" | "name">[];
+  moves?: Pick<FightSceneMove, "id" | "name">[];
   cast: { id: string; person: Pick<Person, "id" | "name"> }[];
   memberRatingAverage: number | null;
   memberRatingCount: number;
@@ -127,6 +134,29 @@ export function FightSceneResultCard({
           ))}
           {scene.cast.length > MAX_FEATURED_CAST && ` & ${scene.cast.length - MAX_FEATURED_CAST} more`}
         </p>
+      )}
+
+      {((scene.styles?.length ?? 0) > 0 || (scene.moves?.length ?? 0) > 0) && (
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {scene.styles?.map((style) => (
+            <span
+              key={style.id}
+              className="px-2 py-0.5 text-[10px] font-bold tracking-wide uppercase"
+              style={{ border: `1px solid ${TICKET_STAMP}`, color: TICKET_STAMP }}
+            >
+              {style.name}
+            </span>
+          ))}
+          {scene.moves?.map((move) => (
+            <span
+              key={move.id}
+              className="px-2 py-0.5 text-[10px] font-bold tracking-wide uppercase"
+              style={{ border: `1px solid ${TICKET_MOVE}`, color: TICKET_MOVE }}
+            >
+              {move.name}
+            </span>
+          ))}
+        </div>
       )}
 
       <div className="mt-3 flex flex-wrap gap-1.5">

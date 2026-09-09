@@ -25,6 +25,8 @@ import { getPersonFavoriteCounts } from "@/lib/person-favorites";
 import { ActorFavoriteButton } from "@/components/actor-favorite-button";
 import { getPersonSignatureVoteSummary } from "@/lib/person-signature-votes";
 import { SignatureVoteProvider, SignatureSpotlight, SignatureVoteButton } from "@/components/actor-signature-vote";
+import { getLineageTree, getFigureIdForPerson } from "@/lib/lineage";
+import { LineageTreeBody } from "@/components/lineage-tree-body";
 
 // Split out from ActorPage's body so the Math.random() call it wraps isn't
 // flagged as an impurity inside the page's own render function (React's
@@ -100,7 +102,28 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
     notFound();
   }
 
-  const bio = await getTmdbPersonDetails(person.tmdbId).catch(() => null);
+  // Read-only: browsing an actor's page shouldn't itself create lineage
+  // data for them just because they were looked at -- a LineageFigure only
+  // ever gets created the moment an admin actually links someone.
+  //
+  // Caught the same way `bio` below already tolerates TMDB being
+  // unreachable: Lineage is supplementary content on this page (same "no
+  // signal, no row" footing as Details/Sparring Partner), so a lookup
+  // failure here -- most likely the LineageFigure/LineageRelation
+  // migration not having been applied to this database yet -- should hide
+  // the section, not take down the whole actor page.
+  const figureId = await getFigureIdForPerson(personId).catch(() => null);
+  const [bio, lineageTree] = await Promise.all([
+    getTmdbPersonDetails(person.tmdbId).catch(() => null),
+    figureId
+      ? getLineageTree(figureId, { up: 1, down: 1, siblingLimit: 3 }).catch(() => null)
+      : Promise.resolve(null),
+  ]);
+  const lineageHasContent =
+    !!lineageTree &&
+    (lineageTree.ancestors.length > 0 ||
+      lineageTree.secondarySifus.length > 0 ||
+      (lineageTree.descendantLevels[0]?.[0]?.children.length ?? 0) > 0);
 
   // A pending (not yet admin-approved) movie is excluded the same way it's
   // excluded from every other public listing.
@@ -460,6 +483,22 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
               {bio.biography && <ActorBio biography={bio.biography} />}
             </div>
           )}
+        </div>
+      )}
+
+      {lineageHasContent && lineageTree && (
+        <div className="mb-10">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-xl font-bold text-white">Lineage</h2>
+            <Link href={`/actors/${personId}/lineage`} className="text-sm font-semibold text-red-500 hover:text-red-400">
+              View full lineage &rarr;
+            </Link>
+          </div>
+          <p className="mb-4 text-xs text-neutral-500">
+            &ldquo;Lineage&rdquo; is our tribute to the martial artists who built this genre, generation by
+            generation. Hand-curated, always a work in progress &mdash; reach out if you spot something to fix.
+          </p>
+          <LineageTreeBody tree={lineageTree} up={1} down={1} />
         </div>
       )}
 

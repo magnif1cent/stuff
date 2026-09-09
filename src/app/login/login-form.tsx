@@ -4,9 +4,10 @@ import { useActionState } from "react";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { authenticate } from "./actions";
+import { ResendVerificationForm } from "@/components/resend-verification-form";
 
-export function LoginForm({ callbackUrl }: { callbackUrl: string }) {
-  const [error, formAction, pending] = useActionState(authenticate, undefined);
+export function LoginForm({ callbackUrl, nonce }: { callbackUrl: string; nonce: string | null }) {
+  const [state, formAction, pending] = useActionState(authenticate, undefined);
 
   return (
     <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-4 py-16">
@@ -52,7 +53,8 @@ export function LoginForm({ callbackUrl }: { callbackUrl: string }) {
         <Link href="/forgot-password" className="-mt-1 self-end text-xs text-neutral-400 hover:text-red-500 hover:underline">
           Forgot password?
         </Link>
-        {error && <p className="text-sm text-red-500">{error}</p>}
+        {state?.message && <p className="text-sm text-red-500">{state.message}</p>}
+        {state?.unverifiedEmail && <ResendVerificationForm email={state.unverifiedEmail} nonce={nonce} />}
         <button
           type="submit"
           disabled={pending}

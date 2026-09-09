@@ -1,6 +1,6 @@
 import bcrypt from "bcryptjs";
 
-export const MIN_PASSWORD_LENGTH = 12;
+export const MIN_PASSWORD_LENGTH = 8;
 // bcrypt silently truncates its input past 72 bytes — anything beyond that
 // is never actually hashed, giving a false sense of extra strength from a
 // longer password, and an unbounded max is also a cheap way to send

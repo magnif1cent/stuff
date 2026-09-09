@@ -17,7 +17,7 @@ export function proxy(request: NextRequest) {
     default-src 'self';
     script-src 'self' 'nonce-${nonce}' 'strict-dynamic' ${isDev ? "'unsafe-eval'" : ""} https:;
     style-src 'self' 'unsafe-inline';
-    img-src 'self' data: https://image.tmdb.org https://*.public.blob.vercel-storage.com https://img.youtube.com;
+    img-src 'self' data: blob: https://image.tmdb.org https://*.public.blob.vercel-storage.com https://img.youtube.com;
     font-src 'self';
     connect-src 'self' https://challenges.cloudflare.com https://*.ingest.us.sentry.io;
     frame-src https://www.youtube-nocookie.com https://challenges.cloudflare.com;

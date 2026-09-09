@@ -16,6 +16,8 @@ export const metadata: Metadata = {
 interface FightSceneSearchParams {
   q?: string;
   tag?: string | string[];
+  style?: string | string[];
+  move?: string | string[];
   actor?: string;
   genre?: string;
   country?: string;
@@ -61,6 +63,12 @@ function pageHref(params: FightSceneSearchParams, page: number) {
   for (const t of Array.isArray(params.tag) ? params.tag : params.tag ? [params.tag] : []) {
     search.append("tag", t);
   }
+  for (const s of Array.isArray(params.style) ? params.style : params.style ? [params.style] : []) {
+    search.append("style", s);
+  }
+  for (const m of Array.isArray(params.move) ? params.move : params.move ? [params.move] : []) {
+    search.append("move", m);
+  }
   if (params.actor) search.set("actor", params.actor);
   if (params.genre) search.set("genre", params.genre);
   if (params.country) search.set("country", params.country);
@@ -85,6 +93,8 @@ export default async function FightSceneSearchPage({
   const session = await auth();
   const query = params.q?.trim() ?? "";
   const selectedTags = Array.isArray(params.tag) ? params.tag : params.tag ? [params.tag] : [];
+  const selectedStyles = Array.isArray(params.style) ? params.style : params.style ? [params.style] : [];
+  const selectedMoves = Array.isArray(params.move) ? params.move : params.move ? [params.move] : [];
   const actor = params.actor?.trim() ?? "";
   const genre = params.genre?.trim() ?? "";
   const country = params.country?.trim() ?? "";
@@ -97,8 +107,10 @@ export default async function FightSceneSearchPage({
   const favoritesOnly = params.favorites === "1" && !!userId;
   const sort = SORT_OPTIONS.some((o) => o.value === params.sort) ? params.sort! : "newest";
 
-  const [tags, genres, countryRows] = await Promise.all([
+  const [tags, styles, moves, genres, countryRows] = await Promise.all([
     prisma.fightSceneTag.findMany({ orderBy: { name: "asc" } }),
+    prisma.fightSceneStyle.findMany({ orderBy: { name: "asc" } }),
+    prisma.fightSceneMove.findMany({ orderBy: { name: "asc" } }),
     prisma.genre.findMany({ orderBy: { name: "asc" } }),
     prisma.movie.findMany({
       where: { country: { not: null }, status: "APPROVED" },
@@ -111,6 +123,8 @@ export default async function FightSceneSearchPage({
 
   const hasFilters =
     selectedTags.length > 0 ||
+    selectedStyles.length > 0 ||
+    selectedMoves.length > 0 ||
     actor.length > 0 ||
     genre.length > 0 ||
     country.length > 0 ||
@@ -127,6 +141,8 @@ export default async function FightSceneSearchPage({
   const sheetFilterCount =
     (query.length > 0 ? 1 : 0) +
     (selectedTags.length > 0 ? 1 : 0) +
+    (selectedStyles.length > 0 ? 1 : 0) +
+    (selectedMoves.length > 0 ? 1 : 0) +
     (actor.length > 0 ? 1 : 0) +
     (genre.length > 0 ? 1 : 0) +
     (country.length > 0 ? 1 : 0) +
@@ -138,6 +154,8 @@ export default async function FightSceneSearchPage({
   // Checking multiple tags is a broadening OR ("has any of these"), matching
   // the standard convention for multi-select within a single filter facet.
   if (selectedTags.length > 0) where.tags = { some: { name: { in: selectedTags } } };
+  if (selectedStyles.length > 0) where.styles = { some: { name: { in: selectedStyles } } };
+  if (selectedMoves.length > 0) where.moves = { some: { name: { in: selectedMoves } } };
   if (actor) where.cast = { some: { person: { name: { contains: actor, mode: "insensitive" } } } };
   // Filters by the *movie's* release year/genre/country, not the scene's own
   // fields — these are all facets of the film the fight happened in, same as
@@ -168,6 +186,8 @@ export default async function FightSceneSearchPage({
   const sceneInclude = {
     movie: { select: { id: true, title: true, releaseDate: true } as const },
     tags: true,
+    styles: true,
+    moves: true,
     cast: { orderBy: { order: "asc" as const }, include: { person: true } },
   } as const;
 
@@ -287,6 +307,50 @@ export default async function FightSceneSearchPage({
                       className="sr-only"
                     />
                     {t.name}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <p className="text-xs text-neutral-400">Martial arts style (any of)</p>
+              <div className="flex flex-wrap gap-2 rounded-md border border-neutral-700 bg-neutral-950 p-2">
+                {styles.length === 0 && <span className="text-sm text-neutral-500">No styles yet</span>}
+                {styles.map((s) => (
+                  <label
+                    key={s.id}
+                    className="flex cursor-pointer items-center gap-1.5 rounded-full border border-neutral-700 px-2 py-1 text-xs text-neutral-300 has-checked:border-red-600 has-checked:bg-red-950/40 has-checked:text-red-300"
+                  >
+                    <input
+                      type="checkbox"
+                      name="style"
+                      value={s.name}
+                      defaultChecked={selectedStyles.includes(s.name)}
+                      className="sr-only"
+                    />
+                    {s.name}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <p className="text-xs text-neutral-400">Martial arts move (any of)</p>
+              <div className="flex flex-wrap gap-2 rounded-md border border-neutral-700 bg-neutral-950 p-2">
+                {moves.length === 0 && <span className="text-sm text-neutral-500">No moves yet</span>}
+                {moves.map((m) => (
+                  <label
+                    key={m.id}
+                    className="flex cursor-pointer items-center gap-1.5 rounded-full border border-neutral-700 px-2 py-1 text-xs text-neutral-300 has-checked:border-red-600 has-checked:bg-red-950/40 has-checked:text-red-300"
+                  >
+                    <input
+                      type="checkbox"
+                      name="move"
+                      value={m.name}
+                      defaultChecked={selectedMoves.includes(m.name)}
+                      className="sr-only"
+                    />
+                    {m.name}
                   </label>
                 ))}
               </div>

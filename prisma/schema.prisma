@@ -64,6 +64,7 @@ model User {
   memberListLikes     MemberListLike[]
   movieRecommendations MovieRecommendation[]
   fightCountEdits     FightCountEdit[]
+  eraSettingEdits     EraSettingEdit[]
   funFacts            FunFact[]
   funFactVotes        FunFactVote[]
   memberReviews       MemberReview[]
@@ -184,6 +185,14 @@ model Movie {
   // not as a second source of truth.
   trueFightCount Int?
 
+  // Member-maintained historical period/dynasty the movie is *set in* (not
+  // its real-world release date — see releaseDate above). Same shared-value,
+  // last-edit-wins model as trueFightCount, for the same reason: no built-in
+  // resistance to a bad edit, so paired with the same guardrails and an
+  // EraSettingEdit accountability trail rather than left unprotected.
+  // Stores an ERA_SETTINGS key (src/lib/era-settings.ts), not free text.
+  eraSetting String?
+
   // "PENDING" | "APPROVED" — member-submitted movies (see submittedBy below)
   // start PENDING and are hidden from every public listing/search until an
   // admin approves them; admin imports (single-title, keyword, bulk CSV) go
@@ -205,6 +214,7 @@ model Movie {
   memberListEntries MemberListEntry[]
   recommendations MovieRecommendation[]
   fightCountEdits FightCountEdit[]
+  eraSettingEdits EraSettingEdit[]
   funFacts        FunFact[]
   memberReviews   MemberReview[]
   signatureVotes  PersonSignatureVote[]
@@ -242,6 +252,23 @@ model FightCountEdit {
   @@index([movieId])
 }
 
+// Accountability trail for Movie.eraSetting edits — same shape and same
+// reasoning as FightCountEdit above, just String values (ERA_SETTINGS keys)
+// instead of Int.
+model EraSettingEdit {
+  id            String   @id @default(cuid())
+  movieId       String
+  editedById    String
+  previousValue String?
+  newValue      String
+  createdAt     DateTime @default(now())
+
+  movie    Movie @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  editedBy User  @relation(fields: [editedById], references: [id], onDelete: Cascade)
+
+  @@index([movieId])
+}
+
 model Genre {
   id     String  @id @default(cuid())
   tmdbId Int     @unique
@@ -261,6 +288,7 @@ model Person {
   tributes    PersonTribute[]
   favorites   PersonFavorite[]
   signatureVotes PersonSignatureVote[]
+  lineageFigure LineageFigure?
 
   @@index([name])
   // See the matching comment on Movie above — backs the ILIKE actor-name
@@ -280,6 +308,60 @@ model CastCredit {
 
   @@unique([movieId, personId])
   @@index([movieId])
+}
+
+// Martial arts lineage: who trained whom. A lineage node (LineageFigure) is
+// not always an actor -- some sifus are historical martial artists who were
+// never credited in a film, and some are characters (Ip Man) played by
+// different actors across different films, so the node can't just *be* a
+// cast credit either. `personId` links a figure to an actor when there is
+// one; it's null for a bare name-only figure. There's no separate "resolve
+// the character to whichever actor played them" field -- src/lib/lineage.ts
+// derives that live from CastCredit.characterName for display, since more
+// than one actor can plausibly have played the same figure (see
+// DECISIONS.md).
+model LineageFigure {
+  id       String  @id @default(cuid())
+  name     String
+  personId String? @unique
+  // A collective (a stunt team, say) rather than a single trained
+  // individual -- always false for an actor-linked figure. Changes how the
+  // figure renders (a distinct node shape) and how many of its own primary
+  // students show before the overflow badge kicks in (see
+  // DEFAULT_GROUP_SIBLING_LIMIT in lib/lineage.ts) -- everything else about
+  // it (cycle detection, primary-link promotion, search) is generic over
+  // any figure and doesn't need to know this flag exists.
+  isGroup  Boolean @default(false)
+  person   Person? @relation(fields: [personId], references: [id], onDelete: SetNull)
+
+  sifuLinks    LineageRelation[] @relation("LineageSifu")
+  studentLinks LineageRelation[] @relation("LineageStudent")
+
+  @@index([name])
+}
+
+// A student can have more than one sifu (it's a DAG, not a strict tree), but
+// exactly one is `isPrimary` at a time -- that's the one that positions the
+// node in the rendered tree; any others render as a secondary "co-sifu"
+// line. There isn't a DB constraint enforcing "at most one primary per
+// student" (a partial unique index isn't representable in schema.prisma the
+// way this repo's migrations are authored) -- it's enforced in
+// src/lib/lineage.ts by demoting the existing primary inside the same
+// transaction whenever a new one is promoted.
+model LineageRelation {
+  id        String   @id @default(cuid())
+  sifuId    String
+  studentId String
+  isPrimary Boolean  @default(true)
+  note      String?
+  createdAt DateTime @default(now())
+
+  sifu    LineageFigure @relation("LineageSifu", fields: [sifuId], references: [id], onDelete: Cascade)
+  student LineageFigure @relation("LineageStudent", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([sifuId, studentId])
+  @@index([studentId])
+  @@index([sifuId])
 }
 
 // --- Ratings ---
@@ -708,6 +790,8 @@ model FightScene {
   submittedBy User                    @relation(fields: [submittedById], references: [id], onDelete: Cascade)
   cast        FightSceneCast[]
   tags        FightSceneTag[]
+  styles      FightSceneStyle[]
+  moves       FightSceneMove[]
   ratings     FightSceneRating[]
   adminRatings FightSceneAdminRating[]
   memberListEntries MemberListFightSceneEntry[]
@@ -728,6 +812,25 @@ model FightScene {
 // shape as Genre <-> Movie above, since there's nothing extra to store per
 // assignment.
 model FightSceneTag {
+  id   String @id @default(cuid())
+  name String @unique
+
+  fightScenes FightScene[]
+}
+
+// Unlike FightSceneTag above (member-creatable since PR #126 — see
+// DECISIONS.md), Style and Move stay admin/reviewer-curated only: members
+// pick from what's already here when submitting a scene, and ask an admin to
+// add anything missing. Deliberately not reusing the tags precedent yet —
+// see DECISIONS.md for why. Same plain many-to-many shape either way.
+model FightSceneStyle {
+  id   String @id @default(cuid())
+  name String @unique
+
+  fightScenes FightScene[]
+}
+
+model FightSceneMove {
   id   String @id @default(cuid())
   name String @unique
 

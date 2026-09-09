@@ -232,7 +232,7 @@ export function FunFactsSection({
   const pageFacts = facts.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   return (
-    <section className="mt-10 max-w-2xl">
+    <section className="mt-10">
       <h2 className="mb-4 font-serif text-xl font-bold text-white">Fun Facts</h2>
 
       <div className="overflow-hidden rounded-md border border-neutral-800 bg-neutral-900">
@@ -380,9 +380,7 @@ export function FunFactsSection({
             );
           })()
         ) : (
-          <p className="border-b border-neutral-800 p-5 text-center text-sm text-neutral-500">
-            No fun facts yet. Be the first to add one.
-          </p>
+          <p className="p-3 text-center text-sm text-neutral-500">No fun facts yet. Be the first to add one.</p>
         )}
 
         {facts.length > 1 && (

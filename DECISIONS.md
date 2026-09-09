@@ -57,9 +57,20 @@ one.
 - [Preview database made static across PRs, trading back the migration-collision risk to stop re-seeding every branch](#preview-database-made-static-across-prs-trading-back-the-migration-collision-risk-to-stop-re-seeding-every-branch)
 - [`images.imageSizes` narrowed to match actual usage, after the free tier's Image Optimization quota was hit](#imagesimagesizes-narrowed-to-match-actual-usage-after-the-free-tiers-image-optimization-quota-was-hit)
 - [TMDB-hosted images marked `unoptimized`, removing them from the Image Optimization quota entirely](#tmdb-hosted-images-marked-unoptimized-removing-them-from-the-image-optimization-quota-entirely)
+- [Reversed: registration no longer auto-signs the member in](#reversed-registration-no-longer-auto-signs-the-member-in)
+- [Minimum password length lowered back to 8, per explicit request](#minimum-password-length-lowered-back-to-8-per-explicit-request)
+- [Sign-in itself now requires a verified email, closing the gap the auto-login reversal deliberately left open](#sign-in-itself-now-requires-a-verified-email-closing-the-gap-the-auto-login-reversal-deliberately-left-open)
+- [Registration enumeration finally closed, reversing the earlier "not doing" call](#registration-enumeration-finally-closed-reversing-the-earlier-not-doing-call)
 
 **Feature Decisions**
 
+- [Member-created fight scene tags get a profanity check, member-facing only](#member-created-fight-scene-tags-get-a-profanity-check-member-facing-only)
+- [Fight scenes gain two new data points: martial arts Style and Move, kept closed-vocabulary against the tags precedent](#fight-scenes-gain-two-new-data-points-martial-arts-style-and-move-kept-closed-vocabulary-against-the-tags-precedent)
+- [Movie Data card reintroduced with a shared Edit button, relocated to a full-width section above Fights](#movie-data-card-reintroduced-with-a-shared-edit-button-relocated-to-a-full-width-section-above-fights)
+- [Historical Setting: renamed from Era, unboxed from its own card](#historical-setting-renamed-from-era-unboxed-from-its-own-card)
+- [Era Setting: a Fight-Count-style field for the historical period a movie is set in](#era-setting-a-fight-count-style-field-for-the-historical-period-a-movie-is-set-in)
+- [Admin sidebar nav grouped by domain, not build order](#admin-sidebar-nav-grouped-by-domain-not-build-order)
+- [Meme Generator added as an admin tab, not a member feature](#meme-generator-added-as-an-admin-tab-not-a-member-feature)
 - [Leaderboard reachable from a "Lists" nav hover submenu](#leaderboard-reachable-from-a-lists-nav-hover-submenu)
 - [Top Franchises leaderboard and collection pages](#top-franchises-leaderboard-and-collection-pages)
 - [List cloning](#list-cloning)
@@ -124,6 +135,13 @@ one.
 - [Trending carousel autoplay cap raised from 1 lap to 5](#trending-carousel-autoplay-cap-raised-from-1-lap-to-5)
 - [Actor Career Highlights styled like the Signature Spotlight banner, "Sparring Partner" from existing fight-scene data](#actor-career-highlights-styled-like-the-signature-spotlight-banner-sparring-partner-from-existing-fight-scene-data)
 - [Career Highlights reverted to a plain Details card](#career-highlights-reverted-to-a-plain-details-card)
+- [Sifu Lineage: primary-sifu-plus-dotted-line, bulk chain-import over drag-and-drop](#sifu-lineage-primary-sifu-plus-dotted-line-bulk-chain-import-over-drag-and-drop)
+- [Sifu Lineage: LineageFigure introduced, reversing the Person-only restriction](#sifu-lineage-lineagefigure-introduced-reversing-the-person-only-restriction)
+- [Sifu Lineage: actor-page teaser moved from a stat card to its own tree section](#sifu-lineage-actor-page-teaser-moved-from-a-stat-card-to-its-own-tree-section)
+- [Sifu Lineage: `LineageTreeBody` rewritten as computed SVG layout, not flexbox](#sifu-lineage-lineagetreebody-rewritten-as-computed-svg-layout-not-flexbox)
+- [Lineage: "sifu"/"student" dropped from display copy, not swapped for another role term](#lineage-sifustudent-dropped-from-display-copy-not-swapped-for-another-role-term)
+- [Lineage: groups are a normal figure in the owner's own row, not a lateral position](#lineage-groups-are-a-normal-figure-in-the-owners-own-row-not-a-lateral-position)
+- [Lineage: bare figures get a delete/toggle-group escape hatch, cascade over block-if-linked](#lineage-bare-figures-get-a-deletetoggle-group-escape-hatch-cascade-over-block-if-linked)
 
 **Deferred & Backlog**
 
@@ -1059,7 +1077,435 @@ catalog size and traffic. This is the structural fix.
   it's a tiny, fixed-size, developer-controlled file that never changes,
   Vercel's resizing wasn't buying anything — marked `unoptimized` too.
 
+### Reversed: registration no longer auto-signs the member in
+Reversal of a call made in "Forgot-password added, CAPTCHA added,
+registration enumeration closed as 'not doing'" (above), which explicitly
+considered "drop auto-login-after-registration for everyone, permanently"
+and closed it as not worth doing once CAPTCHA neutralized the enumeration
+threat that fix was aimed at.
+
+Revisited after a report that a brand-new account was fully signed in the
+moment `/register`'s form submitted, before the member had any chance to
+open the verification email — reasonable behavior for the enumeration
+angle, but not for what "verify your email" is supposed to mean at
+registration time. `register-form.tsx` called `signIn("credentials", ...)`
+immediately after a successful `POST /api/register` and hard-navigated to
+`/`; nothing in the `Credentials` provider's `authorize()` (`src/lib/
+auth.ts`) ever checked `emailVerified` either. Fixed by dropping that
+`signIn` call — the form now shows a "check your email" state with a link
+to `/login` instead of navigating away.
+
+Deliberately narrow in scope: this only removes the *automatic* sign-in
+that used to happen at the moment of registration. It does not touch
+`authorize()` to block credential login for an unverified account
+afterward, and does not touch Google sign-in (auto-verified via
+`profile.email_verified`, unaffected). The rest of the verification model
+is untouched on purpose — `isEmailVerified()` still gates rating,
+reviewing, list-editing, and other write actions per-route, the
+`VerifyEmailBanner` still nudges an already-signed-in unverified member,
+and `/verify-email`'s "sign in and use Resend" copy still assumes a
+signed-in-but-unverified member is a normal, supported state (it's reached
+by a returning member logging in manually before verifying, or by an
+older account created before this change). A member who registers can
+still choose to sign in right away without verifying, the same as any
+other unverified account — what changed is that this no longer happens
+*for* them, invisibly, as part of clicking "Create account".
+
+### Minimum password length lowered back to 8, per explicit request
+Reversal of half of "Password strength requirements: length over
+composition, plus a breach check" (above) — that entry raised the minimum
+from 8 to 12; the site owner asked to lower it back to 8, in the interest
+of signup/login friction. Same reasoning pattern as "Breach-password check
+removed, per explicit request" (also above): the site holds no PII, so the
+owner is weighing account-security friction against ease of use
+differently than a default OWASP/NIST reading would, and has now made
+that call twice.
+
+Only `MIN_PASSWORD_LENGTH` in `src/lib/password.ts` changed, from 12 back
+to 8 — everything else from the original change is untouched: no
+composition rules (still length-only, on purpose, per that entry's
+reasoning), the 72-byte/bcrypt-truncation cap, and bcrypt cost factor 12.
+The two hardcoded "min N characters" placeholders that had drifted into
+plain text in `register-form.tsx` and `reset-password/page.tsx` (rather
+than importing `MIN_PASSWORD_LENGTH`, same as before this change) were
+updated to match by hand — worth revisiting if this number moves a third
+time.
+
+### Sign-in itself now requires a verified email, closing the gap the auto-login reversal deliberately left open
+Follow-up to "Reversed: registration no longer auto-signs the member in"
+(above), which explicitly scoped itself to *only* removing the automatic
+sign-in at registration time and left `authorize()` untouched — an
+unverified account could still deliberately sign in via `/login` with a
+correct password. Asked directly whether that was intentional; on
+reflection, gating sign-in itself (not just contribution) is the more
+standard shape for double opt-in registration, so this closes that gap
+rather than leaving it as a documented accepted gap.
+
+- **Where the check lives**: `Credentials.authorize()` in `src/lib/auth.ts`
+  now throws a new `EmailNotVerifiedSignInError` (a `CredentialsSignin`
+  subclass with `code = "email_not_verified"`) when the password is correct
+  but `user.emailVerified` is null — checked *after* the password
+  comparison, not before, so a wrong-password attempt on an unverified
+  account still gets the same generic `code=credentials` response as any
+  other wrong password. Verified directly against `@auth/core`'s callback
+  source that a thrown `authorize()` error propagates through a
+  server-action `signIn()` call as the exact instance thrown (not rewrapped
+  into a generic `CredentialsSignin`), so `code` survives into
+  `login/actions.ts`'s catch block — confirmed with live requests against a
+  local Postgres instance (register → blocked login with
+  `code=email_not_verified` and no session cookie → verify → login now
+  succeeds with a real session), not just by reading the source.
+- **The resend dead-end this created, and the fix**: the existing
+  `VerifyEmailBanner`/`/api/resend-verification` resend path requires an
+  active session — fine when unverified members could still sign in, a
+  trap once they can't. A member who loses/never gets the first email would
+  have had no way back in. New `/api/resend-verification-public` closes
+  that: same anti-enumeration shape as `/api/forgot-password` (always the
+  same response; only actually sends when there's a real unverified
+  credentials account behind the address), IP-keyed rate limit
+  (`resendVerificationPublicLimiter`, matching `forgotPasswordLimiter`'s
+  reasoning), and its own Turnstile widget. Reused as
+  `ResendVerificationForm` (moved to `src/components/`, not kept
+  login-page-local) in two places: under the login form once
+  `authenticate()` reports `code=email_not_verified` (email prefilled from
+  the failed attempt), and on `/verify-email`'s "link expired" state (email
+  prefilled from the expired token's `identifier`, still editable) — the
+  latter was quietly broken by this change too, since its old copy ("Sign
+  in and use the Resend email button") assumed a signed-in-but-unverified
+  member could still reach the banner, which is no longer true.
+- **`/verify-email`'s success copy updated to match**: previously assumed
+  continuity of an existing session ("You can now rate movies…"); most
+  members reaching that page now have no session at all, since they
+  couldn't sign in before verifying. Now says "Sign in to rate movies…"
+  with a link to `/login`.
+- **Not touched**: Google sign-in (auto-verified via `profile.email_verified`
+  at first sign-in, bypasses `Credentials.authorize()` entirely), the
+  per-route `isEmailVerified()` write-action gating, and the authenticated
+  `/api/resend-verification` + `VerifyEmailBanner` — those still matter for
+  the case this change doesn't cover: an already-signed-in account whose
+  email gets un-verified later (an admin changing their own sign-in email
+  resets `emailVerified` to `null` without touching their live session).
+  Existing sessions issued before this shipped are also unaffected — this
+  only gates future `authorize()` calls, not the `jwt` callback, so it's
+  not a forced global sign-out the way the `passwordChangedAt` check
+  (above) was.
+
+### Registration enumeration finally closed, reversing the earlier "not doing" call
+Reversal of "Forgot-password added, CAPTCHA added, registration
+enumeration closed as 'not doing'" (above), triggered by a screenshot of
+`/register`'s `"An account with that email already exists."` error and a
+request to make it "more discrete." Asked directly how far to take that;
+the site owner chose full anti-enumeration — the same response whether or
+not the email is registered — over just softening the wording, which
+would have kept the actual leak.
+
+The original "not doing" call reasoned that CAPTCHA already neutralized
+the bulk-harvesting threat, so the UX cost of hiding account existence
+wasn't worth paying. That reasoning didn't change; the owner's tolerance
+for the tradeoff did — same pattern as the two password-friction calls
+above (min length, breach check), where the site holds no PII and the
+owner has repeatedly weighed a security/privacy property against product
+polish differently than a default-security reading would.
+
+- **`/api/register` now mirrors `/api/forgot-password`'s and
+  `/api/resend-verification-public`'s shape**: an already-registered email
+  gets the exact same `{ ok: true }` response a real registration gets —
+  no new account row, no email sent, nothing to distinguish the two cases
+  from the response alone. `register-form.tsx`'s success copy was hedged
+  to match ("If `{email}` isn't already registered, we've sent a
+  verification link to it…"), the same wording pattern
+  `forgot-password-form.tsx` already used for its own generic response.
+- **Username collisions are a deliberate exception, not an oversight**:
+  `/api/register` still returns an immediate `"That username is already
+  taken"` error, checked *before* the (now-silent) email lookup so a taken
+  username is never masked by the generic response. Usernames are public
+  handles — profile URLs, attribution on every post/rating — not
+  information to protect, and a member needs to know to pick another one
+  before "usernameLower" uniqueness rejects it later.
+- **Not touched**: `/verify-email`'s and `/login`'s error copy (an
+  unverified or wrong-password sign-in attempt still requires already
+  knowing the account's password to reach the code that admits its
+  existence — see "Sign-in itself now requires a verified email" above),
+  and `/api/forgot-password`, which already had this shape from the start.
+
 ## Feature Decisions
+
+### Member-created fight scene tags get a profanity check, member-facing only
+**PR #138.** Since "Let members create their own fight scene tags" (below)
+made tag creation open rather than admin-curated, nothing stopped a member
+from typing an explicit-profanity tag and having it go live immediately,
+visible on the scene until an admin happened to notice and delete it via
+`/admin/fight-scene-tags`. Added a check at `POST /api/fight-scene-tags`
+(the member-facing create endpoint) that rejects the create outright when
+the name is profane.
+
+- **Reject, don't silently censor.** The alternative — accepting the tag but
+  replacing the profanity with asterisks (`bad-words`' own `.clean()`
+  method) — would leave a half-blanked-out tag live on the scene, a worse
+  outcome than asking the member to pick a different name. `isProfane()`
+  plus a plain 400 error was chosen over `.clean()` for that reason.
+- **Depends on the `bad-words` npm package rather than a hand-written word
+  list.** A hand-maintained list means either committing an explicit slur
+  list into the repo (unpleasant to review/diff, and a list nobody's
+  actively curating goes stale) or under-covering real cases. `bad-words`
+  is a small, widely-used, MIT-licensed package with its own maintained
+  list (`badwords-list`) — the same tradeoff as depending on any other
+  vetted library instead of reinventing it.
+- **Explicit scope: catches profanity/slurs, not "unserious."** This does
+  nothing about a merely silly, junk, or joke tag ("asdf", a meme phrase) —
+  word-list matching can't tell "unserious" from "serious," only "explicit"
+  from "not." Admin delete at `/admin/fight-scene-tags` remains the actual
+  backstop for that broader class, unchanged from before this PR.
+- **Member-facing only — `/api/admin/fight-scene-tags` (the admin create
+  endpoint) doesn't run this check.** An admin is already trusted to curate
+  the vocabulary directly; gating their own tag creation behind a
+  word-list filter would only get in the way of a legitimate edgy-but-real
+  tag an admin chooses to add on purpose.
+- Bypassable by design, not by oversight — spacing, leetspeak, and unlisted
+  slurs all slip through a word-list check. Accepted as "raises the bar
+  for the worst, most obvious cases" rather than a claim of completeness;
+  a determined troll was never going to be stopped by this alone.
+
+### Fight scenes gain two new data points: martial arts Style and Move, kept closed-vocabulary against the tags precedent
+**PR #137.** Adds `FightSceneStyle` and `FightSceneMove` — two more many-to-many
+facets a member can attach to a fight scene alongside the existing category
+Tags, cast, and rating. Schema-wise each is a straight copy of
+`FightSceneTag` (its own table, plain implicit m2m join).
+
+- **Deliberately not following the tags precedent (member-creatable, see
+  "`Let members create their own fight scene tags`" below) despite it being
+  the most recent, most relevant prior decision on this exact codebase.**
+  That reversal's own stated reasoning — "tags aren't data-hygiene-critical,
+  and admin delete is an adequate fallback" — was raised explicitly as a
+  reason to reconsider Style/Move too, and rejected on request: Style/Move
+  stay admin/reviewer-curated only (`/admin/fight-scene-styles`,
+  `/admin/fight-scene-moves`, mirroring `/admin/fight-scene-tags`), a member
+  can only pick from what already exists. The schema carries no cost either
+  way — "closed" vs. "open" is purely which UI/API path can create a new
+  row — so this is cheaply reversible later if it turns out to be too
+  restrictive, the same way tags themselves were once reversed.
+- **Submission form uses a new `AutocompleteChipPicker` (search-to-narrow,
+  multi-select, removable colored chips) instead of the checkbox-grid
+  `ChipPicker` tags/cast already use** — chosen explicitly over reusing
+  `ChipPicker`, on the reasoning that Style/Move vocab could grow long
+  enough that scrolling a checkbox grid stops being the fastest way to find
+  one entry. Filters the already-loaded `styleOptions`/`moveOptions` array
+  client-side (no per-keystroke network call) rather than hitting an
+  endpoint per keystroke like `AutocompleteFilterInput` (actor/director on
+  `/search`) does — a deliberate difference, not an oversight: those lists
+  are effectively unbounded and can't be shipped to the client up front,
+  Style/Move are a bounded admin-curated vocabulary and already are.
+- **Card display: a dedicated badge row, own accent color per facet, above
+  the existing Tags row** (style in the rating-stamp red `#a4291e`, move in a
+  new olive `#4a5a3a`) — one of six mocked-up options (blended into the tags
+  row with no visual distinction; a merged single "Style → Move" pill; an
+  icon-prefixed neutral badge; a plain muted-caption text line; a
+  ticket-stub vertical side rail). The color-coded own-row option won on
+  scan-ability without introducing a third visual language to the card
+  beyond ink + one accent — the two new colors both read as "the same kind
+  of thing, a different flavor," while still being tell-apart-able from
+  category tags' plain underlined-link styling.
+- **Display scope is deliberately limited to the two primary browsing
+  surfaces** — `/search/fights` and the movie-page/collection-page
+  `FightSceneSection` view — not every place a fight scene card can render
+  (member lists, `/tops/fights`, a member profile's saved-scenes grid).
+  `FightSceneResultCard`'s `styles`/`moves` fields are optional rather than
+  required for exactly this reason: those other call sites keep
+  type-checking and rendering correctly (just without the new badge row)
+  without being forced to add the extra Prisma `include` just to satisfy a
+  type. Wiring the remaining surfaces is a small, schema-free follow-up
+  whenever it's worth doing, not deferred for a hard reason.
+
+### Movie Data card reintroduced with a shared Edit button, relocated to a full-width section above Fights
+**PR #136.** Reverses part of the entry directly below this one ("Historical
+Setting: renamed from Era, unboxed from its own card"), which had cut the
+shared "Movie Data" card and left Fight Count/Historical Setting as plain
+unboxed rows. This PR re-introduces the card — grouping both fields under one
+bordered box with a single shared Edit/Done toggle instead of two separate
+ones, so clicking it puts both fields into edit mode together (each still
+saves independently, since they hit different API routes).
+
+- **A real race condition was found and fixed in the shared toggle.** The
+  first implementation keyed a remount to `editing`, resetting each control's
+  local state from its `initial*` prop whenever edit mode opened. Those props
+  only reflect the server's data once `router.refresh()`'s background re-fetch
+  lands — clicking Save then immediately Done, before that refresh landed,
+  could revert a just-saved value back to stale data. Fixed with React's
+  documented "adjust state during render" pattern: compare `editing` against
+  its previous value during render and reset from the component's own
+  already-correct local state, not the lagging prop.
+- **Placement went through several rounds, driven by live screenshot review
+  across signed-out, signed-in, and admin-with-ratings states** (each renders
+  a different column height in the movie page's two-column hero):
+  - First inside the hero, directly under Your Rating — this made Movie Data
+    the last thing before the full-width Cast section, and a small
+    utility-data box sitting right against Cast's much larger heading read as
+    an abrupt break in the page's visual flow.
+  - Tried moving it into the left sidebar, next to Details — closed that gap
+    for signed-out visitors, but flipped the imbalance for signed-in/admin
+    views, where Your Rating's own box (with category sliders, an Editors'
+    Rating tab) makes the right column shorter than the sidebar instead of
+    taller. The two columns' relative height depends on session state; no
+    single static placement in the hero wins in every case.
+  - Tried a side-by-side row with Your Rating in the hero — better (the two
+    end together instead of Movie Data trailing alone), but still imperfect:
+    the two cards aren't the same height so their bottoms don't quite align,
+    and it looks lopsided when signed out, since Your Rating renders as a
+    bare "Sign in to rate this movie" text link rather than a box in that
+    state — a full card next to a bare line of text.
+  - Landed on: Movie Data as its own full-width section, placed between
+    Reviews and Fights — matching the full-width treatment Cast/Reviews/
+    Fights already use, rather than living in the narrow two-column hero at
+    all. This sidesteps the column-balancing problem entirely instead of
+    continuing to patch it.
+- **Fight Count and Historical Setting render as a flex-wrap row of cells,
+  not a stacked list with a divider** — chosen anticipating more
+  member-maintained attributes being added here later. A new attribute is
+  just another cell appended to the row; the previous stacked layout would
+  have made the card taller with each addition, which is exactly what kept
+  re-tipping the hero's column balance before the card was moved out.
+
+### Historical Setting: renamed from Era, unboxed from its own card
+**PR #TBD.** A round of post-launch UI review on the movie page (screenshotting real rendered states, not just reading the JSX) surfaced problems with how "Era Setting" shipped, worked through in a few steps rather than one:
+
+- **"Era" renamed to "Historical Setting"** — "Era" alone reads as the movie's own production era ("an 80s movie"), the opposite of what the field means: the historical period the story is *set in*. Only the display label and edit-history copy changed; `eraSetting`/`EraSettingControl`/etc. keep their names, since renaming those is a schema-touching change disproportionate to a wording fix.
+- **Byline badge trimmed, then dropped entirely** — the year-range labels added right after launch (e.g. "Modern Day / Contemporary (1949–present)") made the byline noticeably heavier than neighbors like "102 min" and wrapped to its own line on mobile. First tried showing just the short name in the byline (keeping the full "(years)" label everywhere else); ultimately removed the byline badge altogether rather than carry two label forms for one field. Fight Count's byline badge is unaffected.
+- **The shared "Movie Data" card was cut, not just relocated.** It first moved from "after Reviews, before Fights" (where it read as an orphaned box on a movie with no reviews and no fight scenes yet — the empty state made it look like a mistake) to right under the Your Rating widget. That fixed the orphaning, but introduced a new problem: as one bordered box spanning the *combined* width of the Details+Your Rating row above it, it broke the two-column rhythm (two side-by-side boxes → one wide bar) and added a fourth similar-looking dark box to a page that already has Details, Your Rating, and often an Admin Review card. Fight Count and Historical Setting now render as plain unboxed rows directly under Your Rating, in that same `max-w-sm` column — no card, no heading, matching the original pre-"Movie Data" Fight Count treatment.
+- **Deliberately not folded into the Details card**, despite both being short factual displays: Details is static, admin/TMDB-sourced catalog record; Fight Count/Historical Setting are member-editable, revisable, with a public edit-history trail — closer kin to Ratings/Fun Facts than to Details. That distinction, plus Details' ~200px sidebar width being too narrow for Historical Setting's dropdown/edit UI (already confirmed tight at 375px mobile), ruled out tabbing or merging them.
+
+### Era Setting: a Fight-Count-style field for the historical period a movie is set in
+**PR #TBD.** Requested as "expand the Fight Count section to collect more
+user entries for different data" — narrowed down to one field (the
+historical period/dynasty a movie is *set in*, not its real-world release
+date) via two explicit choices: what data (an open-ended pick from
+candidates), and what editing model. This also happens to close the data
+gap the "Historical timeline page" backlog item was blocked on (see
+Deferred & Backlog below) — not the original ask, but the same underlying
+attribute, so `Movie.eraSetting` covers both.
+
+- **Copies Fight Count's model exactly, by explicit request over the
+  Ratings alternative** — single shared value, any verified member can
+  overwrite it, last-edit-wins, no consensus step, `EraSettingEdit` as the
+  same kind of accountability trail `FightCountEdit` is (not a second source
+  of truth). Same guardrails too: verified email (staff exempt), rate
+  limiting, full public edit history. Reuses the identical page placement
+  (byline link up top, full control right above it) and component shape —
+  `era-setting-control.tsx` is `fight-count-control.tsx` with a `<select>`
+  in place of the number input.
+- **Fixed dropdown, not free text** — the one real deviation from Fight
+  Count's shape (a bounded number vs. a closed vocabulary). `ERA_SETTINGS`
+  in `src/lib/era-settings.ts` is a hardcoded key/label list, same pattern
+  as `RATING_CATEGORIES`: a small closed set with app-level validation, not
+  an admin-configurable taxonomy table like `Genre`/`FightSceneTag`. Chosen
+  specifically so the still-unbuilt timeline page doesn't inherit unbounded
+  spelling variants of the same dynasty from a free-text field — the same
+  reasoning the backlog entry had already worked out, just executed as
+  member-editable instead of admin-curated.
+
+### Admin sidebar nav grouped by domain, not build order
+**PR #TBD.** Eight tabs deep once Meme Generator shipped, and the nav
+(`src/app/admin/layout.tsx`) had just been growing in whatever order each
+was added — no relation between adjacent items. Grouped into three: a
+`Dashboard` anchor, **Catalog** (Movies, Import from TMDB, Fight Scene
+Tags, Lineage — everything that shapes the data other pages read from),
+**Site Content** (News & Updates, Meme Generator — things published
+straight to visitors), and an `Account` anchor. Mocked up as an artifact
+before building (desktop grouped list + the real mobile behavior) so the
+grouping was agreed on before touching the component.
+
+- **Mobile gets a divider, not a label** — below the `sm` breakpoint this
+  nav isn't a sidebar at all; it's a horizontal scrolling strip
+  (`overflow-x-auto`, row not column). Stacked uppercase group labels don't
+  fit that shape, so mobile keeps the flat scroll and only gains a thin
+  vertical rule at each group boundary — visually consistent with desktop
+  without adding text width to an already-tight strip.
+- **One `NAV_GROUPS` render path for both breakpoints, via `sm:contents`**
+  — rather than two different markup trees, each group renders as a
+  wrapper `<div>` that's a real flex row on mobile (so its divider/links
+  size against the row) and becomes `display: contents` at `sm:` (so its
+  children join the outer nav's own `flex-col` list directly, picking up
+  its `gap-1` uniformly). Same divider element renders as a vertical rule
+  in row mode and a horizontal one in column mode purely through
+  breakpoint-prefixed width/height classes, not two separate elements.
+- **Empty groups render nothing, dividers included** — links are filtered
+  by `adminOnly` per group first, then a group with zero visible links
+  (e.g. Site Content for a `REVIEWER`, who can't reach either link in it)
+  is dropped entirely before the divider-index logic runs, so a `REVIEWER`
+  never sees a stray rule with nothing under it. Verified by screenshotting
+  the actual `reviewer@example.com` seed account, not just the `ADMIN`
+  view.
+
+### Meme Generator added as an admin tab, not a member feature
+**PR #TBD.** Built the backlog item tracked in both this file (see the old
+"Meme generator" bullet, now removed from Deferred & Backlog below) and
+GitHub issue #25 — scoped down from "a member-facing remix tool" to a plain
+`/admin/memes` tab, since the open design questions (image source, output
+handling, editor scope) hadn't been resolved for a public-facing feature and
+narrowing to admin-only sidesteps two of them entirely.
+
+- **Image source: proxied video thumbnail, with a dropped screenshot as an
+  explicit override** — searching a fight scene suggests
+  `youtubeThumbnailUrl()`'s video-level thumbnail (same caveat as always:
+  it's the *video's* thumbnail, not necessarily a frame at
+  `youtubeStartSeconds`), but the admin can drag-and-drop or browse for their
+  own screenshot instead, which always wins over the suggested thumbnail when
+  present. This answers the three-way "thumbnail vs. per-scene upload vs.
+  poster fallback" question from the original backlog entry without
+  committing to any one of them exclusively, and without new schema or Blob
+  storage for a per-scene canonical still. The thumbnail itself is proxied
+  through a new `/api/admin/memes/thumbnail` route rather than pointed at
+  `img.youtube.com` directly — that host doesn't send permissive CORS
+  headers, so drawing it into a `<canvas>` cross-origin would taint the
+  canvas and block `canvas.toBlob()` on export.
+- **Download-only, nothing persisted** — the meme is composited entirely
+  client-side on a `<canvas>` and downloaded as a PNG; no new Prisma model,
+  no server-side image storage. Keeps the feature's whole surface to two thin
+  API routes (search, thumbnail proxy) plus one client component. Shareable
+  meme storage is a real follow-up if this gets used, not a v1 requirement.
+- **Classic top/bottom caption only** — two fixed text fields, fixed
+  font/position (Impact-style, white fill, black stroke, uppercase),
+  matching the traditional meme format rather than a freeform text-box
+  editor. A freeform editor is more UI/state for a v1 nobody has used yet;
+  revisit if the fixed layout turns out too limiting.
+- **CSP's `img-src` widened to allow `blob:`** — the dropped-screenshot path
+  loads the file via `URL.createObjectURL()` into an `<img>`/`<canvas>`,
+  which the existing nonce-based CSP (see "Security headers and a
+  nonce-based CSP added" above) silently blocked before this PR — `blob:`
+  wasn't in `img-src`, so drop-a-screenshot rendered nothing. Caught by
+  actually running the feature in a browser rather than just `next build`;
+  `blob:` URLs are page-local (never fetched over the network), so this
+  doesn't meaningfully widen the app's real attack surface.
+- **Copy to Clipboard added alongside Download, feature-detected rather than
+  always shown** — `navigator.clipboard.write([new ClipboardItem(...)])`
+  reuses the exact same `canvas.toBlob()` call the download button already
+  makes. Support for writing an *image* (not just text) to the clipboard is
+  newer and less universal than `navigator.clipboard` itself, so the button
+  only renders once `clipboard.write` and `ClipboardItem` are both confirmed
+  to exist, checked with a lazy `useState` initializer at mount (matching
+  `hero-carousel.tsx`'s `reducedMotion` pattern) rather than an effect that
+  sets state after the fact — support doesn't change mid-session, so there's
+  nothing to subscribe to. The "Copied!" label swap on click mirrors
+  `share-button.tsx`'s existing `copyLink` pattern.
+- **`ADMIN`-only, not open to `REVIEWER`** — doesn't fit `REVIEWER`'s
+  existing scope (movie-submission approval, fight-scene-tag management,
+  fight-scene verification), so it follows the same default as
+  Import/Lineage/News rather than opening a new carve-out.
+- **Deferred: animated GIF preserved as output, not flattened to a static
+  PNG** — a dropped GIF is currently decoded, composited, and downloaded as
+  a single-frame PNG (`canvas.toBlob()` has no concept of animation), so any
+  motion is silently lost. Scoped but explicitly not built: it needs a GIF
+  *decoder* (`gifuct-js`) to pull out each frame plus its disposal method
+  (GIF frames are often small delta patches against the previous frame, not
+  standalone images — compositing them correctly needs an accumulator
+  canvas, not a fresh draw per frame), the existing caption-drawing code
+  reused per decoded frame, a GIF *encoder* (`gifenc` over `gif.js` — no
+  separate worker-script asset to wire into the Next.js build) to re-stitch
+  the result, a frame-count/dimension cap before encoding (cost scales with
+  pixels × frames, and `gifenc` runs on the main thread with no worker), and
+  an async "Generating…" button state since encoding is no longer
+  instant. Estimated at roughly half a day to a day, not attempted here —
+  deliberately kept light for v1. Revisit if animated output turns out to
+  matter in practice.
 
 ### `/tops` added: Top 100 Movies and Top 100 Fights as their own pages
 **PR #TBD.** Requested as "a page that consists of Tops: Top 20 Movies, Top 20 Fights" —
@@ -4104,6 +4550,269 @@ Lists UI for mobile-friendliness rather than in response to a bug report.
   from the card itself, and easy to lose track of once search or
   pagination scatters cards away from their heading.
 
+### Sifu Lineage: primary-sifu-plus-dotted-line, bulk chain-import over drag-and-drop
+**PR #TBD.** New feature, worked through as a long design conversation before
+any code was written — most of the actual judgment calls got made before
+implementation, not during it.
+
+- **Multiple sifus allowed (it's a DAG), but rendered as one primary chain
+  plus dotted "co-sifu" lines, not a general graph layout.** The site owner
+  confirmed a student can genuinely have more than one recognized sifu, which
+  rules out a strict tree. The alternative to a real DAG-layout library
+  (dagre/elkjs solving edge-crossing minimization — meaningfully more code,
+  harder to reason about, layouts that can shift non-obviously as data
+  changes) is the pattern standard org-chart tools already use for the same
+  "reports to two people" case: one manager is the solid-line primary that
+  sets the node's position, any others render as a dotted secondary line
+  drawn to wherever the node already sits. Chosen for the lighter build and
+  lower ongoing-maintenance cost — layout code that's isolated, deterministic,
+  and doesn't need a graph-layout dependency at all. `LineageRelation.isPrimary`
+  is a plain boolean (the first sifu recorded for a student becomes primary
+  automatically; adding another defaults to secondary), not a DB constraint —
+  a partial unique index ("at most one primary per student") isn't
+  representable in `schema.prisma` the way this repo's migrations are
+  authored, so it's enforced in `src/lib/lineage.ts` by demoting the existing
+  primary inside the same transaction. This is a reversible choice at the data
+  layer either direction — the edges are identical either way, only the
+  *rendering* differs — so switching to full DAG layout later needs no
+  migration, just a different layout component.
+- **Bulk chain-paste import, not drag-and-drop, as the primary way to
+  populate ~500 links.** Drag-and-drop (search-and-drop a person onto a tree
+  node, reposition by dragging) was the first idea raised for entering data at
+  that scale, but costs the same real engineering — an auto-layout engine,
+  drop-target detection, cycle checks on drop, re-parenting logic — whether or
+  not it's the primary entry path. What actually solves the scale problem: a
+  textarea where an admin pastes one succession chain per line
+  (`Old Master Yuen > White Crane Elder > Iron Fist Chen`, sifu first,
+  chain of N names → N−1 links), matching how this kind of lineage data
+  actually gets researched (as chains, not isolated pairs), and matching how
+  org-chart/HRIS tools are actually populated in practice (CSV/paste import,
+  with manual dragging reserved for touch-up afterward, never the primary
+  path). A review step (`previewBulkImport` in `src/lib/lineage.ts`) flags
+  each parsed pair as new / already linked / a name matching more than one
+  actor (with the ambiguous side resolved via a pick, defaulting to the first
+  match) / no match at all, before anything is written — nothing commits on a
+  guess. Drag-and-drop was dropped from scope entirely, not scaled down: the
+  on-tree "+ Sifu"/"+ Student" buttons (search, pick, Confirm) already cover
+  the one-off single-link case drag-and-drop would otherwise have served,
+  without a draft/pending state — see the next bullet.
+- **On-tree add commits immediately per pick, no separate draft/lock step.**
+  The original ask included a "lock/confirm" button for edits made directly on
+  the tree. Implemented as: picking a person from the popover's search and
+  pressing Confirm saves that one link right away — no standing "pending"
+  state spanning multiple edits. A page-wide draft-then-commit model was
+  considered and rejected as exactly the kind of compounding stateful
+  complexity this repo's own conventions (see the `/code-review` guidance on
+  autosave-style surfaces) warn against introducing for a one-off feature.
+- **Lineage nodes are restricted to actors already in the catalog (`Person`
+  records), not a separate lineage-only entity.** A historical sifu who was
+  never in a film can't be added until they exist as a `Person` some other
+  way. Considered a standalone `LineageFigure` model (optionally linked to
+  `Person`) specifically to cover that case, but rejected for now to avoid
+  touching `Person.tmdbId`'s current required-and-unique invariant, which the
+  actor-search/TMDB-import code already assumes holds everywhere.
+- **Public from the start, not admin-only.** Once it became clear actor pages
+  (`/actors/[personId]`) already exist and are public — just not linked from
+  top-level nav — keeping a public-facing feature gated behind an admin
+  screen stopped making sense as a default. The compact **Lineage** card on
+  the actor page and the full tree at `/actors/[personId]/lineage` ship
+  public immediately; there's no feature flag hiding them once data exists.
+- **Not implemented in this pass**: deleting a link directly from the tree
+  view (the admin tree is browse-and-add only; removal still goes through the
+  flat link list, since the tree API doesn't thread relation ids through its
+  ancestor/descendant structures — only figure refs); zoom/pan controls on
+  the tree (discussed early on for very wide/deep lineages, but not load-
+  bearing once the tree defaults to a bounded generations-up/down window
+  with "show more" expand links/buttons and per-parent sibling overflow
+  counts, which were built — 2 up/2 down and re-fetch-with-more in the admin
+  tree, 3 up/3 down and a `?up=&down=` query-param link on the read-only
+  public page). Neither blocks shipping; both are easy to add on top of the
+  existing data shape if a real lineage turns out to need them.
+
+### Sifu Lineage: LineageFigure introduced, reversing the Person-only restriction
+**PR #TBD.** Reverses one specific call from the entry above ("Lineage nodes
+are restricted to actors already in the catalog") within the same feature,
+before any of it shipped — raised as soon as real examples surfaced: not
+every sifu is an actor.
+
+- **Not every sifu is an actor, and some are characters rather than real
+  people.** A historical martial artist (a real sifu who trained someone
+  famous) may never have been credited in a film at all. Harder case: a
+  figure like Ip Man is himself a real person the lineage should be able to
+  name, but the only representation of him in this catalog is as a
+  *character* — `CastCredit.characterName` — played by different actors in
+  different films (Donnie Yen, Tony Leung, Anthony Wong...). Neither case
+  fits "a lineage node is a `Person`."
+- **`LineageFigure` sits between `LineageRelation` and `Person`** — a node
+  has a name and an optional unique `personId`. An actor's figure is created
+  lazily (`resolveFigureForPerson` in `src/lib/lineage.ts`) the moment
+  they're actually linked, not up front for the whole catalog, and reused on
+  every later link to the same actor (`personId` is unique). A bare figure
+  (Ip Man, a never-credited master) is deduped by exact case-insensitive
+  name the same way, so pasting "Ip Man" into two different chains reuses
+  one figure rather than forking the lineage in two. This was buildable
+  cleanly because nothing had shipped yet — no real data to migrate, so the
+  not-yet-released `LineageRelation` migration was rewritten in place rather
+  than layered under a second one.
+- **"Who played this figure" is derived, never stored.** Rather than a field
+  on `LineageFigure` pointing at a specific actor, `getPortrayals(name)`
+  looks up `CastCredit` rows with a matching `characterName` live, on
+  render, wherever a bare figure appears in the two public tree pages (the
+  admin tree skips this — it's browsing flavor for readers, not something an
+  editor needs while linking people). A stored link would have to pick one
+  actor as *the* portrayal, which is simply false for a role recast across
+  films; a lookup can show all of them and stays correct as new movies get
+  added, with no upkeep.
+- **The figure picker (`AdminLineageFigurePicker`) searches actors and
+  existing bare figures together**, plus a trailing "add as a non-actor
+  figure" row for a name matching neither — but bulk chain-import stays
+  actor-matching only (unchanged from the entry above): a name it can't
+  resolve to an actor still shows "Not found" rather than minting a bare
+  figure automatically, so a typo in a 200-line paste doesn't quietly become
+  a permanent phantom entry. Adding a non-actor figure stays a deliberate,
+  reviewed action through the picker.
+- **Public URLs split accordingly**: an actor-linked figure's page is still
+  `/actors/[personId]/lineage` (stable, matches the rest of the site's
+  actor-centric URLs); a bare figure gets `/lineage/[figureId]` instead,
+  since it has no actor page to live under. Both render through the same
+  `LineageTreeBody` component; the figure route redirects into the actor
+  route if a figure turns out to be actor-linked after all (a stale link,
+  someone bookmarking mid-edit), so there's exactly one canonical URL per
+  figure either way.
+
+### Sifu Lineage: actor-page teaser moved from a stat card to its own tree section
+**PR #TBD.** The compact **Lineage** card (sized like Details/Sparring
+Partner, in the stats row) was replaced with a full-width **Lineage**
+section further down the actor page, rendering `LineageTreeBody` — the same
+component the full `/lineage` page uses — instead of a plain list of names.
+Two options were on the table: shrink a second, bespoke tree renderer down
+to stat-card width, or move the teaser out of the card row entirely and
+reuse the existing renderer at 1 up/1 down (the same depth the card showed).
+Chosen for the same reason as most of this feature's other calls: reusing
+what's already built beats building a smaller second version of it — a
+stat-card-sized tree would need its own cramped layout with no payoff
+besides staying in that row. The tradeoff, accepted deliberately: Known
+For/Filmography now sit one section lower on any actor page with lineage
+data.
+
+### Sifu Lineage: `LineageTreeBody` rewritten as computed SVG layout, not flexbox
+**PR #TBD.** The flexbox-and-arrow-glyphs rendering (generation rows as
+`flex-col`, siblings as a wrapped `flex-wrap` row) read ambiguously once a
+sibling row wrapped into a stack on a phone — reported directly against the
+live site (a screenshot showing Jackie Chan's two students stacked with no
+visual difference from a 3-generation chain). Two rounds of CSS patches on
+top of that rendering (a bordered "cluster" box, then a text label naming
+the relationship) still didn't read as clearly as the original wireframe
+mockup, which used real connecting lines between fixed node positions —
+fed back directly ("i like the view in mockup better... clear lines of
+linkage").
+
+Rather than keep patching the flexbox version, `LineageTreeBody` now
+computes an explicit layout (`buildLayout` in the component): every node's
+x/y in trunk-centered units (x=0 is the primary sifu/student chain, row
+index counts generations from the centered figure), shifted once into
+pixel space by the tree's actual extent, then rendered as one absolutely-
+positioned `<svg>` of connecting lines under a set of absolutely-positioned
+node elements — the same technique the original `.dc.html` wireframe used,
+ported into real Tailwind/JSX. A hand-rolled layout rather than a graph-
+layout dependency, same reasoning as the primary-sifu-plus-dotted-line call
+above: this tree has exactly one branching shape (a single chain above and
+below, fanning out per generation), not an arbitrary graph, so plain
+arithmetic covers it without pulling in dagre/elkjs. Slot width and node
+label width were both narrowed in the same pass (a long name like "Michael
+Chow Man-Kin" was pushing generation rows wider than necessary) so names
+wrap within a fixed column instead of stretching the row.
+
+### Lineage: "sifu"/"student" dropped from display copy, not swapped for another role term
+**PR #TBD.** Once non-actor figures could be historical martial artists or
+characters (see "LineageFigure introduced" above), the site owner flagged
+that "sifu" itself doesn't fit every relationship the feature records —
+a specific term for a specific tradition, presupposing a fit that isn't
+guaranteed. The first request read as a rename ("drop sifu and student
+wording... more generic as follows: ..."), but a follow-up clarified the
+actual ask: avoid *displaying* the terms, not replace them with a different
+role noun (a straight `sifu` → `trainer` / `student` → `trainee` swap would
+have kept the same problem — assuming a trainer/trainee relationship fits
+every entry, which is no more guaranteed than "sifu" did).
+
+Structural UI (admin form field labels, the admin tree's add buttons and
+popover, the secondary-link tag) was reworded around the tree's own
+generation axis instead of a role — "Earlier"/"Later" — reusing language
+the admin tree already used for expanding the tree itself ("show earlier
+generations"/"show more generations …"), so the new wording isn't a fresh
+vocabulary, just the existing one applied consistently. The "co-sifu" tag
+on secondary nodes in the public tree (`LineageTreeBody`) was dropped
+entirely rather than relabeled — the dashed border and line already carry
+that meaning visually, and every other node label in that tree is a plain
+name with no role annotation. Internal identifiers (`sifuId`/`studentId`
+fields, the `LineageRelation.sifu`/`student` relations, `addMode`'s
+`"sifu"`/`"student"` values) were left as-is — the request was about
+*display* copy, and renaming the data model over a wording call would risk
+another migration for no user-facing benefit (see the "Production migration
+incident" entry under Foundational Changes for what that risk actually
+costs).
+
+The public disclaimer shown on every actor/figure lineage view was rewritten
+in the same pass, replacing wording that leaned on "training lineage/who
+trained whom" with role-neutral framing the site owner drafted and then
+asked to have reworded for tone: *"'Lineage' is our tribute to the martial
+artists who built this genre, generation by generation. Hand-curated,
+always a work in progress — reach out if you spot something to fix."*
+
+### Lineage: groups are a normal figure in the owner's own row, not a lateral position
+**PR #TBD.** Some "students" belong to a collective rather than being
+trained one-on-one — a stunt team, say — and the site owner wanted a way to
+show that. The first attempt (worked through live with mockups, not
+committed) put the group beside its owner, in the same lateral lane the
+tree already uses for a secondary sifu, with the team's own members fanning
+out beneath it inline. Stress-testing that version at real production pixel
+sizes inside a 340px-wide frame (a typical phone's content width) showed
+two problems: the lateral lane has no width cap today, so it grows with
+every additional co-sifu *or* group with nothing to stop it (the mockup
+already needed ~640px for a single team at comfortable spacing); and — the
+one that actually killed it — reusing the co-sifu lane means "this figure
+trained the owner," backwards from what leading a team is. Asking what the
+tree looks like centered on a *member* of the team (not its owner) is what
+surfaced that: walking up from a member, the team has to be *above* them,
+in the ordinary ancestor position, not off to the side of whoever leads it.
+
+The shipped design instead makes a group a completely ordinary
+`LineageFigure` (`isGroup: true`) positioned exactly where any of the
+owner's other primary students would be — one entry in their descendant
+row, distinguished only by node shape (a rounded square with a group glyph,
+`GroupIcon` in `lineage-group-icon.tsx`) rather than a special position.
+Its own members are simply *its* primary students, one generation further
+down, rendered by the exact same recursive fan-out every figure already
+gets — no new positioning concept, no new width-growth risk, and centering
+on a member of the team makes the team show up for free as an ordinary
+ancestor. The one deliberate asymmetry: a group's own children are capped
+by a separate, larger `DEFAULT_GROUP_SIBLING_LIMIT` (12, vs. 6 for an
+individual) before the overflow badge kicks in, since a team's roster can
+run far larger than any one person's students — surfacing more of it by
+default is worth the extra vertical space on a group's own page.
+
+### Lineage: bare figures get a delete/toggle-group escape hatch, cascade over block-if-linked
+**PR #TBD.** Found immediately while testing groups: a figure created
+without the "this is a group" box checked (or, more generally, any bare
+figure entered wrong) had no way to fix or remove itself short of a manual
+database edit -- `deleteLineageRelation` only ever removed one link, never
+the figure it points at. Two small admin actions close that gap, both
+scoped to bare (non-actor) figures only: `setFigureIsGroup` flips the flag
+on an existing figure in place, and `deleteBareFigure` removes the figure
+outright.
+
+Delete goes straight to removing the figure rather than first requiring
+every link to it be deleted by hand -- the schema already cascades
+`LineageRelation` rows through `onDelete: Cascade` on both `sifuId` and
+`studentId`, so blocking on "has links" would just make the admin do that
+cascade manually before the button worked, for no real safety benefit; a
+`window.confirm` naming what's about to happen (same pattern the existing
+single-link delete already uses) is the actual safeguard. Both actions
+reject an actor-linked figure server-side -- it's auto-managed by
+`resolveFigureForPerson` (upserted whenever that actor is linked again), so
+deleting one wouldn't stick, and "is this actor a group" isn't a coherent
+state to put a real person's figure in.
+
 - **Drag-and-drop reordering for ranked list items** — `ListItemRows`
   (`src/components/list-item-rows.tsx`) now has move-to-top/move-to-bottom
   buttons alongside up/down (see **Feature Decisions** above), covering the
@@ -4214,41 +4923,25 @@ Lists UI for mobile-friendliness rather than in response to a bug report.
 - **Historical timeline page** — a page visually plotting movies along a
   timeline of Chinese historical periods/dynasties each movie is *set in*
   (not its real-world release date, which `Movie.releaseDate` already
-  covers). The real gap: no source has this data. TMDB doesn't track a
-  film's in-story historical setting, so it'd need a new admin-curated
-  attribute — likely a fixed period/dynasty taxonomy (mirroring the
-  `Genre`/`FightSceneTag` pattern) rather than free text, to keep the
-  timeline groupable/orderable. The timeline visualization itself (not
-  just the data model) is also a real, non-trivial UI build, not a
-  reskin of an existing list/grid view.
-- **Meme generator** — a tool letting members caption/remix an image into
-  a meme, seeded from a fight scene or movie. Image-sourcing was already
-  scoped: `youtubeThumbnailUrl()` (`src/lib/youtube.ts`) gives a free,
-  ToS-safe still today, already proven via the fight-scene permalink
-  pages' Open Graph previews, but it's the *video's* thumbnail, not a
-  frame at that scene's `youtubeStartSeconds` — for a long/compilation
-  video the thumbnail may not show the tagged fight at all. Explicitly
-  ruled out: extracting a real frame at that timestamp server-side
-  (yt-dlp/ffmpeg or similar), since downloading YouTube video content
-  violates their ToS and adds a fragile dependency YouTube could break at
-  any time. Three options on the table, undecided: (1) use the
-  video-level thumbnail as-is, simple but sometimes inaccurate; (2) let
-  the fight-scene submitter/admin attach their own still per scene,
-  mirroring the existing admin poster-override pattern (manual upload to
-  Vercel Blob) — more accurate, more UI, needs someone to actually
-  screenshot it; (3) fall back to the movie's poster/backdrop if neither
-  of the above feels reliable enough. Also undecided: the
-  caption/text-overlay editor itself, and whether generated memes get
-  stored/shared or are download-only.
+  covers). The data gap this was blocked on is now closed: `Movie.eraSetting`
+  (see "Era Setting: Fight-Count-style field for the historical period a
+  movie is set in" under Feature Decisions) is exactly that fixed
+  period/dynasty attribute — built member-editable (Fight Count's model)
+  rather than admin-curated as originally guessed here, but still a closed
+  vocabulary (`ERA_SETTINGS`), so it's still groupable/orderable. What's
+  still not built: the timeline visualization itself, a real, non-trivial UI
+  in its own right, not a reskin of an existing list/grid view — and most
+  movies don't have an era set yet, since it's opt-in per movie like Fight
+  Count.
 - **Fun facts / history section per movie** — admin-curated trivia or
   historical context shown on the movie page, likely alongside (or as an
-  extension of) the existing Editorial Review. Real overlap with the
-  "Historical timeline page" item above worth resolving before either is
-  built: if "history" here means the film's *in-story* historical
-  setting (what dynasty/period it's set in), that's the same underlying
-  data gap the timeline page needs; if it means real-world trivia
-  (production history, behind-the-scenes facts), it's a simpler,
-  unrelated content field. Scope that distinction first.
+  extension of) the existing Editorial Review. Previously flagged as
+  overlapping the "Historical timeline page" item above until it was clear
+  whether "history" meant the film's in-story setting or real-world trivia
+  — that in-story-setting half is now `Movie.eraSetting` (see "Era Setting"
+  under Feature Decisions), so if this is still wanted, it's specifically
+  the real-world-trivia half: production history, behind-the-scenes facts,
+  a simpler content field unrelated to the timeline/era work.
 - **Expand member profile** — tabbed reorganization, a member-editable
   `bio` field, an Activity tab, a Liked Lists tab (merged into the Lists
   tab's "My Lists" / "Liked" toggle), and a stats strip have all shipped
@@ -4338,3 +5031,27 @@ Lists UI for mobile-friendliness rather than in response to a bug report.
   viewing-format change. Naming, vote UI, and how (or whether) results
   surface on the scene's permalink page are all still open; not scoped
   further than this concept yet.
+- **A dense member list for a large lineage group** — raised during design
+  review for groups (see **Feature Decisions** above: "Lineage: groups are
+  a normal figure in the owner's own row, not a lateral position"). A group
+  centered on its own page gets a larger sibling cap than an individual
+  (`DEFAULT_GROUP_SIBLING_LIMIT`), but a real stunt team can still run past
+  it — the same shape of problem `LineageTreeBody`'s tree fan doesn't solve
+  on its own that "Actor Filmography split into Known For + a dense list"
+  (above) already solved for a long filmography: a capped visual treatment
+  up top, a plain full list below for everything past it. Not built —
+  raised as a recommendation, not requested, and no real group in the
+  catalog has hit the current cap yet to make it pressing.
+- **A separate page for the entire lineage** — every existing Lineage page
+  (`/actors/[personId]/lineage`, `/lineage/[figureId]`) is figure-centric:
+  centered on one node, showing a bounded window of generations up/down
+  from it. There's no single view of the whole graph at once, so getting
+  from one figure to an unrelated-looking one (a team member over to a
+  teammate, say) means clicking node-by-node through whatever's centered
+  along the way -- raised after exactly that friction while testing groups.
+  Not scoped: whether this is a zoomable/pannable full-graph view (a real
+  departure from `LineageTreeBody`'s hand-rolled layout, which was
+  deliberately built for one predictable branching shape, not an arbitrary
+  graph -- see "LineageTreeBody rewritten as computed SVG layout" above)
+  or something simpler, like a flat searchable list of every figure with
+  links into their centered pages.

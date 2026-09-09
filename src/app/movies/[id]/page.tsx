@@ -21,6 +21,8 @@ import {
   getFightSceneRatingSummaries,
   getFightSceneAdminRatingSummaries,
   getFightSceneTags,
+  getFightSceneStyles,
+  getFightSceneMoves,
   getFightSceneRoundNumbers,
 } from "@/lib/fight-scenes";
 import { getFunFactsForMovie, getFunFactVoteSummaries } from "@/lib/fun-facts";
@@ -43,7 +45,7 @@ import { PosterOverrideControl } from "@/components/poster-override-control";
 import { MovieOverviewSnippet } from "@/components/movie-overview-snippet";
 import { MovieDetailsTabs } from "@/components/movie-details-tabs";
 import { RecommendedBadges } from "@/components/recommended-badge";
-import { FightCountControl } from "@/components/fight-count-control";
+import { MovieDataSection } from "@/components/movie-data-section";
 
 // How many of a movie's fights the movie page itself teases -- the rest live
 // on the dedicated /movies/[id]/fights collection page, linked via "View all".
@@ -143,12 +145,15 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
     discussionPage,
     fightScenes,
     fightSceneTags,
+    fightSceneStyles,
+    fightSceneMoves,
     editorialReview,
     topMemberReviews,
     memberReviewsCount,
     myMemberReview,
     movieRecommenders,
     recentFightCountEdits,
+    recentEraSettingEdits,
     funFacts,
     collectionSiblings,
     similarMovies,
@@ -187,6 +192,8 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
     getDiscussionPage(movie.id),
     getFightScenesForMovie(movie.id, { limit: FEATURED_FIGHT_COUNT }),
     getFightSceneTags(),
+    getFightSceneStyles(),
+    getFightSceneMoves(),
     prisma.editorialReview.findUnique({
       where: { movieId: movie.id },
       include: { author: { select: { username: true } } },
@@ -200,6 +207,12 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
       : null,
     getMovieRecommenders(movie.id),
     prisma.fightCountEdit.findMany({
+      where: { movieId: movie.id },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+      include: { editedBy: { select: { username: true } } },
+    }),
+    prisma.eraSettingEdit.findMany({
       where: { movieId: movie.id },
       orderBy: { createdAt: "desc" },
       take: 5,
@@ -486,6 +499,8 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
       submittedBy: scene.submittedBy,
       cast: scene.cast,
       tags: scene.tags,
+      styles: scene.styles,
+      moves: scene.moves,
       ratingAverage: summary?.average ?? null,
       ratingCount: summary?.count ?? 0,
       adminRatingAverage: adminSummary?.average ?? null,
@@ -525,6 +540,14 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
   });
 
   const serializedFightCountEdits = recentFightCountEdits.map((edit) => ({
+    id: edit.id,
+    previousValue: edit.previousValue,
+    newValue: edit.newValue,
+    createdAt: edit.createdAt.toISOString(),
+    editedBy: edit.editedBy,
+  }));
+
+  const serializedEraSettingEdits = recentEraSettingEdits.map((edit) => ({
     id: edit.id,
     previousValue: edit.previousValue,
     newValue: edit.newValue,
@@ -809,19 +832,14 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
           isAdmin={session?.user?.role === "ADMIN"}
         />
 
-        <FightCountControl
-          movieId={movie.id}
-          initialCount={movie.trueFightCount}
-          recentEdits={serializedFightCountEdits}
-          signedIn={!!session?.user}
-        />
-
         <div id="fights">
           <FightSceneSection
             movieId={movie.id}
             initialFightScenes={serializedFightScenes}
             castOptions={castOptions}
             tagOptions={fightSceneTags}
+            styleOptions={fightSceneStyles}
+            moveOptions={fightSceneMoves}
             signedIn={!!session?.user}
             currentUserId={session?.user?.id ?? null}
             isAdmin={session?.user?.role === "ADMIN"}
@@ -833,6 +851,17 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
             myFavoriteSceneIds={myFavoriteFightSceneIds}
             totalSceneCount={fightSceneRoundNumbers.size}
             viewAllHref={`/movies/${movie.id}/fights`}
+          />
+        </div>
+
+        <div className="mt-10">
+          <MovieDataSection
+            movieId={movie.id}
+            initialCount={movie.trueFightCount}
+            fightCountEdits={serializedFightCountEdits}
+            initialEra={movie.eraSetting}
+            eraSettingEdits={serializedEraSettingEdits}
+            signedIn={!!session?.user}
           />
         </div>
 
