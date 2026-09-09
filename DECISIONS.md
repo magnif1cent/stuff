@@ -64,6 +64,7 @@ one.
 
 **Feature Decisions**
 
+- [Draft Terms of Service and Privacy Policy published now, flagged as a working draft, rather than waiting for full legal review](#draft-terms-of-service-and-privacy-policy-published-now-flagged-as-a-working-draft-rather-than-waiting-for-full-legal-review)
 - [Member-created fight scene tags get a profanity check, member-facing only](#member-created-fight-scene-tags-get-a-profanity-check-member-facing-only)
 - [Fight scenes gain two new data points: martial arts Style and Move, kept closed-vocabulary against the tags precedent](#fight-scenes-gain-two-new-data-points-martial-arts-style-and-move-kept-closed-vocabulary-against-the-tags-precedent)
 - [Movie Data card reintroduced with a shared Edit button, relocated to a full-width section above Fights](#movie-data-card-reintroduced-with-a-shared-edit-button-relocated-to-a-full-width-section-above-fights)
@@ -1229,6 +1230,43 @@ polish differently than a default-security reading would.
   and `/api/forgot-password`, which already had this shape from the start.
 
 ## Feature Decisions
+
+### Draft Terms of Service and Privacy Policy published now, flagged as a working draft, rather than waiting for full legal review
+**Branch `claude/hobby-commercial-transition-h159z4` (PR TBD).** Part of the
+broader hobby-to-commercial transition (see the legal-drafts audit this
+branch started from). `/terms` and `/privacy` went live now, linked from the
+footer and the registration form, instead of waiting until an attorney has
+reviewed final copy and every open question is settled.
+
+- **Publish-with-a-visible-banner over stay-silent-until-perfect.** Both
+  pages carry an amber "working draft" notice at the top rather than
+  presenting as finished, reviewed legal text. The alternative — waiting
+  for full attorney review before publishing anything — leaves the Site
+  with no Terms/Privacy at all in the meantime, which is a worse position
+  for an app that already has real accounts and user content than a
+  clearly-labeled draft is.
+- **Filled in what we could confirm, left the rest explicitly open rather
+  than as literal `[bracketed]` placeholders.** Entity name ("Kung Fu
+  Sauce," pending formal incorporation), governing-law jurisdiction (State
+  of Florida — the owner's home state, the standard recommendation absent
+  a specific reason to incorporate elsewhere), and minimum age (16) are
+  filled in. A dedicated legal/privacy contact address and DMCA agent are
+  not decided yet, so both pages point to `/about`'s existing "reach an
+  admin" channel instead of inventing an address.
+- **Privacy Policy describes account deletion/data export as a manual
+  email request, not a self-service right.** The app has no
+  delete-my-account or export-my-data flow yet (see the "Out of Scope"
+  section of `README.md` and the original hobby-to-commercial gap
+  analysis). Writing the policy to promise a self-service capability that
+  doesn't exist would be a compliance risk in itself, not just an
+  inaccuracy — the honest interim description is that a request is handled
+  manually until that flow is built.
+- **Neither page is a substitute for actual attorney review before a real
+  commercial launch** (accepting payments, running ads, or relying on
+  TMDB data under a paid commercial license instead of the free/
+  non-commercial terms). This is a reasonable-for-now draft, not the final
+  state — revisit once an attorney reviews it and the account-deletion/
+  export flow exists.
 
 ### Member-created fight scene tags get a profanity check, member-facing only
 **PR #138.** Since "Let members create their own fight scene tags" (below)
