@@ -41,6 +41,7 @@ An IMDB-style website for kung fu and martial arts films, built for martial arts
 - [Continuous Integration](#continuous-integration)
 - [Deploying](#deploying)
 - [Footer & About Page](#footer-about-page)
+- [Legal (Terms of Service & Privacy Policy)](#legal-terms-of-service-privacy-policy)
 - [News & Updates](#news-updates)
 - [Community Activity](#community-activity)
 - [Web Analytics](#web-analytics)
@@ -437,9 +438,9 @@ Each slide prefers a fight scene clip over the static TMDB backdrop:
 ## Footer & About Page
 
 Every page has a site-wide footer (`src/components/footer.tsx`) with
-`About`, `News`, and `Top 100` links on the left and a build version
-indicator on the right. It's deliberately not in the main navbar —
-Movies/Fights/Lists stays focused on the core browsing links.
+`About`, `News`, `Top 100`, `Terms`, and `Privacy` links on the left and a
+build version indicator on the right. It's deliberately not in the main
+navbar — Movies/Fights/Lists stays focused on the core browsing links.
 
 `/about` is a public page with four sections: what the site is, how the
 catalog is curated (echoing the TMDB keyword-search curation described
@@ -454,6 +455,30 @@ suffix on non-production deploys), reading Vercel's built-in
 or manual version bump needed. It exists to make "is this the deploy I
 think it is?" a glance instead of a debugging session. Locally (no Vercel
 env), it shows "Local dev build" instead.
+
+## Legal (Terms of Service & Privacy Policy)
+
+`/terms` and `/privacy` are public pages, linked from the footer and from a
+line under the registration form's submit button ("By creating an account,
+you agree to our Terms and Privacy Policy"). Both are a **working draft**,
+flagged as such by an amber notice banner at the top of each page — they
+describe current practice (data collected, third-party processors used,
+account/content rules) accurately, but a few things are explicitly called
+out as still pending rather than silently glossed over:
+
+- A dedicated legal/privacy contact address and DMCA contact — both
+  currently point to the same "reach an admin" channel described on
+  `/about`, which itself doesn't have a settled address yet either.
+- Self-service account deletion and data export aren't built — the Privacy
+  Policy says to email instead, rather than describing a right the app
+  can't yet fulfill.
+
+Entity ("Kung Fu Sauce," pending formal incorporation) and governing-law
+jurisdiction (State of Florida) are filled in rather than left as
+placeholders, since publishing literal `[bracketed]` text on a live page
+would be worse than a plainly-flagged draft. Neither page has been reviewed
+by an attorney yet — see `DECISIONS.md` for the fuller reasoning and what's
+still open before a real commercial launch.
 
 ## News & Updates
 
