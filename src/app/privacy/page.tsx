@@ -82,15 +82,21 @@ export default function PrivacyPage() {
           for the purposes above:
         </p>
         <ul className="flex list-disc flex-col gap-2 pl-5 text-sm leading-relaxed text-neutral-300">
-          <li><span className="text-neutral-100">Our database host</span> — all account and content data.</li>
-          <li><span className="text-neutral-100">Google</span> — email, name, and profile image, only if you use Google sign-in.</li>
-          <li><span className="text-neutral-100">Resend</span> — your email address, to send verification and password-reset email.</li>
-          <li><span className="text-neutral-100">Upstash</span> — your IP address, transiently, for rate limiting.</li>
-          <li><span className="text-neutral-100">Cloudflare (Turnstile)</span> — your IP address and browser signals, for CAPTCHA.</li>
-          <li><span className="text-neutral-100">Vercel</span> — hosting and aggregate page-view analytics.</li>
-          <li><span className="text-neutral-100">Sentry</span> — error context when something breaks, which may include your IP address or account identifiers.</li>
-          <li><span className="text-neutral-100">TMDB</span> — no personal data is sent here; we only pull their public movie/cast catalog data.</li>
+          <li><span className="text-neutral-100">Database hosting</span> — all account and content data.</li>
+          <li><span className="text-neutral-100">Sign-in provider</span> (currently Google) — email, name, and profile image, only if you use Google sign-in.</li>
+          <li><span className="text-neutral-100">Email delivery provider</span> (currently Resend) — your email address, to send verification and password-reset email.</li>
+          <li><span className="text-neutral-100">Rate-limiting / anti-abuse provider</span> (currently Upstash) — your IP address, transiently, for rate limiting.</li>
+          <li><span className="text-neutral-100">CAPTCHA provider</span> (currently Cloudflare Turnstile) — your IP address and browser signals.</li>
+          <li><span className="text-neutral-100">Hosting and analytics provider</span> (currently Vercel) — hosting and aggregate page-view analytics.</li>
+          <li><span className="text-neutral-100">Error-monitoring provider</span> (currently Sentry) — error context when something breaks, which may include your IP address or account identifiers.</li>
+          <li><span className="text-neutral-100">Movie/cast data source</span> (currently TMDB) — no personal data is sent here; we only pull their public movie/cast catalog data.</li>
         </ul>
+        <p className="mt-3 text-sm leading-relaxed text-neutral-300">
+          We name the current provider for each category above for transparency, but the underlying commitment is
+          to the category and purpose, not to that specific vendor — we may switch providers within a category
+          without that being treated as a material change requiring separate notice, so long as the type of data
+          shared and the purpose stay the same.
+        </p>
         <p className="mt-3 text-sm leading-relaxed text-neutral-300">
           We may also disclose information if required by law, or to protect the rights, property, or safety of
           the Site, our users, or the public.

@@ -75,22 +75,27 @@ targeted advertising.
 We share information only with the service providers ("processors") that
 help us operate the Site, and only as needed for the purposes above:
 
-| Provider | Purpose | Data involved |
-|---|---|---|
-| [Postgres host — Neon/Supabase/Vercel Postgres] | Primary database | All account and content data |
-| Google | OAuth sign-in | Email, name, profile image (only if you use Google sign-in) |
-| Resend | Transactional email | Email address |
-| Upstash | Rate limiting | IP address, transiently |
-| Cloudflare (Turnstile) | CAPTCHA | IP address, browser signals |
-| Vercel Blob | Admin-uploaded poster images | (Admin-only use; not member personal data) |
-| Vercel | Hosting, Web Analytics | Aggregate page-view data |
-| Sentry | Error monitoring | Error context, which may include IP address or account identifiers |
-| TMDB | Movie/cast data source | No personal data is sent to TMDB — this is one-directional (we pull their public catalog data) |
+| Category | Currently | Purpose | Data involved |
+|---|---|---|---|
+| Database hosting | [Neon/Supabase/Vercel Postgres] | Primary database | All account and content data |
+| Sign-in provider | Google | OAuth sign-in | Email, name, profile image (only if you use Google sign-in) |
+| Email delivery provider | Resend | Transactional email | Email address |
+| Rate-limiting / anti-abuse provider | Upstash | Rate limiting | IP address, transiently |
+| CAPTCHA provider | Cloudflare (Turnstile) | CAPTCHA | IP address, browser signals |
+| File storage | Vercel Blob | Admin-uploaded poster images | (Admin-only use; not member personal data) |
+| Hosting and analytics provider | Vercel | Hosting, Web Analytics | Aggregate page-view data |
+| Error-monitoring provider | Sentry | Error monitoring | Error context, which may include IP address or account identifiers |
+| Movie/cast data source | TMDB | Catalog data | No personal data is sent to TMDB — this is one-directional (we pull their public catalog data) |
 
-[Note: list the actual hosting providers/regions in use once finalized —
-this table is written generically from the codebase's `.env.example`
-and needs the real vendor names and, for GDPR purposes, whether each is
-US-based (relevant to the international-transfer section below).]
+The table names the current provider per category for transparency, but the
+operative commitment is to the category/purpose, not the specific vendor —
+swapping providers within a category (same data, same purpose) isn't
+treated as a material change requiring separate notice under this policy.
+[Note: list the actual hosting provider/region in use once finalized — the
+Database hosting row is written generically from the codebase's
+`.env.example`, and needs the real vendor name and, for GDPR purposes,
+whether it's US-based (relevant to the international-transfer section
+below).]
 
 We may also disclose information if required by law, or to protect the
 rights, property, or safety of the Company, our users, or the public.
