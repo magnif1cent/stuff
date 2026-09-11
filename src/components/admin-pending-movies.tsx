@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import type { Movie } from "@/generated/prisma/client";
+import { resolvePosterUrl, isTmdbUrl } from "@/lib/tmdb";
 
-type PendingMovieItem = Pick<Movie, "id" | "title"> & {
+type PendingMovieItem = Pick<Movie, "id" | "title" | "posterPath" | "posterOverrideUrl"> & {
   releaseDate: string | null;
   submittedBy: { username: string } | null;
 };
@@ -50,16 +52,33 @@ export function AdminPendingMovies({ initialMovies }: { initialMovies: PendingMo
       <ul className="flex flex-col gap-2">
         {movies.map((movie) => {
           const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : null;
+          const posterUrl = resolvePosterUrl(movie, "w200");
           return (
             <li
               key={movie.id}
               className="flex items-center justify-between gap-2 rounded-md border border-amber-800/50 bg-amber-950/20 px-3 py-2"
             >
-              <div>
-                <span className="text-sm text-neutral-100">
-                  {movie.title} {year && <span className="text-neutral-500">({year})</span>}
-                </span>
-                <p className="text-xs text-neutral-500">Submitted by {movie.submittedBy?.username ?? "a member"}</p>
+              <div className="flex items-center gap-3">
+                <div className="relative h-16 w-11 shrink-0 overflow-hidden rounded-sm bg-neutral-800">
+                  {posterUrl && (
+                    <Image
+                      src={posterUrl}
+                      alt=""
+                      fill
+                      unoptimized={isTmdbUrl(posterUrl)}
+                      sizes="44px"
+                      className="object-cover"
+                    />
+                  )}
+                </div>
+                <div>
+                  <span className="text-sm text-neutral-100">
+                    {movie.title} {year && <span className="text-neutral-500">({year})</span>}
+                  </span>
+                  <p className="text-xs text-neutral-500">
+                    Submitted by {movie.submittedBy?.username ?? "a member"}
+                  </p>
+                </div>
               </div>
               <div className="flex shrink-0 gap-2">
                 <button
