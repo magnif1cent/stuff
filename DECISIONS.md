@@ -64,6 +64,7 @@ one.
 
 **Feature Decisions**
 
+- ["By actor" added to TMDB Import, sharing the keyword-search backend and result/import UI](#by-actor-added-to-tmdb-import-sharing-the-keyword-search-backend-and-resultimport-ui)
 - [Draft Terms of Service and Privacy Policy published now, flagged as a working draft, rather than waiting for full legal review](#draft-terms-of-service-and-privacy-policy-published-now-flagged-as-a-working-draft-rather-than-waiting-for-full-legal-review)
 - [Member-created fight scene tags get a profanity check, member-facing only](#member-created-fight-scene-tags-get-a-profanity-check-member-facing-only)
 - [Fight scenes gain two new data points: martial arts Style and Move, kept closed-vocabulary against the tags precedent](#fight-scenes-gain-two-new-data-points-martial-arts-style-and-move-kept-closed-vocabulary-against-the-tags-precedent)
@@ -1230,6 +1231,23 @@ polish differently than a default-security reading would.
   and `/api/forgot-password`, which already had this shape from the start.
 
 ## Feature Decisions
+
+### "By actor" added to TMDB Import, sharing the keyword-search backend and result/import UI
+**PR TBD.** Extended `/admin/import`'s existing "By keyword" browse-and-batch-import flow
+to also search by actor, rather than building a fourth, separate import path.
+
+- **One `/discover/movie` route, two filters.** `/api/admin/tmdb/discover` now accepts
+  either `keywords` or `personId` (never both) and calls TMDB's `with_keywords` or
+  `with_cast` accordingly; everything downstream (per-movie detail lookup for cast/country,
+  already-imported check, paging) is unchanged and shared.
+- **Single actor per search, not a keyword-style OR/AND set.** "Movies with this actor" is
+  the actual ask — multi-actor combinations would need UI for picking OR vs. AND (the way
+  keywords already do) that nothing here calls for. Can revisit if a real need for
+  multi-actor discovery shows up.
+- **Extracted `useTmdbDiscoverImport` + `TmdbDiscoverResults`** out of what was a
+  keyword-import-only component, since the two tabs are identical past their search step
+  (paging, selection, batch import with progress). Keeps a fix or behavior change in one
+  place instead of two copies quietly drifting apart.
 
 ### Draft Terms of Service and Privacy Policy published now, flagged as a working draft, rather than waiting for full legal review
 **Branch `claude/hobby-commercial-transition-h159z4` (PR TBD).** Part of the
