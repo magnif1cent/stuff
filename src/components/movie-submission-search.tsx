@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
-import type { TmdbMovieSearchResult } from "@/lib/tmdb";
+import { tmdbImageUrl, type TmdbMovieSearchResult } from "@/lib/tmdb";
 
 type SubmissionResult = TmdbMovieSearchResult & { catalogStatus: string | null };
 
@@ -93,21 +94,29 @@ export function MovieSubmissionSearch() {
                 ? "Already submitted, awaiting review"
                 : null;
           const disabled = !!catalogLabel || alreadySubmitted || submittingId === movie.id;
+          const posterUrl = tmdbImageUrl(movie.poster_path, "w200");
 
           return (
             <li
               key={movie.id}
               className="flex items-center justify-between gap-4 rounded-md border border-neutral-800 bg-neutral-900 p-3"
             >
-              <div>
-                <p className="font-medium text-white">
-                  {movie.title}{" "}
-                  <span className="text-neutral-500">
-                    {movie.release_date ? `(${movie.release_date.slice(0, 4)})` : ""}
-                  </span>
-                </p>
-                <p className="line-clamp-2 max-w-xl text-sm text-neutral-400">{movie.overview}</p>
-                {catalogLabel && <p className="mt-1 text-xs text-amber-400">{catalogLabel}</p>}
+              <div className="flex gap-3">
+                <div className="relative h-24 w-16 shrink-0 overflow-hidden rounded-sm bg-neutral-800">
+                  {posterUrl && (
+                    <Image src={posterUrl} alt="" fill unoptimized sizes="64px" className="object-cover" />
+                  )}
+                </div>
+                <div>
+                  <p className="font-medium text-white">
+                    {movie.title}{" "}
+                    <span className="text-neutral-500">
+                      {movie.release_date ? `(${movie.release_date.slice(0, 4)})` : ""}
+                    </span>
+                  </p>
+                  <p className="line-clamp-2 max-w-xl text-sm text-neutral-400">{movie.overview}</p>
+                  {catalogLabel && <p className="mt-1 text-xs text-amber-400">{catalogLabel}</p>}
+                </div>
               </div>
               <button
                 onClick={() => handleSubmit(movie.id)}
