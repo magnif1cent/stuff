@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAdminSession } from "@/lib/require-admin";
-import { discoverMoviesByKeywords, getTmdbMovieDetails } from "@/lib/tmdb";
+import { discoverMoviesByCast, discoverMoviesByKeywords, getTmdbMovieDetails } from "@/lib/tmdb";
 import { prisma } from "@/lib/prisma";
 import { tmdbErrorResponse } from "@/lib/api-error";
 
@@ -16,15 +16,29 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const keywordsParam = url.searchParams.get("keywords");
-  if (!keywordsParam) {
-    return NextResponse.json({ error: "Missing query parameter keywords" }, { status: 400 });
+  const personIdParam = url.searchParams.get("personId");
+  if (!keywordsParam && !personIdParam) {
+    return NextResponse.json({ error: "Missing query parameter keywords or personId" }, { status: 400 });
   }
-  const keywordIds = keywordsParam
-    .split(",")
-    .map((id) => Number(id))
-    .filter((id) => Number.isInteger(id));
-  if (keywordIds.length === 0) {
-    return NextResponse.json({ error: "keywords must be a comma-separated list of keyword ids" }, { status: 400 });
+  if (keywordsParam && personIdParam) {
+    return NextResponse.json({ error: "Provide only one of keywords or personId" }, { status: 400 });
+  }
+
+  let keywordIds: number[] = [];
+  let personId: number | null = null;
+  if (keywordsParam) {
+    keywordIds = keywordsParam
+      .split(",")
+      .map((id) => Number(id))
+      .filter((id) => Number.isInteger(id));
+    if (keywordIds.length === 0) {
+      return NextResponse.json({ error: "keywords must be a comma-separated list of keyword ids" }, { status: 400 });
+    }
+  } else {
+    personId = Number(personIdParam);
+    if (!Number.isInteger(personId)) {
+      return NextResponse.json({ error: "personId must be an integer" }, { status: 400 });
+    }
   }
 
   const page = Number(url.searchParams.get("page") ?? "1");
@@ -38,7 +52,9 @@ export async function GET(request: Request) {
   }
 
   try {
-    const discovered = await discoverMoviesByKeywords(keywordIds, page, countryParam ?? undefined);
+    const discovered = personId
+      ? await discoverMoviesByCast(personId, page, countryParam ?? undefined)
+      : await discoverMoviesByKeywords(keywordIds, page, countryParam ?? undefined);
 
     const alreadyImported = await prisma.movie.findMany({
       where: { tmdbId: { in: discovered.results.map((r) => r.id) } },
@@ -82,6 +98,7 @@ export async function GET(request: Request) {
       totalResults: discovered.total_results,
     });
   } catch (error) {
-    return tmdbErrorResponse(`Failed to discover TMDB movies for keywords ${keywordsParam}:`, error);
+    const subject = personId ? `person ${personId}` : `keywords ${keywordsParam}`;
+    return tmdbErrorResponse(`Failed to discover TMDB movies for ${subject}:`, error);
   }
 }

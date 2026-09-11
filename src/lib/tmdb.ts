@@ -163,6 +163,35 @@ export async function discoverMoviesByKeywords(keywordIds: number[], page: numbe
   });
 }
 
+export interface TmdbPersonSearchResult {
+  id: number;
+  name: string;
+  profile_path: string | null;
+  known_for_department: string | null;
+}
+
+export async function searchTmdbPeople(query: string) {
+  const data = await tmdbFetch<{ results: TmdbPersonSearchResult[] }>("/search/person", {
+    query,
+    include_adult: "false",
+  });
+  return data.results;
+}
+
+export async function discoverMoviesByCast(personId: number, page: number, originCountry?: string) {
+  return tmdbFetch<{
+    results: TmdbDiscoverMovieResult[];
+    page: number;
+    total_pages: number;
+    total_results: number;
+  }>("/discover/movie", {
+    with_cast: String(personId),
+    page: String(page),
+    include_adult: "false",
+    ...(originCountry ? { with_origin_country: originCountry } : {}),
+  });
+}
+
 export interface TmdbPersonDetails {
   id: number;
   name: string;
