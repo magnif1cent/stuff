@@ -4,11 +4,14 @@ import { useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useClickOutside } from "@/hooks/use-click-outside";
+import { matchesAnyPath } from "@/lib/nav-match";
 
 interface NavDropdownItem {
   href: string;
   label: string;
-  isActive?: (pathname: string) => boolean;
+  // Defaults to [href] if omitted -- an exact match. Add "/*" entries for
+  // routes with nested pages (e.g. "/timeline/*") that should also count.
+  matchPaths?: string[];
 }
 
 // Shared by every "a link, plus a chevron revealing one or two related
@@ -16,25 +19,28 @@ interface NavDropdownItem {
 // toggle rather than hover, so it behaves identically on touch and desktop.
 // The label itself stays a real link to `href` (so it still works with
 // middle-click/open-in-new-tab/etc.), while the chevron is a separate
-// control that only ever opens the dropdown.
+// control that only ever opens the dropdown. `matchPaths` (plain strings,
+// not predicate functions) drive the active-state check, since this is a
+// Client Component rendered from a Server Component parent -- functions
+// aren't serializable across that boundary.
 export function NavDropdown({
   label,
   href,
   items,
   ariaLabel,
-  isActive,
+  matchPaths,
 }: {
   label: string;
   href: string;
   items: NavDropdownItem[];
   ariaLabel: string;
-  isActive?: (pathname: string) => boolean;
+  matchPaths?: string[];
 }) {
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   useClickOutside(wrapperRef, () => setOpen(false), open);
   const pathname = usePathname();
-  const active = isActive ? isActive(pathname) : pathname === href;
+  const active = matchesAnyPath(pathname, matchPaths ?? [href]);
 
   return (
     <div ref={wrapperRef} className="relative flex items-center">
@@ -69,7 +75,7 @@ export function NavDropdown({
       {open && (
         <div className="absolute top-full left-0 z-30 mt-1.5 min-w-36 rounded-md border border-neutral-700 bg-neutral-800 p-1 shadow-xl">
           {items.map((item) => {
-            const itemActive = item.isActive ? item.isActive(pathname) : pathname === item.href;
+            const itemActive = matchesAnyPath(pathname, item.matchPaths ?? [item.href]);
             return (
               <Link
                 key={item.href}

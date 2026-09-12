@@ -30,21 +30,15 @@ export async function Navbar() {
               label="Movies"
               href="/search"
               ariaLabel="More ways to browse movies"
-              isActive={(p) => p === "/search" || p === "/timeline" || p.startsWith("/timeline/")}
-              items={[
-                {
-                  href: "/timeline",
-                  label: "Timeline",
-                  isActive: (p) => p === "/timeline" || p.startsWith("/timeline/"),
-                },
-              ]}
+              matchPaths={["/search", "/timeline", "/timeline/*"]}
+              items={[{ href: "/timeline", label: "Timeline", matchPaths: ["/timeline", "/timeline/*"] }]}
             />
             <NavLink href="/search/fights">Fights</NavLink>
             <NavDropdown
               label="Lists"
               href="/lists"
               ariaLabel="More list options"
-              isActive={(p) => p === "/lists" || p.startsWith("/lists/") || p === "/leaderboard"}
+              matchPaths={["/lists", "/lists/*", "/leaderboard"]}
               items={[{ href: "/leaderboard", label: "Leaderboard" }]}
             />
             <Link
