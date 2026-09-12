@@ -36,6 +36,7 @@ An IMDB-style website for kung fu and martial arts films, built for martial arts
 - [Admin Recommendations](#admin-recommendations)
 - [Admin Poster & Backdrop Overrides](#admin-poster--backdrop-overrides)
 - [Visual Theme](#visual-theme)
+- [Navigation](#navigation)
 - [Admin Area & Roles](#admin-area-roles)
 - [Weekly Trending Carousel](#weekly-trending-carousel)
 - [Security](#security)
@@ -292,7 +293,7 @@ The one real difference from Fight Count: this is a fixed dropdown of periods (`
 
 ## Historical Timeline
 
-`/timeline` (linked from the navbar) plots every era-tagged movie along a chronological axis, and renders a genuinely different design on desktop vs. mobile rather than one layout adapted across both:
+`/timeline` (reachable from the navbar's Movies dropdown — see [Navigation](#navigation)) plots every era-tagged movie along a chronological axis, and renders a genuinely different design on desktop vs. mobile rather than one layout adapted across both:
 
 - **Desktop** — a single horizontal axis with one dot per movie, positioned within its era's band; hovering a dot shows its title, era, year, and community rating (pure CSS, no client JS). Band width tracks real historical duration up through Republic of China — except the five most recent eras (`POSTWAR_ERA` onward), which get deliberately more room per year than earlier ones, marked with a visible axis-break rather than silently changing scale. Without that break, those five eras — where most of the catalog actually lives — would inherit the same few cramped pixels a single "Modern" band would get under strict proportionality.
 - **Within each era's dot cluster, vertical position is rating, not release date.** The higher a movie's community rating, the higher its dot sits in the stack; movies with no rating yet are always the bottom-most row, regardless of how many rated movies are above them. Ties fall back to rating count (more votes ranks higher), then release date.
@@ -394,6 +395,18 @@ To enable *uploads* locally or in your own deployment, create a Blob store in yo
 The site's base look (backgrounds, text, accents) is defined once in `src/app/globals.css` as a Tailwind `@theme` override of the neutral/red/yellow/amber color scales, so it applies everywhere those Tailwind classes are used. This palette has changed once already (from a dark neutral theme to a warmer ink-and-paper "Poster House" palette) — check `src/app/globals.css` for the current definition and its inline comment before assuming a specific look when building new UI.
 
 Fight Scene cards ("Fight Ticket" styling) are the one exception: they use hardcoded hex colors rather than the shared Tailwind scale, so they deliberately keep their ink-on-cream, ticket-stub look regardless of whatever the site-wide theme is set to.
+
+## Navigation
+
+The navbar groups links by kind rather than listing everything flat, so a new page gets an obvious home instead of just adding another item to a growing row:
+
+- **Movies** and **Fights** are the two top-level entities. Movies is also a small click-to-toggle dropdown (`NavDropdown`, shared with Lists below) revealing **Timeline** — Timeline is another way to browse the same movies, not a page in its own right, so it lives here rather than as its own top-level link.
+- **Lists** stays a standalone top-level link with its own dropdown revealing **Leaderboard** (unchanged from before this reorganization).
+- **+ Add Movie** is styled as an outline button, distinct from both a plain nav link and the "Join" call-to-action — it's a contribute action, not a browse destination, so it's visually its own kind of thing.
+- **Admin** (signed-in `ADMIN`/`REVIEWER` only) is its own top-level link rather than living inside the account menu — it's a frequently-used tool for those roles, not a personal-account setting, and burying it a click deeper than today would cost more than the tidier menu is worth.
+- Signed-in members get an **account menu** (`AccountNavMenu`) instead of a flat username + "Sign out": an avatar-initial circle plus username toggles a small menu with "My Profile" (`/members/[username]`) and "Sign out". There's no separate "My Lists" entry — `/my-lists` is a legacy redirect to that same profile page (its own "Lists" tab), so a second link would just point at the same place under a different label.
+- **Movies** and the top-level **Fights** link (`NavLink`) highlight themselves as the current page (white text, red underline/dot) when the URL matches — client-side via `usePathname()`, since Next.js doesn't expose the current path to a plain server component without threading it down manually.
+- Mobile still collapses the same nav markup behind a hamburger (`MobileNavToggle`) rather than a separate mobile-only tree — the dropdown/account-menu consolidation already shortens the flat list on mobile too, since it collapses what used to be several rows into two toggles.
 
 ## Admin Area & Roles
 

@@ -64,6 +64,7 @@ one.
 
 **Feature Decisions**
 
+- [Navbar regrouped by kind (entities, contribute, account) instead of one flat link list](#navbar-regrouped-by-kind-entities-contribute-account-instead-of-one-flat-link-list)
 - [Historical Timeline's per-era dot stacking switched from release order to rating order](#historical-timelines-per-era-dot-stacking-switched-from-release-order-to-rating-order)
 - [Historical Timeline page built: a dot-axis on desktop, a capped list on mobile, five independent recent-era entries replacing "Modern"](#historical-timeline-page-built-a-dot-axis-on-desktop-a-capped-list-on-mobile-five-independent-recent-era-entries-replacing-modern)
 - [Backdrop banner switched to aspect-ratio height, reversing the width-cap-only fix](#backdrop-banner-switched-to-aspect-ratio-height-reversing-the-width-cap-only-fix)
@@ -1240,6 +1241,16 @@ polish differently than a default-security reading would.
   and `/api/forgot-password`, which already had this shape from the start.
 
 ## Feature Decisions
+
+### Navbar regrouped by kind (entities, contribute, account) instead of one flat link list
+**PR #TBD.** Prompted by Timeline's own nav link making an already-flat row (Movies, Fights, Timeline, Lists, +Add Movie, Admin, username, Sign out) visibly cramped at tablet widths. Mocked up first — several rounds, several reversed calls — before touching `navbar.tsx`.
+
+- **No generic "Explore" bucket.** The first mockup grouped Timeline, Lists, Leaderboard, and Tops under one "Explore" dropdown, reasoning they were all "lenses over the same catalog." Rejected once mocked up: Lists is "a big part of the content" on its own, not a minor lens, and Timeline is specifically another way to browse *movies* — so it belongs under **Movies**, not in a catch-all next to unrelated things. Movies is now a small dropdown (shared `NavDropdown` component, same click-to-toggle pattern as the existing Lists→Leaderboard menu) revealing Timeline; Lists keeps its standalone top-level slot and its existing Leaderboard dropdown, completely unchanged.
+- **Admin went into the account menu, then came back out.** The account-menu mockup initially folded Admin in alongside My Profile/Sign out. Reconsidered after asking "should clicking my avatar go straight to Admin?": neither answer was right — overriding what an avatar click does breaks a near-universal convention (your own avatar goes to your own profile), and burying Admin a click deeper costs more than the tidier menu is worth, since it's a tool admins/reviewers use often, not a personal-account setting. Admin is back to being its own top-level link, exactly where it lives today, just reordered next to the account menu instead of directly beside the username.
+- **"My Lists" was dropped from the account menu entirely** — not deferred, actually wrong. It was mocked up as a second link alongside "My Profile," but `/my-lists` turned out to already be a legacy redirect straight to `/members/[username]` (the same profile page, which has its own "Lists" tab with no query-param deep link to it) — so a second entry would’ve pointed at the identical destination under a different label. The account menu ended up as just My Profile + Sign out.
+- **+Add Movie is an outline button now, not a plain text link** — it's a contribute action, not a browse link, and reads as one now instead of blending into the row.
+- **Active-page highlighting is new**, not a fix to something broken — nothing indicated the current page before. Added via `usePathname()` in two small client components (`NavLink` for plain links, built into `NavDropdown` for the two dropdown triggers) rather than a bigger app-wide routing change, since that's the minimum needed to know the current path client-side in the App Router.
+- **Mobile keeps sharing the same nav markup as desktop** (collapsed behind the existing hamburger), rather than a separately-authored mobile drawer with labeled sections as one mockup explored — the dropdown/account-menu consolidation already shortens the flat mobile list on its own, and diverging the two trees was judged a bigger architectural change than the problem needed.
 
 ### Historical Timeline's per-era dot stacking switched from release order to rating order
 **PR #TBD.** Follow-up to "Historical Timeline page built" below, prompted by wanting the axis to surface quality, not just chronology, within a crowded era. Mocked up first (color-coded dots, before/after) and confirmed before touching `src/lib/timeline.ts`.
