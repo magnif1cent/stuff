@@ -18,7 +18,7 @@ export function TimelineDesktop({ eras }: { eras: TimelineEraData[] }) {
   const layoutByKey = new Map(TIMELINE_ERA_LAYOUT.map((e) => [e.key, e]));
 
   return (
-    <div className="rail-scrollbar relative mt-8 overflow-x-auto overflow-y-hidden pb-5">
+    <div className="rail-scrollbar relative mt-8 overflow-x-auto overflow-y-hidden pb-5 pl-4 sm:pl-6 lg:pl-10">
       <div className="relative" style={{ width: TIMELINE_AXIS_WIDTH, height: 300 }}>
         {/* axis-break: the scale changes here, marked rather than hidden */}
         <div
