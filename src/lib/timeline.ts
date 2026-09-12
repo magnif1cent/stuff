@@ -90,21 +90,38 @@ export interface TimelineMovie {
   ratingCount: number;
 }
 
+// Highest-rated first, unrated always last (so an era with more high-rated
+// movies than its cap allows never bumps a rated movie for an unrated one);
+// ties broken by rating count (more community confidence ranks higher),
+// then release date (older first) so the order is still fully deterministic.
+function compareByRatingDesc(a: TimelineMovie, b: TimelineMovie): number {
+  const ar = a.ratingAverage ?? -1;
+  const br = b.ratingAverage ?? -1;
+  if (ar !== br) return br - ar;
+  if (a.ratingCount !== b.ratingCount) return b.ratingCount - a.ratingCount;
+  const ad = a.releaseDate?.getTime() ?? 0;
+  const bd = b.releaseDate?.getTime() ?? 0;
+  return ad - bd;
+}
+
 async function moviesForEra(eraKey: string, take: number): Promise<TimelineMovie[]> {
+  // Fetches every movie in the era (not DB-level `take`) because the cap has
+  // to apply AFTER sorting by rating, not before -- otherwise a dense era
+  // would cap to its oldest movies rather than its best ones.
   const movies = await prisma.movie.findMany({
     where: { eraSetting: eraKey, status: "APPROVED" },
-    orderBy: { releaseDate: "asc" },
-    take,
     select: { id: true, title: true, releaseDate: true, posterPath: true, posterOverrideUrl: true, tmdbRating: true },
   });
   if (movies.length === 0) return [];
 
   const summaries = await getRatingSummaries(movies.map((m) => m.id));
-  return movies.map((m) => ({
+  const withRatings = movies.map((m) => ({
     ...m,
     ratingAverage: summaries.get(m.id)?.average ?? null,
     ratingCount: summaries.get(m.id)?.count ?? 0,
   }));
+
+  return withRatings.sort(compareByRatingDesc).slice(0, take);
 }
 
 // One counts query for every era at once, keyed by the vocabulary's own
@@ -176,10 +193,17 @@ export function computeDotLayout(era: { px0: number; px1: number }, movies: Time
   const width = era.px1 - era.px0;
   const cols = columnsForWidth(width);
   const colWidth = width / cols;
+  const last = movies.length - 1;
   return movies.map((movie, i) => {
-    const col = i % cols;
-    const row = Math.floor(i / cols);
-    const jitter = ((i % 5) - 2) * (Math.min(colWidth, 10) / 6);
+    // movies is sorted best-rated first (see compareByRatingDesc), but the
+    // axis stacks best-rated highest -- so fill position walks the array
+    // backwards: the lowest-rated/unrated movie (last in the array) takes
+    // row 0 at the baseline, and the best-rated movie (first) ends up in
+    // the tallest row.
+    const fillIndex = last - i;
+    const col = fillIndex % cols;
+    const row = Math.floor(fillIndex / cols);
+    const jitter = ((fillIndex % 5) - 2) * (Math.min(colWidth, 10) / 6);
     return {
       movie,
       left: era.px0 + col * colWidth + colWidth / 2 + jitter - 12,

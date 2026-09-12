@@ -64,6 +64,7 @@ one.
 
 **Feature Decisions**
 
+- [Historical Timeline's per-era dot stacking switched from release order to rating order](#historical-timelines-per-era-dot-stacking-switched-from-release-order-to-rating-order)
 - [Historical Timeline page built: a dot-axis on desktop, a capped list on mobile, five independent recent-era entries replacing "Modern"](#historical-timeline-page-built-a-dot-axis-on-desktop-a-capped-list-on-mobile-five-independent-recent-era-entries-replacing-modern)
 - [Backdrop banner switched to aspect-ratio height, reversing the width-cap-only fix](#backdrop-banner-switched-to-aspect-ratio-height-reversing-the-width-cap-only-fix)
 - [Backdrop banner capped at max-w-1920px to bound ultrawide-monitor cropping](#backdrop-banner-capped-at-max-w-1920px-to-bound-ultrawide-monitor-cropping)
@@ -1239,6 +1240,14 @@ polish differently than a default-security reading would.
   and `/api/forgot-password`, which already had this shape from the start.
 
 ## Feature Decisions
+
+### Historical Timeline's per-era dot stacking switched from release order to rating order
+**PR #TBD.** Follow-up to "Historical Timeline page built" below, prompted by wanting the axis to surface quality, not just chronology, within a crowded era. Mocked up first (color-coded dots, before/after) and confirmed before touching `src/lib/timeline.ts`.
+
+- **Vertical position is rating rank, not release date.** Within one era's dot cluster, the highest-rated movie sits in the tallest row; a movie with no community rating yet is always in the bottom-most row, no matter how many rated movies are stacked above it. Ties break by rating count (more votes ranks higher), then release date (older first) — the same tie-break order the rest of the app uses when a plain rating sort isn't decisive.
+- **The per-era cap now also picks by rating, not just position.** `moviesForEra()` used to fetch only `take` movies (DB-level, oldest first) and had nothing left to sort by rating within. It now fetches every movie in the era, sorts all of them by rating descending (unrated last), and only then slices to the cap — so a dense era's cap is filled by its best-regarded movies, not its oldest. This applies to both views: the desktop dots and the mobile preview row (`mobilePreview()` just slices the same array), so a mobile era row now shows its standout movies first too. The one place still in release-date order is `/timeline/[era]`'s full "View all" grid, which isn't capped and has no reason to reorder.
+- **Considered, rejected: keep selection chronological and only reorder position.** Would have kept mobile's preview unchanged, but meant a dense era's cap could still exclude a highly-rated movie in favor of an older, unrated one purely by release-date luck — undercutting the point of a rating-driven view. Selecting by rating first was judged the more consistent read of "surface the best movies," accepting the mobile-ordering side effect as a feature rather than a regression.
+- **Not verified against a live dev server or database** — same sandboxed-session limitation as the original build. Checked via `npm run lint` and `npm run build`, plus a standalone script exercising `computeDotLayout()` against synthetic rated/unrated movies to confirm the row inversion lands where intended.
 
 ### Historical Timeline page built: a dot-axis on desktop, a capped list on mobile, five independent recent-era entries replacing "Modern"
 **PR #TBD.** Closes the "Historical timeline page" backlog item (moved out of Deferred & Backlog below) — the grouping data (`Movie.eraSetting`) has existed since Historical Setting shipped, but the visualization itself was explicitly left unbuilt, with only a vague "capped visual treatment, full list below" guess at the shape. Explored several directions in design review before landing on something different from all of them: a literal timeline axis, one dot per movie, hover for detail.
