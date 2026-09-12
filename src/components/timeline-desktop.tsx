@@ -1,4 +1,6 @@
 import Link from "next/link";
+import Image from "next/image";
+import { resolvePosterUrl, isTmdbUrl } from "@/lib/tmdb";
 import {
   computeDotLayout,
   overflowBadgeBottom,
@@ -55,31 +57,48 @@ export function TimelineDesktop({ eras }: { eras: TimelineEraData[] }) {
                 <p className="mt-0.5 text-[10px] text-neutral-600">{era.years}</p>
               </div>
 
-              {dots.map((dot) => (
-                <Link
-                  key={dot.movie.id}
-                  href={`/movies/${dot.movie.id}`}
-                  className="group absolute flex h-6 w-6 items-center justify-center"
-                  style={{ left: dot.left, bottom: dot.bottom }}
-                >
-                  <span className="h-2 w-2 rounded-full bg-amber-500 shadow-[0_0_0_2px_var(--color-neutral-950)] transition group-hover:scale-150 group-hover:bg-amber-400" />
-                  <span
-                    className="pointer-events-none absolute bottom-full left-1/2 z-10 -translate-x-1/2 -translate-y-2 rounded-md border border-neutral-700 bg-neutral-900 px-2.5 py-2 opacity-0 shadow-lg transition group-hover:opacity-100"
-                    style={{ width: 152 }}
+              {dots.map((dot) => {
+                const posterUrl = resolvePosterUrl(dot.movie);
+                return (
+                  <Link
+                    key={dot.movie.id}
+                    href={`/movies/${dot.movie.id}`}
+                    className="group absolute flex h-6 w-6 items-center justify-center"
+                    style={{ left: dot.left, bottom: dot.bottom }}
                   >
-                    <span className="block font-display text-xs tracking-wide text-neutral-100">{dot.movie.title}</span>
-                    <span className="mt-1 block text-[11px] text-neutral-500">
-                      {era.name}
-                      {dot.movie.releaseDate ? ` · ${dot.movie.releaseDate.getFullYear()}` : ""}
-                    </span>
-                    {dot.movie.ratingAverage != null && (
-                      <span className="mt-0.5 block text-[11px] font-semibold text-yellow-500">
-                        ★ {dot.movie.ratingAverage.toFixed(1)}
+                    <span className="h-2 w-2 rounded-full bg-amber-500 shadow-[0_0_0_2px_var(--color-neutral-950)] transition group-hover:scale-150 group-hover:bg-amber-400" />
+                    <span
+                      className="pointer-events-none absolute bottom-full left-1/2 z-10 flex -translate-x-1/2 -translate-y-2 gap-2 rounded-md border border-neutral-700 bg-neutral-900 p-2 opacity-0 shadow-lg transition group-hover:opacity-100"
+                      style={{ width: 190 }}
+                    >
+                      <span className="relative aspect-2/3 w-11 shrink-0 overflow-hidden rounded bg-neutral-800">
+                        {posterUrl && (
+                          <Image
+                            src={posterUrl}
+                            alt=""
+                            fill
+                            unoptimized={isTmdbUrl(posterUrl)}
+                            sizes="44px"
+                            className="object-cover"
+                          />
+                        )}
                       </span>
-                    )}
-                  </span>
-                </Link>
-              ))}
+                      <span className="min-w-0">
+                        <span className="block font-display text-xs tracking-wide text-neutral-100">{dot.movie.title}</span>
+                        <span className="mt-1 block text-[11px] text-neutral-500">
+                          {era.name}
+                          {dot.movie.releaseDate ? ` · ${dot.movie.releaseDate.getFullYear()}` : ""}
+                        </span>
+                        {dot.movie.ratingAverage != null && (
+                          <span className="mt-0.5 block text-[11px] font-semibold text-yellow-500">
+                            ★ {dot.movie.ratingAverage.toFixed(1)}
+                          </span>
+                        )}
+                      </span>
+                    </span>
+                  </Link>
+                );
+              })}
 
               {overflow && (
                 <Link
