@@ -1,0 +1,199 @@
+import { prisma } from "@/lib/prisma";
+import { ERA_SETTINGS, type EraSettingKey } from "@/lib/era-settings";
+import { getRatingSummaries } from "@/lib/ratings";
+
+// Desktop axis layout: hand-placed px0/px1 per era, NOT auto-derived from
+// eraSettingYears() at runtime. Two reasons this stays a separate, static
+// table instead of computing positions from real year spans:
+//  1. Several eras' real ranges overlap by design in the vocabulary (e.g.
+//     Jin 266-420 vs Three Kingdoms 220-280) -- fine as display text, not
+//     fine as adjacent axis bands, which need non-overlapping boundaries.
+//  2. The five most recent eras are deliberately NOT drawn at the same
+//     px/year scale as everything before them (see AXIS_BREAK_PX below) --
+//     a purely date-driven formula would undo that on its own.
+// eraSettingYears(key) from era-settings.ts remains the source of truth for
+// any DISPLAYED year text; these numbers are rendering-only.
+export const TIMELINE_ERA_LAYOUT: { key: EraSettingKey; px0: number; px1: number }[] = [
+  { key: "LEGENDARY", px0: 0, px1: 130 },
+  { key: "WARRING_STATES", px0: 130, px1: 353 },
+  { key: "QIN", px0: 353, px1: 366 },
+  { key: "HAN", px0: 366, px1: 741 },
+  { key: "THREE_KINGDOMS", px0: 741, px1: 794 },
+  { key: "JIN", px0: 794, px1: 917 },
+  { key: "TANG", px0: 1092, px1: 1346 },
+  { key: "SONG", px0: 1393, px1: 1673 },
+  { key: "YUAN", px0: 1673, px1: 1751 },
+  { key: "MING", px0: 1751, px1: 1994 },
+  { key: "QING", px0: 1994, px1: 2229 },
+  { key: "REPUBLIC_ERA", px0: 2229, px1: 2262 },
+  { key: "POSTWAR_ERA", px0: 2286, px1: 2532 },
+  { key: "SEVENTIES", px0: 2532, px1: 2643 },
+  { key: "EIGHTIES", px0: 2643, px1: 2754 },
+  { key: "NINETIES", px0: 2754, px1: 2865 },
+  { key: "CONTEMPORARY", px0: 2865, px1: 3185 },
+];
+
+// The gap between Republic of China's band and Postwar's is where the
+// scale changes -- drawn as a visible break, never hidden.
+export const AXIS_BREAK_PX = 2270;
+export const TIMELINE_AXIS_WIDTH = 3245;
+
+// Chronological order for everything EXCEPT "Other / Unspecified", which
+// isn't a point in time and is surfaced separately, off the axis.
+const CHRONOLOGICAL_KEYS = TIMELINE_ERA_LAYOUT.map((e) => e.key);
+const LAYOUT_BY_KEY = new Map(TIMELINE_ERA_LAYOUT.map((e) => [e.key, e]));
+
+// Deterministic column/row packing, not a scatter layout -- same movie set
+// always renders at the same positions (no client JS, no hydration
+// mismatch risk). Columns fill left-to-right per row before wrapping, with
+// a small index-based (not random) left offset so a full row doesn't look
+// like a ruler.
+const DOT_PITCH = 9;
+const ROW_HEIGHT = 13;
+const ROW_BASELINE = 30;
+
+function columnsForWidth(width: number): number {
+  return Math.max(1, Math.floor(width / DOT_PITCH));
+}
+
+// How many movies render as dots/cards in the overview before a "View all"
+// takes over -- independent of how many actually exist per era, so a
+// 2-movie era and a 200-movie era cost the same to render. Scaled by how
+// many columns an era's band actually fits: a flat cap would let a narrow
+// band like Republic of China (3 columns) try to stack the same 60 dots as
+// a wide one into 20 rows, overflowing the fixed-height plot area.
+// MAX_ROWS_PER_ERA is chosen to stay well under that height at ROW_HEIGHT
+// px per row.
+const MAX_ROWS_PER_ERA = 8;
+const DESKTOP_DOT_CAP_CEILING = 80; // absolute cap regardless of column count
+const MOBILE_PREVIEW_CAP = 5;
+
+function desktopCapForKey(key: EraSettingKey): number {
+  const layout = LAYOUT_BY_KEY.get(key);
+  if (!layout) return DESKTOP_DOT_CAP_CEILING;
+  const cols = columnsForWidth(layout.px1 - layout.px0);
+  return Math.min(DESKTOP_DOT_CAP_CEILING, cols * MAX_ROWS_PER_ERA);
+}
+
+// Carries what both views need: the desktop tooltip only wants the year,
+// the mobile view wants full MovieCard fields (poster, release date as a
+// real Date) so it can reuse that component rather than re-deriving a
+// fake one from a bare year.
+export interface TimelineMovie {
+  id: string;
+  title: string;
+  releaseDate: Date | null;
+  posterPath: string | null;
+  posterOverrideUrl: string | null;
+  tmdbRating: number | null;
+  ratingAverage: number | null;
+  ratingCount: number;
+}
+
+async function moviesForEra(eraKey: string, take: number): Promise<TimelineMovie[]> {
+  const movies = await prisma.movie.findMany({
+    where: { eraSetting: eraKey, status: "APPROVED" },
+    orderBy: { releaseDate: "asc" },
+    take,
+    select: { id: true, title: true, releaseDate: true, posterPath: true, posterOverrideUrl: true, tmdbRating: true },
+  });
+  if (movies.length === 0) return [];
+
+  const summaries = await getRatingSummaries(movies.map((m) => m.id));
+  return movies.map((m) => ({
+    ...m,
+    ratingAverage: summaries.get(m.id)?.average ?? null,
+    ratingCount: summaries.get(m.id)?.count ?? 0,
+  }));
+}
+
+// One counts query for every era at once, keyed by the vocabulary's own
+// key order (chronological keys first, "Other" last) so callers never have
+// to re-derive that ordering themselves.
+export async function getEraCounts(): Promise<Map<string, number>> {
+  const rows = await prisma.movie.groupBy({
+    by: ["eraSetting"],
+    where: { status: "APPROVED", eraSetting: { not: null } },
+    _count: { _all: true },
+  });
+  const counts = new Map<string, number>();
+  for (const row of rows) {
+    if (row.eraSetting) counts.set(row.eraSetting, row._count._all);
+  }
+  return counts;
+}
+
+export interface TimelineEraData {
+  key: EraSettingKey;
+  name: string;
+  years: string | null;
+  totalCount: number;
+  movies: TimelineMovie[]; // capped preview, largest cap the callers need
+}
+
+export interface TimelineOverview {
+  eras: TimelineEraData[];
+  otherCount: number; // "Other / Unspecified" -- not chronological, not plotted on the axis
+  unsetCount: number; // APPROVED movies with no eraSetting at all yet (the field is opt-in)
+}
+
+// Shared fetch for both the desktop axis and the mobile overview -- one
+// pass over every chronological era (skips "Other", which isn't plotted),
+// each capped per desktopCapForKey so the mobile view (which only ever
+// slices the first MOBILE_PREVIEW_CAP of these) doesn't need a second query.
+export async function getTimelineOverview(): Promise<TimelineOverview> {
+  const [counts, unsetCount, ...movieLists] = await Promise.all([
+    getEraCounts(),
+    prisma.movie.count({ where: { status: "APPROVED", eraSetting: null } }),
+    ...CHRONOLOGICAL_KEYS.map((key) => moviesForEra(key, desktopCapForKey(key))),
+  ]);
+
+  const eras = CHRONOLOGICAL_KEYS.map((key, i) => {
+    const meta = ERA_SETTINGS.find((e) => e.key === key)!;
+    return {
+      key,
+      name: meta.name,
+      years: meta.years,
+      totalCount: counts.get(key) ?? 0,
+      movies: movieLists[i],
+    };
+  });
+
+  return { eras, otherCount: counts.get("OTHER") ?? 0, unsetCount };
+}
+
+export function mobilePreview(era: TimelineEraData): TimelineMovie[] {
+  return era.movies.slice(0, MOBILE_PREVIEW_CAP);
+}
+
+export interface TimelineDot {
+  movie: TimelineMovie;
+  left: number;
+  bottom: number;
+}
+
+export function computeDotLayout(era: { px0: number; px1: number }, movies: TimelineMovie[]): TimelineDot[] {
+  const width = era.px1 - era.px0;
+  const cols = columnsForWidth(width);
+  const colWidth = width / cols;
+  return movies.map((movie, i) => {
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    const jitter = ((i % 5) - 2) * (Math.min(colWidth, 10) / 6);
+    return {
+      movie,
+      left: era.px0 + col * colWidth + colWidth / 2 + jitter - 12,
+      bottom: ROW_BASELINE + row * ROW_HEIGHT,
+    };
+  });
+}
+
+// Where an era's "+N more" badge sits -- just above its tallest row,
+// centered on the band. Shared so the desktop component never has to
+// re-derive the row-packing math itself.
+export function overflowBadgeBottom(era: { px0: number; px1: number }, shownCount: number): number {
+  const width = era.px1 - era.px0;
+  const cols = columnsForWidth(width);
+  const rows = Math.max(1, Math.ceil(shownCount / cols));
+  return ROW_BASELINE + rows * ROW_HEIGHT + 6;
+}

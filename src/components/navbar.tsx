@@ -31,6 +31,9 @@ export async function Navbar() {
             <Link href="/search/fights" className="text-sm whitespace-nowrap text-neutral-300 hover:text-white">
               Fights
             </Link>
+            <Link href="/timeline" className="text-sm whitespace-nowrap text-neutral-300 hover:text-white">
+              Timeline
+            </Link>
             <ListsNavMenu />
             <Link href="/movies/submit" className="text-sm whitespace-nowrap text-neutral-300 hover:text-white">
               + Add Movie

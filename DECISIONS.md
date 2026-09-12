@@ -64,6 +64,7 @@ one.
 
 **Feature Decisions**
 
+- [Historical Timeline page built: a dot-axis on desktop, a capped list on mobile, five independent recent-era entries replacing "Modern"](#historical-timeline-page-built-a-dot-axis-on-desktop-a-capped-list-on-mobile-five-independent-recent-era-entries-replacing-modern)
 - [Backdrop banner switched to aspect-ratio height, reversing the width-cap-only fix](#backdrop-banner-switched-to-aspect-ratio-height-reversing-the-width-cap-only-fix)
 - [Backdrop banner capped at max-w-1920px to bound ultrawide-monitor cropping](#backdrop-banner-capped-at-max-w-1920px-to-bound-ultrawide-monitor-cropping)
 - [Backdrop banner gets its own TMDB gallery override, plus an object-top crop fix](#backdrop-banner-gets-its-own-tmdb-gallery-override-plus-an-object-top-crop-fix)
@@ -1238,6 +1239,15 @@ polish differently than a default-security reading would.
   and `/api/forgot-password`, which already had this shape from the start.
 
 ## Feature Decisions
+
+### Historical Timeline page built: a dot-axis on desktop, a capped list on mobile, five independent recent-era entries replacing "Modern"
+**PR #TBD.** Closes the "Historical timeline page" backlog item (moved out of Deferred & Backlog below) — the grouping data (`Movie.eraSetting`) has existed since Historical Setting shipped, but the visualization itself was explicitly left unbuilt, with only a vague "capped visual treatment, full list below" guess at the shape. Explored several directions in design review before landing on something different from all of them: a literal timeline axis, one dot per movie, hover for detail.
+
+- **Desktop and mobile are two different designs, not one adapted across both.** Desktop is a single horizontal axis (one dot per movie, hover tooltip, pure CSS — no client JS). A tap-adapted version of the same axis was prototyped for mobile first and rejected: hover has no touch equivalent, and at real density (dots ~9px apart in a crowded era) a touch target big enough to tap reliably would overlap its neighbors. Mobile instead gets a vertical stack of capped, swipeable era rows (reusing the same `MovieCard` row pattern used elsewhere) with "View all" — a completely different layout, not a graceful-degradation mode of the axis.
+- **An axis-break, not silent non-proportionality.** Band width tracks real historical duration up through Republic of China (1912–1949). Past that point, strict proportionality would squeeze the five most recent eras — where most of the catalog actually lives — into the same handful of pixels a single "1949–present" band would get, which is the opposite of useful. Those five eras get deliberately more room per year instead, with a visible dashed break marking exactly where the scale changes, so it reads as a deliberate choice rather than a rendering bug.
+- **Five independent recent-era entries in `ERA_SETTINGS`, not a "Modern" parent with children.** `POSTWAR_ERA` (1950s & 60s) through `CONTEMPORARY` (2000s+) are flat entries, same status as any dynasty — chosen specifically so nothing in the vocabulary, the dropdown, or the timeline code has to special-case a subgroup. Splitting now rather than later cost nothing: `eraSetting` is opt-in and adoption is still low, and grepping the codebase found no references to the old `"MODERN"` key outside `era-settings.ts` itself and no seed data using it, so there was no backfill to reconcile.
+- **Every era's overview render is capped** regardless of how many movies actually exist, matching the same render-cost-independent-of-count reasoning as Fight Scenes' movie-page teaser — flat 5 on mobile, and on desktop scaled by how many dot-columns an era's band fits (so a narrow band like Republic of China caps lower rather than growing tall) up to an 80-movie ceiling. "View all" opens `/timeline/[era]`, an ordinary paginated grid for that one era, same pagination shape as a movie's Fights page.
+- **Not verified against a live dev server or database** — no Postgres instance was available in this session, same limitation noted on the actor-page career-stats work above. Checked via `npm run lint` and `npm run build` only; the dot-position math (column/row packing, jitter) was traced by hand against representative counts before writing it into `src/lib/timeline.ts`. Revisit with real data before fully trusting the layout at the edges (a very long movie title in the tooltip, an era with exactly one movie, etc.).
 
 ### Backdrop banner switched to aspect-ratio height, reversing the width-cap-only fix
 **PR TBD.** Supersedes "Backdrop banner capped at max-w-1920px..." below, which explicitly rejected
@@ -5126,19 +5136,13 @@ state to put a real person's figure in.
   feature (secret generation/storage, an enrollment flow, backup/recovery
   codes, a recovery path for a lost authenticator), not a small hardening
   patch. Revisit as its own scoped piece of work.
-- **Historical timeline page** — a page visually plotting movies along a
-  timeline of Chinese historical periods/dynasties each movie is *set in*
-  (not its real-world release date, which `Movie.releaseDate` already
-  covers). The data gap this was blocked on is now closed: `Movie.eraSetting`
-  (see "Era Setting: Fight-Count-style field for the historical period a
-  movie is set in" under Feature Decisions) is exactly that fixed
-  period/dynasty attribute — built member-editable (Fight Count's model)
-  rather than admin-curated as originally guessed here, but still a closed
-  vocabulary (`ERA_SETTINGS`), so it's still groupable/orderable. What's
-  still not built: the timeline visualization itself, a real, non-trivial UI
-  in its own right, not a reskin of an existing list/grid view — and most
-  movies don't have an era set yet, since it's opt-in per movie like Fight
-  Count.
+- **Historical timeline page** — shipped (see **Feature Decisions** above:
+  "Historical Timeline page built: a dot-axis on desktop, a capped list on
+  mobile, five independent recent-era entries replacing 'Modern'"), a
+  literal timeline axis rather than the vague "capped visual treatment"
+  guessed at here. Nothing left open here — most movies still don't have an
+  era set (opt-in, like Fight Count), but that's a data-adoption question,
+  not a scope gap in the page itself.
 - **Fun facts / history section per movie** — admin-curated trivia or
   historical context shown on the movie page, likely alongside (or as an
   extension of) the existing Editorial Review. Previously flagged as

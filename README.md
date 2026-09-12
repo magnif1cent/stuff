@@ -26,6 +26,7 @@ An IMDB-style website for kung fu and martial arts films, built for martial arts
 - [Fights](#fights)
 - [Fight Count](#fight-count)
 - [Historical Setting](#historical-setting)
+- [Historical Timeline](#historical-timeline)
 - [Tops](#tops)
 - [Fun Facts](#fun-facts)
 - [Actor Pages](#actor-pages)
@@ -285,9 +286,19 @@ See `DECISIONS.md` for the fuller reasoning, including the aggregation-based alt
 
 ## Historical Setting
 
-A **Historical Setting** — the historical period/dynasty the movie is *set in*, not its real-world release date — sits right under Fight Count (same unboxed row treatment) and follows the same editing model: a full editable control (value, Edit, edit history), single shared value with last-edit-wins and the identical guardrails (verified email, rate limiting, full public edit history). Unlike Fight Count it has no byline badge of its own — "Historical Setting: Modern Day / Contemporary (1949–present)" is long enough that duplicating it into the compact byline row made that row noticeably heavier than its neighbors, so it's surfaced in this one place instead.
+A **Historical Setting** — the historical period/dynasty the movie is *set in*, not its real-world release date — sits right under Fight Count (same unboxed row treatment) and follows the same editing model: a full editable control (value, Edit, edit history), single shared value with last-edit-wins and the identical guardrails (verified email, rate limiting, full public edit history). Unlike Fight Count it has no byline badge of its own — "Historical Setting: Qing Dynasty (1644–1912)" is long enough that duplicating it into the compact byline row made that row noticeably heavier than its neighbors, so it's surfaced in this one place instead.
 
-The one real difference from Fight Count: this is a fixed dropdown of periods (`ERA_SETTINGS` in `src/lib/era-settings.ts`, one entry per period/dynasty with an approximate year range baked into its label), not a free-typed value — chosen so a future page grouping/ordering movies by period (see `DECISIONS.md`) doesn't have to deal with unbounded spelling variants of the same dynasty. It's a hardcoded vocabulary like `RATING_CATEGORIES`, not an admin-configurable taxonomy table like Genre/Fight Scene Tags. (The underlying field/model/component names still say `eraSetting` — only the user-facing label changed, to avoid a schema-touching rename for what was a wording fix.)
+The one real difference from Fight Count: this is a fixed dropdown of periods (`ERA_SETTINGS` in `src/lib/era-settings.ts`, one entry per period/dynasty with an approximate year range baked into its label), not a free-typed value — chosen so the Historical Timeline page below doesn't have to deal with unbounded spelling variants of the same dynasty. It's a hardcoded vocabulary like `RATING_CATEGORIES`, not an admin-configurable taxonomy table like Genre/Fight Scene Tags. (The underlying field/model/component names still say `eraSetting` — only the user-facing label changed, to avoid a schema-touching rename for what was a wording fix.) The five most recent periods (`POSTWAR_ERA` through `CONTEMPORARY`) are flat, independent entries in this same list — same status as any dynasty — not a nested "Modern" group.
+
+## Historical Timeline
+
+`/timeline` (linked from the navbar) plots every era-tagged movie along a chronological axis, and renders a genuinely different design on desktop vs. mobile rather than one layout adapted across both:
+
+- **Desktop** — a single horizontal axis with one dot per movie, positioned within its era's band; hovering a dot shows its title, era, year, and community rating (pure CSS, no client JS). Band width tracks real historical duration up through Republic of China — except the five most recent eras (`POSTWAR_ERA` onward), which get deliberately more room per year than earlier ones, marked with a visible axis-break rather than silently changing scale. Without that break, those five eras — where most of the catalog actually lives — would inherit the same few cramped pixels a single "Modern" band would get under strict proportionality.
+- **Mobile** — a vertical stack of era sections instead, each a capped, swipeable row of posters (reusing the same `MovieCard` rows used elsewhere) with a "View all →" link once an era has more movies than its row shows. Sidesteps the axis's tap-target problem entirely, and treats a 37-year era (Republic of China) and a 400-year one (Han) identically.
+- Every era's overview render is capped regardless of how many movies actually exist — a dense era costs about the same to render as a sparse one. On mobile the cap is a flat 5; on desktop it scales with how many dot-columns an era's band actually fits (narrow bands cap lower, since they'd otherwise need many more rows to fit the same count), up to a ceiling of 80. "View all" on either view opens `/timeline/[era]`, a normal paginated `MovieCard` grid for that one era (same pagination pattern as a movie's Fights page).
+- "Other / Unspecified" and movies with no historical setting recorded at all aren't plotted on the axis (there's no point in time to place them at) — both are called out in a small note instead.
+- Split by Tailwind breakpoint (`hidden md:block` / `md:hidden`) rather than a client-side viewport check, so there's no hydration flash — both trees render, CSS picks which one shows.
 
 ## Tops
 
