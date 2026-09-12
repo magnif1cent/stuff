@@ -19,5 +19,10 @@ export function useTmdbDiscoverFilters() {
     return query ? `&${query}` : "";
   }
 
-  return { country, setCountry, yearFrom, setYearFrom, yearTo, setYearTo, toQueryString };
+  function clearYear() {
+    setYearFrom("");
+    setYearTo("");
+  }
+
+  return { country, setCountry, yearFrom, setYearFrom, yearTo, setYearTo, clearYear, toQueryString };
 }
