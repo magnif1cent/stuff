@@ -70,6 +70,7 @@ one.
 - [Poster override gains a "Pick another poster" TMDB gallery option, alongside the existing upload](#poster-override-gains-a-pick-another-poster-tmdb-gallery-option-alongside-the-existing-upload)
 - [Release-year range filter added to TMDB Import's "By keyword"/"By actor" tabs](#release-year-range-filter-added-to-tmdb-imports-by-keywordby-actor-tabs)
 - [Member "Add a movie" search grew top-billed cast, reversing an earlier same-session call to skip it](#member-add-a-movie-search-grew-top-billed-cast-reversing-an-earlier-same-session-call-to-skip-it)
+- ["By studio" added to TMDB Import, reusing the keyword/actor discover backend](#by-studio-added-to-tmdb-import-reusing-the-keywordactor-discover-backend)
 - ["By actor" added to TMDB Import, sharing the keyword-search backend and result/import UI](#by-actor-added-to-tmdb-import-sharing-the-keyword-search-backend-and-resultimport-ui)
 - [Draft Terms of Service and Privacy Policy published now, flagged as a working draft, rather than waiting for full legal review](#draft-terms-of-service-and-privacy-policy-published-now-flagged-as-a-working-draft-rather-than-waiting-for-full-legal-review)
 - [Member-created fight scene tags get a profanity check, member-facing only](#member-created-fight-scene-tags-get-a-profanity-check-member-facing-only)
@@ -1361,6 +1362,25 @@ expand/click) looked like the safer default until the actual cost was clearer.
 - **`extractTopBilledCast` pulled into `src/lib/tmdb.ts`** as a shared helper (sort by billing
   `order`, slice to top N) instead of duplicating the admin discover route's inline version a
   second time — one already-established piece of logic, one place it lives.
+
+### "By studio" added to TMDB Import, reusing the keyword/actor discover backend
+**PR TBD.** Extended `/admin/import`'s discover-based browse-and-batch-import flow with a
+third search dimension — production company — rather than a separate import path.
+
+- **One `/discover/movie` route, three filters.** `/api/admin/tmdb/discover` now accepts
+  exactly one of `keywords`, `personId`, or `companyId`, calling TMDB's `with_keywords`,
+  `with_cast`, or `with_companies` accordingly; the validation that used to be a two-way
+  if/else became a `providedFilterCount` check so a fourth filter can slot in the same way
+  later. Per-movie detail lookup, already-imported check, and paging stay shared and
+  unchanged.
+- **Single studio per search, same reasoning as "By actor."** "Movies from this studio" is
+  the actual ask; a multi-studio OR/AND set isn't needed yet and can follow the same path
+  keywords already took if it comes up.
+- **`searchTmdbCompanies`/`discoverMoviesByCompany` mirror the existing person-search and
+  cast-discover pair** in `src/lib/tmdb.ts`, and `AdminStudioImport` mirrors
+  `AdminActorImport` structurally (search input → chip-picker results → single selection →
+  shared filters/results/import), rather than inventing a new shape for what's the third
+  copy of the same pattern.
 
 ### "By actor" added to TMDB Import, sharing the keyword-search backend and result/import UI
 **PR TBD.** Extended `/admin/import`'s existing "By keyword" browse-and-batch-import flow
