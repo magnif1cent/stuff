@@ -19,7 +19,7 @@ export function TimelineDesktop({ eras }: { eras: TimelineEraData[] }) {
 
   return (
     <div className="rail-scrollbar relative mt-8 overflow-x-auto overflow-y-hidden pb-5 pl-4 sm:pl-6 lg:pl-10">
-      <div className="relative" style={{ width: TIMELINE_AXIS_WIDTH, height: 300 }}>
+      <div className="relative" style={{ width: TIMELINE_AXIS_WIDTH, height: 460 }}>
         {/* axis-break: the scale changes here, marked rather than hidden */}
         <div
           className="absolute top-0"
@@ -32,7 +32,7 @@ export function TimelineDesktop({ eras }: { eras: TimelineEraData[] }) {
         />
         <p
           className="absolute text-center text-[10px] leading-tight text-neutral-600"
-          style={{ left: AXIS_BREAK_PX - 115, bottom: 260, width: 240 }}
+          style={{ left: AXIS_BREAK_PX - 115, bottom: 420, width: 240 }}
         >
           ⌇ scale expands here — recent eras get more room per year than earlier ones ⌇
         </p>
@@ -68,23 +68,25 @@ export function TimelineDesktop({ eras }: { eras: TimelineEraData[] }) {
                   >
                     <span className="h-2 w-2 rounded-full bg-amber-500 shadow-[0_0_0_2px_var(--color-neutral-950)] transition group-hover:scale-150 group-hover:bg-amber-400" />
                     <span
-                      className="pointer-events-none absolute bottom-full left-1/2 z-10 flex -translate-x-1/2 -translate-y-2 gap-2 rounded-md border border-neutral-700 bg-neutral-900 p-2 opacity-0 shadow-lg transition group-hover:opacity-100"
-                      style={{ width: 190 }}
+                      className="pointer-events-none absolute bottom-full left-1/2 z-10 -translate-x-1/2 -translate-y-2 rounded-md border border-neutral-700 bg-neutral-900 p-2 opacity-0 shadow-lg transition group-hover:opacity-100"
+                      style={{ width: 128 }}
                     >
-                      <span className="relative aspect-2/3 w-11 shrink-0 overflow-hidden rounded bg-neutral-800">
+                      <span className="relative aspect-2/3 w-28 shrink-0 overflow-hidden rounded bg-neutral-800">
                         {posterUrl && (
                           <Image
                             src={posterUrl}
                             alt=""
                             fill
                             unoptimized={isTmdbUrl(posterUrl)}
-                            sizes="44px"
+                            sizes="112px"
                             className="object-cover"
                           />
                         )}
                       </span>
-                      <span className="min-w-0">
-                        <span className="block font-display text-xs tracking-wide text-neutral-100">{dot.movie.title}</span>
+                      <span className="mt-2 block">
+                        <span className="line-clamp-2 block font-display text-xs tracking-wide text-neutral-100">
+                          {dot.movie.title}
+                        </span>
                         <span className="mt-1 block text-[11px] text-neutral-500">
                           {era.name}
                           {dot.movie.releaseDate ? ` · ${dot.movie.releaseDate.getFullYear()}` : ""}
