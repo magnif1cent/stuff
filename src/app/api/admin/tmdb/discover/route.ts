@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { requireAdminSession } from "@/lib/require-admin";
-import { discoverMoviesByCast, discoverMoviesByKeywords, extractTopBilledCast, getTmdbMovieDetails } from "@/lib/tmdb";
+import {
+  discoverMoviesByCast,
+  discoverMoviesByCompany,
+  discoverMoviesByKeywords,
+  extractTopBilledCast,
+  getTmdbMovieDetails,
+} from "@/lib/tmdb";
 import { prisma } from "@/lib/prisma";
 import { tmdbErrorResponse } from "@/lib/api-error";
 
@@ -30,15 +36,24 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const keywordsParam = url.searchParams.get("keywords");
   const personIdParam = url.searchParams.get("personId");
-  if (!keywordsParam && !personIdParam) {
-    return NextResponse.json({ error: "Missing query parameter keywords or personId" }, { status: 400 });
+  const companyIdParam = url.searchParams.get("companyId");
+  const providedFilterCount = [keywordsParam, personIdParam, companyIdParam].filter((v) => v !== null).length;
+  if (providedFilterCount === 0) {
+    return NextResponse.json(
+      { error: "Missing query parameter keywords, personId, or companyId" },
+      { status: 400 },
+    );
   }
-  if (keywordsParam && personIdParam) {
-    return NextResponse.json({ error: "Provide only one of keywords or personId" }, { status: 400 });
+  if (providedFilterCount > 1) {
+    return NextResponse.json(
+      { error: "Provide only one of keywords, personId, or companyId" },
+      { status: 400 },
+    );
   }
 
   let keywordIds: number[] = [];
   let personId: number | null = null;
+  let companyId: number | null = null;
   if (keywordsParam) {
     keywordIds = keywordsParam
       .split(",")
@@ -47,10 +62,15 @@ export async function GET(request: Request) {
     if (keywordIds.length === 0) {
       return NextResponse.json({ error: "keywords must be a comma-separated list of keyword ids" }, { status: 400 });
     }
-  } else {
+  } else if (personIdParam) {
     personId = Number(personIdParam);
     if (!Number.isInteger(personId)) {
       return NextResponse.json({ error: "personId must be an integer" }, { status: 400 });
+    }
+  } else {
+    companyId = Number(companyIdParam);
+    if (!Number.isInteger(companyId)) {
+      return NextResponse.json({ error: "companyId must be an integer" }, { status: 400 });
     }
   }
 
@@ -85,7 +105,9 @@ export async function GET(request: Request) {
   try {
     const discovered = personId
       ? await discoverMoviesByCast(personId, page, discoverOptions)
-      : await discoverMoviesByKeywords(keywordIds, page, discoverOptions);
+      : companyId
+        ? await discoverMoviesByCompany(companyId, page, discoverOptions)
+        : await discoverMoviesByKeywords(keywordIds, page, discoverOptions);
 
     const alreadyImported = await prisma.movie.findMany({
       where: { tmdbId: { in: discovered.results.map((r) => r.id) } },
@@ -124,7 +146,11 @@ export async function GET(request: Request) {
       totalResults: discovered.total_results,
     });
   } catch (error) {
-    const subject = personId ? `person ${personId}` : `keywords ${keywordsParam}`;
+    const subject = personId
+      ? `person ${personId}`
+      : companyId
+        ? `company ${companyId}`
+        : `keywords ${keywordsParam}`;
     return tmdbErrorResponse(`Failed to discover TMDB movies for ${subject}:`, error);
   }
 }

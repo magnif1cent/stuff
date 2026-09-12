@@ -4,9 +4,10 @@ import { useState } from "react";
 import type { TmdbMovieSearchResult } from "@/lib/tmdb";
 import { AdminKeywordImport } from "@/components/admin-keyword-import";
 import { AdminActorImport } from "@/components/admin-actor-import";
+import { AdminStudioImport } from "@/components/admin-studio-import";
 
 export function AdminImportSearch() {
-  const [mode, setMode] = useState<"title" | "keyword" | "actor">("title");
+  const [mode, setMode] = useState<"title" | "keyword" | "actor" | "studio">("title");
 
   return (
     <div>
@@ -35,10 +36,19 @@ export function AdminImportSearch() {
         >
           By actor
         </button>
+        <button
+          onClick={() => setMode("studio")}
+          className={`px-3 py-2 text-sm font-medium ${
+            mode === "studio" ? "border-b-2 border-red-600 text-white" : "text-neutral-400 hover:text-white"
+          }`}
+        >
+          By studio
+        </button>
       </div>
 
       {mode === "keyword" && <AdminKeywordImport />}
       {mode === "actor" && <AdminActorImport />}
+      {mode === "studio" && <AdminStudioImport />}
       {mode === "title" && <TitleSearch />}
     </div>
   );
