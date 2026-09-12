@@ -412,7 +412,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
   const collectionContent = hasCollection && (
     <>
       <Link
-        href={`/collections/${movie.collectionTmdbId}`}
+        href={`/collections/${movie.collectionTmdbId}?from=${movie.id}`}
         className="text-red-500 underline decoration-red-800 underline-offset-2 hover:text-red-400"
       >
         {movie.collectionName}
@@ -443,7 +443,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
   const collectionPills = hasCollection && (
     <div className="flex flex-wrap gap-1.5">
       <Link
-        href={`/collections/${movie.collectionTmdbId}`}
+        href={`/collections/${movie.collectionTmdbId}?from=${movie.id}`}
         className="rounded-full border border-red-800 bg-red-950/40 px-2 py-0.5 text-xs text-red-400 hover:border-red-600 hover:text-red-300"
       >
         {movie.collectionName}
