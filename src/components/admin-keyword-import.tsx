@@ -2,21 +2,23 @@
 
 import { useState } from "react";
 import type { TmdbKeyword } from "@/lib/tmdb";
-import { TMDB_COUNTRY_OPTIONS } from "@/lib/tmdb-country-options";
 import { useTmdbDiscoverImport, type TmdbDiscoverPage } from "@/hooks/use-tmdb-discover-import";
+import { useTmdbDiscoverFilters } from "@/hooks/use-tmdb-discover-filters";
 import { TmdbDiscoverResults } from "@/components/tmdb-discover-results";
+import { TmdbDiscoverFilterFields } from "@/components/tmdb-discover-filter-fields";
 
 export function AdminKeywordImport() {
   const [keywordQuery, setKeywordQuery] = useState("");
   const [keywordOptions, setKeywordOptions] = useState<TmdbKeyword[]>([]);
   const [selectedKeywords, setSelectedKeywords] = useState<TmdbKeyword[]>([]);
   const [searchingKeywords, setSearchingKeywords] = useState(false);
-  const [country, setCountry] = useState("");
+  const filters = useTmdbDiscoverFilters();
 
   const discover = useTmdbDiscoverImport(async (targetPage) => {
     const keywordIds = selectedKeywords.map((k) => k.id).join(",");
-    const countryQuery = country ? `&country=${country}` : "";
-    const res = await fetch(`/api/admin/tmdb/discover?keywords=${keywordIds}&page=${targetPage}${countryQuery}`);
+    const res = await fetch(
+      `/api/admin/tmdb/discover?keywords=${keywordIds}&page=${targetPage}${filters.toQueryString()}`,
+    );
     const body = await res.json();
     if (!res.ok) return { ok: false, error: body.error ?? "Search failed." };
     return { ok: true, data: body as TmdbDiscoverPage };
@@ -98,22 +100,7 @@ export function AdminKeywordImport() {
         </div>
       )}
 
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <label className="flex items-center gap-1.5 text-xs text-neutral-500">
-          Country
-          <select
-            value={country}
-            onChange={(e) => setCountry(e.target.value)}
-            className="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-neutral-100 focus:border-red-600 focus:outline-none"
-          >
-            {TMDB_COUNTRY_OPTIONS.map((option) => (
-              <option key={option.code} value={option.code}>
-                {option.name}
-              </option>
-            ))}
-          </select>
-        </label>
-
+      <TmdbDiscoverFilterFields filters={filters}>
         <button
           onClick={discover.search}
           disabled={discover.loading || selectedKeywords.length === 0}
@@ -121,7 +108,7 @@ export function AdminKeywordImport() {
         >
           {discover.loading ? "Searching…" : "Search movies"}
         </button>
-      </div>
+      </TmdbDiscoverFilterFields>
 
       {discover.message && <p className="mb-4 text-sm text-neutral-300">{discover.message}</p>}
 

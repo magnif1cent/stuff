@@ -1,12 +1,25 @@
 import { NextResponse } from "next/server";
 import { requireAdminSession } from "@/lib/require-admin";
-import { discoverMoviesByCast, discoverMoviesByKeywords, getTmdbMovieDetails } from "@/lib/tmdb";
+import { discoverMoviesByCast, discoverMoviesByKeywords, extractTopBilledCast, getTmdbMovieDetails } from "@/lib/tmdb";
 import { prisma } from "@/lib/prisma";
 import { tmdbErrorResponse } from "@/lib/api-error";
 
 // TMDB refuses to serve page 501+ even when total_pages reports higher.
 const MAX_DISCOVER_PAGE = 500;
 const DISPLAY_CAST_COUNT = 3;
+const MIN_YEAR = 1870;
+
+type ParsedYear = { ok: true; year: number | undefined } | { ok: false; error: string };
+
+function parseYearParam(value: string | null, paramName: string): ParsedYear {
+  if (!value) return { ok: true, year: undefined };
+  const year = Number(value);
+  const maxYear = new Date().getFullYear() + 5;
+  if (!Number.isInteger(year) || year < MIN_YEAR || year > maxYear) {
+    return { ok: false, error: `${paramName} must be a year between ${MIN_YEAR} and ${maxYear}` };
+  }
+  return { ok: true, year };
+}
 
 export async function GET(request: Request) {
   const session = await requireAdminSession();
@@ -51,10 +64,28 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "country must be a 2-letter ISO 3166-1 code (e.g. HK)" }, { status: 400 });
   }
 
+  const parsedYearFrom = parseYearParam(url.searchParams.get("yearFrom"), "yearFrom");
+  if (!parsedYearFrom.ok) {
+    return NextResponse.json({ error: parsedYearFrom.error }, { status: 400 });
+  }
+  const parsedYearTo = parseYearParam(url.searchParams.get("yearTo"), "yearTo");
+  if (!parsedYearTo.ok) {
+    return NextResponse.json({ error: parsedYearTo.error }, { status: 400 });
+  }
+  if (parsedYearFrom.year && parsedYearTo.year && parsedYearFrom.year > parsedYearTo.year) {
+    return NextResponse.json({ error: "yearFrom must be less than or equal to yearTo" }, { status: 400 });
+  }
+
+  const discoverOptions = {
+    originCountry: countryParam ?? undefined,
+    yearFrom: parsedYearFrom.year,
+    yearTo: parsedYearTo.year,
+  };
+
   try {
     const discovered = personId
-      ? await discoverMoviesByCast(personId, page, countryParam ?? undefined)
-      : await discoverMoviesByKeywords(keywordIds, page, countryParam ?? undefined);
+      ? await discoverMoviesByCast(personId, page, discoverOptions)
+      : await discoverMoviesByKeywords(keywordIds, page, discoverOptions);
 
     const alreadyImported = await prisma.movie.findMany({
       where: { tmdbId: { in: discovered.results.map((r) => r.id) } },
@@ -69,12 +100,7 @@ export async function GET(request: Request) {
     const results = await Promise.all(
       discovered.results.map(async (movie) => {
         const details = await getTmdbMovieDetails(movie.id).catch(() => null);
-        const topCast = details
-          ? [...details.credits.cast]
-              .sort((a, b) => a.order - b.order)
-              .slice(0, DISPLAY_CAST_COUNT)
-              .map((c) => c.name)
-          : [];
+        const topCast = details ? extractTopBilledCast(details, DISPLAY_CAST_COUNT) : [];
 
         return {
           tmdbId: movie.id,
