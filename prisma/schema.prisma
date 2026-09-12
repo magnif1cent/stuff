@@ -146,6 +146,11 @@ model Movie {
   // different poster without depending on what TMDB happens to have.
   posterOverrideUrl String?
   backdropPath   String?
+  // Admin-picked alternate from TMDB's own backdrop gallery for this movie
+  // (see /movie/{id}/images) that takes precedence over backdropPath above.
+  // Always a TMDB image URL, not an upload -- unlike posterOverrideUrl,
+  // there's no file-upload path for backdrops.
+  backdropOverrideUrl String?
   runtime        Int?
   director       String?
   country        String?

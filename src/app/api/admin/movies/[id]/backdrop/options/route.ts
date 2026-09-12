@@ -5,9 +5,8 @@ import { getTmdbMovieImages } from "@/lib/tmdb";
 import { selectTopImages } from "@/lib/tmdb-image-options";
 import { tmdbErrorResponse } from "@/lib/api-error";
 
-// How many alternates to offer -- TMDB can return dozens of near-duplicate
-// posters for a popular title, so this trims to the highest-voted ones
-// rather than dumping everything into the picker.
+// How many alternates to offer -- same cap as the poster picker, for the
+// same reason (TMDB can return dozens of near-duplicate backdrops).
 const MAX_OPTIONS = 24;
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -23,9 +22,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   }
 
   try {
-    const { posters } = await getTmdbMovieImages(movie.tmdbId);
-    return NextResponse.json({ options: selectTopImages(posters, MAX_OPTIONS) });
+    const { backdrops } = await getTmdbMovieImages(movie.tmdbId);
+    return NextResponse.json({ options: selectTopImages(backdrops, MAX_OPTIONS) });
   } catch (error) {
-    return tmdbErrorResponse(`Failed to fetch TMDB poster options for movie ${movieId}:`, error);
+    return tmdbErrorResponse(`Failed to fetch TMDB backdrop options for movie ${movieId}:`, error);
   }
 }
