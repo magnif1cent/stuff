@@ -64,6 +64,7 @@ one.
 
 **Feature Decisions**
 
+- [Backdrop banner capped at max-w-1920px to bound ultrawide-monitor cropping](#backdrop-banner-capped-at-max-w-1920px-to-bound-ultrawide-monitor-cropping)
 - [Backdrop banner gets its own TMDB gallery override, plus an object-top crop fix](#backdrop-banner-gets-its-own-tmdb-gallery-override-plus-an-object-top-crop-fix)
 - [Poster override gains a "Pick another poster" TMDB gallery option, alongside the existing upload](#poster-override-gains-a-pick-another-poster-tmdb-gallery-option-alongside-the-existing-upload)
 - [Release-year range filter added to TMDB Import's "By keyword"/"By actor" tabs](#release-year-range-filter-added-to-tmdb-imports-by-keywordby-actor-tabs)
@@ -1235,6 +1236,26 @@ polish differently than a default-security reading would.
   and `/api/forgot-password`, which already had this shape from the start.
 
 ## Feature Decisions
+
+### Backdrop banner capped at max-w-1920px to bound ultrawide-monitor cropping
+**PR TBD.** Follow-up to "Backdrop banner gets its own TMDB gallery override..." below: `object-top`
+fixed which *end* of the image got cropped, but a full-`100vw`, fixed-height banner has a separate
+problem on very wide monitors — as the container's width grows with no matching height increase, its
+aspect ratio diverges further from the backdrop's native ~16:9, so `object-cover` zooms in more and
+more, down to a thin sliver of the image on an ultrawide display.
+
+- **`max-w-[1920px] mx-auto` letterboxing over a taller/responsive height.** Considered making the
+  banner's height scale with viewport width instead (e.g. `aspect-[21/9]`), but that just delays the
+  same problem to an even wider monitor while also making the banner noticeably taller on ordinary
+  desktop widths, changing the page's whole rhythm. Capping width instead means anything up to a
+  normal wide desktop (≤1920px) is completely unaffected, and only screens past that see letterboxing
+  (page background either side) instead of an ever-thinner image crop.
+- **Applied to both the movie page banner and the homepage `HeroCarousel`** (including its nav
+  arrows/dots, since they're positioned relative to the same now-capped container) — same underlying
+  container shape, same fix.
+- **`sizes` on both `<Image fill>`s updated to `(min-width: 1920px) 1920px, 100vw`** to match the new
+  effective render width, so Next's responsive image loading doesn't keep requesting a wider image
+  than the capped container will ever display.
 
 ### Backdrop banner gets its own TMDB gallery override, plus an object-top crop fix
 **PR TBD.** Two related changes to the movie page's backdrop banner: it was sometimes cropping off

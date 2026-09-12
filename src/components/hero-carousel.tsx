@@ -60,7 +60,7 @@ function Slide({ movie, active, playClip }: { movie: FeaturedMovie; active: bool
           fill
           priority
           unoptimized
-          sizes="100vw"
+          sizes="(min-width: 1920px) 1920px, 100vw"
           className={`object-cover object-top transition-opacity ${showClip ? "opacity-0" : "opacity-100"}`}
           style={{ transitionDuration: `${FADE_MS}ms` }}
         />
@@ -177,7 +177,7 @@ export function HeroCarousel({ movies }: { movies: FeaturedMovie[] }) {
         if (e.key === "ArrowLeft") goTo(index - 1);
         if (e.key === "ArrowRight") goTo(index + 1);
       }}
-      className="group relative h-72 w-full overflow-hidden outline-none sm:h-96"
+      className="group relative mx-auto h-72 w-full max-w-[1920px] overflow-hidden outline-none sm:h-96"
     >
       {prevIndex !== null && prevIndex !== index && (
         <Slide movie={movies[prevIndex]} active={false} playClip={false} />

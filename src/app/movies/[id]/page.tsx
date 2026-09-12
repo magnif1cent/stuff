@@ -599,7 +599,11 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
   }));
 
   const backdropMat = (
-    <div className="relative h-40 w-full sm:h-80">
+    // max-w caps how wide (and therefore how short, relative to the image's
+    // own ~16:9 shape) this can stretch on an ultrawide monitor -- past that
+    // width it's letterboxed by the page background instead of the image
+    // getting cropped down to an ever-thinner sliver as the viewport grows.
+    <div className="relative mx-auto h-40 w-full max-w-[1920px] sm:h-80">
       {backdropUrl ? (
         <Image
           src={backdropUrl}
@@ -607,7 +611,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
           fill
           priority
           unoptimized
-          sizes="100vw"
+          sizes="(min-width: 1920px) 1920px, 100vw"
           className="object-cover object-top"
         />
       ) : (
