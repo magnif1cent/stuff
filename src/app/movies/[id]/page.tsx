@@ -606,7 +606,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
     // the same problem's return past that height cap -- once height plateaus,
     // an ever-widening container would otherwise start cropping tighter
     // again, so past 1920px it's letterboxed by the page background instead.
-    <div className="relative mx-auto aspect-21/10 max-h-[30rem] w-full max-w-[1920px] bg-neutral-900">
+    <div className="relative mx-auto aspect-21/10 max-h-[30rem] w-full max-w-[1920px]">
       {backdropUrl ? (
         <Image
           src={backdropUrl}
@@ -615,7 +615,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
           priority
           unoptimized
           sizes="(min-width: 1920px) 1920px, 100vw"
-          className="object-contain"
+          className="object-cover object-[center_25%]"
         />
       ) : (
         <div className="h-full w-full bg-neutral-900" />
