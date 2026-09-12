@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { tmdbImageUrl, type TmdbMovieSearchResult } from "@/lib/tmdb";
 
-type SubmissionResult = TmdbMovieSearchResult & { catalogStatus: string | null };
+type SubmissionResult = TmdbMovieSearchResult & { catalogStatus: string | null; topCast: string[] };
 
 export function MovieSubmissionSearch() {
   const [query, setQuery] = useState("");
@@ -114,6 +114,9 @@ export function MovieSubmissionSearch() {
                       {movie.release_date ? `(${movie.release_date.slice(0, 4)})` : ""}
                     </span>
                   </p>
+                  {movie.topCast.length > 0 && (
+                    <p className="text-xs text-neutral-500">{movie.topCast.join(", ")}</p>
+                  )}
                   <p className="line-clamp-2 max-w-xl text-sm text-neutral-400">{movie.overview}</p>
                   {catalogLabel && <p className="mt-1 text-xs text-amber-400">{catalogLabel}</p>}
                 </div>

@@ -64,6 +64,8 @@ one.
 
 **Feature Decisions**
 
+- [Release-year range filter added to TMDB Import's "By keyword"/"By actor" tabs](#release-year-range-filter-added-to-tmdb-imports-by-keywordby-actor-tabs)
+- [Member "Add a movie" search grew top-billed cast, reversing an earlier same-session call to skip it](#member-add-a-movie-search-grew-top-billed-cast-reversing-an-earlier-same-session-call-to-skip-it)
 - ["By actor" added to TMDB Import, sharing the keyword-search backend and result/import UI](#by-actor-added-to-tmdb-import-sharing-the-keyword-search-backend-and-resultimport-ui)
 - [Draft Terms of Service and Privacy Policy published now, flagged as a working draft, rather than waiting for full legal review](#draft-terms-of-service-and-privacy-policy-published-now-flagged-as-a-working-draft-rather-than-waiting-for-full-legal-review)
 - [Member-created fight scene tags get a profanity check, member-facing only](#member-created-fight-scene-tags-get-a-profanity-check-member-facing-only)
@@ -1231,6 +1233,35 @@ polish differently than a default-security reading would.
   and `/api/forgot-password`, which already had this shape from the start.
 
 ## Feature Decisions
+
+### Release-year range filter added to TMDB Import's "By keyword"/"By actor" tabs
+**PR TBD.** Added an optional From/To year range next to the existing Country filter on both
+discover-based import tabs.
+
+- **`primary_release_date.gte`/`.lte` over TMDB's `primary_release_year`**, since the latter only
+  matches a single exact year — a range needs the date-bound params, translated from whole years
+  to a Jan 1–Dec 31 span rather than asking for day-level input nobody needs here.
+- **Country and year filter state/UI extracted into a shared `useTmdbDiscoverFilters` hook +
+  `TmdbDiscoverFilterFields` component** used by both tabs, rather than adding year inputs to each
+  tab's own Country `<select>` block a second time — same reasoning as the `useTmdbDiscoverImport`/
+  `TmdbDiscoverResults` extraction above: one shared filter surface instead of two that can drift.
+- **Validated server-side** (`MIN_YEAR = 1870`, upper bound of current year + 5, `yearFrom <=
+  yearTo`) in `/api/admin/tmdb/discover`, not just left to the browser's `<input type="number">` —
+  the same route already validates `country` and `page` the same way.
+
+### Member "Add a movie" search grew top-billed cast, reversing an earlier same-session call to skip it
+**PR TBD.** Right after adding posters to `/movies/submit`'s search results, top-billed cast was
+deliberately left out of that same PR — showing it for every result would mean one extra
+`getTmdbMovieDetails` call per row on every keystroke-driven search, and on-demand (fetch only on
+expand/click) looked like the safer default until the actual cost was clearer.
+
+- **Reversed after walking through the admin "By keyword" import flow**, which already pays this
+  exact cost (a `getTmdbMovieDetails` call per visible result, purely to get cast/country) and has
+  for a while — the "list of matches to eyeball before committing" search-result page is the same
+  shape here, so the same tradeoff applies, not a new one.
+- **`extractTopBilledCast` pulled into `src/lib/tmdb.ts`** as a shared helper (sort by billing
+  `order`, slice to top N) instead of duplicating the admin discover route's inline version a
+  second time — one already-established piece of logic, one place it lives.
 
 ### "By actor" added to TMDB Import, sharing the keyword-search backend and result/import UI
 **PR TBD.** Extended `/admin/import`'s existing "By keyword" browse-and-batch-import flow

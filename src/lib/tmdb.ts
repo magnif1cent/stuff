@@ -123,6 +123,17 @@ export function extractOriginalLanguageName(details: TmdbMovieDetails): string |
   return match?.english_name || details.original_language || null;
 }
 
+// TMDB's credits.cast is already ordered roughly by billing but not
+// guaranteed sorted, and can run to 30+ names -- this is the shared "just the
+// names a browsing admin/member needs to judge relevance" trim used by both
+// the admin discover grid and the member submission search.
+export function extractTopBilledCast(details: TmdbMovieDetails, count = 3): string[] {
+  return [...details.credits.cast]
+    .sort((a, b) => a.order - b.order)
+    .slice(0, count)
+    .map((c) => c.name);
+}
+
 export interface TmdbKeyword {
   id: number;
   name: string;
@@ -143,13 +154,33 @@ export interface TmdbDiscoverMovieResult {
   vote_average: number;
 }
 
+export interface TmdbDiscoverFilterOptions {
+  originCountry?: string;
+  yearFrom?: number;
+  yearTo?: number;
+}
+
+// Shared by both discover-by-keyword and discover-by-cast: with_origin_country
+// (undocumented in TMDB's official reference, but confirmed working) and a
+// primary-release-date range both AND against whichever discover filter the
+// caller is already applying (keywords or cast).
+function discoverFilterParams(options?: TmdbDiscoverFilterOptions): Record<string, string> {
+  if (!options) return {};
+  const params: Record<string, string> = {};
+  if (options.originCountry) params.with_origin_country = options.originCountry;
+  if (options.yearFrom) params["primary_release_date.gte"] = `${options.yearFrom}-01-01`;
+  if (options.yearTo) params["primary_release_date.lte"] = `${options.yearTo}-12-31`;
+  return params;
+}
+
 // TMDB's with_keywords param: comma = AND, pipe = OR (can't mix both in one
 // call). We only need OR here — a film tagged "kung fu" OR "martial arts" is
-// still a match, it doesn't need both tags. with_origin_country (undocumented
-// in TMDB's official reference, but confirmed working) ANDs against that —
-// combined with a keyword OR, it narrows to e.g. (kung fu OR martial arts)
-// AND Hong Kong in a single call instead of filtering client-side.
-export async function discoverMoviesByKeywords(keywordIds: number[], page: number, originCountry?: string) {
+// still a match, it doesn't need both tags.
+export async function discoverMoviesByKeywords(
+  keywordIds: number[],
+  page: number,
+  options?: TmdbDiscoverFilterOptions,
+) {
   return tmdbFetch<{
     results: TmdbDiscoverMovieResult[];
     page: number;
@@ -159,7 +190,7 @@ export async function discoverMoviesByKeywords(keywordIds: number[], page: numbe
     with_keywords: keywordIds.join("|"),
     page: String(page),
     include_adult: "false",
-    ...(originCountry ? { with_origin_country: originCountry } : {}),
+    ...discoverFilterParams(options),
   });
 }
 
@@ -178,7 +209,7 @@ export async function searchTmdbPeople(query: string) {
   return data.results;
 }
 
-export async function discoverMoviesByCast(personId: number, page: number, originCountry?: string) {
+export async function discoverMoviesByCast(personId: number, page: number, options?: TmdbDiscoverFilterOptions) {
   return tmdbFetch<{
     results: TmdbDiscoverMovieResult[];
     page: number;
@@ -188,7 +219,7 @@ export async function discoverMoviesByCast(personId: number, page: number, origi
     with_cast: String(personId),
     page: String(page),
     include_adult: "false",
-    ...(originCountry ? { with_origin_country: originCountry } : {}),
+    ...discoverFilterParams(options),
   });
 }
 

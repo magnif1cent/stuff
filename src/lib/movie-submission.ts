@@ -1,15 +1,31 @@
 import { prisma } from "@/lib/prisma";
-import { searchTmdbMovies } from "@/lib/tmdb";
+import { extractTopBilledCast, getTmdbMovieDetails, searchTmdbMovies } from "@/lib/tmdb";
 import { importMovieFromTmdb } from "@/lib/tmdb-import";
 
 export async function searchTmdbMoviesForSubmission(query: string) {
   const results = await searchTmdbMovies(query);
-  const existing = await prisma.movie.findMany({
-    where: { tmdbId: { in: results.map((r) => r.id) } },
-    select: { tmdbId: true, status: true },
-  });
+  const [existing, topCastByTmdbId] = await Promise.all([
+    prisma.movie.findMany({
+      where: { tmdbId: { in: results.map((r) => r.id) } },
+      select: { tmdbId: true, status: true },
+    }),
+    // /search/movie doesn't include cast, so fetch full details per result
+    // (same call the import path already makes) to show it here too — a
+    // failed detail fetch for one movie shouldn't sink the whole search.
+    Promise.all(
+      results.map(async (r) => {
+        const details = await getTmdbMovieDetails(r.id).catch(() => null);
+        return [r.id, details ? extractTopBilledCast(details) : []] as const;
+      }),
+    ),
+  ]);
   const statusByTmdbId = new Map(existing.map((m) => [m.tmdbId, m.status]));
-  return results.map((r) => ({ ...r, catalogStatus: statusByTmdbId.get(r.id) ?? null }));
+  const topCastMap = new Map(topCastByTmdbId);
+  return results.map((r) => ({
+    ...r,
+    catalogStatus: statusByTmdbId.get(r.id) ?? null,
+    topCast: topCastMap.get(r.id) ?? [],
+  }));
 }
 
 // Guards against the member-submission path ever calling
