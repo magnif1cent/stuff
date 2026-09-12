@@ -61,7 +61,7 @@ function Slide({ movie, active, playClip }: { movie: FeaturedMovie; active: bool
           priority
           unoptimized
           sizes="(min-width: 1920px) 1920px, 100vw"
-          className={`object-cover object-top transition-opacity ${showClip ? "opacity-0" : "opacity-100"}`}
+          className={`object-cover object-[center_25%] transition-opacity ${showClip ? "opacity-0" : "opacity-100"}`}
           style={{ transitionDuration: `${FADE_MS}ms` }}
         />
       ) : (

@@ -1258,6 +1258,12 @@ severity was wrong, not just its chosen fix.
 - **`max-w-[1920px]` kept, not removed** — once `max-h` caps height, an unbounded-width container
   would start recreating the exact same growing-crop problem past that point, so the width cap is
   still doing real work, just further out than before.
+- **`object-top` swapped for `object-[center_25%]`** after a still-cropped screenshot on a different,
+  more tightly-framed backdrop. This is the last constant tuned here, not the start of another round:
+  no fixed `object-position` can guarantee zero cropping across TMDB backdrops of wildly different
+  compositions (wide establishing shots vs. tight character crops), so further whack-a-mole tuning
+  against one more screenshot isn't the right lever. A backdrop that still crops badly for a specific
+  movie is what the "Pick another backdrop" gallery (above) is actually for.
 
 ### Backdrop banner capped at max-w-1920px to bound ultrawide-monitor cropping
 **PR TBD.** Follow-up to "Backdrop banner gets its own TMDB gallery override..." below: `object-top`

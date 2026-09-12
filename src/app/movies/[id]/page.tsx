@@ -615,7 +615,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
           priority
           unoptimized
           sizes="(min-width: 1920px) 1920px, 100vw"
-          className="object-cover object-top"
+          className="object-cover object-[center_25%]"
         />
       ) : (
         <div className="h-full w-full bg-neutral-900" />
