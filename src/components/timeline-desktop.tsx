@@ -67,11 +67,15 @@ export function TimelineDesktop({ eras }: { eras: TimelineEraData[] }) {
                     style={{ left: dot.left, bottom: dot.bottom }}
                   >
                     <span className="h-2 w-2 rounded-full bg-amber-500 shadow-[0_0_0_2px_var(--color-neutral-950)] transition group-hover:scale-150 group-hover:bg-amber-400" />
-                    <span
+                    <div
                       className="pointer-events-none absolute bottom-full left-1/2 z-10 -translate-x-1/2 -translate-y-2 rounded-md border border-neutral-700 bg-neutral-900 p-2 opacity-0 shadow-lg transition group-hover:opacity-100"
                       style={{ width: 128 }}
                     >
-                      <span className="relative aspect-2/3 w-28 shrink-0 overflow-hidden rounded bg-neutral-800">
+                      {/* a plain <span> here ignores width/aspect-ratio (both
+                          are no-ops on inline elements), which is why the
+                          poster wasn't rendering -- needs a block-level box
+                          for next/image's `fill` to have anything to fill */}
+                      <div className="relative aspect-2/3 w-28 overflow-hidden rounded bg-neutral-800">
                         {posterUrl && (
                           <Image
                             src={posterUrl}
@@ -82,22 +86,20 @@ export function TimelineDesktop({ eras }: { eras: TimelineEraData[] }) {
                             className="object-cover"
                           />
                         )}
-                      </span>
-                      <span className="mt-2 block">
-                        <span className="line-clamp-2 block font-display text-xs tracking-wide text-neutral-100">
-                          {dot.movie.title}
-                        </span>
-                        <span className="mt-1 block text-[11px] text-neutral-500">
+                      </div>
+                      <div className="mt-2">
+                        <p className="line-clamp-2 font-display text-xs tracking-wide text-neutral-100">{dot.movie.title}</p>
+                        <p className="mt-1 text-[11px] text-neutral-500">
                           {era.name}
                           {dot.movie.releaseDate ? ` · ${dot.movie.releaseDate.getFullYear()}` : ""}
-                        </span>
+                        </p>
                         {dot.movie.ratingAverage != null && (
-                          <span className="mt-0.5 block text-[11px] font-semibold text-yellow-500">
+                          <p className="mt-0.5 text-[11px] font-semibold text-yellow-500">
                             ★ {dot.movie.ratingAverage.toFixed(1)}
-                          </span>
+                          </p>
                         )}
-                      </span>
-                    </span>
+                      </div>
+                    </div>
                   </Link>
                 );
               })}
