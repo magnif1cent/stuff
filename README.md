@@ -368,9 +368,11 @@ Any admin can mark a movie as one of their personal recommendations from the mov
 
 ## Admin Poster Overrides
 
-If a movie's TMDB poster is missing, low-quality, or wrong, admins can upload a replacement (JPEG/PNG/WebP, 5MB max) directly on the movie page. The override is stored in [Vercel Blob](https://vercel.com/docs/storage/vercel-blob) and always takes priority over the TMDB poster when set; admins can remove it to fall back to TMDB's image again.
+If a movie's TMDB poster is missing, low-quality, or wrong, admins get two ways to replace it from the same menu on the movie page's poster: **Upload poster** (JPEG/PNG/WebP, 5MB max, stored in [Vercel Blob](https://vercel.com/docs/storage/vercel-blob)) or **Pick another poster**, which opens a gallery of TMDB's other posters for that title (English + textless only, top 24 by TMDB's own vote score) to choose from instead. Either way the override always takes priority over the default TMDB poster when set; **Remove poster** clears it and falls back to TMDB's image again.
 
-To enable this locally or in your own deployment, create a Blob store in your Vercel project's **Storage** tab and connect it — Vercel injects `BLOB_READ_WRITE_TOKEN` automatically for deployed environments, and you can run `vercel env pull` to get it into your local `.env`. Without this token, poster uploads will fail, but the rest of the app is unaffected.
+A gallery pick doesn't upload anything — it just points `posterOverrideUrl` at that poster's own TMDB URL, so it stays on TMDB's CDN (no Blob storage used, and it keeps the same `unoptimized` treatment as any other TMDB-hosted image, unlike an uploaded file which goes through real Vercel Image Optimization).
+
+To enable *uploads* locally or in your own deployment, create a Blob store in your Vercel project's **Storage** tab and connect it — Vercel injects `BLOB_READ_WRITE_TOKEN` automatically for deployed environments, and you can run `vercel env pull` to get it into your local `.env`. Without this token, uploads will fail, but picking from the TMDB gallery (and the rest of the app) is unaffected.
 
 ## Visual Theme
 

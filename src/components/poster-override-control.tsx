@@ -2,6 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
+import { tmdbImageUrl } from "@/lib/tmdb";
+
+interface PosterOption {
+  filePath: string;
+  width: number;
+  height: number;
+}
 
 // Wraps the poster image itself (passed as children) rather than sitting
 // below it: the whole poster is the tap target, with a small pencil badge
@@ -32,6 +40,11 @@ export function PosterOverrideControl({
   const [recommendSubmitting, setRecommendSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [galleryLoading, setGalleryLoading] = useState(false);
+  const [galleryOptions, setGalleryOptions] = useState<PosterOption[]>([]);
+  const [selectingPath, setSelectingPath] = useState<string | null>(null);
+
   useEffect(() => {
     if (!menuOpen) return;
     function onClickOutside(e: MouseEvent) {
@@ -42,6 +55,20 @@ export function PosterOverrideControl({
     document.addEventListener("mousedown", onClickOutside);
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, [menuOpen]);
+
+  useEffect(() => {
+    if (!galleryOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setGalleryOpen(false);
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [galleryOpen]);
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -61,6 +88,40 @@ export function PosterOverrideControl({
       setError(body.error ?? "Something went wrong.");
       return;
     }
+    router.refresh();
+  }
+
+  async function openGallery() {
+    setMenuOpen(false);
+    setError(null);
+    setGalleryOpen(true);
+    setGalleryLoading(true);
+    const res = await fetch(`/api/admin/movies/${movieId}/poster/options`);
+    setGalleryLoading(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setGalleryOpen(false);
+      setError(body.error ?? "Couldn't load poster options.");
+      return;
+    }
+    const body = await res.json();
+    setGalleryOptions(body.options ?? []);
+  }
+
+  async function pickPoster(filePath: string) {
+    setSelectingPath(filePath);
+    const res = await fetch(`/api/admin/movies/${movieId}/poster`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ posterPath: filePath }),
+    });
+    setSelectingPath(null);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setError(body.error ?? "Something went wrong.");
+      return;
+    }
+    setGalleryOpen(false);
     router.refresh();
   }
 
@@ -140,7 +201,7 @@ export function PosterOverrideControl({
             }}
             className="block w-full cursor-pointer rounded px-3 py-1.5 text-left text-sm text-neutral-100 hover:bg-neutral-700 focus:bg-neutral-700 focus:outline-none"
           >
-            {hasOverride ? "Replace poster" : "Upload custom poster"}
+            Upload poster
             <input
               ref={fileInputRef}
               type="file"
@@ -150,6 +211,13 @@ export function PosterOverrideControl({
               className="hidden"
             />
           </label>
+          <button
+            type="button"
+            onClick={openGallery}
+            className="block w-full rounded px-3 py-1.5 text-left text-sm text-neutral-100 hover:bg-neutral-700"
+          >
+            Pick another poster
+          </button>
           {hasOverride && (
             <button
               type="button"
@@ -175,6 +243,65 @@ export function PosterOverrideControl({
         <p className="absolute inset-x-0 top-full z-10 mt-1.5 rounded-md bg-neutral-950/90 px-2 py-1 text-xs text-red-500">
           {error}
         </p>
+      )}
+
+      {galleryOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Pick another poster"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setGalleryOpen(false);
+          }}
+        >
+          <div className="flex max-h-[85dvh] w-full max-w-2xl flex-col rounded-md border border-neutral-700 bg-neutral-900 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-neutral-800 px-4 py-3">
+              <span className="font-serif text-sm font-bold text-white">Pick another poster</span>
+              <button
+                type="button"
+                onClick={() => setGalleryOpen(false)}
+                aria-label="Close"
+                className="flex h-7 w-7 items-center justify-center rounded-md border border-neutral-700 text-neutral-300 hover:text-white"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="overflow-y-auto p-4">
+              {galleryLoading ? (
+                <p className="text-sm text-neutral-400">Loading posters…</p>
+              ) : galleryOptions.length === 0 ? (
+                <p className="text-sm text-neutral-400">No other posters available for this movie on TMDB.</p>
+              ) : (
+                <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                  {galleryOptions.map((option) => {
+                    const thumbUrl = tmdbImageUrl(option.filePath, "w342");
+                    const busy = selectingPath === option.filePath;
+                    return (
+                      <button
+                        key={option.filePath}
+                        type="button"
+                        onClick={() => pickPoster(option.filePath)}
+                        disabled={selectingPath !== null}
+                        className="relative aspect-2/3 overflow-hidden rounded-sm bg-neutral-800 ring-red-600 hover:ring-2 disabled:opacity-50"
+                      >
+                        {thumbUrl && (
+                          <Image src={thumbUrl} alt="" fill unoptimized sizes="150px" className="object-cover" />
+                        )}
+                        {busy && (
+                          <span className="absolute inset-0 flex items-center justify-center bg-black/60">
+                            <span className="h-4 w-4 animate-spin rounded-full border-2 border-neutral-500 border-t-neutral-100" />
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -236,3 +236,23 @@ export interface TmdbPersonDetails {
 export async function getTmdbPersonDetails(tmdbId: number) {
   return tmdbFetch<TmdbPersonDetails>(`/person/${tmdbId}`);
 }
+
+export interface TmdbImage {
+  file_path: string;
+  iso_639_1: string | null;
+  aspect_ratio: number;
+  width: number;
+  height: number;
+  vote_average: number;
+}
+
+// Restricted to English + textless (null language) posters rather than every
+// region's localized art -- same "curated over exhaustive" call as the
+// country dropdown, since a full multi-language dump is mostly noise for
+// picking a replacement poster.
+export async function getTmdbMoviePosters(tmdbId: number) {
+  const data = await tmdbFetch<{ posters: TmdbImage[] }>(`/movie/${tmdbId}/images`, {
+    include_image_language: "en,null",
+  });
+  return data.posters;
+}
