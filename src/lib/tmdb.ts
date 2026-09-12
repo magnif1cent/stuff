@@ -42,6 +42,16 @@ export function resolvePosterUrl(
   return movie.posterOverrideUrl || tmdbImageUrl(movie.posterPath, size);
 }
 
+// Same "override wins if set" pattern as resolvePosterUrl -- backdropOverrideUrl
+// is always a TMDB-picked alternate rather than an upload, but resolution
+// works identically either way.
+export function resolveBackdropUrl(
+  movie: { backdropPath: string | null; backdropOverrideUrl: string | null },
+  size: "w200" | "w342" | "w500" | "w780" | "w1280" | "original" = "w1280",
+) {
+  return movie.backdropOverrideUrl || tmdbImageUrl(movie.backdropPath, size);
+}
+
 // TMDB's own CDN already serves pre-sized image buckets for free, outside
 // Vercel's Image Optimization quota — so TMDB-hosted images are marked
 // `unoptimized` at their call sites to skip Vercel's transformation
@@ -246,13 +256,13 @@ export interface TmdbImage {
   vote_average: number;
 }
 
-// Restricted to English + textless (null language) posters rather than every
+// Restricted to English + textless (null language) images rather than every
 // region's localized art -- same "curated over exhaustive" call as the
 // country dropdown, since a full multi-language dump is mostly noise for
-// picking a replacement poster.
-export async function getTmdbMoviePosters(tmdbId: number) {
-  const data = await tmdbFetch<{ posters: TmdbImage[] }>(`/movie/${tmdbId}/images`, {
+// picking a replacement poster or backdrop. One call returns both lists, so
+// callers picking just one still only pay for a single request.
+export async function getTmdbMovieImages(tmdbId: number) {
+  return tmdbFetch<{ posters: TmdbImage[]; backdrops: TmdbImage[] }>(`/movie/${tmdbId}/images`, {
     include_image_language: "en,null",
   });
-  return data.posters;
 }

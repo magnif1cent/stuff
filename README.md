@@ -33,7 +33,7 @@ An IMDB-style website for kung fu and martial arts films, built for martial arts
 - [Reviews](#reviews)
 - [You Might Also Like](#you-might-also-like)
 - [Admin Recommendations](#admin-recommendations)
-- [Admin Poster Overrides](#admin-poster-overrides)
+- [Admin Poster & Backdrop Overrides](#admin-poster--backdrop-overrides)
 - [Visual Theme](#visual-theme)
 - [Admin Area & Roles](#admin-area-roles)
 - [Weekly Trending Carousel](#weekly-trending-carousel)
@@ -120,7 +120,7 @@ Pick one:
 cp .env.example .env
 ```
 
-Fill in `DATABASE_URL`, `TMDB_API_KEY`, `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`, and generate an `AUTH_SECRET`. `RESEND_API_KEY`/`EMAIL_FROM` are optional — see [Email Verification](#email-verification) below. `BLOB_READ_WRITE_TOKEN` is optional too — see [Admin Poster Overrides](#admin-poster-overrides). `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` and `NEXT_PUBLIC_TURNSTILE_SITE_KEY`/`TURNSTILE_SECRET_KEY` are optional too — see [Security](#security). `SENTRY_DSN`/`NEXT_PUBLIC_SENTRY_DSN` are optional too — see [Error Monitoring](#error-monitoring).
+Fill in `DATABASE_URL`, `TMDB_API_KEY`, `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`, and generate an `AUTH_SECRET`. `RESEND_API_KEY`/`EMAIL_FROM` are optional — see [Email Verification](#email-verification) below. `BLOB_READ_WRITE_TOKEN` is optional too — see [Admin Poster & Backdrop Overrides](#admin-poster--backdrop-overrides). `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` and `NEXT_PUBLIC_TURNSTILE_SITE_KEY`/`TURNSTILE_SECRET_KEY` are optional too — see [Security](#security). `SENTRY_DSN`/`NEXT_PUBLIC_SENTRY_DSN` are optional too — see [Error Monitoring](#error-monitoring).
 
 ```bash
 npx auth secret
@@ -366,11 +366,13 @@ Similarity is a weighted blend of three signals, all sourced from data already i
 
 Any admin can mark a movie as one of their personal recommendations from the movie's detail page — a "+ Recommend this movie" toggle sits in the same tap-menu as the poster's Replace/Remove poster controls (tap the poster to open it). Each admin's recommendation is independent: a movie can carry zero, one, or both admins' picks at once, and each shows as its own badge (a colored circle with the admin's initial — a placeholder until real per-admin icon images are provided) next to the movie's runtime/director byline and on the movie's card everywhere it appears in search/browse grids.
 
-## Admin Poster Overrides
+## Admin Poster & Backdrop Overrides
 
 If a movie's TMDB poster is missing, low-quality, or wrong, admins get two ways to replace it from the same menu on the movie page's poster: **Upload poster** (JPEG/PNG/WebP, 5MB max, stored in [Vercel Blob](https://vercel.com/docs/storage/vercel-blob)) or **Pick another poster**, which opens a gallery of TMDB's other posters for that title (English + textless only, top 24 by TMDB's own vote score) to choose from instead. Either way the override always takes priority over the default TMDB poster when set; **Remove poster** clears it and falls back to TMDB's image again.
 
 A gallery pick doesn't upload anything — it just points `posterOverrideUrl` at that poster's own TMDB URL, so it stays on TMDB's CDN (no Blob storage used, and it keeps the same `unoptimized` treatment as any other TMDB-hosted image, unlike an uploaded file which goes through real Vercel Image Optimization).
+
+The backdrop banner at the top of the movie page has its own, simpler admin control (a small pencil icon in its corner) with **Pick another backdrop** — the same TMDB gallery pattern as the poster picker, but for `/movie/{id}/images`'s `backdrops` list — and **Remove backdrop**. There's no upload option here: a backdrop override is always a TMDB image URL, stored in its own `backdropOverrideUrl` column, since there's no case for uploading art TMDB doesn't already have the way there sometimes is for a wrong/missing poster.
 
 To enable *uploads* locally or in your own deployment, create a Blob store in your Vercel project's **Storage** tab and connect it — Vercel injects `BLOB_READ_WRITE_TOKEN` automatically for deployed environments, and you can run `vercel env pull` to get it into your local `.env`. Without this token, uploads will fail, but picking from the TMDB gallery (and the rest of the app) is unaffected.
 

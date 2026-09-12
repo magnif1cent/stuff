@@ -64,6 +64,7 @@ one.
 
 **Feature Decisions**
 
+- [Backdrop banner gets its own TMDB gallery override, plus an object-top crop fix](#backdrop-banner-gets-its-own-tmdb-gallery-override-plus-an-object-top-crop-fix)
 - [Poster override gains a "Pick another poster" TMDB gallery option, alongside the existing upload](#poster-override-gains-a-pick-another-poster-tmdb-gallery-option-alongside-the-existing-upload)
 - [Release-year range filter added to TMDB Import's "By keyword"/"By actor" tabs](#release-year-range-filter-added-to-tmdb-imports-by-keywordby-actor-tabs)
 - [Member "Add a movie" search grew top-billed cast, reversing an earlier same-session call to skip it](#member-add-a-movie-search-grew-top-billed-cast-reversing-an-earlier-same-session-call-to-skip-it)
@@ -1234,6 +1235,33 @@ polish differently than a default-security reading would.
   and `/api/forgot-password`, which already had this shape from the start.
 
 ## Feature Decisions
+
+### Backdrop banner gets its own TMDB gallery override, plus an object-top crop fix
+**PR TBD.** Two related changes to the movie page's backdrop banner: it was sometimes cropping off
+the top of the image (a face, in the reported case), and admins had no way to change a backdrop the
+way they already could a poster.
+
+- **`object-top` instead of the default center crop** on both backdrop renders (movie page banner,
+  homepage `HeroCarousel`). These are short, wide containers holding TMDB's often taller/portrait-
+  leaning key art; the bottom gradient overlay already used for text legibility implies the important
+  content is meant to live in the upper portion, so centering was cropping the wrong end.
+- **New `backdropOverrideUrl` column on `Movie`** (nullable, mirrors `posterOverrideUrl`) — schema
+  change, flagged here per CLAUDE.md's convention. **No upload path for it**, unlike posters: a
+  backdrop override is always a TMDB image URL picked from `/movie/{id}/images`'s `backdrops` list,
+  since there's no real case for uploading art TMDB doesn't have, the way there sometimes is for a
+  wrong/missing poster. Kept the scope to picking only rather than matching the poster control's
+  upload+pick pair.
+- **`getTmdbMoviePosters` generalized to `getTmdbMovieImages`**, returning both `posters` and
+  `backdrops` from the one `/movie/{id}/images` call, since backdrop picking needs the same endpoint
+  the poster picker already calls — no reason to fetch it twice.
+- **Extracted `TmdbImageGalleryDialog`** (the modal grid-of-thumbnails picker) out of
+  `PosterOverrideControl` into its own component, parameterized by aspect ratio, grid columns, and
+  fetch URL, so `BackdropOverrideControl` doesn't duplicate that dialog. `PosterOverrideControl` now
+  uses it too. Also extracted the "sort by vote score, cap at N, map to the picker's shape" logic
+  (`selectTopImages`) since both the poster and backdrop `options` routes did the exact same thing.
+- **Backdrop's own admin control is deliberately smaller than the poster one** — just a pencil badge
+  with Pick/Remove, no upload option and no unrelated recommend-toggle riding along (that's
+  specifically a poster-menu convenience from an earlier decision, not a general pattern to repeat).
 
 ### Poster override gains a "Pick another poster" TMDB gallery option, alongside the existing upload
 **PR TBD.** Admins previously could only replace a movie's poster by uploading their own file. Added

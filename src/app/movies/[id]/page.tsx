@@ -6,7 +6,7 @@ import type { Metadata } from "next";
 import type { Session } from "next-auth";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { tmdbImageUrl, resolvePosterUrl, isTmdbUrl } from "@/lib/tmdb";
+import { tmdbImageUrl, resolvePosterUrl, resolveBackdropUrl, isTmdbUrl } from "@/lib/tmdb";
 import { truncate } from "@/lib/text";
 import {
   getCommunityRatingSummary,
@@ -42,6 +42,7 @@ import { FightSceneSection } from "@/components/fight-scene-section";
 import { FunFactsSection } from "@/components/fun-facts-section";
 import { ReviewsSection } from "@/components/reviews-section";
 import { PosterOverrideControl } from "@/components/poster-override-control";
+import { BackdropOverrideControl } from "@/components/backdrop-override-control";
 import { MovieOverviewSnippet } from "@/components/movie-overview-snippet";
 import { MovieDetailsTabs } from "@/components/movie-details-tabs";
 import { RecommendedBadges } from "@/components/recommended-badge";
@@ -304,7 +305,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
       : [],
   ]);
 
-  const backdropUrl = tmdbImageUrl(movie.backdropPath, "w1280");
+  const backdropUrl = resolveBackdropUrl(movie, "w1280");
   const posterUrl = resolvePosterUrl(movie, "w342");
   const recommendedByMe =
     session?.user?.role === "ADMIN" && movieRecommenders.some((r) => r.id === session.user.id);
@@ -597,16 +598,34 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
     })),
   }));
 
+  const backdropMat = (
+    <div className="relative h-40 w-full sm:h-80">
+      {backdropUrl ? (
+        <Image
+          src={backdropUrl}
+          alt=""
+          fill
+          priority
+          unoptimized
+          sizes="100vw"
+          className="object-cover object-top"
+        />
+      ) : (
+        <div className="h-full w-full bg-neutral-900" />
+      )}
+      <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 to-neutral-950/30" />
+    </div>
+  );
+
   return (
     <div className="flex flex-1 flex-col">
-      <div className="relative h-40 w-full sm:h-80">
-        {backdropUrl ? (
-          <Image src={backdropUrl} alt="" fill priority unoptimized sizes="100vw" className="object-cover" />
-        ) : (
-          <div className="h-full w-full bg-neutral-900" />
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 to-neutral-950/30" />
-      </div>
+      {session?.user?.role === "ADMIN" ? (
+        <BackdropOverrideControl movieId={movie.id} hasOverride={!!movie.backdropOverrideUrl}>
+          {backdropMat}
+        </BackdropOverrideControl>
+      ) : (
+        backdropMat
+      )}
 
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 pt-8 sm:flex-row">
         <p className={`${titleClassName} sm:hidden`}>{titleText}</p>
