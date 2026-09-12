@@ -599,11 +599,14 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
   }));
 
   const backdropMat = (
-    // max-w caps how wide (and therefore how short, relative to the image's
-    // own ~16:9 shape) this can stretch on an ultrawide monitor -- past that
-    // width it's letterboxed by the page background instead of the image
-    // getting cropped down to an ever-thinner sliver as the viewport grows.
-    <div className="relative mx-auto h-40 w-full max-w-[1920px] sm:h-80">
+    // aspect-ratio (not a fixed height) keeps this proportional to width up
+    // to max-h, instead of pinning a short height that gets crops tighter
+    // and tighter as the viewport widens; max-h then caps it back down on
+    // wide screens so it doesn't grow into an oversized banner. max-w bounds
+    // the same problem's return past that height cap -- once height plateaus,
+    // an ever-widening container would otherwise start cropping tighter
+    // again, so past 1920px it's letterboxed by the page background instead.
+    <div className="relative mx-auto aspect-21/10 max-h-[30rem] w-full max-w-[1920px]">
       {backdropUrl ? (
         <Image
           src={backdropUrl}

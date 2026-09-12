@@ -177,7 +177,7 @@ export function HeroCarousel({ movies }: { movies: FeaturedMovie[] }) {
         if (e.key === "ArrowLeft") goTo(index - 1);
         if (e.key === "ArrowRight") goTo(index + 1);
       }}
-      className="group relative mx-auto h-72 w-full max-w-[1920px] overflow-hidden outline-none sm:h-96"
+      className="group relative mx-auto aspect-21/10 max-h-[30rem] w-full max-w-[1920px] overflow-hidden outline-none"
     >
       {prevIndex !== null && prevIndex !== index && (
         <Slide movie={movies[prevIndex]} active={false} playClip={false} />

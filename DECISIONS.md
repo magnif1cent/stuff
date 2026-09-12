@@ -64,6 +64,7 @@ one.
 
 **Feature Decisions**
 
+- [Backdrop banner switched to aspect-ratio height, reversing the width-cap-only fix](#backdrop-banner-switched-to-aspect-ratio-height-reversing-the-width-cap-only-fix)
 - [Backdrop banner capped at max-w-1920px to bound ultrawide-monitor cropping](#backdrop-banner-capped-at-max-w-1920px-to-bound-ultrawide-monitor-cropping)
 - [Backdrop banner gets its own TMDB gallery override, plus an object-top crop fix](#backdrop-banner-gets-its-own-tmdb-gallery-override-plus-an-object-top-crop-fix)
 - [Poster override gains a "Pick another poster" TMDB gallery option, alongside the existing upload](#poster-override-gains-a-pick-another-poster-tmdb-gallery-option-alongside-the-existing-upload)
@@ -1236,6 +1237,27 @@ polish differently than a default-security reading would.
   and `/api/forgot-password`, which already had this shape from the start.
 
 ## Feature Decisions
+
+### Backdrop banner switched to aspect-ratio height, reversing the width-cap-only fix
+**PR TBD.** Supersedes "Backdrop banner capped at max-w-1920px..." below, which explicitly rejected
+an aspect-ratio height in favor of keeping the fixed `h-80` (320px) and only capping width. Real
+screenshots at ~1920-2020px width (comfortably under that cap) showed the actual problem: at a fixed
+320px, the banner was already cropped enough to hide the interesting content (people, action) well
+before reaching the "ultrawide" range the cap was written for — the earlier entry's read of the
+severity was wrong, not just its chosen fix.
+
+- **`aspect-21/10` instead of a fixed `h-40`/`sm:h-80`.** Height now scales with width, keeping the
+  same crop tightness at any size instead of holding height constant while width (and therefore
+  cropping) grows unchecked. The ratio was picked to match a reference screenshot at ~695×330px that
+  looked right — full scene visible, nothing important cropped out.
+- **`max-h-[30rem]` (480px) caps how tall it gets** on wide screens, since scaling height by the same
+  ratio all the way up to 1920px width would put it near 900px tall — a banner that dominates the
+  page rather than sitting above the fold content. This reintroduces some of the earlier cropping
+  past the ~1000px width where the cap engages, but far less severe than the original 6:1 box the
+  fixed-320px height produced at the same widths.
+- **`max-w-[1920px]` kept, not removed** — once `max-h` caps height, an unbounded-width container
+  would start recreating the exact same growing-crop problem past that point, so the width cap is
+  still doing real work, just further out than before.
 
 ### Backdrop banner capped at max-w-1920px to bound ultrawide-monitor cropping
 **PR TBD.** Follow-up to "Backdrop banner gets its own TMDB gallery override..." below: `object-top`
