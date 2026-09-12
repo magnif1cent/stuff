@@ -50,6 +50,16 @@ export function TmdbDiscoverFilterFields({
           onChange={(e) => filters.setYearTo(e.target.value)}
           className="w-20 rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-neutral-100 focus:border-red-600 focus:outline-none"
         />
+        {(filters.yearFrom || filters.yearTo) && (
+          <button
+            type="button"
+            onClick={filters.clearYear}
+            className="text-neutral-500 hover:text-white"
+            aria-label="Clear year range"
+          >
+            ×
+          </button>
+        )}
       </label>
 
       {children}

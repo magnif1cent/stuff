@@ -64,6 +64,7 @@ one.
 
 **Feature Decisions**
 
+- [Poster override gains a "Pick another poster" TMDB gallery option, alongside the existing upload](#poster-override-gains-a-pick-another-poster-tmdb-gallery-option-alongside-the-existing-upload)
 - [Release-year range filter added to TMDB Import's "By keyword"/"By actor" tabs](#release-year-range-filter-added-to-tmdb-imports-by-keywordby-actor-tabs)
 - [Member "Add a movie" search grew top-billed cast, reversing an earlier same-session call to skip it](#member-add-a-movie-search-grew-top-billed-cast-reversing-an-earlier-same-session-call-to-skip-it)
 - ["By actor" added to TMDB Import, sharing the keyword-search backend and result/import UI](#by-actor-added-to-tmdb-import-sharing-the-keyword-search-backend-and-resultimport-ui)
@@ -1233,6 +1234,27 @@ polish differently than a default-security reading would.
   and `/api/forgot-password`, which already had this shape from the start.
 
 ## Feature Decisions
+
+### Poster override gains a "Pick another poster" TMDB gallery option, alongside the existing upload
+**PR TBD.** Admins previously could only replace a movie's poster by uploading their own file. Added
+a second path in the same menu: browse TMDB's other posters for that title and click one.
+
+- **Stores the picked poster's TMDB URL directly in `posterOverrideUrl`, no Blob upload.** The
+  column already just holds "whatever URL wins," so a TMDB URL is a valid value for it without any
+  schema change — and it keeps the pick on TMDB's own CDN, `unoptimized` like any other TMDB image,
+  rather than round-tripping the bytes through our own Blob storage for no reason.
+- **`isTmdbUrl()` now gates the Blob `del()` cleanup** (on upload-replaces-pick, pick-replaces-upload,
+  and Remove) so it only ever tries to delete an override that's actually ours in Blob — deleting a
+  TMDB URL there was always going to no-op (silently, since that cleanup is best-effort), but gating
+  it explicitly makes the two override "kinds" a real distinction in the code, not an accident of
+  what `del()` happens to tolerate.
+- **English + textless posters only, top 24 by TMDB's vote score.** TMDB can return dozens of
+  near-duplicate regional variants per title; same "curated over exhaustive" call as the Country
+  dropdown elsewhere in TMDB Import.
+- **"Replace poster"/"Upload custom poster" collapsed to one "Upload poster" label**, since the
+  hasOverride-dependent wording mattered less once there are two ways to set an override — "Upload
+  poster" reads the same whether or not one already exists, and Remove poster's own visibility
+  already communicates that state.
 
 ### Release-year range filter added to TMDB Import's "By keyword"/"By actor" tabs
 **PR TBD.** Added an optional From/To year range next to the existing Country filter on both
