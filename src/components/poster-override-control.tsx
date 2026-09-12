@@ -190,6 +190,13 @@ export function PosterOverrideControl({
 
       {menuOpen && (
         <div className="absolute top-full left-0 z-10 mt-1.5 w-max min-w-40 rounded-md border border-neutral-700 bg-neutral-800 p-1 shadow-xl">
+          <button
+            type="button"
+            onClick={openGallery}
+            className="block w-full rounded px-3 py-1.5 text-left text-sm text-neutral-100 hover:bg-neutral-700"
+          >
+            Pick another poster
+          </button>
           <label
             tabIndex={0}
             role="button"
@@ -211,13 +218,6 @@ export function PosterOverrideControl({
               className="hidden"
             />
           </label>
-          <button
-            type="button"
-            onClick={openGallery}
-            className="block w-full rounded px-3 py-1.5 text-left text-sm text-neutral-100 hover:bg-neutral-700"
-          >
-            Pick another poster
-          </button>
           {hasOverride && (
             <button
               type="button"
