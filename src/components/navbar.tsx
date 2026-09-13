@@ -3,8 +3,9 @@ import { auth } from "@/lib/auth";
 import { isEmailVerified } from "@/lib/verification";
 import { Logo } from "@/components/logo";
 import { SearchBar } from "@/components/search-bar";
-import { SignOutButton } from "@/components/sign-out-button";
-import { ListsNavMenu } from "@/components/lists-nav-menu";
+import { NavDropdown } from "@/components/nav-dropdown";
+import { NavLink } from "@/components/nav-link";
+import { AccountNavMenu } from "@/components/account-nav-menu";
 import { VerifyEmailBanner } from "@/components/verify-email-banner";
 import { MobileNavToggle } from "@/components/mobile-nav-toggle";
 
@@ -25,31 +26,34 @@ export async function Navbar() {
             <SearchBar />
           </div>
           <nav className="order-2 flex w-full flex-wrap items-center justify-start gap-x-3 gap-y-2 sm:order-3 sm:ml-auto sm:w-auto sm:flex-nowrap sm:gap-x-4">
-            <Link href="/search" className="text-sm whitespace-nowrap text-neutral-300 hover:text-white">
-              Movies
-            </Link>
-            <Link href="/search/fights" className="text-sm whitespace-nowrap text-neutral-300 hover:text-white">
-              Fights
-            </Link>
-            <ListsNavMenu />
-            <Link href="/movies/submit" className="text-sm whitespace-nowrap text-neutral-300 hover:text-white">
+            <NavDropdown
+              label="Movies"
+              href="/search"
+              ariaLabel="More ways to browse movies"
+              matchPaths={["/search", "/timeline", "/timeline/*"]}
+              items={[{ href: "/timeline", label: "Timeline", matchPaths: ["/timeline", "/timeline/*"] }]}
+            />
+            <NavLink href="/search/fights">Fights</NavLink>
+            <NavDropdown
+              label="Lists"
+              href="/lists"
+              ariaLabel="More list options"
+              matchPaths={["/lists", "/lists/*", "/leaderboard"]}
+              items={[{ href: "/leaderboard", label: "Leaderboard" }]}
+            />
+            <Link
+              href="/movies/submit"
+              className="rounded-md border border-neutral-700 px-3 py-1.5 text-sm font-medium whitespace-nowrap text-neutral-300 hover:border-red-600 hover:text-white"
+            >
               + Add Movie
             </Link>
+            {session?.user?.role === "ADMIN" || session?.user?.role === "REVIEWER" ? (
+              <Link href="/admin" className="text-sm whitespace-nowrap text-neutral-300 hover:text-white">
+                Admin
+              </Link>
+            ) : null}
             {session?.user ? (
-              <>
-                {(session.user.role === "ADMIN" || session.user.role === "REVIEWER") && (
-                  <Link href="/admin" className="text-sm whitespace-nowrap text-neutral-300 hover:text-white">
-                    Admin
-                  </Link>
-                )}
-                <Link
-                  href={`/members/${session.user.username}`}
-                  className="text-sm whitespace-nowrap text-neutral-500 hover:text-white"
-                >
-                  {session.user.username}
-                </Link>
-                <SignOutButton />
-              </>
+              <AccountNavMenu username={session.user.username} />
             ) : (
               <>
                 <Link href="/login" className="text-sm whitespace-nowrap text-neutral-300 hover:text-white">

@@ -64,6 +64,9 @@ one.
 
 **Feature Decisions**
 
+- [Navbar regrouped by kind (entities, contribute, account) instead of one flat link list](#navbar-regrouped-by-kind-entities-contribute-account-instead-of-one-flat-link-list)
+- [Historical Timeline's per-era dot stacking switched from release order to rating order](#historical-timelines-per-era-dot-stacking-switched-from-release-order-to-rating-order)
+- [Historical Timeline page built: a dot-axis on desktop, a capped list on mobile, five independent recent-era entries replacing "Modern"](#historical-timeline-page-built-a-dot-axis-on-desktop-a-capped-list-on-mobile-five-independent-recent-era-entries-replacing-modern)
 - [Backdrop banner switched to aspect-ratio height, reversing the width-cap-only fix](#backdrop-banner-switched-to-aspect-ratio-height-reversing-the-width-cap-only-fix)
 - [Backdrop banner capped at max-w-1920px to bound ultrawide-monitor cropping](#backdrop-banner-capped-at-max-w-1920px-to-bound-ultrawide-monitor-cropping)
 - [Backdrop banner gets its own TMDB gallery override, plus an object-top crop fix](#backdrop-banner-gets-its-own-tmdb-gallery-override-plus-an-object-top-crop-fix)
@@ -1238,6 +1241,33 @@ polish differently than a default-security reading would.
   and `/api/forgot-password`, which already had this shape from the start.
 
 ## Feature Decisions
+
+### Navbar regrouped by kind (entities, contribute, account) instead of one flat link list
+**PR #TBD.** Prompted by Timeline's own nav link making an already-flat row (Movies, Fights, Timeline, Lists, +Add Movie, Admin, username, Sign out) visibly cramped at tablet widths. Mocked up first — several rounds, several reversed calls — before touching `navbar.tsx`.
+
+- **No generic "Explore" bucket.** The first mockup grouped Timeline, Lists, Leaderboard, and Tops under one "Explore" dropdown, reasoning they were all "lenses over the same catalog." Rejected once mocked up: Lists is "a big part of the content" on its own, not a minor lens, and Timeline is specifically another way to browse *movies* — so it belongs under **Movies**, not in a catch-all next to unrelated things. Movies is now a small dropdown (shared `NavDropdown` component, same click-to-toggle pattern as the existing Lists→Leaderboard menu) revealing Timeline; Lists keeps its standalone top-level slot and its existing Leaderboard dropdown, completely unchanged.
+- **Admin went into the account menu, then came back out.** The account-menu mockup initially folded Admin in alongside My Profile/Sign out. Reconsidered after asking "should clicking my avatar go straight to Admin?": neither answer was right — overriding what an avatar click does breaks a near-universal convention (your own avatar goes to your own profile), and burying Admin a click deeper costs more than the tidier menu is worth, since it's a tool admins/reviewers use often, not a personal-account setting. Admin is back to being its own top-level link, exactly where it lives today, just reordered next to the account menu instead of directly beside the username.
+- **"My Lists" was dropped from the account menu entirely** — not deferred, actually wrong. It was mocked up as a second link alongside "My Profile," but `/my-lists` turned out to already be a legacy redirect straight to `/members/[username]` (the same profile page, which has its own "Lists" tab with no query-param deep link to it) — so a second entry would’ve pointed at the identical destination under a different label. The account menu ended up as just My Profile + Sign out.
+- **+Add Movie is an outline button now, not a plain text link** — it's a contribute action, not a browse link, and reads as one now instead of blending into the row.
+- **Active-page highlighting is new**, not a fix to something broken — nothing indicated the current page before. Added via `usePathname()` in two small client components (`NavLink` for plain links, built into `NavDropdown` for the two dropdown triggers) rather than a bigger app-wide routing change, since that's the minimum needed to know the current path client-side in the App Router.
+- **Mobile keeps sharing the same nav markup as desktop** (collapsed behind the existing hamburger), rather than a separately-authored mobile drawer with labeled sections as one mockup explored — the dropdown/account-menu consolidation already shortens the flat mobile list on its own, and diverging the two trees was judged a bigger architectural change than the problem needed.
+
+### Historical Timeline's per-era dot stacking switched from release order to rating order
+**PR #TBD.** Follow-up to "Historical Timeline page built" below, prompted by wanting the axis to surface quality, not just chronology, within a crowded era. Mocked up first (color-coded dots, before/after) and confirmed before touching `src/lib/timeline.ts`.
+
+- **Vertical position is rating rank, not release date.** Within one era's dot cluster, the highest-rated movie sits in the tallest row; a movie with no community rating yet is always in the bottom-most row, no matter how many rated movies are stacked above it. Ties break by rating count (more votes ranks higher), then release date (older first) — the same tie-break order the rest of the app uses when a plain rating sort isn't decisive.
+- **The per-era cap now also picks by rating, not just position.** `moviesForEra()` used to fetch only `take` movies (DB-level, oldest first) and had nothing left to sort by rating within. It now fetches every movie in the era, sorts all of them by rating descending (unrated last), and only then slices to the cap — so a dense era's cap is filled by its best-regarded movies, not its oldest. This applies to both views: the desktop dots and the mobile preview row (`mobilePreview()` just slices the same array), so a mobile era row now shows its standout movies first too. The one place still in release-date order is `/timeline/[era]`'s full "View all" grid, which isn't capped and has no reason to reorder.
+- **Considered, rejected: keep selection chronological and only reorder position.** Would have kept mobile's preview unchanged, but meant a dense era's cap could still exclude a highly-rated movie in favor of an older, unrated one purely by release-date luck — undercutting the point of a rating-driven view. Selecting by rating first was judged the more consistent read of "surface the best movies," accepting the mobile-ordering side effect as a feature rather than a regression.
+- **Not verified against a live dev server or database** — same sandboxed-session limitation as the original build. Checked via `npm run lint` and `npm run build`, plus a standalone script exercising `computeDotLayout()` against synthetic rated/unrated movies to confirm the row inversion lands where intended.
+
+### Historical Timeline page built: a dot-axis on desktop, a capped list on mobile, five independent recent-era entries replacing "Modern"
+**PR #TBD.** Closes the "Historical timeline page" backlog item (moved out of Deferred & Backlog below) — the grouping data (`Movie.eraSetting`) has existed since Historical Setting shipped, but the visualization itself was explicitly left unbuilt, with only a vague "capped visual treatment, full list below" guess at the shape. Explored several directions in design review before landing on something different from all of them: a literal timeline axis, one dot per movie, hover for detail.
+
+- **Desktop and mobile are two different designs, not one adapted across both.** Desktop is a single horizontal axis (one dot per movie, hover tooltip, pure CSS — no client JS). A tap-adapted version of the same axis was prototyped for mobile first and rejected: hover has no touch equivalent, and at real density (dots ~9px apart in a crowded era) a touch target big enough to tap reliably would overlap its neighbors. Mobile instead gets a vertical stack of capped, swipeable era rows (reusing the same `MovieCard` row pattern used elsewhere) with "View all" — a completely different layout, not a graceful-degradation mode of the axis.
+- **An axis-break, not silent non-proportionality.** Band width tracks real historical duration up through Republic of China (1912–1949). Past that point, strict proportionality would squeeze the five most recent eras — where most of the catalog actually lives — into the same handful of pixels a single "1949–present" band would get, which is the opposite of useful. Those five eras get deliberately more room per year instead, with a visible dashed break marking exactly where the scale changes, so it reads as a deliberate choice rather than a rendering bug.
+- **Five independent recent-era entries in `ERA_SETTINGS`, not a "Modern" parent with children.** `POSTWAR_ERA` (1950s & 60s) through `CONTEMPORARY` (2000s+) are flat entries, same status as any dynasty — chosen specifically so nothing in the vocabulary, the dropdown, or the timeline code has to special-case a subgroup. Splitting now rather than later cost nothing: `eraSetting` is opt-in and adoption is still low, and grepping the codebase found no references to the old `"MODERN"` key outside `era-settings.ts` itself and no seed data using it, so there was no backfill to reconcile.
+- **Every era's overview render is capped** regardless of how many movies actually exist, matching the same render-cost-independent-of-count reasoning as Fight Scenes' movie-page teaser — flat 5 on mobile, and on desktop scaled by how many dot-columns an era's band fits (so a narrow band like Republic of China caps lower rather than growing tall) up to an 80-movie ceiling. "View all" opens `/timeline/[era]`, an ordinary paginated grid for that one era, same pagination shape as a movie's Fights page.
+- **Not verified against a live dev server or database** — no Postgres instance was available in this session, same limitation noted on the actor-page career-stats work above. Checked via `npm run lint` and `npm run build` only; the dot-position math (column/row packing, jitter) was traced by hand against representative counts before writing it into `src/lib/timeline.ts`. Revisit with real data before fully trusting the layout at the edges (a very long movie title in the tooltip, an era with exactly one movie, etc.).
 
 ### Backdrop banner switched to aspect-ratio height, reversing the width-cap-only fix
 **PR TBD.** Supersedes "Backdrop banner capped at max-w-1920px..." below, which explicitly rejected
@@ -5126,19 +5156,13 @@ state to put a real person's figure in.
   feature (secret generation/storage, an enrollment flow, backup/recovery
   codes, a recovery path for a lost authenticator), not a small hardening
   patch. Revisit as its own scoped piece of work.
-- **Historical timeline page** — a page visually plotting movies along a
-  timeline of Chinese historical periods/dynasties each movie is *set in*
-  (not its real-world release date, which `Movie.releaseDate` already
-  covers). The data gap this was blocked on is now closed: `Movie.eraSetting`
-  (see "Era Setting: Fight-Count-style field for the historical period a
-  movie is set in" under Feature Decisions) is exactly that fixed
-  period/dynasty attribute — built member-editable (Fight Count's model)
-  rather than admin-curated as originally guessed here, but still a closed
-  vocabulary (`ERA_SETTINGS`), so it's still groupable/orderable. What's
-  still not built: the timeline visualization itself, a real, non-trivial UI
-  in its own right, not a reskin of an existing list/grid view — and most
-  movies don't have an era set yet, since it's opt-in per movie like Fight
-  Count.
+- **Historical timeline page** — shipped (see **Feature Decisions** above:
+  "Historical Timeline page built: a dot-axis on desktop, a capped list on
+  mobile, five independent recent-era entries replacing 'Modern'"), a
+  literal timeline axis rather than the vague "capped visual treatment"
+  guessed at here. Nothing left open here — most movies still don't have an
+  era set (opt-in, like Fight Count), but that's a data-adoption question,
+  not a scope gap in the page itself.
 - **Fun facts / history section per movie** — admin-curated trivia or
   historical context shown on the movie page, likely alongside (or as an
   extension of) the existing Editorial Review. Previously flagged as
