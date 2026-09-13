@@ -21,6 +21,18 @@ const SECTIONS = [
     adminOnly: false,
   },
   {
+    href: "/admin/fight-scene-styles",
+    title: "Fight Styles",
+    description: "Manage the martial arts styles members can tag fight scenes with, optionally grouped.",
+    adminOnly: false,
+  },
+  {
+    href: "/admin/fight-scene-moves",
+    title: "Fight Moves",
+    description: "Manage the named moves members can tag fight scenes with.",
+    adminOnly: false,
+  },
+  {
     href: "/admin/lineage",
     title: "Lineage",
     description: "Link actors into martial arts training lineages and browse the resulting tree.",
