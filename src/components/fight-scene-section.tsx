@@ -20,7 +20,7 @@ const MAX_TAG_NAME_LENGTH = 40;
 
 export type CastOption = Pick<Person, "id" | "name">;
 export type TagOption = Pick<FightSceneTag, "id" | "name">;
-export type StyleOption = Pick<FightSceneStyle, "id" | "name">;
+export type StyleOption = Pick<FightSceneStyle, "id" | "name"> & { groupName?: string | null };
 export type MoveOption = Pick<FightSceneMove, "id" | "name">;
 
 // Style pill color; Tags/cast use the neutral+red "checked" look, but Style
