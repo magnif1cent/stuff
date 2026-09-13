@@ -54,7 +54,18 @@ export function NavDropdown({
         {label}
       </Link>
       <button
-        onClick={() => setOpen((o) => !o)}
+        onClick={(e) => {
+          // On mobile, this button lives inside MobileNavToggle's panel,
+          // which closes the whole hamburger menu on any click inside it
+          // (so a real nav link collapses it after navigating). Without
+          // stopping propagation here, that same handler fires on every
+          // chevron tap too and closes the panel in the same instant this
+          // dropdown tries to open -- so it looks like tapping does
+          // nothing. This button never navigates, so the panel has no
+          // reason to close.
+          e.stopPropagation();
+          setOpen((o) => !o);
+        }}
         aria-label={ariaLabel}
         aria-expanded={open}
         className={`flex h-5 w-5 items-center justify-center hover:text-white ${active ? "text-neutral-100" : "text-neutral-500"}`}
