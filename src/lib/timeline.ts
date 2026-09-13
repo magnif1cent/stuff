@@ -119,7 +119,16 @@ const LAYOUT_BY_KEY = new Map(TIMELINE_ERA_LAYOUT.map((e) => [e.key, e]));
 // like a ruler.
 const DOT_PITCH = 9;
 const ROW_HEIGHT = 13;
-const ROW_BASELINE = 30;
+
+// Where the visual axis line sits, in the same bottom-anchored px space as
+// every other coordinate in this file. Exported (not left as a component-
+// local magic number) specifically so the axis line, the era name/years
+// label below it, and the scale-tick ruler further below that all derive
+// from the one value instead of three independently hand-tuned numbers
+// that happen to agree -- the kind of drift that already caused a real bug
+// once in this feature (the tooltip-clipping fix).
+export const AXIS_BASELINE_PX = 46;
+const ROW_BASELINE = AXIS_BASELINE_PX + 4;
 
 function columnsForWidth(width: number): number {
   return Math.max(1, Math.floor(width / DOT_PITCH));
