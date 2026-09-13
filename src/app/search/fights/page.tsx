@@ -7,6 +7,7 @@ import { FightSceneResultCard } from "@/components/fight-scene-result-card";
 import { RatingStarInput } from "@/components/rating-star-input";
 import { AutocompleteFilterInput } from "@/components/autocomplete-filter-input";
 import { FilterSheetProvider, FilterSheetTrigger, FilterSheetPanel } from "@/components/filter-sheet";
+import { Pagination } from "@/components/pagination";
 import type { Prisma } from "@/generated/prisma/client";
 
 export const metadata: Metadata = {
@@ -561,27 +562,12 @@ export default async function FightSceneSearchPage({
                 })}
               </div>
 
-              {totalPages > 1 && (
-                <div className="mt-8 flex items-center justify-center gap-4 text-sm">
-                  {page > 1 ? (
-                    <a href={pageHref(params, page - 1)} className="text-red-500 hover:underline">
-                      ← Previous
-                    </a>
-                  ) : (
-                    <span className="text-neutral-600">← Previous</span>
-                  )}
-                  <span className="text-neutral-400">
-                    Page {page} of {totalPages} ({totalResults} results)
-                  </span>
-                  {page < totalPages ? (
-                    <a href={pageHref(params, page + 1)} className="text-red-500 hover:underline">
-                      Next →
-                    </a>
-                  ) : (
-                    <span className="text-neutral-600">Next →</span>
-                  )}
-                </div>
-              )}
+              <Pagination
+                page={page}
+                totalPages={totalPages}
+                buildHref={(p) => pageHref(params, p)}
+                label={`${totalResults} results`}
+              />
             </>
           )}
         </div>

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { isEraSettingKey, eraSettingName, eraSettingYears } from "@/lib/era-settings";
 import { getRatingSummaries } from "@/lib/ratings";
 import { MovieCard } from "@/components/movie-card";
+import { Pagination } from "@/components/pagination";
 
 const PAGE_SIZE = 24;
 
@@ -81,27 +82,7 @@ export default async function TimelineEraPage({
         })}
       </div>
 
-      {totalPages > 1 && (
-        <div className="mt-8 flex items-center justify-center gap-4 text-sm">
-          {page > 1 ? (
-            <Link href={pageHref(era, page - 1)} className="text-red-500 hover:underline">
-              ← Previous
-            </Link>
-          ) : (
-            <span className="text-neutral-600">← Previous</span>
-          )}
-          <span className="text-neutral-400">
-            Page {page} of {totalPages}
-          </span>
-          {page < totalPages ? (
-            <Link href={pageHref(era, page + 1)} className="text-red-500 hover:underline">
-              Next →
-            </Link>
-          ) : (
-            <span className="text-neutral-600">Next →</span>
-          )}
-        </div>
-      )}
+      <Pagination page={page} totalPages={totalPages} buildHref={(p) => pageHref(era, p)} />
     </div>
   );
 }

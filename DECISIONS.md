@@ -65,6 +65,7 @@ one.
 
 **Feature Decisions**
 
+- [Pagination extracted into one shared component, adding jump-to-page links everywhere at once](#pagination-extracted-into-one-shared-component-adding-jump-to-page-links-everywhere-at-once)
 - [Historical Timeline's axis-break disclosed with a tick ruler instead of a text note](#historical-timelines-axis-break-disclosed-with-a-tick-ruler-instead-of-a-text-note)
 - [Navbar regrouped by kind (entities, contribute, account) instead of one flat link list](#navbar-regrouped-by-kind-entities-contribute-account-instead-of-one-flat-link-list)
 - [Historical Timeline's per-era dot stacking switched from release order to rating order](#historical-timelines-per-era-dot-stacking-switched-from-release-order-to-rating-order)
@@ -1251,6 +1252,14 @@ polish differently than a default-security reading would.
 - **Wired into CI** (`npm run test` in `build-and-lint`, alongside lint and build) — a test suite nobody runs on every push isn't protection, it's decoration.
 
 ## Feature Decisions
+
+### Pagination extracted into one shared component, adding jump-to-page links everywhere at once
+**PR #TBD.** Prompted by a request to add page-number links to one paginated list, movie search — but the exact same "← Previous / Page X of Y / Next" block, with no way to jump to a specific page, turned out to be independently copy-pasted across seven pages (movie search, fight-scene search, a movie's Fights and Reviews, `/lists`, an actor's Tributes, `/news`, a Timeline era). Fixing one and leaving the other six with the old Previous/Next-only UI would have been an inconsistent, worse outcome than the reuse this duplication already called for, so all seven were moved onto one shared `Pagination` component instead of patching the one page that was asked about.
+
+- **`buildHref(page)` stays a per-page callback, not folded into the shared component.** Every page's own filters/sort end up in the query string differently (an era slug, `sort`/`tag`/`verified`, a search query, etc.) — each page keeps its existing `pageHref(...)` helper and just wraps it, so `Pagination` itself stays filter-agnostic.
+- **Collapses to first/last/current-±1 with an ellipsis past 7 pages**, matching common pagination UI elsewhere — small lists (the common case today) just show every page number with no ellipsis at all.
+- **Standardized on `next/link` `Link`** for every page number/Previous/Next — three of the seven pages (`/search`, `/search/fights`, `/news`) were using a raw `<a>` for this instead, losing client-side transitions; the other four already used `Link`, so this follows the majority rather than introducing a third convention.
+- **The collapsing logic (`pageNumbers()`) lives in `src/lib/pagination.ts`, not inside the component** — keeps it colocated with this repo's other pure-logic unit tests (`src/lib/*.test.ts`) rather than requiring a DOM/component-testing setup this project doesn't have yet for one function.
 
 ### Historical Timeline's axis-break disclosed with a tick ruler instead of a text note
 **PR #TBD.** Prompted by honest self-review of the shipped Timeline feature: "Historical Timeline" promises proportional time, but the axis-break means the five most recent decades get a dramatically different px/year rate than everything before them, disclosed only by a small, easy-to-miss note. Two directions were mocked up — a stronger visual disclosure (this one) versus reframing the page's name/copy to stop promising proportionality — and this one was picked.
