@@ -41,6 +41,29 @@ const JUMP_LEFT_MARGIN = 32;
 // query itself to start joining that data.
 const RATING_FILTER_OPTIONS = [0, 3, 4] as const;
 
+// Closest band to x, not just the one strictly containing it -- a plain
+// `x >= px0 && x < px1` check has two failure modes a chip click can
+// actually hit: it falls silently to the very first era whenever x lands
+// in a gap between bands (several exist, e.g. Jin->Tang), and it's brittle
+// to sub-pixel scrollLeft rounding right at a boundary (fractional at some
+// zoom/DPR levels), which can leave a just-clicked early, narrow band never
+// registering as active. Distance-to-nearest-band has neither problem: a
+// contained point still has distance 0, and a near-miss from rounding is
+// still closest to the band it was actually aimed at.
+function nearestEraKey(x: number): EraSettingKey {
+  let best = TIMELINE_ERA_LAYOUT[0];
+  let bestDist = Infinity;
+  for (const layout of TIMELINE_ERA_LAYOUT) {
+    const dist = x < layout.px0 ? layout.px0 - x : x > layout.px1 ? x - layout.px1 : 0;
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = layout;
+      if (dist === 0) break;
+    }
+  }
+  return best.key;
+}
+
 // Pure CSS hover (Tailwind's group/group-hover) — no client JS needed for
 // the tooltip. Each dot's hit area is 24px even though the painted dot is
 // 8px, per the usual "hit target bigger than the mark" rule for dense
@@ -63,9 +86,7 @@ export function TimelineDesktop({ eras }: { eras: TimelineEraData[] }) {
     if (!el) return;
     function update() {
       setViewport({ left: el!.scrollLeft, width: el!.clientWidth });
-      const x = el!.scrollLeft + JUMP_LEFT_MARGIN;
-      const era = TIMELINE_ERA_LAYOUT.find((e) => x >= e.px0 && x < e.px1) ?? TIMELINE_ERA_LAYOUT[0];
-      setActiveKey(era.key);
+      setActiveKey(nearestEraKey(el!.scrollLeft + JUMP_LEFT_MARGIN));
     }
     update();
     el.addEventListener("scroll", update, { passive: true });
@@ -79,6 +100,10 @@ export function TimelineDesktop({ eras }: { eras: TimelineEraData[] }) {
   function jumpTo(key: EraSettingKey) {
     const layout = layoutByKey.get(key);
     if (!layout || !scrollRef.current) return;
+    // Set directly rather than waiting on the scroll listener above to
+    // infer it back from the resulting position -- the chip you clicked
+    // should light up immediately, not depend on where the scroll settles.
+    setActiveKey(key);
     scrollRef.current.scrollTo({ left: Math.max(0, layout.px0 - JUMP_LEFT_MARGIN), behavior: "smooth" });
   }
 
