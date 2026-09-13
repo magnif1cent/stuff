@@ -158,6 +158,7 @@ one.
 - [Lineage: groups are a normal figure in the owner's own row, not a lateral position](#lineage-groups-are-a-normal-figure-in-the-owners-own-row-not-a-lateral-position)
 - [Lineage: bare figures get a delete/toggle-group escape hatch, cascade over block-if-linked](#lineage-bare-figures-get-a-deletetoggle-group-escape-hatch-cascade-over-block-if-linked)
 - [Navbar wordmark switched from a plain serif to all-caps Anton](#navbar-wordmark-switched-from-a-plain-serif-to-all-caps-anton)
+- [Historical Timeline gains era quick-jump chips, a minimap, and in-place rating filtering](#historical-timeline-gains-era-quick-jump-chips-a-minimap-and-in-place-rating-filtering)
 
 **Deferred & Backlog**
 
@@ -1253,6 +1254,16 @@ polish differently than a default-security reading would.
 - **Wired into CI** (`npm run test` in `build-and-lint`, alongside lint and build) — a test suite nobody runs on every push isn't protection, it's decoration.
 
 ## Feature Decisions
+
+### Historical Timeline gains era quick-jump chips, a minimap, and in-place rating filtering
+**PR #TBD.** Prompted by honest self-review of the shipped Timeline (a 3245px-wide axis with no way to navigate it except hand-scrolling) followed by a mocked-up canvas of candidate fixes, which were then built as proposed.
+
+- **`TimelineDesktop` became a client component.** It previously needed no JS at all (the hover tooltip is pure CSS); scroll-position tracking, click-to-jump, and drag-to-pan all genuinely need it. Splitting `src/lib/timeline.ts` was required to do this safely: the pure axis/layout math (`computeDotLayout`, `computeScaleTicks`, `TIMELINE_ERA_LAYOUT`, etc.) moved to a new `src/lib/timeline-layout.ts` with no imports beyond `era-settings`, while the prisma-dependent data fetching (`getTimelineOverview`, `moviesForEra`) stayed in `timeline.ts`, which now re-exports the layout module for its existing (server-only) callers. Without this split, a client component importing anything from the old `timeline.ts` would have pulled prisma into the browser bundle.
+- **Era chips jump via known pixel offsets (`TIMELINE_ERA_LAYOUT[key].px0`), not `scrollIntoView`.** The era divs that `scrollIntoView` could target have no intrinsic size of their own (their children are all absolutely positioned out of flow), so it wouldn't have scrolled to the right place. Computing the target directly from the same layout table the axis itself is built from is both simpler and exact.
+- **The minimap's bar heights are square-root scaled, using each era's real `totalCount`** (not hand-tuned guesses, unlike the mockup that first sold the idea) — a linear scale would have let Contemporary's ~80-movie cap flatten every sparse dynasty into an invisible sliver.
+- **The rating filter is scoped to rating only, not the genre/verified pills the mockup also sketched.** Rating is the one per-movie facet `getTimelineOverview` already fetches; a genre or verified-only filter would mean that query joining more data it doesn't currently need, which was judged a separate follow-up rather than something to fold in here.
+- **Filtering dims non-matching dots in place (lower opacity) rather than hiding them or re-navigating.** The whole point of a spatial/chronological layout is that a dot's position carries meaning — hiding dots would collapse gaps and make the axis appear to reflow under a filter change, which a plain opacity change avoids.
+- **Not verified against a live browser** — same sandboxed-session limitation noted on this feature's earlier entries. Checked via `npm run lint`, `npm run test`, and `npm run build` (the last of these also confirms prisma didn't leak into the client bundle, since a bundling failure there would fail the build), plus the design canvas mockup itself is close to a working prototype of the interaction, which the browser cannot render here.
 
 ### Navbar wordmark switched from a plain serif to all-caps Anton
 **PR #TBD.** Mocked up three directions on a design canvas before touching `logo.tsx`: all-caps Anton (the poster-hero display face already used on movie detail pages), the existing serif treatment just capitalized and tracked out, and Barlow Condensed with a left accent bar. Anton was picked as the most on-brand option since it reuses an identity the app already established (see "Poster House visual identity adopted" above) rather than introducing a fourth font just for the nav — `font-display` was already wired up in `globals.css`/`layout.tsx`, so this needed no new font load. A split-color variant (`KUNG FU` in cream, `SAUCE` in red, with looser tracking) was mocked up and tried but dropped in favor of the original flat red for now — picked as a starting point rather than a final call, worth revisiting if the flat-red version reads too dense at real nav scale. The left-accent-bar treatment on the Barlow Condensed option was flagged as a design cliché during review and dropped along with that direction.
