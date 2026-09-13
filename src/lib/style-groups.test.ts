@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { groupStylesByCategory } from "@/lib/fight-scenes";
+import { groupStylesByCategory, compareStylesByGroup } from "@/lib/style-groups";
 
 type Style = { id: string; name: string; group: { name: string } | null };
 
@@ -49,5 +49,47 @@ describe("groupStylesByCategory", () => {
 
   it("returns an empty array for an empty input", () => {
     expect(groupStylesByCategory([])).toEqual([]);
+  });
+});
+
+describe("compareStylesByGroup", () => {
+  it("sorts by group name first, ungrouped styles last", () => {
+    const styles = [
+      style("1", "Drunken Boxing", null),
+      style("2", "Wing Chun", "Southern"),
+      style("3", "Bajiquan", "Northern"),
+    ];
+    const sorted = [...styles].sort(compareStylesByGroup);
+    expect(sorted.map((s) => s.name)).toEqual(["Bajiquan", "Wing Chun", "Drunken Boxing"]);
+  });
+
+  it("sorts by style name within the same group", () => {
+    const styles = [style("1", "Wing Chun", "Southern"), style("2", "Hung Ga", "Southern")];
+    const sorted = [...styles].sort(compareStylesByGroup);
+    expect(sorted.map((s) => s.name)).toEqual(["Hung Ga", "Wing Chun"]);
+  });
+
+  it("sorts multiple ungrouped styles by name among themselves", () => {
+    const styles = [style("1", "Muay Thai", null), style("2", "Drunken Boxing", null)];
+    const sorted = [...styles].sort(compareStylesByGroup);
+    expect(sorted.map((s) => s.name)).toEqual(["Drunken Boxing", "Muay Thai"]);
+  });
+
+  it("combined with groupStylesByCategory produces contiguous, correctly ordered buckets", () => {
+    const styles = [
+      style("1", "Wing Chun", "Southern"),
+      style("2", "Drunken Boxing", null),
+      style("3", "Changquan", "Northern"),
+      style("4", "Hung Ga", "Southern"),
+      style("5", "Bajiquan", "Northern"),
+    ];
+    const sorted = [...styles].sort(compareStylesByGroup);
+    const buckets = groupStylesByCategory(sorted);
+    expect(buckets.map((b) => b.label)).toEqual(["Northern", "Southern", null]);
+    expect(buckets.map((b) => b.styles.map((s) => s.name))).toEqual([
+      ["Bajiquan", "Changquan"],
+      ["Hung Ga", "Wing Chun"],
+      ["Drunken Boxing"],
+    ]);
   });
 });

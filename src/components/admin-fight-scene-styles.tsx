@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { FightSceneStyle, FightStyleGroup } from "@/generated/prisma/client";
+import { groupStylesByCategory, compareStylesByGroup } from "@/lib/style-groups";
 
 type GroupItem = Pick<FightStyleGroup, "id" | "name"> & { _count: { styles: number } };
 type StyleItem = Pick<FightSceneStyle, "id" | "name"> & {
@@ -47,7 +48,7 @@ export function AdminFightSceneStyles({
       return;
     }
     const { style } = await res.json();
-    setStyles((prev) => [...prev, { ...style, group: null }].sort((a, b) => a.name.localeCompare(b.name)));
+    setStyles((prev) => [...prev, { ...style, group: null }].sort(compareStylesByGroup));
     setNewName("");
   }
 
@@ -73,9 +74,7 @@ export function AdminFightSceneStyles({
       return;
     }
     const { style } = await res.json();
-    setStyles((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, name: style.name } : s)).sort((a, b) => a.name.localeCompare(b.name)),
-    );
+    setStyles((prev) => prev.map((s) => (s.id === id ? { ...s, name: style.name } : s)).sort(compareStylesByGroup));
     setEditingId(null);
   }
 
@@ -104,7 +103,7 @@ export function AdminFightSceneStyles({
       return;
     }
     const group = groupId ? (groups.find((g) => g.id === groupId) ?? null) : null;
-    setStyles((prev) => prev.map((s) => (s.id === style.id ? { ...s, group } : s)));
+    setStyles((prev) => prev.map((s) => (s.id === style.id ? { ...s, group } : s)).sort(compareStylesByGroup));
   }
 
   async function handleAddGroup(e: React.FormEvent) {
@@ -153,7 +152,11 @@ export function AdminFightSceneStyles({
     setGroups((prev) =>
       prev.map((g) => (g.id === id ? { ...g, name: group.name } : g)).sort((a, b) => a.name.localeCompare(b.name)),
     );
-    setStyles((prev) => prev.map((s) => (s.group?.id === id ? { ...s, group: { id, name: group.name } } : s)));
+    setStyles((prev) =>
+      prev
+        .map((s) => (s.group?.id === id ? { ...s, group: { id, name: group.name } } : s))
+        .sort(compareStylesByGroup),
+    );
     setEditingGroupId(null);
   }
 
@@ -167,8 +170,10 @@ export function AdminFightSceneStyles({
       return;
     }
     setGroups((prev) => prev.filter((g) => g.id !== id));
-    setStyles((prev) => prev.map((s) => (s.group?.id === id ? { ...s, group: null } : s)));
+    setStyles((prev) => prev.map((s) => (s.group?.id === id ? { ...s, group: null } : s)).sort(compareStylesByGroup));
   }
+
+  const styleBuckets = groupStylesByCategory(styles);
 
   return (
     <div>
@@ -272,65 +277,82 @@ export function AdminFightSceneStyles({
 
       {error && <p className="mb-4 text-sm text-red-500">{error}</p>}
 
-      <ul className="flex flex-col gap-2">
-        {styles.map((style) => (
-          <li
-            key={style.id}
-            className="flex items-center justify-between gap-2 rounded-md border border-neutral-800 bg-neutral-900 px-3 py-2"
-          >
-            {editingId === style.id ? (
-              <>
-                <input
-                  type="text"
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  className="flex-1 rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
-                />
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => saveEdit(style.id)}
-                    disabled={saving}
-                    className="text-xs text-neutral-300 hover:text-white"
-                  >
-                    Save
-                  </button>
-                  <button onClick={() => setEditingId(null)} className="text-xs text-neutral-400 hover:text-white">
-                    Cancel
-                  </button>
-                </div>
-              </>
-            ) : (
-              <>
-                <span className="text-sm text-neutral-100">{style.name}</span>
-                <div className="flex items-center gap-3 text-xs text-neutral-500">
-                  <span>
-                    {style._count.fightScenes} scene{style._count.fightScenes === 1 ? "" : "s"}
-                  </span>
-                  <select
-                    value={style.group?.id ?? ""}
-                    onChange={(e) => handleChangeGroup(style, e.target.value || null)}
-                    className="rounded-md border border-neutral-700 bg-neutral-950 px-1.5 py-1 text-xs text-neutral-300 focus:border-red-600 focus:outline-none"
-                  >
-                    <option value="">No group</option>
-                    {groups.map((group) => (
-                      <option key={group.id} value={group.id}>
-                        {group.name}
-                      </option>
-                    ))}
-                  </select>
-                  <button onClick={() => startEdit(style)} className="text-neutral-400 hover:text-white">
-                    Rename
-                  </button>
-                  <button onClick={() => handleDelete(style.id)} className="text-neutral-400 hover:text-red-400">
-                    Delete
-                  </button>
-                </div>
-              </>
+      <div className="flex flex-col gap-5">
+        {styleBuckets.map((bucket, i) => (
+          <div key={bucket.label ?? `ungrouped-${i}`}>
+            {styleBuckets.length > 1 && (
+              <p className="mb-2 text-xs font-semibold tracking-wide text-neutral-500 uppercase">
+                {bucket.label ?? "Ungrouped"}
+              </p>
             )}
-          </li>
+            <ul className="flex flex-col gap-2">
+              {bucket.styles.map((style) => (
+                <li
+                  key={style.id}
+                  className="flex items-center justify-between gap-2 rounded-md border border-neutral-800 bg-neutral-900 px-3 py-2"
+                >
+                  {editingId === style.id ? (
+                    <>
+                      <input
+                        type="text"
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        className="flex-1 rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => saveEdit(style.id)}
+                          disabled={saving}
+                          className="text-xs text-neutral-300 hover:text-white"
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={() => setEditingId(null)}
+                          className="text-xs text-neutral-400 hover:text-white"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-sm text-neutral-100">{style.name}</span>
+                      <div className="flex items-center gap-3 text-xs text-neutral-500">
+                        <span>
+                          {style._count.fightScenes} scene{style._count.fightScenes === 1 ? "" : "s"}
+                        </span>
+                        <select
+                          value={style.group?.id ?? ""}
+                          onChange={(e) => handleChangeGroup(style, e.target.value || null)}
+                          className="rounded-md border border-neutral-700 bg-neutral-950 px-1.5 py-1 text-xs text-neutral-300 focus:border-red-600 focus:outline-none"
+                        >
+                          <option value="">No group</option>
+                          {groups.map((group) => (
+                            <option key={group.id} value={group.id}>
+                              {group.name}
+                            </option>
+                          ))}
+                        </select>
+                        <button onClick={() => startEdit(style)} className="text-neutral-400 hover:text-white">
+                          Rename
+                        </button>
+                        <button
+                          onClick={() => handleDelete(style.id)}
+                          className="text-neutral-400 hover:text-red-400"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
         ))}
         {styles.length === 0 && <p className="text-sm text-neutral-500">No styles yet.</p>}
-      </ul>
+      </div>
     </div>
   );
 }

@@ -4,7 +4,7 @@ import { AdminFightSceneStyles } from "@/components/admin-fight-scene-styles";
 export default async function AdminFightSceneStylesPage() {
   const [styles, groups] = await Promise.all([
     prisma.fightSceneStyle.findMany({
-      orderBy: { name: "asc" },
+      orderBy: [{ group: { name: "asc" } }, { name: "asc" }],
       include: { _count: { select: { fightScenes: true } }, group: { select: { id: true, name: true } } },
     }),
     prisma.fightStyleGroup.findMany({

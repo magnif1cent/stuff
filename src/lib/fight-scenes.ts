@@ -97,32 +97,10 @@ export function getFightStyleGroups() {
   return prisma.fightStyleGroup.findMany({ orderBy: { name: "asc" } });
 }
 
-type StyleWithGroupName = { id: string; name: string; group: { name: string } | null };
-
-// Clusters styles by their optional FightStyleGroup for display, assuming
-// the caller already queried them ordered by group name then style name
-// (so same-group styles are contiguous) — this just walks that list and
-// buckets consecutive runs. Ungrouped styles land in one run with a null
-// label, same as any other group; the caller decides whether a null label
-// gets an "Other" heading or no heading at all. When every style shares one
-// bucket (no groups configured yet, or exactly one), there's nothing to
-// cluster, so this returns a single group and callers can skip rendering
-// headers entirely.
-export function groupStylesByCategory<T extends StyleWithGroupName>(
-  styles: T[],
-): { label: string | null; styles: T[] }[] {
-  const buckets: { label: string | null; styles: T[] }[] = [];
-  for (const style of styles) {
-    const label = style.group?.name ?? null;
-    const current = buckets[buckets.length - 1];
-    if (current && current.label === label) {
-      current.styles.push(style);
-    } else {
-      buckets.push({ label, styles: [style] });
-    }
-  }
-  return buckets;
-}
+// Re-exported for existing callers/imports — the implementation moved to
+// style-groups.ts (a prisma-free module) so a client component can import it
+// directly without pulling prisma into the browser bundle.
+export { groupStylesByCategory } from "@/lib/style-groups";
 
 export async function getFightSceneRatingSummaries(
   fightSceneIds: string[],
