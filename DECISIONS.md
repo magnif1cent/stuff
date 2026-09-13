@@ -157,6 +157,7 @@ one.
 - [Lineage: "sifu"/"student" dropped from display copy, not swapped for another role term](#lineage-sifustudent-dropped-from-display-copy-not-swapped-for-another-role-term)
 - [Lineage: groups are a normal figure in the owner's own row, not a lateral position](#lineage-groups-are-a-normal-figure-in-the-owners-own-row-not-a-lateral-position)
 - [Lineage: bare figures get a delete/toggle-group escape hatch, cascade over block-if-linked](#lineage-bare-figures-get-a-deletetoggle-group-escape-hatch-cascade-over-block-if-linked)
+- [Navbar wordmark switched from a plain serif to all-caps Anton](#navbar-wordmark-switched-from-a-plain-serif-to-all-caps-anton)
 
 **Deferred & Backlog**
 
@@ -1252,6 +1253,9 @@ polish differently than a default-security reading would.
 - **Wired into CI** (`npm run test` in `build-and-lint`, alongside lint and build) — a test suite nobody runs on every push isn't protection, it's decoration.
 
 ## Feature Decisions
+
+### Navbar wordmark switched from a plain serif to all-caps Anton
+**PR #TBD.** Mocked up three directions on a design canvas before touching `logo.tsx`: all-caps Anton (the poster-hero display face already used on movie detail pages), the existing serif treatment just capitalized and tracked out, and Barlow Condensed with a left accent bar. Anton was picked as the most on-brand option since it reuses an identity the app already established (see "Poster House visual identity adopted" above) rather than introducing a fourth font just for the nav — `font-display` was already wired up in `globals.css`/`layout.tsx`, so this needed no new font load. A split-color variant (`KUNG FU` in cream, `SAUCE` in red, with looser tracking) was mocked up and tried but dropped in favor of the original flat red for now — picked as a starting point rather than a final call, worth revisiting if the flat-red version reads too dense at real nav scale. The left-accent-bar treatment on the Barlow Condensed option was flagged as a design cliché during review and dropped along with that direction.
 
 ### Pagination extracted into one shared component, adding jump-to-page links everywhere at once
 **PR #TBD.** Prompted by a request to add page-number links to one paginated list, movie search — but the exact same "← Previous / Page X of Y / Next" block, with no way to jump to a specific page, turned out to be independently copy-pasted across seven pages (movie search, fight-scene search, a movie's Fights and Reviews, `/lists`, an actor's Tributes, `/news`, a Timeline era). Fixing one and leaving the other six with the old Previous/Next-only UI would have been an inconsistent, worse outcome than the reuse this duplication already called for, so all seven were moved onto one shared `Pagination` component instead of patching the one page that was asked about.
