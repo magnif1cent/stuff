@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getNewsArchivePage, NEWS_ARCHIVE_PAGE_SIZE } from "@/lib/news";
 import { NewsList, type NewsPostItem } from "@/components/news-list";
+import { Pagination } from "@/components/pagination";
 
 function pageHref(page: number) {
   return page > 1 ? `/news?page=${page}` : "/news";
@@ -35,27 +36,7 @@ export default async function NewsArchivePage({
         <>
           <NewsList posts={items} />
 
-          {totalPages > 1 && (
-            <div className="mt-8 flex items-center justify-center gap-4 text-sm">
-              {page > 1 ? (
-                <a href={pageHref(page - 1)} className="text-red-500 hover:underline">
-                  ← Previous
-                </a>
-              ) : (
-                <span className="text-neutral-600">← Previous</span>
-              )}
-              <span className="text-neutral-400">
-                Page {page} of {totalPages} ({totalCount} posts)
-              </span>
-              {page < totalPages ? (
-                <a href={pageHref(page + 1)} className="text-red-500 hover:underline">
-                  Next →
-                </a>
-              ) : (
-                <span className="text-neutral-600">Next →</span>
-              )}
-            </div>
-          )}
+          <Pagination page={page} totalPages={totalPages} buildHref={pageHref} label={`${totalCount} posts`} />
         </>
       )}
     </div>
