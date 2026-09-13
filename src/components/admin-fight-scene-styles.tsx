@@ -225,11 +225,11 @@ export function AdminFightSceneStyles({
 
         {groupError && <p className="mb-3 text-sm text-red-500">{groupError}</p>}
 
-        <ul className="flex flex-col gap-2">
+        <ul className="flex flex-col gap-1">
           {groups.map((group) => (
             <li
               key={group.id}
-              className="flex items-center justify-between gap-2 rounded-md border border-neutral-800 bg-neutral-900 px-3 py-2"
+              className="flex items-center justify-between gap-2 rounded-md border border-neutral-800 bg-neutral-900 px-2.5 py-1"
             >
               {editingGroupId === group.id ? (
                 <>
@@ -307,19 +307,19 @@ export function AdminFightSceneStyles({
 
       {error && <p className="mb-4 text-sm text-red-500">{error}</p>}
 
-      <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-4">
         {styleBuckets.map((bucket, i) => (
           <div key={bucket.label ?? `ungrouped-${i}`}>
             {styleBuckets.length > 1 && (
-              <p className="mb-2 text-xs font-semibold tracking-wide text-neutral-500 uppercase">
+              <p className="mb-1.5 text-xs font-semibold tracking-wide text-neutral-500 uppercase">
                 {bucket.label ?? "Ungrouped"}
               </p>
             )}
-            <ul className="flex flex-col gap-2">
+            <ul className="flex flex-col gap-1">
               {bucket.styles.map((style) => (
                 <li
                   key={style.id}
-                  className="flex items-center justify-between gap-2 rounded-md border border-neutral-800 bg-neutral-900 px-3 py-2"
+                  className="flex items-center justify-between gap-2 rounded-md border border-neutral-800 bg-neutral-900 px-2.5 py-1"
                 >
                   {editingId === style.id ? (
                     <>
