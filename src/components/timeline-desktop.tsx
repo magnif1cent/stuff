@@ -238,12 +238,17 @@ export function TimelineDesktop({ eras }: { eras: TimelineEraData[] }) {
                       style={{ left: dot.left, bottom: dot.bottom }}
                     >
                       <span
-                        className={`h-2 w-2 rounded-full bg-amber-500 shadow-[0_0_0_2px_var(--color-neutral-950)] transition group-hover:scale-150 group-hover:bg-amber-400 ${
+                        className={`h-2 w-2 rounded-full bg-amber-500 shadow-[0_0_0_2px_var(--color-neutral-950)] transition group-hover:scale-150 group-hover:bg-amber-400 group-focus-visible:scale-150 group-focus-visible:bg-amber-400 ${
                           passesFilter ? "opacity-100" : "opacity-25"
                         }`}
                       />
+                      {/* group-focus-visible mirrors group-hover so keyboard
+                          (Tab) users see the same poster/rating tooltip --
+                          previously hover-only, meaning keyboard and most
+                          touch interaction had no way to see it without
+                          following the link away from the page. */}
                       <div
-                        className="pointer-events-none absolute bottom-full left-1/2 z-10 -translate-x-1/2 -translate-y-2 rounded-md border border-neutral-700 bg-neutral-900 p-2 opacity-0 shadow-lg transition group-hover:opacity-100"
+                        className="pointer-events-none absolute bottom-full left-1/2 z-10 -translate-x-1/2 -translate-y-2 rounded-md border border-neutral-700 bg-neutral-900 p-2 opacity-0 shadow-lg transition group-hover:opacity-100 group-focus-visible:opacity-100"
                         style={{ width: 128 }}
                       >
                         {/* a plain <span> here ignores width/aspect-ratio (both
