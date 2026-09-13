@@ -193,7 +193,19 @@ export function computeDotLayout(era: { px0: number; px1: number }, movies: Time
   const width = era.px1 - era.px0;
   const cols = columnsForWidth(width);
   const colWidth = width / cols;
-  const last = movies.length - 1;
+  const n = movies.length;
+  const last = n - 1;
+  // Rows fill in fillIndex order (0, 1, 2, ...), so every row below the
+  // highest occupied one is always completely full -- only the topmost row
+  // can be partial. Left-packing that partial row (columns 0..k-1 out of
+  // `cols`) reads as "off center" whenever an era has few movies relative to
+  // its column count -- exactly the common case for a sparse era. Centering
+  // just that one row fixes it without disturbing full rows, which already
+  // span the band evenly.
+  const topRow = n > 0 ? Math.floor(last / cols) : 0;
+  const dotsInTopRow = n - topRow * cols;
+  const topRowOffset = ((cols - dotsInTopRow) * colWidth) / 2;
+
   return movies.map((movie, i) => {
     // movies is sorted best-rated first (see compareByRatingDesc), but the
     // axis stacks best-rated highest -- so fill position walks the array
@@ -203,10 +215,11 @@ export function computeDotLayout(era: { px0: number; px1: number }, movies: Time
     const fillIndex = last - i;
     const col = fillIndex % cols;
     const row = Math.floor(fillIndex / cols);
+    const rowOffset = row === topRow ? topRowOffset : 0;
     const jitter = ((fillIndex % 5) - 2) * (Math.min(colWidth, 10) / 6);
     return {
       movie,
-      left: era.px0 + col * colWidth + colWidth / 2 + jitter - 12,
+      left: era.px0 + rowOffset + col * colWidth + colWidth / 2 + jitter - 12,
       bottom: ROW_BASELINE + row * ROW_HEIGHT,
     };
   });
