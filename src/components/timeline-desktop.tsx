@@ -3,6 +3,7 @@ import Image from "next/image";
 import { resolvePosterUrl, isTmdbUrl } from "@/lib/tmdb";
 import {
   computeDotLayout,
+  computeScaleTicks,
   overflowBadgeBottom,
   TIMELINE_AXIS_WIDTH,
   TIMELINE_ERA_LAYOUT,
@@ -16,6 +17,7 @@ import {
 // scatter marks.
 export function TimelineDesktop({ eras }: { eras: TimelineEraData[] }) {
   const layoutByKey = new Map(TIMELINE_ERA_LAYOUT.map((e) => [e.key, e]));
+  const scaleTicks = computeScaleTicks();
 
   return (
     <div className="rail-scrollbar relative mt-8 overflow-x-auto overflow-y-hidden pb-5 pl-4 sm:pl-6 lg:pl-10">
@@ -30,12 +32,25 @@ export function TimelineDesktop({ eras }: { eras: TimelineEraData[] }) {
             background: "repeating-linear-gradient(-55deg, var(--color-neutral-950) 0 3px, var(--color-neutral-900) 3px 6px)",
           }}
         />
-        <p
-          className="absolute text-center text-[10px] leading-tight text-neutral-600"
-          style={{ left: AXIS_BREAK_PX - 115, bottom: 420, width: 240 }}
-        >
-          ⌇ scale expands here — recent eras get more room per year than earlier ones ⌇
-        </p>
+        {/* A constant-interval (10-year) tick ruler, Qing onward -- everything
+            before it already sits at one roughly-consistent px/year rate (see
+            TIMELINE_ERA_LAYOUT's own comment), so there's no scale change to
+            show there. Since the interval never changes, tick DENSITY does
+            the explaining: packed together before the break, spread apart
+            after it -- no note to read or miss. */}
+        {scaleTicks.map((tick) => (
+          <div key={tick.year} className="absolute" style={{ left: tick.left, bottom: 400 }}>
+            <div
+              className="absolute bottom-0 left-1/2 w-px -translate-x-1/2 bg-neutral-700"
+              style={{ height: tick.labeled ? 10 : 6 }}
+            />
+            {tick.labeled && (
+              <p className="absolute bottom-3 left-1/2 -translate-x-1/2 text-[9px] whitespace-nowrap text-neutral-600">
+                {tick.year}
+              </p>
+            )}
+          </div>
+        ))}
 
         {/* one continuous axis line under every band */}
         <div className="absolute right-0 bottom-[26px] left-0 h-0.5 bg-neutral-700" />

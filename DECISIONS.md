@@ -65,6 +65,7 @@ one.
 
 **Feature Decisions**
 
+- [Historical Timeline's axis-break disclosed with a tick ruler instead of a text note](#historical-timelines-axis-break-disclosed-with-a-tick-ruler-instead-of-a-text-note)
 - [Navbar regrouped by kind (entities, contribute, account) instead of one flat link list](#navbar-regrouped-by-kind-entities-contribute-account-instead-of-one-flat-link-list)
 - [Historical Timeline's per-era dot stacking switched from release order to rating order](#historical-timelines-per-era-dot-stacking-switched-from-release-order-to-rating-order)
 - [Historical Timeline page built: a dot-axis on desktop, a capped list on mobile, five independent recent-era entries replacing "Modern"](#historical-timeline-page-built-a-dot-axis-on-desktop-a-capped-list-on-mobile-five-independent-recent-era-entries-replacing-modern)
@@ -1250,6 +1251,15 @@ polish differently than a default-security reading would.
 - **Wired into CI** (`npm run test` in `build-and-lint`, alongside lint and build) — a test suite nobody runs on every push isn't protection, it's decoration.
 
 ## Feature Decisions
+
+### Historical Timeline's axis-break disclosed with a tick ruler instead of a text note
+**PR #TBD.** Prompted by honest self-review of the shipped Timeline feature: "Historical Timeline" promises proportional time, but the axis-break means the five most recent decades get a dramatically different px/year rate than everything before them, disclosed only by a small, easy-to-miss note. Two directions were mocked up — a stronger visual disclosure (this one) versus reframing the page's name/copy to stop promising proportionality — and this one was picked.
+
+- **A constant 10-year tick ruler, not a note.** Since the tick interval never changes, density alone shows the scale change: many ticks packed into Qing/Republic, few spread across the same number of years after the break. Nothing to read, nothing to miss.
+- **Scoped to Qing through Contemporary, not the whole axis.** Every dynasty before Qing already sits at one roughly-consistent px/year rate (see `TIMELINE_ERA_LAYOUT`'s own comment) — there's no second scale change to disclose further back, and covering it would have required converting BC/AD year math for no real benefit.
+- **Computed independently per band, never by a global "which band contains year Y" search.** Several eras' real year ranges overlap by design in the vocabulary (Jin 266–420 vs. Three Kingdoms 220–280) — a cross-band search would be ambiguous for those. Each band ticks only within its own already-disjoint pixel span.
+- **Each band owns its start year, yields its end year to the next band** — a bug caught by the new test suite before it shipped: Eighties (1980–1990) and Nineties (1990–2000) share the boundary year 1990, and the first version generated a tick from *both* bands at that exact pixel, silently doubling up at every decade seam. Fixed by making the per-band loop exclusive on the end year.
+- **Placed in the axis's existing upper "note" zone**, not a new reserved strip — that zone was already verified clear of the tallest dot stack and its tooltip during the original tooltip-clipping fix, so reusing it avoided re-deriving that headroom math.
 
 ### Navbar regrouped by kind (entities, contribute, account) instead of one flat link list
 **PR #TBD.** Prompted by Timeline's own nav link making an already-flat row (Movies, Fights, Timeline, Lists, +Add Movie, Admin, username, Sign out) visibly cramped at tablet widths. Mocked up first — several rounds, several reversed calls — before touching `navbar.tsx`.

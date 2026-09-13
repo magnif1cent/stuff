@@ -38,6 +38,75 @@ export const TIMELINE_ERA_LAYOUT: { key: EraSettingKey; px0: number; px1: number
 export const AXIS_BREAK_PX = 2270;
 export const TIMELINE_AXIS_WIDTH = 3245;
 
+// Real calendar year range for each band a scale-disclosure tick ruler
+// covers -- deliberately scoped to Qing onward, not the whole axis. Every
+// dynasty before Qing already sits at one roughly-consistent px/year rate
+// (see the comment atop this file), so there's no scale change to disclose
+// there; Qing through Contemporary is exactly the stretch where the rate
+// changes at AXIS_BREAK_PX, which is the one thing this ruler exists to
+// make visible. Kept separate from TIMELINE_ERA_LAYOUT (not merged into
+// it) since most eras have no meaningful single "year" to tick against --
+// Warring States/Han/etc. span centuries at a scale where a 10-year tick
+// is meaningless, and Legendary has no start date at all.
+const TICK_YEAR_RANGE: Partial<Record<EraSettingKey, { startYear: number; endYear: number }>> = {
+  QING: { startYear: 1644, endYear: 1912 },
+  REPUBLIC_ERA: { startYear: 1912, endYear: 1949 },
+  POSTWAR_ERA: { startYear: 1949, endYear: 1969 },
+  SEVENTIES: { startYear: 1970, endYear: 1980 },
+  EIGHTIES: { startYear: 1980, endYear: 1990 },
+  NINETIES: { startYear: 1990, endYear: 2000 },
+  // Open-ended in the vocabulary ("2000-present"); ticks stop at
+  // TICK_YEAR_CAP regardless, so this only needs to be large enough that
+  // the cap -- not this endpoint -- is what bounds the loop.
+  CONTEMPORARY: { startYear: 2000, endYear: 2030 },
+};
+const TICK_STEP_YEARS = 10;
+const TICK_LABEL_STEP_YEARS = 50;
+// Ticks stop here rather than at each band's real (or open-ended) end --
+// a static, rendering-only ruler that kept ticking into "the future" every
+// year would read as a bug, not a feature.
+const TICK_YEAR_CAP = 2020;
+
+export interface ScaleTick {
+  left: number;
+  year: number;
+  labeled: boolean;
+}
+
+// Every tick is exactly TICK_STEP_YEARS apart, computed independently per
+// band (never by searching "which band contains year Y" across the whole
+// axis) -- several eras' real year ranges overlap by design (see the
+// TIMELINE_ERA_LAYOUT comment), so a global year->pixel search would be
+// ambiguous. Each band only ever ticks within its own already-disjoint
+// pixel span, using its own start/end year, so that ambiguity never
+// arises. Constant tick spacing is the whole point: since it never
+// changes, tick DENSITY on screen is what shows the scale change, not a
+// number anyone has to read.
+export function computeScaleTicks(): ScaleTick[] {
+  const ticks: ScaleTick[] = [];
+  for (const [key, range] of Object.entries(TICK_YEAR_RANGE) as [EraSettingKey, { startYear: number; endYear: number }][]) {
+    const layout = LAYOUT_BY_KEY.get(key);
+    if (!layout) continue;
+    const { startYear, endYear } = range;
+    const width = layout.px1 - layout.px0;
+    const firstTick = Math.ceil(startYear / TICK_STEP_YEARS) * TICK_STEP_YEARS;
+    // Strictly less than endYear (not <=): several of these bands share a
+    // boundary year with the next one (Eighties ends 1990, Nineties starts
+    // 1990) -- each band owns its own start year and yields its end year to
+    // whichever band starts there, so that shared point gets exactly one
+    // tick instead of two stacked on top of each other.
+    for (let year = firstTick; year < endYear && year <= TICK_YEAR_CAP; year += TICK_STEP_YEARS) {
+      const frac = (year - startYear) / (endYear - startYear);
+      ticks.push({
+        left: layout.px0 + frac * width,
+        year,
+        labeled: year % TICK_LABEL_STEP_YEARS === 0,
+      });
+    }
+  }
+  return ticks;
+}
+
 // Chronological order for everything EXCEPT "Other / Unspecified", which
 // isn't a point in time and is surfaced separately, off the axis.
 const CHRONOLOGICAL_KEYS = TIMELINE_ERA_LAYOUT.map((e) => e.key);

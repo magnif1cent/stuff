@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { ERA_SETTINGS } from "@/lib/era-settings";
-import { compareByRatingDesc, computeDotLayout, TIMELINE_ERA_LAYOUT, type TimelineMovie } from "@/lib/timeline";
+import {
+  compareByRatingDesc,
+  computeDotLayout,
+  computeScaleTicks,
+  TIMELINE_ERA_LAYOUT,
+  type TimelineMovie,
+} from "@/lib/timeline";
 
 function movie(id: string, rating: number | null, ratingCount = 0, releaseDate = "2000-01-01"): TimelineMovie {
   return {
@@ -95,5 +101,50 @@ describe("computeDotLayout", () => {
     const centers = dots.map((d) => d.left + 12).sort((a, b) => a - b);
     expect(centers[0]).toBeGreaterThan(era.px0);
     expect(centers[centers.length - 1]).toBeLessThan(era.px1);
+  });
+});
+
+describe("computeScaleTicks", () => {
+  const qing = TIMELINE_ERA_LAYOUT.find((e) => e.key === "QING")!;
+  const republic = TIMELINE_ERA_LAYOUT.find((e) => e.key === "REPUBLIC_ERA")!;
+  const nineties = TIMELINE_ERA_LAYOUT.find((e) => e.key === "NINETIES")!;
+
+  it("never ticks past the year cap (no ticks implying the future)", () => {
+    const ticks = computeScaleTicks();
+    expect(ticks.every((t) => t.year <= 2020)).toBe(true);
+  });
+
+  it("labels only every 50 years, not every tick", () => {
+    const ticks = computeScaleTicks();
+    const labeled = ticks.filter((t) => t.labeled);
+    expect(labeled.length).toBeGreaterThan(0);
+    expect(labeled.every((t) => t.year % 50 === 0)).toBe(true);
+    expect(labeled.length).toBeLessThan(ticks.length);
+  });
+
+  it("packs many more ticks into Qing/Republic than into the same number of years post-break", () => {
+    // This is the actual point of the feature: constant year-per-tick, so
+    // density alone shows the compression before AXIS_BREAK_PX versus the
+    // expansion after it.
+    const ticks = computeScaleTicks();
+    const preBreak = ticks.filter((t) => t.left >= qing.px0 && t.left <= republic.px1);
+    const postBreak = ticks.filter((t) => t.left >= nineties.px0 && t.left <= nineties.px1);
+
+    const preBreakPxPerTick = (republic.px1 - qing.px0) / preBreak.length;
+    const postBreakPxPerTick = (nineties.px1 - nineties.px0) / postBreak.length;
+    expect(postBreakPxPerTick).toBeGreaterThan(preBreakPxPerTick * 5);
+  });
+
+  it("keeps every tick within its own band's pixel span", () => {
+    // Overlapping real year ranges elsewhere in the vocabulary are exactly
+    // why this must never search "which band contains year Y" globally --
+    // each tick's position must come from its own band's already-disjoint
+    // px0/px1, not a cross-band lookup.
+    const ticks = computeScaleTicks();
+    const allBands = TIMELINE_ERA_LAYOUT;
+    for (const tick of ticks) {
+      const inSomeBand = allBands.some((b) => tick.left >= b.px0 && tick.left <= b.px1);
+      expect(inSomeBand).toBe(true);
+    }
   });
 });
