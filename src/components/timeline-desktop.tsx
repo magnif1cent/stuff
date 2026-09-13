@@ -3,12 +3,25 @@ import Image from "next/image";
 import { resolvePosterUrl, isTmdbUrl } from "@/lib/tmdb";
 import {
   computeDotLayout,
+  computeScaleTicks,
   overflowBadgeBottom,
   TIMELINE_AXIS_WIDTH,
   TIMELINE_ERA_LAYOUT,
   AXIS_BREAK_PX,
+  AXIS_BASELINE_PX,
   type TimelineEraData,
 } from "@/lib/timeline";
+
+// Reserved below AXIS_BASELINE_PX for the era name/years label; the scale-
+// tick ruler gets whatever's left under that, down to the plot's own floor.
+const ERA_LABEL_HEIGHT = 26;
+
+// Headroom above the baseline for the tallest dot stack plus its hover
+// tooltip -- verified once (see DECISIONS.md) at 434px above whatever the
+// baseline's own position is, so the plot's total height is derived from
+// that same 434px rather than a second, independently hand-picked number
+// that could drift from it.
+const PLOT_HEIGHT_ABOVE_BASELINE = 434;
 
 // Pure CSS hover (Tailwind's group/group-hover) — no client JS needed for
 // the tooltip. Each dot's hit area is 24px even though the painted dot is
@@ -16,29 +29,45 @@ import {
 // scatter marks.
 export function TimelineDesktop({ eras }: { eras: TimelineEraData[] }) {
   const layoutByKey = new Map(TIMELINE_ERA_LAYOUT.map((e) => [e.key, e]));
+  const scaleTicks = computeScaleTicks();
 
   return (
     <div className="rail-scrollbar relative mt-8 overflow-x-auto overflow-y-hidden pb-5 pl-4 sm:pl-6 lg:pl-10">
-      <div className="relative" style={{ width: TIMELINE_AXIS_WIDTH, height: 460 }}>
+      <div className="relative" style={{ width: TIMELINE_AXIS_WIDTH, height: PLOT_HEIGHT_ABOVE_BASELINE + AXIS_BASELINE_PX }}>
         {/* axis-break: the scale changes here, marked rather than hidden */}
         <div
           className="absolute top-0"
           style={{
             left: AXIS_BREAK_PX,
-            bottom: 26,
+            bottom: AXIS_BASELINE_PX,
             width: 12,
             background: "repeating-linear-gradient(-55deg, var(--color-neutral-950) 0 3px, var(--color-neutral-900) 3px 6px)",
           }}
         />
-        <p
-          className="absolute text-center text-[10px] leading-tight text-neutral-600"
-          style={{ left: AXIS_BREAK_PX - 115, bottom: 420, width: 240 }}
-        >
-          ⌇ scale expands here — recent eras get more room per year than earlier ones ⌇
-        </p>
 
         {/* one continuous axis line under every band */}
-        <div className="absolute right-0 bottom-[26px] left-0 h-0.5 bg-neutral-700" />
+        <div className="absolute right-0 left-0 h-0.5 bg-neutral-700" style={{ bottom: AXIS_BASELINE_PX }} />
+
+        {/* A constant-interval (10-year) tick ruler below the axis, Qing
+            onward -- everything before it already sits at one roughly-
+            consistent px/year rate (see TIMELINE_ERA_LAYOUT's own comment),
+            so there's no scale change to show there. Since the interval
+            never changes, tick DENSITY does the explaining: packed together
+            before the break, spread apart after it -- no note to read or
+            miss. */}
+        {scaleTicks.map((tick) => (
+          <div key={tick.year} className="absolute" style={{ left: tick.left, bottom: 10 }}>
+            <div
+              className="absolute bottom-0 left-1/2 w-px -translate-x-1/2 bg-neutral-700"
+              style={{ height: tick.labeled ? 8 : 4 }}
+            />
+            {tick.labeled && (
+              <p className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 text-[9px] whitespace-nowrap text-neutral-600">
+                {tick.year}
+              </p>
+            )}
+          </div>
+        ))}
 
         {eras.map((era) => {
           const layout = layoutByKey.get(era.key);
@@ -51,7 +80,12 @@ export function TimelineDesktop({ eras }: { eras: TimelineEraData[] }) {
             <div key={era.key}>
               <div
                 className="absolute text-center"
-                style={{ left: layout.px0 + width / 2, bottom: 0, width: 150, transform: "translateX(-50%)" }}
+                style={{
+                  left: layout.px0 + width / 2,
+                  bottom: AXIS_BASELINE_PX - ERA_LABEL_HEIGHT,
+                  width: 150,
+                  transform: "translateX(-50%)",
+                }}
               >
                 <p className="truncate text-xs font-semibold text-neutral-300">{era.name}</p>
                 <p className="mt-0.5 text-[10px] text-neutral-600">{era.years}</p>
