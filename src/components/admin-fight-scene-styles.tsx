@@ -345,7 +345,7 @@ export function AdminFightSceneStyles({
                     e.dataTransfer.effectAllowed = "move";
                   }}
                   title="Drag onto a group above to reassign it"
-                  className="flex cursor-grab items-center justify-between gap-2 rounded-md border border-neutral-800 bg-neutral-900 px-2.5 py-1 active:cursor-grabbing"
+                  className="flex cursor-grab items-center justify-between gap-2 rounded-md border border-neutral-800 bg-neutral-900 px-2.5 py-1 select-none active:cursor-grabbing"
                 >
                   {editingId === style.id ? (
                     <>
