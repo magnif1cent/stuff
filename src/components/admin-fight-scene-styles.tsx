@@ -240,6 +240,7 @@ export function AdminFightSceneStyles({
               key={group.id}
               onDragOver={(e) => {
                 e.preventDefault();
+                e.dataTransfer.dropEffect = "move";
                 setDragOverGroupId(group.id);
               }}
               onDragLeave={() => setDragOverGroupId((id) => (id === group.id ? null : id))}
