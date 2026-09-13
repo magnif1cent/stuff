@@ -53,6 +53,15 @@ export function AdminFightSceneStyles({
   const [editGroupName, setEditGroupName] = useState("");
   const [savingGroup, setSavingGroup] = useState(false);
   const [groupError, setGroupError] = useState<string | null>(null);
+  const [dragOverGroupId, setDragOverGroupId] = useState<string | null>(null);
+
+  function handleDropOnGroup(e: React.DragEvent, groupId: string) {
+    e.preventDefault();
+    setDragOverGroupId(null);
+    const styleId = e.dataTransfer.getData("text/plain");
+    const style = styles.find((s) => s.id === styleId);
+    if (style && style.group?.id !== groupId) handleChangeGroup(style, groupId);
+  }
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
@@ -229,7 +238,17 @@ export function AdminFightSceneStyles({
           {groups.map((group) => (
             <li
               key={group.id}
-              className="flex items-center justify-between gap-2 rounded-md border border-neutral-800 bg-neutral-900 px-2.5 py-1"
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragOverGroupId(group.id);
+              }}
+              onDragLeave={() => setDragOverGroupId((id) => (id === group.id ? null : id))}
+              onDrop={(e) => handleDropOnGroup(e, group.id)}
+              className={`flex items-center justify-between gap-2 rounded-md border px-2.5 py-1 ${
+                dragOverGroupId === group.id
+                  ? "border-red-600 bg-red-950/20"
+                  : "border-neutral-800 bg-neutral-900"
+              }`}
             >
               {editingGroupId === group.id ? (
                 <>
@@ -319,7 +338,13 @@ export function AdminFightSceneStyles({
               {bucket.styles.map((style) => (
                 <li
                   key={style.id}
-                  className="flex items-center justify-between gap-2 rounded-md border border-neutral-800 bg-neutral-900 px-2.5 py-1"
+                  draggable={editingId !== style.id}
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData("text/plain", style.id);
+                    e.dataTransfer.effectAllowed = "move";
+                  }}
+                  title="Drag onto a group above to reassign it"
+                  className="flex cursor-grab items-center justify-between gap-2 rounded-md border border-neutral-800 bg-neutral-900 px-2.5 py-1 active:cursor-grabbing"
                 >
                   {editingId === style.id ? (
                     <>
