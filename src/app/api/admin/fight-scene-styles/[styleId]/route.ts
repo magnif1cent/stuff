@@ -15,7 +15,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ st
     return NextResponse.json({ error: "Style not found." }, { status: 404 });
   }
 
-  const { name } = await request.json();
+  const { name, groupId } = await request.json();
   if (typeof name !== "string" || name.trim().length === 0) {
     return NextResponse.json({ error: "name is required." }, { status: 400 });
   }
@@ -26,13 +26,27 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ st
       { status: 400 },
     );
   }
+  // groupId is optional and nullable — omitted or `null` both mean "leave
+  // ungrouped"; anything else must be a real group's id.
+  if (groupId !== undefined && groupId !== null) {
+    if (typeof groupId !== "string") {
+      return NextResponse.json({ error: "groupId must be a string or null." }, { status: 400 });
+    }
+    const groupExists = await prisma.fightStyleGroup.findUnique({ where: { id: groupId } });
+    if (!groupExists) {
+      return NextResponse.json({ error: "That group doesn't exist." }, { status: 400 });
+    }
+  }
 
   const nameTaken = await prisma.fightSceneStyle.findFirst({ where: { name: trimmedName, id: { not: styleId } } });
   if (nameTaken) {
     return NextResponse.json({ error: "A style with that name already exists." }, { status: 400 });
   }
 
-  const style = await prisma.fightSceneStyle.update({ where: { id: styleId }, data: { name: trimmedName } });
+  const style = await prisma.fightSceneStyle.update({
+    where: { id: styleId },
+    data: { name: trimmedName, ...(groupId !== undefined ? { groupId } : {}) },
+  });
   return NextResponse.json({ style });
 }
 

@@ -829,10 +829,25 @@ model FightSceneTag {
 // add anything missing. Deliberately not reusing the tags precedent yet —
 // see DECISIONS.md for why. Same plain many-to-many shape either way.
 model FightSceneStyle {
+  id      String  @id @default(cuid())
+  name    String  @unique
+  groupId String?
+
+  group       FightStyleGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  fightScenes FightScene[]
+}
+
+// Purely organizational: clusters styles (e.g. "Northern", "Southern",
+// "Internal") in the admin list and the /search/fights filter. Optional and
+// admin/reviewer-curated like FightSceneStyle itself — deleting a group
+// ungroups its styles rather than deleting them (onDelete: SetNull above),
+// since the group is just a label, not part of what a style means. Not
+// applied to FightSceneMove — moves weren't asked to be grouped.
+model FightStyleGroup {
   id   String @id @default(cuid())
   name String @unique
 
-  fightScenes FightScene[]
+  styles FightSceneStyle[]
 }
 
 model FightSceneMove {

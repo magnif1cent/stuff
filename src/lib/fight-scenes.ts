@@ -9,6 +9,7 @@ export const MAX_FIGHT_SCENE_TITLE_LENGTH = 200;
 export const MAX_FIGHT_SCENE_TAG_NAME_LENGTH = 40;
 export const MAX_FIGHT_SCENE_STYLE_NAME_LENGTH = 40;
 export const MAX_FIGHT_SCENE_MOVE_NAME_LENGTH = 40;
+export const MAX_FIGHT_STYLE_GROUP_NAME_LENGTH = 40;
 
 export interface FightSceneRatingSummary {
   average: number | null;
@@ -77,12 +78,50 @@ export function getFightSceneTags() {
   return prisma.fightSceneTag.findMany({ orderBy: { name: "asc" } });
 }
 
-export function getFightSceneStyles() {
-  return prisma.fightSceneStyle.findMany({ orderBy: { name: "asc" } });
+// Flattens the optional group relation into a plain groupName, so callers
+// that only need it for display (the member-facing style picker) don't have
+// to deal with the nested shape.
+export async function getFightSceneStyles() {
+  const styles = await prisma.fightSceneStyle.findMany({
+    orderBy: { name: "asc" },
+    include: { group: { select: { name: true } } },
+  });
+  return styles.map(({ group, ...style }) => ({ ...style, groupName: group?.name ?? null }));
 }
 
 export function getFightSceneMoves() {
   return prisma.fightSceneMove.findMany({ orderBy: { name: "asc" } });
+}
+
+export function getFightStyleGroups() {
+  return prisma.fightStyleGroup.findMany({ orderBy: { name: "asc" } });
+}
+
+type StyleWithGroupName = { id: string; name: string; group: { name: string } | null };
+
+// Clusters styles by their optional FightStyleGroup for display, assuming
+// the caller already queried them ordered by group name then style name
+// (so same-group styles are contiguous) — this just walks that list and
+// buckets consecutive runs. Ungrouped styles land in one run with a null
+// label, same as any other group; the caller decides whether a null label
+// gets an "Other" heading or no heading at all. When every style shares one
+// bucket (no groups configured yet, or exactly one), there's nothing to
+// cluster, so this returns a single group and callers can skip rendering
+// headers entirely.
+export function groupStylesByCategory<T extends StyleWithGroupName>(
+  styles: T[],
+): { label: string | null; styles: T[] }[] {
+  const buckets: { label: string | null; styles: T[] }[] = [];
+  for (const style of styles) {
+    const label = style.group?.name ?? null;
+    const current = buckets[buckets.length - 1];
+    if (current && current.label === label) {
+      current.styles.push(style);
+    } else {
+      buckets.push({ label, styles: [style] });
+    }
+  }
+  return buckets;
 }
 
 export async function getFightSceneRatingSummaries(

@@ -1,7 +1,12 @@
 import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getFightSceneRatingSummaries, getFightSceneAdminRatingSummaries, getFightSceneFavoriteCounts } from "@/lib/fight-scenes";
+import {
+  getFightSceneRatingSummaries,
+  getFightSceneAdminRatingSummaries,
+  getFightSceneFavoriteCounts,
+  groupStylesByCategory,
+} from "@/lib/fight-scenes";
 import { parseRatingFilter } from "@/lib/rating-filter";
 import { FightSceneResultCard } from "@/components/fight-scene-result-card";
 import { RatingStarInput } from "@/components/rating-star-input";
@@ -110,7 +115,10 @@ export default async function FightSceneSearchPage({
 
   const [tags, styles, moves, genres, countryRows] = await Promise.all([
     prisma.fightSceneTag.findMany({ orderBy: { name: "asc" } }),
-    prisma.fightSceneStyle.findMany({ orderBy: { name: "asc" } }),
+    prisma.fightSceneStyle.findMany({
+      orderBy: [{ group: { name: "asc" } }, { name: "asc" }],
+      include: { group: { select: { name: true } } },
+    }),
     prisma.fightSceneMove.findMany({ orderBy: { name: "asc" } }),
     prisma.genre.findMany({ orderBy: { name: "asc" } }),
     prisma.movie.findMany({
@@ -121,6 +129,7 @@ export default async function FightSceneSearchPage({
     }),
   ]);
   const countries = countryRows.map((m) => m.country!).filter(Boolean);
+  const styleGroups = groupStylesByCategory(styles);
 
   const hasFilters =
     selectedTags.length > 0 ||
@@ -315,22 +324,33 @@ export default async function FightSceneSearchPage({
 
             <div className="flex flex-col gap-1">
               <p className="text-xs text-neutral-400">Martial arts style (any of)</p>
-              <div className="flex flex-wrap gap-2 rounded-md border border-neutral-700 bg-neutral-950 p-2">
+              <div className="flex flex-col gap-2 rounded-md border border-neutral-700 bg-neutral-950 p-2">
                 {styles.length === 0 && <span className="text-sm text-neutral-500">No styles yet</span>}
-                {styles.map((s) => (
-                  <label
-                    key={s.id}
-                    className="flex cursor-pointer items-center gap-1.5 rounded-full border border-neutral-700 px-2 py-1 text-xs text-neutral-300 has-checked:border-red-600 has-checked:bg-red-950/40 has-checked:text-red-300"
-                  >
-                    <input
-                      type="checkbox"
-                      name="style"
-                      value={s.name}
-                      defaultChecked={selectedStyles.includes(s.name)}
-                      className="sr-only"
-                    />
-                    {s.name}
-                  </label>
+                {styleGroups.map((group, i) => (
+                  <div key={group.label ?? `ungrouped-${i}`}>
+                    {styleGroups.length > 1 && (
+                      <p className="mb-1 text-[10px] tracking-wide text-neutral-500 uppercase">
+                        {group.label ?? "Other"}
+                      </p>
+                    )}
+                    <div className="flex flex-wrap gap-2">
+                      {group.styles.map((s) => (
+                        <label
+                          key={s.id}
+                          className="flex cursor-pointer items-center gap-1.5 rounded-full border border-neutral-700 px-2 py-1 text-xs text-neutral-300 has-checked:border-red-600 has-checked:bg-red-950/40 has-checked:text-red-300"
+                        >
+                          <input
+                            type="checkbox"
+                            name="style"
+                            value={s.name}
+                            defaultChecked={selectedStyles.includes(s.name)}
+                            className="sr-only"
+                          />
+                          {s.name}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>
