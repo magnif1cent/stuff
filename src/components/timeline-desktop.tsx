@@ -39,7 +39,14 @@ const JUMP_LEFT_MARGIN = 32;
 // like the mockup's illustrative pills) because rating is the one facet
 // getTimelineOverview already fetches per movie; the others would need the
 // query itself to start joining that data.
-const RATING_FILTER_OPTIONS = [0, 3, 4] as const;
+//
+// Ratings are on a 1-10 scale sitewide (see src/lib/rating-filter.ts and
+// RatingStarInput's own 5-star-via-half-star-clicks encoding of it, plus
+// every "★ 8.5"-style display) -- 6/8 are real bars on that scale ("decent"
+// / "great"). This was first shipped as [0, 3, 4], a leftover from
+// mentally treating it as a 1-5 scale; on the real 1-10 scale that barely
+// filtered anything out.
+const RATING_FILTER_OPTIONS = [0, 6, 8] as const;
 
 // Closest band to x, not just the one strictly containing it -- a plain
 // `x >= px0 && x < px1` check has two failure modes a chip click can
