@@ -94,7 +94,7 @@ export interface TimelineMovie {
 // movies than its cap allows never bumps a rated movie for an unrated one);
 // ties broken by rating count (more community confidence ranks higher),
 // then release date (older first) so the order is still fully deterministic.
-function compareByRatingDesc(a: TimelineMovie, b: TimelineMovie): number {
+export function compareByRatingDesc(a: TimelineMovie, b: TimelineMovie): number {
   const ar = a.ratingAverage ?? -1;
   const br = b.ratingAverage ?? -1;
   if (ar !== br) return br - ar;

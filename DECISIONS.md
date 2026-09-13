@@ -61,6 +61,7 @@ one.
 - [Minimum password length lowered back to 8, per explicit request](#minimum-password-length-lowered-back-to-8-per-explicit-request)
 - [Sign-in itself now requires a verified email, closing the gap the auto-login reversal deliberately left open](#sign-in-itself-now-requires-a-verified-email-closing-the-gap-the-auto-login-reversal-deliberately-left-open)
 - [Registration enumeration finally closed, reversing the earlier "not doing" call](#registration-enumeration-finally-closed-reversing-the-earlier-not-doing-call)
+- [Vitest introduced as the project's first test runner](#vitest-introduced-as-the-projects-first-test-runner)
 
 **Feature Decisions**
 
@@ -1239,6 +1240,14 @@ polish differently than a default-security reading would.
   knowing the account's password to reach the code that admits its
   existence — see "Sign-in itself now requires a verified email" above),
   and `/api/forgot-password`, which already had this shape from the start.
+
+### Vitest introduced as the project's first test runner
+**PR #TBD.** Prompted by a concrete failure mode, not a general "we should have tests" instinct: the Historical Timeline's dot-layout math (`computeDotLayout`) and its rating-sort comparator each shipped a real bug that was only caught by a user screenshot, and each was "verified" beforehand with a throwaway script written for that one check and then deleted — no protection against a later change silently reintroducing either bug.
+
+- **Vitest over Jest** — lighter setup for a Next.js/TS project (no Babel/ts-jest transform config to maintain), and its peer dependency range on `@types/node` matters here: the latest major (5.x) requires `^22 || >=24`, which conflicts with this repo's `@types/node: "^20"` — pinned to `vitest@^2` instead of bumping `@types/node`, since upgrading a widely-depended-on type package just to satisfy a new dev tool's peer range is a bigger, riskier change than the tests themselves.
+- **Scoped to pure-logic unit tests only, colocated as `src/lib/*.test.ts`** — no React Testing Library, no jsdom, no database. `moviesForEra()` itself isn't unit-tested (it's a thin Prisma query), but its sort/tie-break logic (`compareByRatingDesc`) is, since that's where the actual judgment calls live and where a regression would be silent otherwise.
+- **A regression test asserts `TIMELINE_ERA_LAYOUT` covers every `ERA_SETTINGS` key** (except `OTHER`) — this table is hand-maintained and the axis derives its rendered era list FROM it, not the other way around, so a future era added to the vocabulary without a matching layout entry would previously have just silently never appeared on the timeline instead of failing anything.
+- **Wired into CI** (`npm run test` in `build-and-lint`, alongside lint and build) — a test suite nobody runs on every push isn't protection, it's decoration.
 
 ## Feature Decisions
 

@@ -151,6 +151,8 @@ npm run dev
 
 Visit `http://localhost:3000`. Sign in as the admin account and use `/admin/import` to search TMDB and pull in real kung fu films (there's no single "kung fu" genre on TMDB, so curation is admin-driven by design — see [TMDB Import](#tmdb-import) below for both ways to search).
 
+`npm run test` runs the (currently small) Vitest suite — pure-logic unit tests only, colocated as `src/lib/*.test.ts`, no database or browser needed. It runs in CI alongside lint and build.
+
 ## Usernames
 
 Members are identified publicly by a username, not their email or real name — it's what shows on discussion posts, fight scenes, and editorial reviews. Usernames are 3-20 characters, letters/numbers/underscores only.
