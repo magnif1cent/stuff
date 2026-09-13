@@ -18,7 +18,16 @@ export function AccountNavMenu({ username }: { username: string }) {
   return (
     <div ref={wrapperRef} className="relative flex items-center">
       <button
-        onClick={() => setOpen((o) => !o)}
+        onClick={(e) => {
+          // On mobile this button lives inside MobileNavToggle's panel,
+          // which closes the whole hamburger menu on any click inside it.
+          // Without stopping propagation, that fires here too and closes
+          // the panel in the same instant this menu tries to open. This
+          // button never navigates on its own, so the panel has no reason
+          // to close (see the identical note in NavDropdown).
+          e.stopPropagation();
+          setOpen((o) => !o);
+        }}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label="Account menu"
