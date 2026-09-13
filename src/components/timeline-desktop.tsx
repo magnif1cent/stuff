@@ -241,6 +241,20 @@ export function TimelineDesktop({ eras }: { eras: TimelineEraData[] }) {
                   <p className="mt-0.5 text-[10px] text-neutral-600">{era.years}</p>
                 </div>
 
+                {/* A band with real movies always gets at least one dot, so
+                    this only fires for eras with none at all -- otherwise
+                    that band would be indistinguishable blank space between
+                    its neighbors' dot clusters, reading as broken rather
+                    than as "confirmed nothing here yet". */}
+                {era.totalCount === 0 && (
+                  <p
+                    className="absolute -translate-x-1/2 text-[10px] whitespace-nowrap text-neutral-700 italic"
+                    style={{ left: layout.px0 + width / 2, bottom: AXIS_BASELINE_PX + 8 }}
+                  >
+                    No movies yet
+                  </p>
+                )}
+
                 {dots.map((dot) => {
                   const posterUrl = resolvePosterUrl(dot.movie);
                   const passesFilter = minRating === 0 || (dot.movie.ratingAverage ?? 0) >= minRating;
