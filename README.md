@@ -473,7 +473,7 @@ Each slide prefers a fight scene clip over the static TMDB backdrop:
 
 1. Push this repo to GitHub and import it into [Vercel](https://vercel.com/new).
 2. Set the environment variables from `.env.example` in the Vercel project settings (use a hosted Postgres connection string).
-3. Run `npx prisma migrate deploy` against the production database (Vercel's build step, or manually).
+3. Vercel's Build Command (`vercel.json`'s `buildCommand`, running `scripts/vercel-build.sh` via the `vercel-build` npm script) runs `prisma migrate deploy` against whichever database that environment's `DATABASE_URL` points at, then `next build` — no manual migration step needed on deploy. It retries `migrate deploy` a few times before failing the build, since the Preview environment's database is one static Neon branch shared across every open PR (see `DECISIONS.md`), so concurrent deployments can transiently collide on Prisma's migration lock.
 4. Update the Google OAuth redirect URI to your production domain.
 
 ## Footer & About Page

@@ -55,6 +55,7 @@ one.
 - [Vercel preview deployments deleted on PR close, to stop Neon preview-branch pileup](#vercel-preview-deployments-deleted-on-pr-close-to-stop-neon-preview-branch-pileup)
 - [Weekly Trending Carousel's cron had never run — `CRON_SECRET` was never configured in Production](#weekly-trending-carousels-cron-had-never-run-cron_secret-was-never-configured-in-production)
 - [Preview database made static across PRs, trading back the migration-collision risk to stop re-seeding every branch](#preview-database-made-static-across-prs-trading-back-the-migration-collision-risk-to-stop-re-seeding-every-branch)
+- [Vercel's Build Command moved into the repo, with a retry around `prisma migrate deploy`](#vercels-build-command-moved-into-the-repo-with-a-retry-around-prisma-migrate-deploy)
 - [`images.imageSizes` narrowed to match actual usage, after the free tier's Image Optimization quota was hit](#imagesimagesizes-narrowed-to-match-actual-usage-after-the-free-tiers-image-optimization-quota-was-hit)
 - [TMDB-hosted images marked `unoptimized`, removing them from the Image Optimization quota entirely](#tmdb-hosted-images-marked-unoptimized-removing-them-from-the-image-optimization-quota-entirely)
 - [Reversed: registration no longer auto-signs the member in](#reversed-registration-no-longer-auto-signs-the-member-in)
@@ -1014,6 +1015,15 @@ protecting against for this project's actual pace of parallel work.
   Free-plan branch-count limit from that same incident doesn't get
   re-triggered by deployment pileup), but no longer cascades into deleting
   a Neon branch, since no single deployment owns the shared one anymore.
+
+### Vercel's Build Command moved into the repo, with a retry around `prisma migrate deploy`
+**No PR — infra + `vercel.json`/`package.json`/`scripts/vercel-build.sh`.** Direct fallout from "Preview database made static across PRs" above: with every open PR's preview deployment now racing against the same shared Neon branch, `prisma migrate deploy` started intermittently failing deployments on Prisma's migration advisory lock — observed directly during this session, where a run of PRs deploying back-to-back saw the same commit's Vercel deployment fail, then succeed on a later attempt, with no code change in between.
+
+- **The Build Command used to live only in the Vercel dashboard**, not tracked anywhere in the repo — this file's own earlier entries (see "Preview database made static...") could only describe what it did from the outside ("Vercel's Build Command runs `prisma migrate deploy`..."), not show it. Moved it into `vercel.json`'s `buildCommand`, which Vercel honors over the dashboard setting, so the actual deploy logic is now readable and diffable like everything else here.
+- **`scripts/vercel-build.sh`, not a one-line `buildCommand` string.** A real script (`npm run vercel-build` invokes it) reads far better than cramming a retry loop into one JSON string, and matches how every other repeated command here already lives in `package.json`'s `scripts`.
+- **Retries `prisma migrate deploy` up to 3 times with a 5s pause, then fails the deploy for real** — doesn't swallow a genuine migration problem, just gives transient lock contention a few chances to clear on its own before surfacing as a failure someone has to notice and manually redeploy past. `next build` only runs once, after a migrate success; a build is never attempted against a database that didn't finish migrating.
+- **Treats the symptom, not the cause.** The actual root cause is the shared-preview-database design itself, an already-accepted tradeoff (see the entry above) made to avoid re-seeding a fresh database per branch. Reverting that would eliminate the contention entirely but bring back the cost it was designed to avoid — this is the cheap, low-risk mitigation, not a redesign.
+- **Verified by exercising the script directly** (not deployed to Vercel to confirm — no access to trigger or observe a real Vercel build from this session): faked `npx`/`npm` on `PATH` to simulate `prisma migrate deploy` failing twice then succeeding (retries, then builds), always failing (exits 1 after 3 attempts, `npm run build` never invoked), and succeeding immediately (no retry, builds once). `sh -n` confirms the script parses.
 
 ### `images.imageSizes` narrowed to match actual usage, after the free tier's Image Optimization quota was hit
 The `kfmdb` Vercel team hit 100% of the Hobby plan's 5,000/month Image
