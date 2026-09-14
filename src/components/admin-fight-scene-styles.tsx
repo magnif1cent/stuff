@@ -59,10 +59,7 @@ export function AdminFightSceneStyles({
     e.preventDefault();
     setDragOverGroupId(null);
     const styleId = e.dataTransfer.getData("text/plain");
-    // TEMP DEBUG — remove once the drag-and-drop cursor issue is diagnosed.
-    console.log("[dnd] drop fired on group", groupId, "styleId from dataTransfer:", JSON.stringify(styleId));
     const style = styles.find((s) => s.id === styleId);
-    console.log("[dnd] matched style:", style ? style.name : "NONE FOUND");
     if (style && style.group?.id !== groupId) handleChangeGroup(style, groupId);
   }
 
@@ -252,20 +249,13 @@ export function AdminFightSceneStyles({
           {groups.map((group) => (
             <li
               key={group.id}
-              // TEMP DEBUG — remove once the drag-and-drop cursor issue is diagnosed.
-              onDragEnter={(e) => {
-                e.preventDefault();
-                console.log("[dnd] dragenter on group", group.id, group.name);
-              }}
+              onDragEnter={(e) => e.preventDefault()}
               onDragOver={(e) => {
                 e.preventDefault();
                 e.dataTransfer.dropEffect = "move";
                 setDragOverGroupId(group.id);
               }}
-              onDragLeave={() => {
-                console.log("[dnd] dragleave on group", group.id, group.name);
-                setDragOverGroupId((id) => (id === group.id ? null : id));
-              }}
+              onDragLeave={() => setDragOverGroupId((id) => (id === group.id ? null : id))}
               onDrop={(e) => handleDropOnGroup(e, group.id)}
               className={`flex items-center justify-between gap-2 rounded-md border px-2.5 py-1 ${
                 dragOverGroupId === group.id
@@ -365,8 +355,6 @@ export function AdminFightSceneStyles({
                   onDragStart={(e) => {
                     e.dataTransfer.setData("text/plain", style.id);
                     e.dataTransfer.effectAllowed = "move";
-                    // TEMP DEBUG — remove once the drag-and-drop cursor issue is diagnosed.
-                    console.log("[dnd] dragstart", style.id, style.name, "draggable=", editingId !== style.id);
                   }}
                   title="Drag onto a group above to reassign it"
                   className="flex cursor-grab items-center justify-between gap-2 rounded-md border border-neutral-800 bg-neutral-900 px-2.5 py-1 select-none active:cursor-grabbing"
