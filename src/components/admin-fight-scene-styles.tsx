@@ -53,14 +53,20 @@ export function AdminFightSceneStyles({
   const [editGroupName, setEditGroupName] = useState("");
   const [savingGroup, setSavingGroup] = useState(false);
   const [groupError, setGroupError] = useState<string | null>(null);
+  // dragOverGroupId highlights a named group's row/cluster; the ungrouped
+  // cluster under Styles has no id to key off, so it gets its own flag.
   const [dragOverGroupId, setDragOverGroupId] = useState<string | null>(null);
+  const [dragOverUngrouped, setDragOverUngrouped] = useState(false);
 
-  function handleDropOnGroup(e: React.DragEvent, groupId: string) {
+  // Shared by the Groups section's rows (always a real groupId) and the
+  // Styles section's clusters (groupId is null for the "Ungrouped" one).
+  function handleDropOnGroup(e: React.DragEvent, groupId: string | null) {
     e.preventDefault();
     setDragOverGroupId(null);
+    setDragOverUngrouped(false);
     const styleId = e.dataTransfer.getData("text/plain");
     const style = styles.find((s) => s.id === styleId);
-    if (style && style.group?.id !== groupId) handleChangeGroup(style, groupId);
+    if (style && (style.group?.id ?? null) !== groupId) handleChangeGroup(style, groupId);
   }
 
   async function handleAdd(e: React.FormEvent) {
@@ -339,93 +345,120 @@ export function AdminFightSceneStyles({
 
       {error && <p className="mb-4 text-sm text-red-500">{error}</p>}
 
-      <div className="flex flex-col gap-4">
-        {styleBuckets.map((bucket, i) => (
-          <div key={bucket.label ?? `ungrouped-${i}`}>
-            {styleBuckets.length > 1 && (
-              <p className="mb-1.5 text-xs font-semibold tracking-wide text-neutral-500 uppercase">
-                {bucket.label ?? "Ungrouped"}
-              </p>
-            )}
-            <ul className="flex flex-col gap-1">
-              {bucket.styles.map((style) => (
-                <li
-                  key={style.id}
-                  draggable={editingId !== style.id}
-                  onDragStart={(e) => {
-                    e.dataTransfer.setData("text/plain", style.id);
-                    e.dataTransfer.effectAllowed = "move";
-                  }}
-                  title="Drag onto a group above to reassign it"
-                  className="flex cursor-grab items-center justify-between gap-2 rounded-md border border-neutral-800 bg-neutral-900 px-2.5 py-1 select-none active:cursor-grabbing"
-                >
-                  {editingId === style.id ? (
-                    <>
-                      <input
-                        type="text"
-                        value={editName}
-                        onChange={(e) => setEditName(e.target.value)}
-                        className="flex-1 rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
-                      />
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => saveEdit(style.id)}
-                          disabled={saving}
-                          className="text-xs text-neutral-300 hover:text-white"
-                        >
-                          Save
-                        </button>
-                        <button
-                          onClick={() => setEditingId(null)}
-                          className="text-xs text-neutral-400 hover:text-white"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <span className="text-sm text-neutral-100">{style.name}</span>
-                      <div className="flex items-center gap-3 text-xs text-neutral-500">
-                        <span>
-                          {style._count.fightScenes} scene{style._count.fightScenes === 1 ? "" : "s"}
-                        </span>
-                        <select
-                          value={style.group?.id ?? ""}
-                          onChange={(e) => handleChangeGroup(style, e.target.value || null)}
-                          className="rounded-md border border-neutral-700 bg-neutral-950 px-1.5 py-1 text-xs text-neutral-300 focus:border-red-600 focus:outline-none"
-                        >
-                          <option value="">No group</option>
-                          {groups.map((group) => (
-                            <option key={group.id} value={group.id}>
-                              {group.name}
-                            </option>
-                          ))}
-                        </select>
-                        <button
-                          onClick={() => startEdit(style)}
-                          aria-label={`Rename ${style.name}`}
-                          title="Rename"
-                          className="text-neutral-400 hover:text-white"
-                        >
-                          <PencilIcon />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(style.id)}
-                          aria-label={`Delete ${style.name}`}
-                          title="Delete"
-                          className="text-neutral-400 hover:text-red-400"
-                        >
-                          <TrashIcon />
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
+      {/*
+        No gap between buckets (same reasoning as the Groups list above) --
+        each bucket <div> is itself a drop target now (drop anywhere in a
+        cluster, including its label and the gaps between its own style
+        rows, reassigns to that cluster's group), and a gap between buckets
+        would be a dead zone none of them cover. Each bucket supplies its
+        own bottom padding for visual separation instead.
+      */}
+      <div className="flex flex-col">
+        {styleBuckets.map((bucket, i) => {
+          const bucketGroupId = bucket.styles[0]?.group?.id ?? null;
+          const isDragOver = bucketGroupId ? dragOverGroupId === bucketGroupId : dragOverUngrouped;
+          return (
+            <div
+              key={bucket.label ?? `ungrouped-${i}`}
+              onDragEnter={(e) => e.preventDefault()}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = "move";
+                if (bucketGroupId) setDragOverGroupId(bucketGroupId);
+                else setDragOverUngrouped(true);
+              }}
+              onDragLeave={() => {
+                if (bucketGroupId) setDragOverGroupId((id) => (id === bucketGroupId ? null : id));
+                else setDragOverUngrouped(false);
+              }}
+              onDrop={(e) => handleDropOnGroup(e, bucketGroupId)}
+              className={`rounded-md pb-4 ${isDragOver ? "bg-red-950/20 outline outline-red-600" : ""}`}
+            >
+              {styleBuckets.length > 1 && (
+                <p className="mb-1.5 text-xs font-semibold tracking-wide text-neutral-500 uppercase">
+                  {bucket.label ?? "Ungrouped"}
+                </p>
+              )}
+              <ul className="flex flex-col gap-1">
+                {bucket.styles.map((style) => (
+                  <li
+                    key={style.id}
+                    draggable={editingId !== style.id}
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData("text/plain", style.id);
+                      e.dataTransfer.effectAllowed = "move";
+                    }}
+                    title="Drag onto a group (above, or another cluster here) to reassign it"
+                    className="flex cursor-grab items-center justify-between gap-2 rounded-md border border-neutral-800 bg-neutral-900 px-2.5 py-1 select-none active:cursor-grabbing"
+                  >
+                    {editingId === style.id ? (
+                      <>
+                        <input
+                          type="text"
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          className="flex-1 rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
+                        />
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => saveEdit(style.id)}
+                            disabled={saving}
+                            className="text-xs text-neutral-300 hover:text-white"
+                          >
+                            Save
+                          </button>
+                          <button
+                            onClick={() => setEditingId(null)}
+                            className="text-xs text-neutral-400 hover:text-white"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-sm text-neutral-100">{style.name}</span>
+                        <div className="flex items-center gap-3 text-xs text-neutral-500">
+                          <span>
+                            {style._count.fightScenes} scene{style._count.fightScenes === 1 ? "" : "s"}
+                          </span>
+                          <select
+                            value={style.group?.id ?? ""}
+                            onChange={(e) => handleChangeGroup(style, e.target.value || null)}
+                            className="rounded-md border border-neutral-700 bg-neutral-950 px-1.5 py-1 text-xs text-neutral-300 focus:border-red-600 focus:outline-none"
+                          >
+                            <option value="">No group</option>
+                            {groups.map((group) => (
+                              <option key={group.id} value={group.id}>
+                                {group.name}
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            onClick={() => startEdit(style)}
+                            aria-label={`Rename ${style.name}`}
+                            title="Rename"
+                            className="text-neutral-400 hover:text-white"
+                          >
+                            <PencilIcon />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(style.id)}
+                            aria-label={`Delete ${style.name}`}
+                            title="Delete"
+                            className="text-neutral-400 hover:text-red-400"
+                          >
+                            <TrashIcon />
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          );
+        })}
         {styles.length === 0 && <p className="text-sm text-neutral-500">No styles yet.</p>}
       </div>
     </div>
