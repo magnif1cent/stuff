@@ -237,7 +237,18 @@ export function AdminFightSceneStyles({
 
         {groupError && <p className="mb-3 text-sm text-red-500">{groupError}</p>}
 
-        <ul className="flex flex-col gap-1">
+        {/*
+          No gap between rows (unlike every other list in this component) --
+          each <li> is a drag-and-drop target, and a visual gap isn't part of
+          any element's hit-box, so it was a dead zone: dropping in that 4px
+          strip landed on nothing and showed "not allowed". Confirmed via
+          console logging -- dragenter/dragleave kept firing on adjacent
+          groups with drop never firing. Each <li> already carries its own
+          full border, so removing the gap alone (no divider needed) still
+          reads as a clean separated list, just with adjacent borders
+          touching instead of a blank strip between them.
+        */}
+        <ul className="flex flex-col">
           {groups.map((group) => (
             <li
               key={group.id}
