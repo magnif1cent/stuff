@@ -190,28 +190,58 @@ export async function searchLineageFigures(
   };
 }
 
+// Lowercase and strip everything that isn't a letter or digit, so spacing
+// and punctuation variants of the same name collapse together --
+// "Wong Fei-Hung", "Wong Fei-hung", and "Wong Fei Hung" all normalize to
+// "wongfeihung". Deliberately not fuzzy/similarity matching (this repo
+// already has pg_trgm-based similarity() for "did you mean" in
+// fuzzy-search.ts): a false-positive portrayal misattributes an actor to
+// the wrong character, which a wrong search suggestion doesn't.
+export function normalizeCharacterName(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
 // A bare figure has no photo of its own, but the catalog often already
 // knows who's played them on screen -- CastCredit.characterName is exact
-// free text from TMDB, so this is a best-effort case-insensitive match, not
+// free text from TMDB, so this is a best-effort normalized-text match, not
 // a stored link (more than one actor can plausibly have played the same
 // figure across different films, so it couldn't be a single FK anyway).
 // Display-only enrichment: never used to resolve identity or write data.
-export async function getPortrayals(name: string): Promise<{ person: PersonRef; movieTitle: string }[]> {
-  const credits = await prisma.castCredit.findMany({
-    where: { characterName: { equals: name, mode: "insensitive" }, movie: { status: "APPROVED" } },
-    select: {
-      person: { select: { id: true, name: true, profilePath: true } },
-      movie: { select: { title: true, releaseDate: true } },
-    },
-    orderBy: { movie: { releaseDate: "asc" } },
-    take: 6,
-  });
+//
+// Single-word names are skipped entirely (see DECISIONS.md): a name with
+// no space is exactly the shape of a generic role reused across unrelated
+// films ("Monk", "Extra", "Dragon"), where matching would attribute
+// unrelated actors to the same "character". This is a heuristic, not a
+// guarantee -- it doesn't catch every collision -- but every genuine
+// recurring figure found in this catalog is multi-word, so it costs
+// nothing for the real cases this feature is for.
+export async function getPortrayals(name: string): Promise<{ person: PersonRef; movieTitle: string; movieYear: number | null }[]> {
+  if (!name.trim().includes(" ")) return [];
+
+  const normalized = normalizeCharacterName(name);
+  const credits = await prisma.$queryRaw<
+    { personId: string; personName: string; profilePath: string | null; movieTitle: string; releaseDate: Date | null }[]
+  >`
+    SELECT "Person"."id" AS "personId", "Person"."name" AS "personName", "Person"."profilePath",
+           "Movie"."title" AS "movieTitle", "Movie"."releaseDate"
+    FROM "CastCredit"
+    JOIN "Person" ON "Person"."id" = "CastCredit"."personId"
+    JOIN "Movie" ON "Movie"."id" = "CastCredit"."movieId"
+    WHERE "Movie"."status" = 'APPROVED'
+      AND lower(regexp_replace("CastCredit"."characterName", '[^a-zA-Z0-9]', '', 'g')) = ${normalized}
+    ORDER BY "Movie"."releaseDate" ASC
+    LIMIT 6
+  `;
   const seen = new Set<string>();
-  const results: { person: PersonRef; movieTitle: string }[] = [];
+  const results: { person: PersonRef; movieTitle: string; movieYear: number | null }[] = [];
   for (const credit of credits) {
-    if (seen.has(credit.person.id)) continue;
-    seen.add(credit.person.id);
-    results.push({ person: credit.person, movieTitle: credit.movie.title });
+    if (seen.has(credit.personId)) continue;
+    seen.add(credit.personId);
+    results.push({
+      person: { id: credit.personId, name: credit.personName, profilePath: credit.profilePath },
+      movieTitle: credit.movieTitle,
+      movieYear: credit.releaseDate ? credit.releaseDate.getUTCFullYear() : null,
+    });
     if (results.length === 3) break;
   }
   return results;

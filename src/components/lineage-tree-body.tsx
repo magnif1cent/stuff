@@ -29,6 +29,14 @@ function initials(name: string): string {
 // shifted once by the tree's actual min/max extent so nothing renders at a
 // negative pixel position. See DECISIONS.md for why this replaced the
 // earlier flexbox-and-arrows rendering.
+//
+// A parent with more than one child/overflow slot connects via an elbow
+// (a vertical stem, a shared horizontal bar, then an even vertical drop
+// into each child) rather than a diagonal line straight from the parent to
+// each child -- see DECISIONS.md. Secondary "co-sifu" links and the
+// ancestor chain are unaffected: the ancestor chain never branches, and a
+// secondary link stays a plain diagonal on purpose (its dashed diagonal is
+// what visually marks it as not a primary descendant edge).
 
 const SLOT_W = 78;
 const ROW_H = 108;
@@ -49,6 +57,10 @@ interface LayoutLine {
   x2: number;
   y2: number;
   dashed: boolean;
+  // Whether this segment is the one that actually reaches a node (and so
+  // should carry the arrowhead marker) -- false for the stem/bar segments
+  // of an elbow connector, which are purely intermediate.
+  arrowhead: boolean;
 }
 
 function buildLayout(tree: LineageTree) {
@@ -67,10 +79,10 @@ function buildLayout(tree: LineageTree) {
   for (let i = 0; i < A - 1; i++) {
     const from = posById.get(ancestorsReversed[i].id)!;
     const to = posById.get(ancestorsReversed[i + 1].id)!;
-    lines.push({ x1: from.x, y1: from.y, x2: to.x, y2: to.y, dashed: false });
+    lines.push({ x1: from.x, y1: from.y, x2: to.x, y2: to.y, dashed: false, arrowhead: true });
   }
   if (A > 0) {
-    lines.push({ x1: 0, y1: -ROW_H, x2: 0, y2: 0, dashed: false });
+    lines.push({ x1: 0, y1: -ROW_H, x2: 0, y2: 0, dashed: false, arrowhead: true });
   }
 
   const secondaryRowY = A > 0 ? -ROW_H : -ROW_H;
@@ -78,7 +90,7 @@ function buildLayout(tree: LineageTree) {
     const x = (i + 1) * SLOT_W;
     nodes.push({ id: figure.id, figure, kind: "secondary", x, y: secondaryRowY });
     posById.set(figure.id, { x, y: secondaryRowY });
-    lines.push({ x1: x, y1: secondaryRowY, x2: 0, y2: 0, dashed: true });
+    lines.push({ x1: x, y1: secondaryRowY, x2: 0, y2: 0, dashed: true, arrowhead: true });
   });
 
   nodes.push({ id: tree.center.id, figure: tree.center, kind: "center", x: 0, y: 0 });
@@ -113,12 +125,17 @@ function buildLayout(tree: LineageTree) {
       const parentPos = posById.get(group.parent.id) ?? { x: 0, y: y - ROW_H };
       const w = widths[i];
       let slot = 0;
+      // Every drop point under this parent (real children plus the
+      // overflow badge, if any) -- collected first so the connector can be
+      // drawn as one elbow (stem + shared bar + even drops) instead of a
+      // diagonal line per child radiating straight out of the parent.
+      const drops: { x: number; y: number; dashed: boolean }[] = [];
       for (const child of group.children) {
         const x = centers[i] + (slot - (w - 1) / 2) * SLOT_W;
         slot++;
         nodes.push({ id: child.id, figure: child, kind: "child", x, y });
         posById.set(child.id, { x, y });
-        lines.push({ x1: parentPos.x, y1: parentPos.y, x2: x, y2: y, dashed: false });
+        drops.push({ x, y, dashed: false });
       }
       if (group.overflowCount > 0) {
         const x = centers[i] + (slot - (w - 1) / 2) * SLOT_W;
@@ -130,7 +147,30 @@ function buildLayout(tree: LineageTree) {
           y,
           overflowCount: group.overflowCount,
         });
-        lines.push({ x1: parentPos.x, y1: parentPos.y, x2: x, y2: y, dashed: true });
+        drops.push({ x, y, dashed: true });
+      }
+
+      if (drops.length === 1) {
+        // The common case (a single child, no overflow) already lands
+        // exactly under the parent via `centers[i]` above, so a plain line
+        // is already a straight vertical drop -- no elbow needed.
+        const drop = drops[0];
+        lines.push({ x1: parentPos.x, y1: parentPos.y, x2: drop.x, y2: drop.y, dashed: drop.dashed, arrowhead: true });
+      } else if (drops.length > 1) {
+        const elbowY = parentPos.y + ROW_H / 2;
+        const dropXs = drops.map((d) => d.x);
+        lines.push({ x1: parentPos.x, y1: parentPos.y, x2: parentPos.x, y2: elbowY, dashed: false, arrowhead: false });
+        lines.push({
+          x1: Math.min(...dropXs),
+          y1: elbowY,
+          x2: Math.max(...dropXs),
+          y2: elbowY,
+          dashed: false,
+          arrowhead: false,
+        });
+        for (const drop of drops) {
+          lines.push({ x1: drop.x, y1: elbowY, x2: drop.x, y2: drop.y, dashed: drop.dashed, arrowhead: true });
+        }
       }
     });
   });
@@ -156,6 +196,7 @@ function buildLayout(tree: LineageTree) {
       x2: l.x2 + offsetX,
       y2: l.y2 + offsetY,
       dashed: l.dashed,
+      arrowhead: l.arrowhead,
     })),
   };
 }
@@ -249,7 +290,16 @@ async function Portrayal({ figure }: { figure: LineageFigureRef }) {
   if (portrayals.length === 0) return null;
   return (
     <span className="text-[9px] leading-tight text-neutral-600">
-      played by {portrayals.map((p) => p.person.name).join(", ")}
+      played by{" "}
+      {portrayals.map((p, i) => (
+        <span key={p.person.id}>
+          {i > 0 && ", "}
+          <Link href={`/actors/${p.person.id}`} className="text-neutral-400 underline decoration-dotted hover:text-neutral-200">
+            {p.person.name}
+          </Link>
+          {p.movieYear && <span> ({p.movieYear})</span>}
+        </span>
+      ))}
     </span>
   );
 }
@@ -292,7 +342,7 @@ export async function LineageTreeBody({ tree, up, down }: { tree: LineageTree; u
                 stroke="#4d3a26"
                 strokeWidth={2}
                 strokeDasharray={line.dashed ? "4 4" : undefined}
-                markerEnd={line.dashed ? undefined : "url(#lineage-arrow)"}
+                markerEnd={!line.dashed && line.arrowhead ? "url(#lineage-arrow)" : undefined}
               />
             ))}
           </svg>
