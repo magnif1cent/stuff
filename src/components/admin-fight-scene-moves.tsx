@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { FightSceneMove } from "@/generated/prisma/client";
+import { PencilIcon, TrashIcon } from "@/components/action-icons";
 
 type MoveItem = Pick<FightSceneMove, "id" | "name"> & { _count: { fightScenes: number } };
 
@@ -129,11 +130,21 @@ export function AdminFightSceneMoves({ initialMoves }: { initialMoves: MoveItem[
                   <span>
                     {move._count.fightScenes} scene{move._count.fightScenes === 1 ? "" : "s"}
                   </span>
-                  <button onClick={() => startEdit(move)} className="text-neutral-400 hover:text-white">
-                    Rename
+                  <button
+                    onClick={() => startEdit(move)}
+                    aria-label={`Rename ${move.name}`}
+                    title="Rename"
+                    className="text-neutral-400 hover:text-white"
+                  >
+                    <PencilIcon />
                   </button>
-                  <button onClick={() => handleDelete(move.id)} className="text-neutral-400 hover:text-red-400">
-                    Delete
+                  <button
+                    onClick={() => handleDelete(move.id)}
+                    aria-label={`Delete ${move.name}`}
+                    title="Delete"
+                    className="text-neutral-400 hover:text-red-400"
+                  >
+                    <TrashIcon />
                   </button>
                 </div>
               </>
