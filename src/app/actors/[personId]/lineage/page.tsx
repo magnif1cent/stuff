@@ -19,6 +19,8 @@ export async function generateMetadata({
 
 const DEFAULT_UP = 3;
 const DEFAULT_DOWN = 3;
+const DEFAULT_SIBLINGS = 8;
+const DEFAULT_GROUP_SIBLINGS = 12;
 
 // A deeper, un-collapsed view than the compact card on the actor page --
 // this page IS the "show more" destination, so there's no further level to
@@ -31,24 +33,28 @@ export default async function ActorLineagePage({
   searchParams,
 }: {
   params: Promise<{ personId: string }>;
-  searchParams: Promise<{ up?: string; down?: string }>;
+  searchParams: Promise<{ up?: string; down?: string; siblings?: string; groupSiblings?: string }>;
 }) {
   const { personId } = await params;
-  const { up: upParam, down: downParam } = await searchParams;
+  const { up: upParam, down: downParam, siblings: siblingsParam, groupSiblings: groupSiblingsParam } = await searchParams;
   const up = Number(upParam) || DEFAULT_UP;
   const down = Number(downParam) || DEFAULT_DOWN;
+  const siblings = Number(siblingsParam) || DEFAULT_SIBLINGS;
+  const groupSiblings = Number(groupSiblingsParam) || DEFAULT_GROUP_SIBLINGS;
 
   const figureId = await getFigureIdForPerson(personId).catch(() => null);
   if (!figureId) {
     notFound();
   }
-  const tree = await getLineageTree(figureId, { up, down, siblingLimit: 8 }).catch(() => null);
+  const tree = await getLineageTree(figureId, { up, down, siblingLimit: siblings, groupSiblingLimit: groupSiblings }).catch(
+    () => null,
+  );
   if (!tree) {
     notFound();
   }
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-4 py-10">
+    <div className="w-full px-4 py-10">
       <Link href={`/actors/${personId}`} className="mb-6 inline-block text-sm text-neutral-400 hover:text-white">
         &larr; Back to {tree.center.name}
       </Link>
@@ -60,7 +66,7 @@ export default async function ActorLineagePage({
         reach out if you spot something to fix.
       </p>
 
-      <LineageTreeBody tree={tree} up={up} down={down} />
+      <LineageTreeBody tree={tree} up={up} down={down} siblings={siblings} groupSiblings={groupSiblings} />
     </div>
   );
 }

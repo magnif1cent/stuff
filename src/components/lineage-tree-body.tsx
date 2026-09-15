@@ -50,6 +50,12 @@ interface LayoutNode {
   x: number;
   y: number;
   overflowCount?: number;
+  // Which sibling-limit query param an overflow badge's "+N more" link
+  // should bump -- a group's own children are capped separately (a larger
+  // limit, since a team can run much bigger than one person's students),
+  // so which one applies depends on whether this overflow's parent is a
+  // group, not on the overflow node itself.
+  overflowParentIsGroup?: boolean;
 }
 interface LayoutLine {
   x1: number;
@@ -146,6 +152,7 @@ function buildLayout(tree: LineageTree) {
           x,
           y,
           overflowCount: group.overflowCount,
+          overflowParentIsGroup: group.parent.isGroup,
         });
         drops.push({ x, y, dashed: true });
       }
@@ -211,7 +218,7 @@ const NODE_SIZE: Record<LayoutNode["kind"], number> = {
   overflow: 40,
 };
 
-function TreeNode({ node, marker }: { node: LayoutNode; marker?: number }) {
+function TreeNode({ node, marker, moreHref }: { node: LayoutNode; marker?: number; moreHref?: string }) {
   const size = NODE_SIZE[node.kind];
   const isOverflow = node.kind === "overflow";
   const isCenter = node.kind === "center";
@@ -260,10 +267,17 @@ function TreeNode({ node, marker }: { node: LayoutNode; marker?: number }) {
       style={{ left: node.x, top: node.y }}
     >
       {isOverflow ? (
-        <>
-          {circle}
-          <span className="text-[10px] text-neutral-500">more</span>
-        </>
+        moreHref ? (
+          <Link href={moreHref} className="flex flex-col items-center gap-1 hover:opacity-80">
+            {circle}
+            <span className="text-[10px] text-neutral-500 underline decoration-dotted">more</span>
+          </Link>
+        ) : (
+          <>
+            {circle}
+            <span className="text-[10px] text-neutral-500">more</span>
+          </>
+        )
       ) : (
         <Link href={figureHref(node.figure)} className="flex flex-col items-center gap-1 hover:opacity-80">
           {circle}
@@ -349,18 +363,36 @@ function PortrayalList({ entries }: { entries: PortrayalEntry[] }) {
   );
 }
 
-export async function LineageTreeBody({ tree, up, down }: { tree: LineageTree; up: number; down: number }) {
+export async function LineageTreeBody({
+  tree,
+  up,
+  down,
+  siblings,
+  groupSiblings,
+}: {
+  tree: LineageTree;
+  up: number;
+  down: number;
+  siblings: number;
+  groupSiblings: number;
+}) {
   const isEmpty = tree.ancestors.length === 0 && tree.secondarySifus.length === 0 && tree.descendantLevels.length === 0;
   const layout = buildLayout(tree);
   const { markerByNodeId, entries } = await resolvePortrayalMarkers(layout.nodes);
 
+  // Every link that re-centers/expands this same tree needs to carry all
+  // four params forward, or expanding one (more generations, say) would
+  // silently reset another (a sibling limit already bumped by an earlier
+  // "+N more" click).
+  const treeUrl = (overrides: { up?: number; down?: number; siblings?: number; groupSiblings?: number }) => {
+    const params = { up, down, siblings, groupSiblings, ...overrides };
+    return `${figureHref(tree.center)}?up=${params.up}&down=${params.down}&siblings=${params.siblings}&groupSiblings=${params.groupSiblings}`;
+  };
+
   return (
     <div className="flex flex-col items-center gap-3">
       {tree.ancestorsTruncated && (
-        <Link
-          href={`${figureHref(tree.center)}?up=${up + 3}&down=${down}`}
-          className="text-xs text-neutral-500 hover:text-neutral-300"
-        >
+        <Link href={treeUrl({ up: up + 3 })} className="text-xs text-neutral-500 hover:text-neutral-300">
           &hellip; show earlier generations
         </Link>
       )}
@@ -393,16 +425,26 @@ export async function LineageTreeBody({ tree, up, down }: { tree: LineageTree; u
             ))}
           </svg>
           {layout.nodes.map((node) => (
-            <TreeNode key={node.id} node={node} marker={markerByNodeId.get(node.id)} />
+            <TreeNode
+              key={node.id}
+              node={node}
+              marker={markerByNodeId.get(node.id)}
+              moreHref={
+                node.kind === "overflow"
+                  ? treeUrl(
+                      node.overflowParentIsGroup
+                        ? { groupSiblings: groupSiblings + (node.overflowCount ?? 0) }
+                        : { siblings: siblings + (node.overflowCount ?? 0) },
+                    )
+                  : undefined
+              }
+            />
           ))}
         </div>
       </div>
 
       {tree.descendantsTruncated && (
-        <Link
-          href={`${figureHref(tree.center)}?up=${up}&down=${down + 3}`}
-          className="text-xs text-neutral-500 hover:text-neutral-300"
-        >
+        <Link href={treeUrl({ down: down + 3 })} className="text-xs text-neutral-500 hover:text-neutral-300">
           show more generations &hellip;
         </Link>
       )}
