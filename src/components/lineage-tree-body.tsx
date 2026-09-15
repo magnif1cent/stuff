@@ -339,7 +339,7 @@ function PortrayalList({ entries }: { entries: PortrayalEntry[] }) {
                 >
                   {p.person.name}
                 </Link>
-                {p.movieYear && <span> ({p.movieYear})</span>}
+                {p.years.length > 0 && <span> ({p.years.join(", ")})</span>}
               </span>
             ))}
           </p>

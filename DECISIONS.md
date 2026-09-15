@@ -5139,8 +5139,9 @@ matching "earlier generations appear above" in the page's own copy),
 skipping any figure with zero matches so numbering has no gaps a reader
 would have to explain.
 
-`getPortrayals` and its matching logic are untouched -- this is a
-rendering change only. The `Portrayal` subcomponent from the previous two
+`getPortrayals`'s matching logic (normalization, the single-word guard)
+is untouched -- only what it returns and how much of it changed, see the
+follow-up below. The `Portrayal` subcomponent from the previous two
 entries is gone (each node no longer independently awaits its own
 `getPortrayals` call); `LineageTreeBody` now resolves every bare figure's
 portrayals in one batched pass after `buildLayout`, same total DB work as
@@ -5161,6 +5162,20 @@ calls "browsing flavor for readers"). The footnote-plus-list keeps that
 browsing value while still being always-visible, unlike the avatar
 option, at the cost of the reader looking one section away from the node
 instead of directly underneath it.
+
+**Follow-up, same PR: dropped the 3-actor cap, and an actor's every year
+now shows, not just their earliest.** Both caps existed for the old
+inline node caption, where more text meant more wrapping inside a fixed
+80px column. Once the caption moved into a list with no such column,
+those caps were fixed data loss with no layout benefit left to justify
+it -- reported directly against Jet Li, credited across three separate
+Wong Fei-Hung films, showing only his first (1991) because
+`getPortrayals` deduped down to one credit per actor. It still dedupes to
+one *entry* per actor (no repeated rows for the same person), but now
+collects every year from their matching credits instead of discarding
+all but the earliest, and returns every distinct actor rather than
+`slice`-ing to 3. `PortrayalList` renders the years comma-joined after
+the actor's name, e.g. "Jet Li (1991, 1992, 1993)".
 
 ### Lineage: "sifu"/"student" dropped from display copy, not swapped for another role term
 **PR #TBD.** Once non-actor figures could be historical martial artists or

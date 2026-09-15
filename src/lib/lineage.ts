@@ -215,36 +215,40 @@ export function normalizeCharacterName(name: string): string {
 // guarantee -- it doesn't catch every collision -- but every genuine
 // recurring figure found in this catalog is multi-word, so it costs
 // nothing for the real cases this feature is for.
-export async function getPortrayals(name: string): Promise<{ person: PersonRef; movieTitle: string; movieYear: number | null }[]> {
+//
+// No cap on distinct actors, and every year an actor played the role is
+// kept (not just their earliest) -- this renders into a list below the
+// tree with room to breathe (see DECISIONS.md), not the old fixed-width
+// node caption that capping at 3 actors and one year each was built for.
+export async function getPortrayals(name: string): Promise<{ person: PersonRef; years: number[] }[]> {
   if (!name.trim().includes(" ")) return [];
 
   const normalized = normalizeCharacterName(name);
   const credits = await prisma.$queryRaw<
-    { personId: string; personName: string; profilePath: string | null; movieTitle: string; releaseDate: Date | null }[]
+    { personId: string; personName: string; profilePath: string | null; releaseDate: Date | null }[]
   >`
     SELECT "Person"."id" AS "personId", "Person"."name" AS "personName", "Person"."profilePath",
-           "Movie"."title" AS "movieTitle", "Movie"."releaseDate"
+           "Movie"."releaseDate"
     FROM "CastCredit"
     JOIN "Person" ON "Person"."id" = "CastCredit"."personId"
     JOIN "Movie" ON "Movie"."id" = "CastCredit"."movieId"
     WHERE "Movie"."status" = 'APPROVED'
       AND lower(regexp_replace("CastCredit"."characterName", '[^a-zA-Z0-9]', '', 'g')) = ${normalized}
     ORDER BY "Movie"."releaseDate" ASC
-    LIMIT 6
   `;
-  const seen = new Set<string>();
-  const results: { person: PersonRef; movieTitle: string; movieYear: number | null }[] = [];
+
+  const order: string[] = [];
+  const byPerson = new Map<string, { person: PersonRef; years: number[] }>();
   for (const credit of credits) {
-    if (seen.has(credit.personId)) continue;
-    seen.add(credit.personId);
-    results.push({
-      person: { id: credit.personId, name: credit.personName, profilePath: credit.profilePath },
-      movieTitle: credit.movieTitle,
-      movieYear: credit.releaseDate ? credit.releaseDate.getUTCFullYear() : null,
-    });
-    if (results.length === 3) break;
+    let entry = byPerson.get(credit.personId);
+    if (!entry) {
+      entry = { person: { id: credit.personId, name: credit.personName, profilePath: credit.profilePath }, years: [] };
+      byPerson.set(credit.personId, entry);
+      order.push(credit.personId);
+    }
+    if (credit.releaseDate) entry.years.push(credit.releaseDate.getUTCFullYear());
   }
-  return results;
+  return order.map((id) => byPerson.get(id)!);
 }
 
 // --- Cycle detection -------------------------------------------------
