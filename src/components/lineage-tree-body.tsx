@@ -29,6 +29,14 @@ function initials(name: string): string {
 // shifted once by the tree's actual min/max extent so nothing renders at a
 // negative pixel position. See DECISIONS.md for why this replaced the
 // earlier flexbox-and-arrows rendering.
+//
+// A parent with more than one child/overflow slot connects via an elbow
+// (a vertical stem, a shared horizontal bar, then an even vertical drop
+// into each child) rather than a diagonal line straight from the parent to
+// each child -- see DECISIONS.md. Secondary "co-sifu" links and the
+// ancestor chain are unaffected: the ancestor chain never branches, and a
+// secondary link stays a plain diagonal on purpose (its dashed diagonal is
+// what visually marks it as not a primary descendant edge).
 
 const SLOT_W = 78;
 const ROW_H = 108;
@@ -49,6 +57,10 @@ interface LayoutLine {
   x2: number;
   y2: number;
   dashed: boolean;
+  // Whether this segment is the one that actually reaches a node (and so
+  // should carry the arrowhead marker) -- false for the stem/bar segments
+  // of an elbow connector, which are purely intermediate.
+  arrowhead: boolean;
 }
 
 function buildLayout(tree: LineageTree) {
@@ -67,10 +79,10 @@ function buildLayout(tree: LineageTree) {
   for (let i = 0; i < A - 1; i++) {
     const from = posById.get(ancestorsReversed[i].id)!;
     const to = posById.get(ancestorsReversed[i + 1].id)!;
-    lines.push({ x1: from.x, y1: from.y, x2: to.x, y2: to.y, dashed: false });
+    lines.push({ x1: from.x, y1: from.y, x2: to.x, y2: to.y, dashed: false, arrowhead: true });
   }
   if (A > 0) {
-    lines.push({ x1: 0, y1: -ROW_H, x2: 0, y2: 0, dashed: false });
+    lines.push({ x1: 0, y1: -ROW_H, x2: 0, y2: 0, dashed: false, arrowhead: true });
   }
 
   const secondaryRowY = A > 0 ? -ROW_H : -ROW_H;
@@ -78,7 +90,7 @@ function buildLayout(tree: LineageTree) {
     const x = (i + 1) * SLOT_W;
     nodes.push({ id: figure.id, figure, kind: "secondary", x, y: secondaryRowY });
     posById.set(figure.id, { x, y: secondaryRowY });
-    lines.push({ x1: x, y1: secondaryRowY, x2: 0, y2: 0, dashed: true });
+    lines.push({ x1: x, y1: secondaryRowY, x2: 0, y2: 0, dashed: true, arrowhead: true });
   });
 
   nodes.push({ id: tree.center.id, figure: tree.center, kind: "center", x: 0, y: 0 });
@@ -113,12 +125,17 @@ function buildLayout(tree: LineageTree) {
       const parentPos = posById.get(group.parent.id) ?? { x: 0, y: y - ROW_H };
       const w = widths[i];
       let slot = 0;
+      // Every drop point under this parent (real children plus the
+      // overflow badge, if any) -- collected first so the connector can be
+      // drawn as one elbow (stem + shared bar + even drops) instead of a
+      // diagonal line per child radiating straight out of the parent.
+      const drops: { x: number; y: number; dashed: boolean }[] = [];
       for (const child of group.children) {
         const x = centers[i] + (slot - (w - 1) / 2) * SLOT_W;
         slot++;
         nodes.push({ id: child.id, figure: child, kind: "child", x, y });
         posById.set(child.id, { x, y });
-        lines.push({ x1: parentPos.x, y1: parentPos.y, x2: x, y2: y, dashed: false });
+        drops.push({ x, y, dashed: false });
       }
       if (group.overflowCount > 0) {
         const x = centers[i] + (slot - (w - 1) / 2) * SLOT_W;
@@ -130,7 +147,30 @@ function buildLayout(tree: LineageTree) {
           y,
           overflowCount: group.overflowCount,
         });
-        lines.push({ x1: parentPos.x, y1: parentPos.y, x2: x, y2: y, dashed: true });
+        drops.push({ x, y, dashed: true });
+      }
+
+      if (drops.length === 1) {
+        // The common case (a single child, no overflow) already lands
+        // exactly under the parent via `centers[i]` above, so a plain line
+        // is already a straight vertical drop -- no elbow needed.
+        const drop = drops[0];
+        lines.push({ x1: parentPos.x, y1: parentPos.y, x2: drop.x, y2: drop.y, dashed: drop.dashed, arrowhead: true });
+      } else if (drops.length > 1) {
+        const elbowY = parentPos.y + ROW_H / 2;
+        const dropXs = drops.map((d) => d.x);
+        lines.push({ x1: parentPos.x, y1: parentPos.y, x2: parentPos.x, y2: elbowY, dashed: false, arrowhead: false });
+        lines.push({
+          x1: Math.min(...dropXs),
+          y1: elbowY,
+          x2: Math.max(...dropXs),
+          y2: elbowY,
+          dashed: false,
+          arrowhead: false,
+        });
+        for (const drop of drops) {
+          lines.push({ x1: drop.x, y1: elbowY, x2: drop.x, y2: drop.y, dashed: drop.dashed, arrowhead: true });
+        }
       }
     });
   });
@@ -156,6 +196,7 @@ function buildLayout(tree: LineageTree) {
       x2: l.x2 + offsetX,
       y2: l.y2 + offsetY,
       dashed: l.dashed,
+      arrowhead: l.arrowhead,
     })),
   };
 }
@@ -170,7 +211,7 @@ const NODE_SIZE: Record<LayoutNode["kind"], number> = {
   overflow: 40,
 };
 
-function TreeNode({ node }: { node: LayoutNode }) {
+function TreeNode({ node, marker }: { node: LayoutNode; marker?: number }) {
   const size = NODE_SIZE[node.kind];
   const isOverflow = node.kind === "overflow";
   const isCenter = node.kind === "center";
@@ -226,37 +267,92 @@ function TreeNode({ node }: { node: LayoutNode }) {
       ) : (
         <Link href={figureHref(node.figure)} className="flex flex-col items-center gap-1 hover:opacity-80">
           {circle}
-          <span className={`text-xs leading-tight ${isCenter ? "font-semibold text-white" : "text-neutral-300"}`}>
+          <span
+            className={`bg-neutral-950 text-xs leading-tight ${isCenter ? "font-semibold text-white" : "text-neutral-300"}`}
+          >
             {node.figure.name}
+            {marker && <sup className="ml-0.5 text-[11px] font-bold text-neutral-500">{marker}</sup>}
           </span>
           {isCenter && isGroup && <span className="text-[9px] text-neutral-500 uppercase">Group</span>}
         </Link>
       )}
-      {!isOverflow && <Portrayal figure={node.figure} />}
     </div>
   );
 }
 
-// Best-effort "played by" caption for bare figures (Ip Man, say) -- derived
-// live from CastCredit.characterName, not stored anywhere (see
-// getPortrayals in lib/lineage.ts for why: more than one actor can
-// plausibly have played the same figure). Skipped for actor-linked figures,
-// which already show their own real photo, and for groups, which were
-// never a character a single actor could have played.
-async function Portrayal({ figure }: { figure: LineageFigureRef }) {
-  if (figure.personId || !figure.id || figure.isGroup) return null;
-  const portrayals = await getPortrayals(figure.name);
-  if (portrayals.length === 0) return null;
+// A bare figure's own "played by" detail (see getPortrayals in
+// lib/lineage.ts) doesn't render inline on the node -- its length varies
+// with how much cast data a figure has, which made sibling nodes on the
+// same row look uneven next to each other. Instead the node just gets a
+// superscript marker, and every marker's detail is collected into one
+// list below the whole tree, where there's no per-node column width to
+// wrap inside of. See DECISIONS.md.
+interface PortrayalEntry {
+  marker: number;
+  figureName: string;
+  portrayals: Awaited<ReturnType<typeof getPortrayals>>;
+}
+
+async function resolvePortrayalMarkers(nodes: LayoutNode[]): Promise<{
+  markerByNodeId: Map<string, number>;
+  entries: PortrayalEntry[];
+}> {
+  const bareNodes = nodes.filter(
+    (n) => n.kind !== "overflow" && n.figure.id && !n.figure.personId && !n.figure.isGroup,
+  );
+  const portrayalsByNodeId = new Map<string, Awaited<ReturnType<typeof getPortrayals>>>();
+  await Promise.all(
+    bareNodes.map(async (n) => {
+      const portrayals = await getPortrayals(n.figure.name);
+      if (portrayals.length > 0) portrayalsByNodeId.set(n.id, portrayals);
+    }),
+  );
+
+  const markerByNodeId = new Map<string, number>();
+  const entries: PortrayalEntry[] = [];
+  for (const n of nodes) {
+    const portrayals = portrayalsByNodeId.get(n.id);
+    if (!portrayals) continue;
+    const marker = entries.length + 1;
+    markerByNodeId.set(n.id, marker);
+    entries.push({ marker, figureName: n.figure.name, portrayals });
+  }
+  return { markerByNodeId, entries };
+}
+
+function PortrayalList({ entries }: { entries: PortrayalEntry[] }) {
+  if (entries.length === 0) return null;
   return (
-    <span className="text-[9px] leading-tight text-neutral-600">
-      played by {portrayals.map((p) => p.person.name).join(", ")}
-    </span>
+    <div className="w-full max-w-lg border-t border-neutral-800 pt-3">
+      <p className="mb-2 text-[10px] tracking-wide text-neutral-600 uppercase">Portrayed by</p>
+      <div className="flex flex-col gap-1.5">
+        {entries.map((entry) => (
+          <p key={entry.marker} className="text-xs leading-relaxed text-neutral-500">
+            <sup className="mr-1 text-[9px] font-bold text-neutral-500">{entry.marker}</sup>
+            {entry.figureName} &mdash;{" "}
+            {entry.portrayals.map((p, i) => (
+              <span key={p.person.id}>
+                {i > 0 && ", "}
+                <Link
+                  href={`/actors/${p.person.id}`}
+                  className="text-neutral-400 underline decoration-dotted hover:text-neutral-200"
+                >
+                  {p.person.name}
+                </Link>
+                {p.years.length > 0 && <span> ({p.years.join(", ")})</span>}
+              </span>
+            ))}
+          </p>
+        ))}
+      </div>
+    </div>
   );
 }
 
 export async function LineageTreeBody({ tree, up, down }: { tree: LineageTree; up: number; down: number }) {
   const isEmpty = tree.ancestors.length === 0 && tree.secondarySifus.length === 0 && tree.descendantLevels.length === 0;
   const layout = buildLayout(tree);
+  const { markerByNodeId, entries } = await resolvePortrayalMarkers(layout.nodes);
 
   return (
     <div className="flex flex-col items-center gap-3">
@@ -292,12 +388,12 @@ export async function LineageTreeBody({ tree, up, down }: { tree: LineageTree; u
                 stroke="#4d3a26"
                 strokeWidth={2}
                 strokeDasharray={line.dashed ? "4 4" : undefined}
-                markerEnd={line.dashed ? undefined : "url(#lineage-arrow)"}
+                markerEnd={!line.dashed && line.arrowhead ? "url(#lineage-arrow)" : undefined}
               />
             ))}
           </svg>
           {layout.nodes.map((node) => (
-            <TreeNode key={node.id} node={node} />
+            <TreeNode key={node.id} node={node} marker={markerByNodeId.get(node.id)} />
           ))}
         </div>
       </div>
@@ -310,6 +406,8 @@ export async function LineageTreeBody({ tree, up, down }: { tree: LineageTree; u
           show more generations &hellip;
         </Link>
       )}
+
+      <PortrayalList entries={entries} />
 
       {isEmpty && <p className="mt-4 text-sm text-neutral-500">No lineage recorded for {tree.center.name} yet.</p>}
     </div>

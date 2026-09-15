@@ -153,8 +153,11 @@ one.
 - [Career Highlights reverted to a plain Details card](#career-highlights-reverted-to-a-plain-details-card)
 - [Sifu Lineage: primary-sifu-plus-dotted-line, bulk chain-import over drag-and-drop](#sifu-lineage-primary-sifu-plus-dotted-line-bulk-chain-import-over-drag-and-drop)
 - [Sifu Lineage: LineageFigure introduced, reversing the Person-only restriction](#sifu-lineage-lineagefigure-introduced-reversing-the-person-only-restriction)
+- [Lineage: `getPortrayals` matching widened to normalized text, not exact](#lineage-getportrayals-matching-widened-to-normalized-text-not-exact)
 - [Sifu Lineage: actor-page teaser moved from a stat card to its own tree section](#sifu-lineage-actor-page-teaser-moved-from-a-stat-card-to-its-own-tree-section)
 - [Sifu Lineage: `LineageTreeBody` rewritten as computed SVG layout, not flexbox](#sifu-lineage-lineagetreebody-rewritten-as-computed-svg-layout-not-flexbox)
+- [Lineage: parent→child connectors switched to an elbow, not a diagonal fan-out](#lineage-parentchild-connectors-switched-to-an-elbow-not-a-diagonal-fan-out)
+- [Lineage: "played by" moved off the node into a footnote marker + shared list](#lineage-played-by-moved-off-the-node-into-a-footnote-marker--shared-list)
 - [Lineage: "sifu"/"student" dropped from display copy, not swapped for another role term](#lineage-sifustudent-dropped-from-display-copy-not-swapped-for-another-role-term)
 - [Lineage: groups are a normal figure in the owner's own row, not a lateral position](#lineage-groups-are-a-normal-figure-in-the-owners-own-row-not-a-lateral-position)
 - [Lineage: bare figures get a delete/toggle-group escape hatch, cascade over block-if-linked](#lineage-bare-figures-get-a-deletetoggle-group-escape-hatch-cascade-over-block-if-linked)
@@ -4987,6 +4990,48 @@ every sifu is an actor.
   someone bookmarking mid-edit), so there's exactly one canonical URL per
   figure either way.
 
+### Lineage: `getPortrayals` matching widened to normalized text, not exact
+**PR #TBD.** `getPortrayals` originally matched `characterName` by exact,
+case-insensitive equality against a `LineageFigure`'s own name. A data
+review of `CastCredit.characterName` found the catalog's single most-
+recurring character, Wong Fei-Hung, split across three distinct strings —
+`"Wong Fei-Hung"`, `"Wong Fei-hung"`, and `"Wong Fei Hung"` (no hyphen, the
+largest of the three) — none of which is just a case difference from
+another, so the exact-match version silently missed whichever spelling the
+admin didn't happen to type when creating the figure. Confirmed live: a
+figure created as "Wong Fei-Hung" was only ever surfacing the actors from
+the hyphenated spelling, never the no-hyphen one.
+
+- **Matching now compares a normalized form**: lowercase, then every
+  character that isn't a letter or digit stripped (`normalizeCharacterName`
+  in `lib/lineage.ts`) — so hyphens, spaces, and punctuation all collapse
+  together. Still deterministic, not similarity/fuzzy matching (this repo
+  already has `pg_trgm`-based `similarity()` for "did you mean" in
+  `fuzzy-search.ts`, but a false-positive portrayal misattributes an actor
+  to the wrong character, which a wrong search suggestion doesn't — fuzzy
+  matching was rejected for that reason).
+- **A stored, admin-curated portrayal link was considered and rejected
+  again**, for the same reason the entry above chose derivation over
+  storage the first time: it would reverse the "stays correct as new
+  movies get added, with no upkeep" property, in exchange for fully
+  solving a same-name/different-character collision risk (two unrelated
+  films both using a common name like "Dragon") that remains theoretical
+  for this catalog — nothing in it has actually collided yet. The
+  confirmed defect was the matching gap, not a collision, so that's what
+  this change fixes.
+- **Single-word figure names are skipped entirely** (`getPortrayals`
+  returns `[]` before querying) as a partial guard against that same
+  collision risk: every genuine recurring character found in the data
+  (Wong Fei-hung, Wong Kei-ying, Leung Foon, Fong Sai-yuk, Monk San Te) is
+  multi-word, while collision-prone generic role names ("Monk," "Extra,"
+  "Dragon") are single common words. This is a heuristic, not a fix — a
+  two-word figure can still collide with an unrelated same-named character
+  elsewhere in the catalog, and this change doesn't attempt to solve that.
+- **The caption now shows the release year and links each actor** to their
+  own actor page (`/actors/[personId]`) — both were already available
+  (`getPortrayals` already fetched `releaseDate` to sort by) but never
+  reached the page.
+
 ### Sifu Lineage: actor-page teaser moved from a stat card to its own tree section
 **PR #TBD.** The compact **Lineage** card (sized like Details/Sparring
 Partner, in the stats row) was replaced with a full-width **Lineage**
@@ -5029,6 +5074,108 @@ arithmetic covers it without pulling in dagre/elkjs. Slot width and node
 label width were both narrowed in the same pass (a long name like "Michael
 Chow Man-Kin" was pushing generation rows wider than necessary) so names
 wrap within a fixed column instead of stretching the row.
+
+### Lineage: parent→child connectors switched to an elbow, not a diagonal fan-out
+**PR #TBD.** `buildLayout`'s descendant connectors originally drew one
+straight `<line>` per child, from the parent's own point directly to that
+child's x — correct, but visibly radiating outward from the parent
+whenever it had more than one child (flagged directly against a
+production screenshot: Lam Sai-Wing's two students, Lau Cham and Chiu Kao,
+fanning out as two diagonals). Switched to the standard org-chart/
+family-tree elbow instead: a vertical stem from the parent to a shared
+midpoint, one horizontal bar across that parent's own children, then an
+even vertical drop into each — reusing the same `centers[i]` sibling
+positions `buildLayout` already computed, so node placement, overlap
+avoidance, and slot width are all unchanged. A parent with exactly one
+child (the common case) still renders as a single straight line, since
+that child is already centered at the parent's own x.
+
+Left deliberately unconverted: the ancestor chain (never branches, so it
+was already a plain vertical line) and secondary "co-sifu" links, which
+stay a diagonal, dashed line to the center on purpose — per the entry
+below, the dashed diagonal is what visually marks a secondary link as not
+a primary descendant edge, and making it orthogonal too would blur that
+distinction rather than fix the fan-out the feedback was actually about.
+
+**Follow-up, same PR: name/caption labels given an opaque background,
+`ROW_H` left alone.** Screenshotting the change against a real portrayal
+caption (see the entry above widening `getPortrayals` matching) showed the
+connector visibly cutting across a node's own "played by ..." text — the
+caption now carries release years, wraps to 2-3 lines inside the node's
+fixed 80px column, and a connector routinely ran straight through it.
+Raising `ROW_H` (108 → 168) was tried first and did clear it, but was
+rejected on sight: a noticeably taller, sparser tree isn't worth it just to
+buy clearance for a caption whose height is unbounded anyway (more actors,
+longer names) — a tall enough caption would eventually outrun any fixed
+row height. Reverted to 108, keeping only the other half of the fix: the
+name label and the portrayal caption `<span>` were given the page's own
+background color (`bg-neutral-950`). Inline backgrounds paint per line, so
+this hides any connector segment that passes behind wrapped text without
+touching the line's coordinates or needing to know the caption's real
+height — the fix that actually generalizes, independent of row height.
+Confirmed with Playwright screenshots at the original `ROW_H` against both
+a single-child chain and a two-child branch: in both, the connector now
+only shows in the gaps between text lines, same tree size as before.
+
+### Lineage: "played by" moved off the node into a footnote marker + shared list
+**PR #TBD.** The inline caption's real, separate problem (distinct from
+the connector-crossing bug the previous two entries fixed): its height
+varies with how much portrayal data a figure has, so sibling nodes on the
+same row could end up visibly uneven with each other -- one child's
+column taller than its neighbor's for no reason a reader would find
+meaningful, purely an artifact of how much cast data happened to get
+imported for that particular character.
+
+Replaced the inline text with a small superscript marker next to a bare
+figure's name (`TreeNode`'s `marker` prop), and moved the actual "played
+by" detail into one list below the whole tree (`PortrayalList`), keyed by
+the same markers. Every node's own footprint is now just a circle, a
+name, and at most a 1-2 character superscript -- fixed height regardless
+of how many actors a figure has -- and the readable detail lives
+somewhere with no per-node column width to wrap inside of. Markers are
+numbered in `buildLayout`'s existing node order (ancestors oldest-first,
+then center, then descendants level by level -- already top-to-bottom,
+matching "earlier generations appear above" in the page's own copy),
+skipping any figure with zero matches so numbering has no gaps a reader
+would have to explain.
+
+`getPortrayals`'s matching logic (normalization, the single-word guard)
+is untouched -- only what it returns and how much of it changed, see the
+follow-up below. The `Portrayal` subcomponent from the previous two
+entries is gone (each node no longer independently awaits its own
+`getPortrayals` call); `LineageTreeBody` now resolves every bare figure's
+portrayals in one batched pass after `buildLayout`, same total DB work as
+before. This also makes the background-masking fix from the entry above
+moot for the portrayal caption specifically -- there's no more inline
+caption in a node's column for a connector to cross -- though the masking
+stays on the name label itself, which can still wrap to two lines on a
+long name.
+
+Two other options were mocked up and set aside: small avatar photos in
+place of text (same fixed-height win, but hides names/years behind a
+hover or tap, a real loss on touch devices); and dropping the caption from
+every tree entirely, showing it only as a full section on a figure's own
+page (removes the layout problem completely, but a figure shown as
+someone else's ancestor/descendant would give no hint at all who played
+them without a click-through -- too large a loss of what README already
+calls "browsing flavor for readers"). The footnote-plus-list keeps that
+browsing value while still being always-visible, unlike the avatar
+option, at the cost of the reader looking one section away from the node
+instead of directly underneath it.
+
+**Follow-up, same PR: dropped the 3-actor cap, and an actor's every year
+now shows, not just their earliest.** Both caps existed for the old
+inline node caption, where more text meant more wrapping inside a fixed
+80px column. Once the caption moved into a list with no such column,
+those caps were fixed data loss with no layout benefit left to justify
+it -- reported directly against Jet Li, credited across three separate
+Wong Fei-Hung films, showing only his first (1991) because
+`getPortrayals` deduped down to one credit per actor. It still dedupes to
+one *entry* per actor (no repeated rows for the same person), but now
+collects every year from their matching credits instead of discarding
+all but the earliest, and returns every distinct actor rather than
+`slice`-ing to 3. `PortrayalList` renders the years comma-joined after
+the actor's name, e.g. "Jet Li (1991, 1992, 1993)".
 
 ### Lineage: "sifu"/"student" dropped from display copy, not swapped for another role term
 **PR #TBD.** Once non-actor figures could be historical martial artists or
