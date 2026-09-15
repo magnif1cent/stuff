@@ -39,7 +39,14 @@ function initials(name: string): string {
 // what visually marks it as not a primary descendant edge).
 
 const SLOT_W = 78;
-const ROW_H = 108;
+// Tall enough to clear a node's own name label plus a multi-actor
+// portrayal caption (both wrap inside the fixed w-20 column, so a node
+// with a two-line name and a three-actor caption can run to ~150px of
+// content below its own anchor point) -- otherwise the connector line
+// into the next row draws directly across that caption text. 108 was
+// enough before the portrayal caption carried release years; it no longer
+// is.
+const ROW_H = 168;
 const PAD_X = 56;
 const PAD_Y = 52;
 
@@ -267,7 +274,9 @@ function TreeNode({ node }: { node: LayoutNode }) {
       ) : (
         <Link href={figureHref(node.figure)} className="flex flex-col items-center gap-1 hover:opacity-80">
           {circle}
-          <span className={`text-xs leading-tight ${isCenter ? "font-semibold text-white" : "text-neutral-300"}`}>
+          <span
+            className={`bg-neutral-950 text-xs leading-tight ${isCenter ? "font-semibold text-white" : "text-neutral-300"}`}
+          >
             {node.figure.name}
           </span>
           {isCenter && isGroup && <span className="text-[9px] text-neutral-500 uppercase">Group</span>}
@@ -289,7 +298,7 @@ async function Portrayal({ figure }: { figure: LineageFigureRef }) {
   const portrayals = await getPortrayals(figure.name);
   if (portrayals.length === 0) return null;
   return (
-    <span className="text-[9px] leading-tight text-neutral-600">
+    <span className="bg-neutral-950 text-[9px] leading-tight text-neutral-600">
       played by{" "}
       {portrayals.map((p, i) => (
         <span key={p.person.id}>
