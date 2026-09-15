@@ -498,7 +498,7 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
             &ldquo;Lineage&rdquo; is our tribute to the martial artists who built this genre, generation by
             generation. Hand-curated, always a work in progress &mdash; reach out if you spot something to fix.
           </p>
-          <LineageTreeBody tree={lineageTree} up={1} down={1} />
+          <LineageTreeBody tree={lineageTree} up={1} down={1} siblings={3} groupSiblings={12} />
         </div>
       )}
 

@@ -161,6 +161,7 @@ one.
 - [Lineage: "sifu"/"student" dropped from display copy, not swapped for another role term](#lineage-sifustudent-dropped-from-display-copy-not-swapped-for-another-role-term)
 - [Lineage: groups are a normal figure in the owner's own row, not a lateral position](#lineage-groups-are-a-normal-figure-in-the-owners-own-row-not-a-lateral-position)
 - [Lineage: bare figures get a delete/toggle-group escape hatch, cascade over block-if-linked](#lineage-bare-figures-get-a-deletetoggle-group-escape-hatch-cascade-over-block-if-linked)
+- [Lineage: the "+N more" overflow badge became a real link, and the page container widened](#lineage-the-n-more-overflow-badge-became-a-real-link-and-the-page-container-widened)
 - [Fight Styles gain optional groups, via a real FightStyleGroup table](#fight-styles-gain-optional-groups-via-a-real-fightstylegroup-table)
 - [Navbar wordmark switched from a plain serif to all-caps Anton](#navbar-wordmark-switched-from-a-plain-serif-to-all-caps-anton)
 - [Historical Timeline gains era quick-jump chips, a minimap, and in-place rating filtering](#historical-timeline-gains-era-quick-jump-chips-a-minimap-and-in-place-rating-filtering)
@@ -5266,6 +5267,45 @@ reject an actor-linked figure server-side -- it's auto-managed by
 `resolveFigureForPerson` (upserted whenever that actor is linked again), so
 deleting one wouldn't stick, and "is this actor a group" isn't a coherent
 state to put a real person's figure in.
+
+### Lineage: the "+N more" overflow badge became a real link, and the page container widened
+**PR #TBD.** Two small, related gaps found looking at a real, heavily-
+populated tree (Yu Jim-Yuen's — eight direct Seven Little Fortunes plus
+two stunt-team groups, each with their own students): the "+N more"
+overflow badge was plain text with no `href` at all, so whichever
+students got cut off past the sibling limit were completely unreachable
+from the tree — not hidden-but-findable, just gone from the UI. Separately,
+the page wrapping `LineageTreeBody` was capped at `max-w-4xl`, so a wide
+tree like this one needed horizontal scrolling well before it needed to.
+
+- **Container width**: dropped `max-w-4xl` from both lineage page
+  wrappers (`/lineage/[figureId]`, `/actors/[personId]/lineage`) down to
+  plain `w-full` — nothing upstream in `layout.tsx`'s `<main>` constrains
+  width either, so this actually widens the usable area. The tree's own
+  `overflow-x-auto` wrapper is untouched and still catches any tree wider
+  than the viewport; this just raises how wide a tree needs to be before
+  that kicks in. The short heading and disclaimer paragraph stretch to the
+  same width now too — plain short lines, not a readability problem the
+  way a long-form paragraph would be.
+- **Overflow badge → real link**: `getLineageTree` already took
+  `siblingLimit`/`groupSiblingLimit` options (a group's own roster gets a
+  separately, more generous cap — see "groups are a normal figure" above),
+  just never exposed as a page-level control. Added `siblings`/
+  `groupSiblings` search params (defaulting to the values already
+  hardcoded, 8 and 12, so nothing changes unless one is clicked) alongside
+  the existing `up`/`down`, and gave the overflow `LayoutNode` an
+  `overflowParentIsGroup` flag so `LineageTreeBody` knows which of the two
+  params a given badge should bump — a group's overflow needs
+  `groupSiblings` raised, an individual's needs `siblings`. Clicking
+  "+N more" now re-centers the same tree with that limit raised by exactly
+  this badge's own `overflowCount`, guaranteed to clear what was hidden
+  behind it specifically, even though the limit is applied tree-wide (a
+  different parent's own overflow, if any, isn't necessarily also cleared
+  by the same click). All four URL params (`up`, `down`, `siblings`,
+  `groupSiblings`) are now threaded through every link `LineageTreeBody`
+  generates via one small `treeUrl()` helper, so expanding one dimension
+  (more generations, say) can't silently reset another already-expanded
+  one (a sibling limit already bumped by an earlier click).
 
 - **Drag-and-drop reordering for ranked list items** — `ListItemRows`
   (`src/components/list-item-rows.tsx`) now has move-to-top/move-to-bottom
