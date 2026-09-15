@@ -271,7 +271,7 @@ function TreeNode({ node, marker }: { node: LayoutNode; marker?: number }) {
             className={`bg-neutral-950 text-xs leading-tight ${isCenter ? "font-semibold text-white" : "text-neutral-300"}`}
           >
             {node.figure.name}
-            {marker && <sup className="ml-0.5 text-[8px] font-bold text-neutral-500">{marker}</sup>}
+            {marker && <sup className="ml-0.5 text-[11px] font-bold text-neutral-500">{marker}</sup>}
           </span>
           {isCenter && isGroup && <span className="text-[9px] text-neutral-500 uppercase">Group</span>}
         </Link>
