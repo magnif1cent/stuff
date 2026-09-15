@@ -211,7 +211,7 @@ const NODE_SIZE: Record<LayoutNode["kind"], number> = {
   overflow: 40,
 };
 
-function TreeNode({ node }: { node: LayoutNode }) {
+function TreeNode({ node, marker }: { node: LayoutNode; marker?: number }) {
   const size = NODE_SIZE[node.kind];
   const isOverflow = node.kind === "overflow";
   const isCenter = node.kind === "center";
@@ -271,44 +271,88 @@ function TreeNode({ node }: { node: LayoutNode }) {
             className={`bg-neutral-950 text-xs leading-tight ${isCenter ? "font-semibold text-white" : "text-neutral-300"}`}
           >
             {node.figure.name}
+            {marker && <sup className="ml-0.5 text-[8px] font-bold text-neutral-500">{marker}</sup>}
           </span>
           {isCenter && isGroup && <span className="text-[9px] text-neutral-500 uppercase">Group</span>}
         </Link>
       )}
-      {!isOverflow && <Portrayal figure={node.figure} />}
     </div>
   );
 }
 
-// Best-effort "played by" caption for bare figures (Ip Man, say) -- derived
-// live from CastCredit.characterName, not stored anywhere (see
-// getPortrayals in lib/lineage.ts for why: more than one actor can
-// plausibly have played the same figure). Skipped for actor-linked figures,
-// which already show their own real photo, and for groups, which were
-// never a character a single actor could have played.
-async function Portrayal({ figure }: { figure: LineageFigureRef }) {
-  if (figure.personId || !figure.id || figure.isGroup) return null;
-  const portrayals = await getPortrayals(figure.name);
-  if (portrayals.length === 0) return null;
+// A bare figure's own "played by" detail (see getPortrayals in
+// lib/lineage.ts) doesn't render inline on the node -- its length varies
+// with how much cast data a figure has, which made sibling nodes on the
+// same row look uneven next to each other. Instead the node just gets a
+// superscript marker, and every marker's detail is collected into one
+// list below the whole tree, where there's no per-node column width to
+// wrap inside of. See DECISIONS.md.
+interface PortrayalEntry {
+  marker: number;
+  figureName: string;
+  portrayals: Awaited<ReturnType<typeof getPortrayals>>;
+}
+
+async function resolvePortrayalMarkers(nodes: LayoutNode[]): Promise<{
+  markerByNodeId: Map<string, number>;
+  entries: PortrayalEntry[];
+}> {
+  const bareNodes = nodes.filter(
+    (n) => n.kind !== "overflow" && n.figure.id && !n.figure.personId && !n.figure.isGroup,
+  );
+  const portrayalsByNodeId = new Map<string, Awaited<ReturnType<typeof getPortrayals>>>();
+  await Promise.all(
+    bareNodes.map(async (n) => {
+      const portrayals = await getPortrayals(n.figure.name);
+      if (portrayals.length > 0) portrayalsByNodeId.set(n.id, portrayals);
+    }),
+  );
+
+  const markerByNodeId = new Map<string, number>();
+  const entries: PortrayalEntry[] = [];
+  for (const n of nodes) {
+    const portrayals = portrayalsByNodeId.get(n.id);
+    if (!portrayals) continue;
+    const marker = entries.length + 1;
+    markerByNodeId.set(n.id, marker);
+    entries.push({ marker, figureName: n.figure.name, portrayals });
+  }
+  return { markerByNodeId, entries };
+}
+
+function PortrayalList({ entries }: { entries: PortrayalEntry[] }) {
+  if (entries.length === 0) return null;
   return (
-    <span className="bg-neutral-950 text-[9px] leading-tight text-neutral-600">
-      played by{" "}
-      {portrayals.map((p, i) => (
-        <span key={p.person.id}>
-          {i > 0 && ", "}
-          <Link href={`/actors/${p.person.id}`} className="text-neutral-400 underline decoration-dotted hover:text-neutral-200">
-            {p.person.name}
-          </Link>
-          {p.movieYear && <span> ({p.movieYear})</span>}
-        </span>
-      ))}
-    </span>
+    <div className="w-full max-w-lg border-t border-neutral-800 pt-3">
+      <p className="mb-2 text-[10px] tracking-wide text-neutral-600 uppercase">Portrayed by</p>
+      <div className="flex flex-col gap-1.5">
+        {entries.map((entry) => (
+          <p key={entry.marker} className="text-xs leading-relaxed text-neutral-500">
+            <sup className="mr-1 text-[9px] font-bold text-neutral-500">{entry.marker}</sup>
+            {entry.figureName} &mdash;{" "}
+            {entry.portrayals.map((p, i) => (
+              <span key={p.person.id}>
+                {i > 0 && ", "}
+                <Link
+                  href={`/actors/${p.person.id}`}
+                  className="text-neutral-400 underline decoration-dotted hover:text-neutral-200"
+                >
+                  {p.person.name}
+                </Link>
+                {p.movieYear && <span> ({p.movieYear})</span>}
+              </span>
+            ))}
+          </p>
+        ))}
+      </div>
+    </div>
   );
 }
 
 export async function LineageTreeBody({ tree, up, down }: { tree: LineageTree; up: number; down: number }) {
   const isEmpty = tree.ancestors.length === 0 && tree.secondarySifus.length === 0 && tree.descendantLevels.length === 0;
   const layout = buildLayout(tree);
+  const { markerByNodeId, entries } = await resolvePortrayalMarkers(layout.nodes);
 
   return (
     <div className="flex flex-col items-center gap-3">
@@ -349,7 +393,7 @@ export async function LineageTreeBody({ tree, up, down }: { tree: LineageTree; u
             ))}
           </svg>
           {layout.nodes.map((node) => (
-            <TreeNode key={node.id} node={node} />
+            <TreeNode key={node.id} node={node} marker={markerByNodeId.get(node.id)} />
           ))}
         </div>
       </div>
@@ -362,6 +406,8 @@ export async function LineageTreeBody({ tree, up, down }: { tree: LineageTree; u
           show more generations &hellip;
         </Link>
       )}
+
+      <PortrayalList entries={entries} />
 
       {isEmpty && <p className="mt-4 text-sm text-neutral-500">No lineage recorded for {tree.center.name} yet.</p>}
     </div>

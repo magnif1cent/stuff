@@ -157,6 +157,7 @@ one.
 - [Sifu Lineage: actor-page teaser moved from a stat card to its own tree section](#sifu-lineage-actor-page-teaser-moved-from-a-stat-card-to-its-own-tree-section)
 - [Sifu Lineage: `LineageTreeBody` rewritten as computed SVG layout, not flexbox](#sifu-lineage-lineagetreebody-rewritten-as-computed-svg-layout-not-flexbox)
 - [Lineage: parent→child connectors switched to an elbow, not a diagonal fan-out](#lineage-parentchild-connectors-switched-to-an-elbow-not-a-diagonal-fan-out)
+- [Lineage: "played by" moved off the node into a footnote marker + shared list](#lineage-played-by-moved-off-the-node-into-a-footnote-marker--shared-list)
 - [Lineage: "sifu"/"student" dropped from display copy, not swapped for another role term](#lineage-sifustudent-dropped-from-display-copy-not-swapped-for-another-role-term)
 - [Lineage: groups are a normal figure in the owner's own row, not a lateral position](#lineage-groups-are-a-normal-figure-in-the-owners-own-row-not-a-lateral-position)
 - [Lineage: bare figures get a delete/toggle-group escape hatch, cascade over block-if-linked](#lineage-bare-figures-get-a-deletetoggle-group-escape-hatch-cascade-over-block-if-linked)
@@ -5115,6 +5116,51 @@ height — the fix that actually generalizes, independent of row height.
 Confirmed with Playwright screenshots at the original `ROW_H` against both
 a single-child chain and a two-child branch: in both, the connector now
 only shows in the gaps between text lines, same tree size as before.
+
+### Lineage: "played by" moved off the node into a footnote marker + shared list
+**PR #TBD.** The inline caption's real, separate problem (distinct from
+the connector-crossing bug the previous two entries fixed): its height
+varies with how much portrayal data a figure has, so sibling nodes on the
+same row could end up visibly uneven with each other -- one child's
+column taller than its neighbor's for no reason a reader would find
+meaningful, purely an artifact of how much cast data happened to get
+imported for that particular character.
+
+Replaced the inline text with a small superscript marker next to a bare
+figure's name (`TreeNode`'s `marker` prop), and moved the actual "played
+by" detail into one list below the whole tree (`PortrayalList`), keyed by
+the same markers. Every node's own footprint is now just a circle, a
+name, and at most a 1-2 character superscript -- fixed height regardless
+of how many actors a figure has -- and the readable detail lives
+somewhere with no per-node column width to wrap inside of. Markers are
+numbered in `buildLayout`'s existing node order (ancestors oldest-first,
+then center, then descendants level by level -- already top-to-bottom,
+matching "earlier generations appear above" in the page's own copy),
+skipping any figure with zero matches so numbering has no gaps a reader
+would have to explain.
+
+`getPortrayals` and its matching logic are untouched -- this is a
+rendering change only. The `Portrayal` subcomponent from the previous two
+entries is gone (each node no longer independently awaits its own
+`getPortrayals` call); `LineageTreeBody` now resolves every bare figure's
+portrayals in one batched pass after `buildLayout`, same total DB work as
+before. This also makes the background-masking fix from the entry above
+moot for the portrayal caption specifically -- there's no more inline
+caption in a node's column for a connector to cross -- though the masking
+stays on the name label itself, which can still wrap to two lines on a
+long name.
+
+Two other options were mocked up and set aside: small avatar photos in
+place of text (same fixed-height win, but hides names/years behind a
+hover or tap, a real loss on touch devices); and dropping the caption from
+every tree entirely, showing it only as a full section on a figure's own
+page (removes the layout problem completely, but a figure shown as
+someone else's ancestor/descendant would give no hint at all who played
+them without a click-through -- too large a loss of what README already
+calls "browsing flavor for readers"). The footnote-plus-list keeps that
+browsing value while still being always-visible, unlike the avatar
+option, at the cost of the reader looking one section away from the node
+instead of directly underneath it.
 
 ### Lineage: "sifu"/"student" dropped from display copy, not swapped for another role term
 **PR #TBD.** Once non-actor figures could be historical martial artists or
