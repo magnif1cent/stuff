@@ -5096,24 +5096,25 @@ below, the dashed diagonal is what visually marks a secondary link as not
 a primary descendant edge, and making it orthogonal too would blur that
 distinction rather than fix the fan-out the feedback was actually about.
 
-**Follow-up, same PR: `ROW_H` raised from 108 to 168, and the name/caption
-labels given an opaque background.** Screenshotting the change against a
-real portrayal caption (see the entry above widening `getPortrayals`
-matching) showed the connector visibly cutting across a node's own "played
-by ..." text — the caption now carries release years, wraps to 2-3 lines
-inside the node's fixed 80px column, and at the old row height that text
-routinely ran past the halfway point a connector was drawn through. Raising
-`ROW_H` gives the elbow's horizontal bar room to clear a typical wrapped
-caption before the next row starts; it can't guarantee clearance for every
-possible caption length (an unbounded, async-fetched string against a
-fixed synchronous layout), so the name label and the portrayal caption
-`<span>` were also given the page's own background color
-(`bg-neutral-950`) — since inline backgrounds paint per line, this hides
-any connector segment that still passes behind wrapped text without
-touching the vertical line's start/end coordinates or needing to know the
-caption's real height. Confirmed with a Playwright screenshot against
-seeded portrayal data, not just the type-checker: the stem now only shows
-in the gaps between text lines.
+**Follow-up, same PR: name/caption labels given an opaque background,
+`ROW_H` left alone.** Screenshotting the change against a real portrayal
+caption (see the entry above widening `getPortrayals` matching) showed the
+connector visibly cutting across a node's own "played by ..." text — the
+caption now carries release years, wraps to 2-3 lines inside the node's
+fixed 80px column, and a connector routinely ran straight through it.
+Raising `ROW_H` (108 → 168) was tried first and did clear it, but was
+rejected on sight: a noticeably taller, sparser tree isn't worth it just to
+buy clearance for a caption whose height is unbounded anyway (more actors,
+longer names) — a tall enough caption would eventually outrun any fixed
+row height. Reverted to 108, keeping only the other half of the fix: the
+name label and the portrayal caption `<span>` were given the page's own
+background color (`bg-neutral-950`). Inline backgrounds paint per line, so
+this hides any connector segment that passes behind wrapped text without
+touching the line's coordinates or needing to know the caption's real
+height — the fix that actually generalizes, independent of row height.
+Confirmed with Playwright screenshots at the original `ROW_H` against both
+a single-child chain and a two-child branch: in both, the connector now
+only shows in the gaps between text lines, same tree size as before.
 
 ### Lineage: "sifu"/"student" dropped from display copy, not swapped for another role term
 **PR #TBD.** Once non-actor figures could be historical martial artists or

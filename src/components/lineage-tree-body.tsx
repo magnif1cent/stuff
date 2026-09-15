@@ -39,14 +39,7 @@ function initials(name: string): string {
 // what visually marks it as not a primary descendant edge).
 
 const SLOT_W = 78;
-// Tall enough to clear a node's own name label plus a multi-actor
-// portrayal caption (both wrap inside the fixed w-20 column, so a node
-// with a two-line name and a three-actor caption can run to ~150px of
-// content below its own anchor point) -- otherwise the connector line
-// into the next row draws directly across that caption text. 108 was
-// enough before the portrayal caption carried release years; it no longer
-// is.
-const ROW_H = 168;
+const ROW_H = 108;
 const PAD_X = 56;
 const PAD_Y = 52;
 
