@@ -39,8 +39,8 @@ const sourceSerif4 = Source_Serif_4({
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXTAUTH_URL ?? "http://localhost:3000"),
   title: {
-    default: "Kung Fu Sauce",
-    template: "%s | Kung Fu Sauce",
+    default: "KUNG FU SAUCE",
+    template: "%s | KUNG FU SAUCE",
   },
   description: "An IMDB-style database for kung fu and martial arts films.",
 };
