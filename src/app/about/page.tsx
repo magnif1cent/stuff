@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "About — Kung Fu Sauce",
+  title: "About",
   description: "What Kung Fu Sauce is, how the catalog is curated, and how to reach an admin.",
 };
 

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy — Kung Fu Sauce",
+  title: "Privacy Policy",
   description: "What Kung Fu Sauce collects, how it's used, and your choices.",
 };
 
