@@ -482,9 +482,12 @@ export default async function FightSceneSearchPage({
         </FilterSheetPanel>
 
         <div className="order-1 min-w-0 flex-1 sm:order-2">
-          <h1 className="mb-4 font-serif text-xl font-bold text-white">
-            {query ? <>Fights matching &ldquo;{query}&rdquo;</> : "Browse Fights"}
-          </h1>
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+            <h1 className="font-serif text-xl font-bold text-white">
+              {query ? <>Fights matching &ldquo;{query}&rdquo;</> : "Browse Fights"}
+            </h1>
+            <FilterSheetTrigger activeCount={sheetFilterCount} />
+          </div>
 
           {/* Quick-access shortcuts into a filtered/sorted view — a faster
               path than the sidebar form for the handful of values (a sort
@@ -500,7 +503,6 @@ export default async function FightSceneSearchPage({
               named exception as the one actor prominent enough on this site
               to warrant his own one-click shortcut. */}
           <div className="mb-6 flex flex-wrap gap-2">
-            <FilterSheetTrigger activeCount={sheetFilterCount} />
             <a
               href={sort === "memberRating" ? "/search/fights" : "/search/fights?sort=memberRating"}
               className={bubbleClass(sort === "memberRating")}
