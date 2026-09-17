@@ -220,7 +220,14 @@ export function buildLayout(tree: LineageTree) {
       const x = parentX + overflowOffset;
       nodes.push({
         id: `${parentId}-overflow`,
-        figure: { id: "", name: `+${group.overflowCount} more`, profilePath: null, personId: null, isGroup: false },
+        figure: {
+          id: "",
+          name: `+${group.overflowCount} more`,
+          profilePath: null,
+          personId: null,
+          isGroup: false,
+          aliases: [],
+        },
         kind: "overflow",
         x,
         y,

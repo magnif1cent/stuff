@@ -337,6 +337,13 @@ model LineageFigure {
   // it (cycle detection, primary-link promotion, search) is generic over
   // any figure and doesn't need to know this flag exists.
   isGroup  Boolean @default(false)
+  // Alternate names the same figure is credited or known under (a nickname,
+  // a different romanization of the same historical name). Unioned into the
+  // "Portrayed by" footnote lookup (getPortrayals in lib/lineage.ts)
+  // alongside `name`, so a movie crediting the character under any of these
+  // still surfaces that actor under this one figure instead of splintering
+  // across a second, unlinked figure for the other name.
+  aliases  String[] @default([])
   person   Person? @relation(fields: [personId], references: [id], onDelete: SetNull)
 
   sifuLinks    LineageRelation[] @relation("LineageSifu")
