@@ -484,6 +484,15 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
     </>
   );
 
+  // Only shown when it actually differs from the display title -- most
+  // catalog entries are English-language originals where TMDB's
+  // original_title is identical to title, so the common case renders
+  // nothing here.
+  const originalTitleText =
+    movie.originalTitle && movie.originalTitle.trim().toLowerCase() !== movie.title.trim().toLowerCase()
+      ? movie.originalTitle
+      : null;
+
   const serializedFightScenes = fightScenes.map((scene) => {
     const summary = fightSceneRatingSummaries.get(scene.id);
     const adminSummary = fightSceneAdminRatingSummaries.get(scene.id);
@@ -636,6 +645,9 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
 
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 pt-8 sm:flex-row">
         <p className={`${titleClassName} sm:hidden`}>{titleText}</p>
+        {originalTitleText && (
+          <p className="font-editorial -mt-1 text-base text-neutral-400 italic sm:hidden">{originalTitleText}</p>
+        )}
 
         {/* Mobile: poster + a clamped movie.overview snippet sit side by
             side on the first line of a *wrapping* flex row -- byline moved
@@ -715,6 +727,9 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
           </div>
 
           <h1 className={`hidden ${titleClassName} sm:block`}>{titleText}</h1>
+          {originalTitleText && (
+            <p className="font-editorial hidden text-base text-neutral-400 italic sm:block">{originalTitleText}</p>
+          )}
 
           {movie.tagline && (
             <p className="font-editorial mt-2 hidden text-base text-neutral-400 italic sm:block">
