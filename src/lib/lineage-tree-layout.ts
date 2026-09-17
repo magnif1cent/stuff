@@ -12,8 +12,9 @@ import type { DescendantGroup, LineageFigureRef, LineageTree } from "@/lib/linea
 // shifted once by the tree's actual min/max extent so nothing renders at a
 // negative pixel position. See DECISIONS.md for why this replaced the
 // earlier flexbox-and-arrows rendering, and for why the descendant side
-// was rewritten again to size each branch by its full subtree width
-// instead of nudging one level at a time.
+// was rewritten again (twice) to compare each branch's own row-by-row
+// "contour" against its neighbors instead of nudging one level at a time
+// or reserving a flat width per branch.
 //
 // A parent with more than one child/overflow slot connects via an elbow
 // (a vertical stem, a shared horizontal bar, then an even vertical drop
@@ -87,62 +88,136 @@ export function buildLayout(tree: LineageTree) {
   nodes.push({ id: tree.center.id, figure: tree.center, kind: "center", x: 0, y: 0 });
   posById.set(tree.center.id, { x: 0, y: 0 });
 
-  // Every branch below the center is sized by its *own subtree's* full
-  // width, computed bottom-up, before any descendant is positioned --
-  // not just by how many immediate children the level directly above has.
-  // Sizing level-by-level from immediate child counts alone (the previous
-  // approach: center each parent's row directly under it, then nudge a
-  // later cluster right just far enough to clear the immediately
-  // preceding one) under-reserves a wide branch's width two levels down:
-  // it leaves just enough room for a neighboring sibling's own children,
-  // but that sibling's own grandchildren can still land in (or past) the
-  // wide branch's column, reading as descendants of the wrong person --
-  // and the neighboring parent's own connector, still drawn from its real
-  // (unmoved) position to its shifted-away children, can end up with a
-  // gap between its stem and its own elbow bar. Reserving the full
-  // subtree width up front means a parent is always exactly centered over
-  // its own children and never shares a column with an unrelated node.
+  // Every branch below the center reserves only as much horizontal room as
+  // its own shape actually needs, compared row-by-row (a "contour") against
+  // its neighbors -- not a flat width based on total descendant count. An
+  // earlier version of this sized each branch by its full leaf count
+  // (3 students reserves 3 slots, no matter how deep), which does stop a
+  // wide branch's grandchild from landing on a neighboring parent's own
+  // column, but it also reserves that same width at *every* row the branch
+  // spans -- so a childless sibling standing next to a branch with deep
+  // students still gets pushed as far away as that branch's *widest* row,
+  // even though nothing of the sibling's own is anywhere near that row to
+  // collide with. That reads as much more sprawled/uneven than the tree
+  // actually needs to be. Comparing contours instead only requires
+  // clearance at rows where two branches actually have something in them,
+  // so a leaf sibling can sit right next to a deep branch's own head and
+  // let that branch's grandchildren spread out underneath, while two
+  // branches that really do get wide at the same depth still end up
+  // properly separated -- see DECISIONS.md.
   const groupByParentAtLevel = new Map<string, DescendantGroup>();
   tree.descendantLevels.forEach((groups, levelIndex) => {
     for (const group of groups) groupByParentAtLevel.set(`${levelIndex}:${group.parent.id}`, group);
   });
 
-  const widthCache = new Map<string, number>();
-  function subtreeWidth(nodeId: string, levelIndex: number): number {
+  // A subtree's "profile" is its horizontal extent at each depth relative
+  // to its own root (depth 0 = the root itself, always [0, 0]), after its
+  // own children have already been packed against each other. `offsets`
+  // gives each direct child's (and the overflow badge's, if any) x
+  // relative to this subtree's root, already centered so the root sits at
+  // the mean of its direct children's own positions.
+  interface Subtree {
+    offsets: Map<string, number>;
+    overflowOffset: number | null;
+    profile: [number, number][];
+  }
+  const subtreeCache = new Map<string, Subtree>();
+
+  function computeSubtree(nodeId: string, levelIndex: number): Subtree {
     const key = `${levelIndex}:${nodeId}`;
-    const cached = widthCache.get(key);
-    if (cached !== undefined) return cached;
+    const cached = subtreeCache.get(key);
+    if (cached) return cached;
+
     const group = groupByParentAtLevel.get(key);
-    let width = 1;
-    if (group) {
-      width = group.children.reduce((sum, child) => sum + subtreeWidth(child.id, levelIndex + 1), 0);
-      if (group.overflowCount > 0) width += 1;
-      width = Math.max(width, 1);
+    if (!group) {
+      const leaf: Subtree = { offsets: new Map(), overflowOffset: null, profile: [[0, 0]] };
+      subtreeCache.set(key, leaf);
+      return leaf;
     }
-    widthCache.set(key, width);
-    return width;
+
+    const childSubtrees = group.children.map((child) => computeSubtree(child.id, levelIndex + 1));
+    const offsets = new Map<string, number>();
+    const unionProfile: [number, number][] = [];
+
+    // Merge a subtree's own profile (shifted by where it's about to be
+    // placed) into the running union of everything already placed to its
+    // left -- this is what the next sibling's placement gets compared
+    // against, one row at a time.
+    const mergeIntoUnion = (dx: number, profile: [number, number][]) => {
+      profile.forEach(([min, max], depth) => {
+        const parentDepth = depth + 1;
+        const shifted: [number, number] = [min + dx, max + dx];
+        const existing = unionProfile[parentDepth];
+        unionProfile[parentDepth] = existing
+          ? [Math.min(existing[0], shifted[0]), Math.max(existing[1], shifted[1])]
+          : shifted;
+      });
+    };
+
+    // The minimum dx that clears every row where this profile and the
+    // union-so-far both have something, with at least one slot of buffer.
+    const minClearance = (profile: [number, number][]) => {
+      let required = -Infinity;
+      profile.forEach(([min], depth) => {
+        const existing = unionProfile[depth + 1];
+        if (existing) required = Math.max(required, existing[1] + SLOT_W - min);
+      });
+      return required;
+    };
+
+    let cursor = 0;
+    group.children.forEach((child, i) => {
+      const sub = childSubtrees[i];
+      const dx = i === 0 ? 0 : Math.max(minClearance(sub.profile), cursor);
+      offsets.set(child.id, dx);
+      mergeIntoUnion(dx, sub.profile);
+      cursor = dx + SLOT_W;
+    });
+
+    let overflowOffset: number | null = null;
+    if (group.overflowCount > 0) {
+      const leafProfile: [number, number][] = [[0, 0]];
+      const dx = group.children.length === 0 ? 0 : Math.max(minClearance(leafProfile), cursor);
+      overflowOffset = dx;
+      mergeIntoUnion(dx, leafProfile);
+    }
+
+    // Center this parent over the mean of its own direct children/overflow
+    // positions (not their full subtree extents), then rebase everything
+    // -- offsets, the overflow slot, and the merged profile -- so the
+    // parent itself sits at relative x=0.
+    const allOffsets = [...offsets.values(), ...(overflowOffset !== null ? [overflowOffset] : [])];
+    const center = allOffsets.length > 0 ? (Math.min(...allOffsets) + Math.max(...allOffsets)) / 2 : 0;
+
+    const rebasedOffsets = new Map([...offsets].map(([id, dx]) => [id, dx - center]));
+    const rebasedOverflow = overflowOffset === null ? null : overflowOffset - center;
+    const profile: [number, number][] = [[0, 0]];
+    unionProfile.forEach((extent, depth) => {
+      if (depth === 0 || !extent) return;
+      profile[depth] = [extent[0] - center, extent[1] - center];
+    });
+
+    const result: Subtree = { offsets: rebasedOffsets, overflowOffset: rebasedOverflow, profile };
+    subtreeCache.set(key, result);
+    return result;
   }
 
   function layoutChildren(parentId: string, levelIndex: number, parentX: number, parentY: number) {
     const group = groupByParentAtLevel.get(`${levelIndex}:${parentId}`);
     if (!group) return;
 
-    const childWidths = group.children.map((child) => subtreeWidth(child.id, levelIndex + 1));
-    const totalWidth = childWidths.reduce((a, b) => a + b, 0) + (group.overflowCount > 0 ? 1 : 0);
+    const { offsets, overflowOffset } = computeSubtree(parentId, levelIndex);
     const y = parentY + ROW_H;
-    let cursor = parentX - (totalWidth / 2) * SLOT_W;
     const drops: { x: number; y: number; dashed: boolean }[] = [];
 
-    group.children.forEach((child, i) => {
-      const w = childWidths[i];
-      const x = cursor + (w / 2) * SLOT_W;
-      cursor += w * SLOT_W;
+    group.children.forEach((child) => {
+      const x = parentX + offsets.get(child.id)!;
       nodes.push({ id: child.id, figure: child, kind: "child", x, y });
       posById.set(child.id, { x, y });
       drops.push({ x, y, dashed: false });
     });
-    if (group.overflowCount > 0) {
-      const x = cursor + SLOT_W / 2;
+    if (group.overflowCount > 0 && overflowOffset !== null) {
+      const x = parentX + overflowOffset;
       nodes.push({
         id: `${parentId}-overflow`,
         figure: { id: "", name: `+${group.overflowCount} more`, profilePath: null, personId: null, isGroup: false },
