@@ -163,6 +163,7 @@ one.
 - [Lineage: bare figures get a delete/toggle-group escape hatch, cascade over block-if-linked](#lineage-bare-figures-get-a-deletetoggle-group-escape-hatch-cascade-over-block-if-linked)
 - [Lineage: the "+N more" overflow badge became a real link, and the page container widened](#lineage-the-n-more-overflow-badge-became-a-real-link-and-the-page-container-widened)
 - [Lineage: descendant layout sized by subtree width, not per-level nudging](#lineage-descendant-layout-sized-by-subtree-width-not-per-level-nudging)
+- [Lineage: descendant layout switched from flat subtree width to row-by-row contours](#lineage-descendant-layout-switched-from-flat-subtree-width-to-row-by-row-contours)
 - [Fight Styles gain optional groups, via a real FightStyleGroup table](#fight-styles-gain-optional-groups-via-a-real-fightstylegroup-table)
 - [Navbar wordmark switched from a plain serif to all-caps Anton](#navbar-wordmark-switched-from-a-plain-serif-to-all-caps-anton)
 - [Historical Timeline gains era quick-jump chips, a minimap, and in-place rating filtering](#historical-timeline-gains-era-quick-jump-chips-a-minimap-and-in-place-rating-filtering)
@@ -5347,6 +5348,46 @@ student — and separately, Chiu Kao's own connector to its two real children
   the kind of thing worth a regression test for (`lineage-tree-layout.test.ts`
   asserts no two same-row nodes from different branches share an x, and that
   every multi-child parent stays within its own children's span).
+
+### Lineage: descendant layout switched from flat subtree width to row-by-row contours
+**PR #TBD.** Follow-up report on the fix directly above: on Yu Jim-Yuen's real
+tree (eight Seven Little Fortunes, two of whom each head a stunt team a
+couple of generations further down), the previous PR's fix was no longer
+misattributing anyone, but the row of eight now looked visibly sprawled and
+unevenly spaced compared to how it rendered before either fix — flagged as
+"wrong" even though nothing was actually mis-linked.
+
+- **The subtree-width fix traded one blind spot for a different
+  over-correction.** Reserving a branch's full leaf count as its width holds
+  that reservation at *every* row the branch spans, not just the rows where
+  it's actually wide. Jackie Chan and Sammo Kam-Bo Hung each only get wide
+  three generations down (their own stunt teams' rosters); at the row they
+  actually share with their four plain, childless siblings, none of that
+  width is needed yet. The flat-width version still pushed those childless
+  siblings as far away as Jackie Chan's *widest* row, producing large,
+  uneven gaps next to a normal one-slot gap between two plain siblings.
+- **Fix: compare branches by row-by-row "contour" instead of total leaf
+  count** (the standard technique behind tools like Reingold–Tilford tree
+  layout, adapted to this app's one fixed branching shape rather than
+  pulling in a general graph-layout dependency — same reasoning as the
+  original "hand-rolled, not a library" call). Each subtree now carries its
+  own horizontal extent *per depth* relative to its root; a sibling is
+  placed only as far from its predecessor as needed to clear whatever that
+  predecessor actually has at each shared depth, with at least one slot of
+  clearance. A plain sibling next to a deep branch now sits its normal one
+  slot away, and that branch's own grandchildren are free to spread out
+  underneath the (now-vacated) column above them — safe, because a leaf
+  sibling has nothing rendered at that lower depth to be confused with.
+  Two branches that really do get wide at the same depth still end up
+  properly separated, since the comparison still holds at every depth both
+  sides occupy — verified by re-running the original Lau Cham/Chiu Kao
+  regression tests unchanged (still passing) alongside a new test for the
+  tight-packing case (`lineage-tree-layout.test.ts`).
+- **Centering convention**: a parent is centered over the mean of its
+  *direct* children/overflow badge's own positions, not the midpoint of
+  their full subtree spans — keeps the elbow bar (which only ever spans the
+  direct children) always straddling the parent's stem, and matches what
+  "centered under its parent" reads as to someone looking at the tree.
 
 - **Drag-and-drop reordering for ranked list items** — `ListItemRows`
   (`src/components/list-item-rows.tsx`) now has move-to-top/move-to-bottom
