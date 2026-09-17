@@ -164,6 +164,7 @@ one.
 - [Lineage: the "+N more" overflow badge became a real link, and the page container widened](#lineage-the-n-more-overflow-badge-became-a-real-link-and-the-page-container-widened)
 - [Lineage: descendant layout sized by subtree width, not per-level nudging](#lineage-descendant-layout-sized-by-subtree-width-not-per-level-nudging)
 - [Lineage: descendant layout switched from flat subtree width to row-by-row contours](#lineage-descendant-layout-switched-from-flat-subtree-width-to-row-by-row-contours)
+- [Lineage: figures gain `aliases`, unioned into the "Portrayed by" lookup](#lineage-figures-gain-aliases-unioned-into-the-portrayed-by-lookup)
 - [Fight Styles gain optional groups, via a real FightStyleGroup table](#fight-styles-gain-optional-groups-via-a-real-fightstylegroup-table)
 - [Navbar wordmark switched from a plain serif to all-caps Anton](#navbar-wordmark-switched-from-a-plain-serif-to-all-caps-anton)
 - [Historical Timeline gains era quick-jump chips, a minimap, and in-place rating filtering](#historical-timeline-gains-era-quick-jump-chips-a-minimap-and-in-place-rating-filtering)
@@ -5388,6 +5389,68 @@ unevenly spaced compared to how it rendered before either fix — flagged as
   their full subtree spans — keeps the elbow bar (which only ever spans the
   direct children) always straddling the parent's stem, and matches what
   "centered under its parent" reads as to someone looking at the tree.
+
+### Lineage: figures gain `aliases`, unioned into the "Portrayed by" lookup
+**PR #TBD.** Reported case: the same historical figure (Lam Sai Wing, also
+widely known by the nickname "Porky Wing") could be credited under either
+name across different films' cast data, but `getPortrayals` only ever
+matched a figure's single `name` column — a movie crediting the nickname
+was silently missing from the figure's "Portrayed by" footnote, with no way
+to reconcile it short of creating (or already having created) a second,
+separately-linked `LineageFigure` for the same person.
+
+- **Schema-backed aliases over a hardcoded lookup table.** Considered a
+  small in-code `Record<string, string[]>` of known nickname pairs instead —
+  no migration, ships faster — but this app already treats "admin adds it
+  themselves, no deploy needed" as the default for lineage data (every other
+  correction here goes through `/admin/lineage`), and historical figures
+  with multiple romanizations/nicknames are expected to keep coming up, not
+  a one-off. `aliases String[] @default([])` added to `LineageFigure`
+  (`20260917030000_add_lineage_figure_aliases`); no unique/format constraint
+  on the array itself, same as `name` already has none.
+- **Not a merge tool.** A duplicate figure with its own links (sifu/students
+  already recorded against the wrong name) still needs those relinked onto
+  the canonical figure by hand before the duplicate is deleted — aliases
+  only solve the case where the second name never became its own linked
+  figure (or has since had its links cleared), which was true of the
+  reported case. A proper "merge figure A into B" action (reassign every
+  `LineageRelation` row, skipping ones that would collide with an existing
+  link or a cycle) was discussed but deferred — no second real case to
+  design it against yet, and it's a materially bigger surface (conflict
+  resolution, primary-link handling) than this fix needed.
+- **`getPortrayals` takes a name *or* an array of names/aliases** in one
+  call (`= ANY(...)` against the normalized `characterName` set) rather
+  than one call per name merged by the caller — the existing per-movie
+  actor aggregation inside the function already does exactly the dedup/
+  union-years work needed across multiple matched credits, so extending it
+  to accept multiple source names got that merging for free instead of
+  duplicating it at the call site. The one caller
+  (`resolvePortrayalMarkers` in `lineage-tree-body.tsx`) passes
+  `[figure.name, ...figure.aliases]`.
+- **Aliases aren't restricted to bare (non-actor) figures** the way
+  `isGroup`/delete are — an actor-linked figure is still, in principle, a
+  real person who could themselves be credited under more than one name.
+  No case for that has come up yet, but there's no reason to block it the
+  way marking a real actor's figure as a "group" would be nonsensical.
+- **Verified against a real local Postgres for once**, rather than the
+  usual sandboxed-session "no DATABASE_URL" limitation noted on other
+  schema-touching entries above: this session had a local `postgresql-16`
+  install available, so `prisma migrate deploy` ran for real (confirming
+  the hand-written array-column DDL applies cleanly), and a throwaway
+  script exercised `createOrReuseBareFigure` → `setFigureAliases` →
+  `getPortrayals` end-to-end against it with data shaped exactly like the
+  reported case (two `CastCredit` rows crediting the same figure under
+  "Lam Sai Wing" and "Porky Wing" respectively) — confirming the combined
+  lookup surfaces both actors where a name-only lookup would only surface
+  one, and that the dedup/blank/self-name cleanup in `setFigureAliases`
+  behaves as intended. This is what actually gave confidence in the raw
+  `= ANY(${normalizedNames}::text[])` query specifically, which the
+  DB-less `vitest` suite can only prove *doesn't* run (the single-word
+  short-circuit tests), not that it runs *correctly* — also backed by
+  `npx prisma validate`, `npm run lint`, `npm run build`, and
+  `npm run test` (including two new `getPortrayals` cases in
+  `lineage.test.ts` covering the array form's single-word short-circuit and
+  its "at least one multi-word entry still attempts the lookup" case).
 
 - **Drag-and-drop reordering for ranked list items** — `ListItemRows`
   (`src/components/list-item-rows.tsx`) now has move-to-top/move-to-bottom

@@ -127,7 +127,7 @@ async function resolvePortrayalMarkers(nodes: LayoutNode[]): Promise<{
   const portrayalsByNodeId = new Map<string, Awaited<ReturnType<typeof getPortrayals>>>();
   await Promise.all(
     bareNodes.map(async (n) => {
-      const portrayals = await getPortrayals(n.figure.name);
+      const portrayals = await getPortrayals([n.figure.name, ...n.figure.aliases]);
       if (portrayals.length > 0) portrayalsByNodeId.set(n.id, portrayals);
     }),
   );

@@ -23,4 +23,17 @@ describe("getPortrayals", () => {
     await expect(getPortrayals("Dragon")).resolves.toEqual([]);
     await expect(getPortrayals("  Monk  ")).resolves.toEqual([]);
   });
+
+  it("short-circuits to [] when every name/alias in the array is single-word", async () => {
+    await expect(getPortrayals(["Dragon", "Monk"])).resolves.toEqual([]);
+    await expect(getPortrayals([])).resolves.toEqual([]);
+  });
+
+  it("still attempts the lookup when at least one alias is multi-word, even alongside single-word ones", async () => {
+    // Mirrors the single-name test's approach from the opposite direction:
+    // a name/alias array isn't disqualified just because one entry in it
+    // is single-word -- confirmed here by reaching the (connectionless)
+    // $queryRaw call and rejecting, rather than resolving to [].
+    await expect(getPortrayals(["Dragon", "Lam Sai Wing"])).rejects.toThrow();
+  });
 });
