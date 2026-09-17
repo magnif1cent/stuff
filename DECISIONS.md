@@ -162,6 +162,7 @@ one.
 - [Lineage: groups are a normal figure in the owner's own row, not a lateral position](#lineage-groups-are-a-normal-figure-in-the-owners-own-row-not-a-lateral-position)
 - [Lineage: bare figures get a delete/toggle-group escape hatch, cascade over block-if-linked](#lineage-bare-figures-get-a-deletetoggle-group-escape-hatch-cascade-over-block-if-linked)
 - [Lineage: the "+N more" overflow badge became a real link, and the page container widened](#lineage-the-n-more-overflow-badge-became-a-real-link-and-the-page-container-widened)
+- [Lineage: descendant layout sized by subtree width, not per-level nudging](#lineage-descendant-layout-sized-by-subtree-width-not-per-level-nudging)
 - [Fight Styles gain optional groups, via a real FightStyleGroup table](#fight-styles-gain-optional-groups-via-a-real-fightstylegroup-table)
 - [Navbar wordmark switched from a plain serif to all-caps Anton](#navbar-wordmark-switched-from-a-plain-serif-to-all-caps-anton)
 - [Historical Timeline gains era quick-jump chips, a minimap, and in-place rating filtering](#historical-timeline-gains-era-quick-jump-chips-a-minimap-and-in-place-rating-filtering)
@@ -5306,6 +5307,46 @@ tree like this one needed horizontal scrolling well before it needed to.
   generates via one small `treeUrl()` helper, so expanding one dimension
   (more generations, say) can't silently reset another already-expanded
   one (a sibling limit already bumped by an earlier click).
+
+### Lineage: descendant layout sized by subtree width, not per-level nudging
+**PR #TBD.** Bug report: on a wide real tree, one sifu's later child (Lau Kar-Wing,
+one of Lau Cham's three primary students) rendered at almost the exact same x as
+Lau Cham's own sibling (Chiu Kao), reading as if Lau Kar-Wing were Chiu Kao's
+student — and separately, Chiu Kao's own connector to its two real children
+(Chiu Chi-Ling, Chiu Wai) looked broken.
+
+- **Root cause, not two bugs.** `buildLayout`'s descendant pass previously
+  centered each parent's children directly under that parent, then, level by
+  level, nudged only the *next* cluster right by just enough to clear the
+  *immediately preceding* cluster's own child count. That sizing only looked
+  one level down — a branch's width two levels down (Lau Cham's 3-wide
+  grandchildren row) was invisible when the level above it (Lau Cham vs. Chiu
+  Kao, 2 siblings) decided how far apart to place them. The result: Chiu
+  Kao's own real position could land inside Lau Cham's now-wider
+  grandchildren span (the coincidental Lau-Kar-Wing alignment), and Chiu
+  Kao's connector — still drawn from its real, un-nudged position to its own
+  now-shifted-right children — left a gap between its stem and its own elbow
+  bar, since the bar's span was computed only from the (shifted) children,
+  never from the parent's own x.
+- **Fix: size every branch by its full subtree width, computed bottom-up,
+  before any node is positioned**, then lay out top-down with each parent
+  exactly centered over its own reserved band. A parent is now provably
+  never sharing a column with an unrelated node, and its own connector can't
+  gap, since the bar's span is always centered on the parent by construction
+  rather than derived independently from wherever the children ended up.
+  This replaces the per-level "nudge the next cluster right" pass entirely,
+  not just patches it — the earlier approach's blind spot (no downstream
+  look-ahead) can't be closed by nudging harder without effectively
+  recomputing the same subtree widths anyway.
+- **Pulled the layout math out of `LineageTreeBody` into `src/lib/lineage-
+  tree-layout.ts`**, unchanged in behavior for every other case (ancestors,
+  secondary sifus, single-child straight drops, overflow badges), so it's
+  reachable from a plain `vitest` unit test instead of needing a rendered
+  component — this repo's test config is already scoped to pure `src/lib`
+  logic (see `vitest.config.ts`), and a layout bug like this one is exactly
+  the kind of thing worth a regression test for (`lineage-tree-layout.test.ts`
+  asserts no two same-row nodes from different branches share an x, and that
+  every multi-child parent stays within its own children's span).
 
 - **Drag-and-drop reordering for ranked list items** — `ListItemRows`
   (`src/components/list-item-rows.tsx`) now has move-to-top/move-to-bottom
