@@ -44,6 +44,12 @@ const SORT_OPTIONS = [
   { value: "mostFavorited", label: "Most Favorited" },
 ] as const;
 
+// Same bounds as the admin TMDB discover route's MIN_YEAR/maxYear -- also
+// gives the year inputs' native up/down spinner a `min` to land on instead
+// of jumping to 1 when the field is empty.
+const MIN_YEAR = 1870;
+const MAX_YEAR = new Date().getFullYear() + 5;
+
 // Quick-access shortcuts into the movie year range, filtering on the same
 // yearFrom/yearTo the sidebar form already supports.
 const ERA_OPTIONS = [
@@ -448,6 +454,8 @@ export default async function FightSceneSearchPage({
                   aria-label="Year from"
                   defaultValue={params.yearFrom ?? ""}
                   placeholder="1970"
+                  min={MIN_YEAR}
+                  max={MAX_YEAR}
                   className="w-1/2 min-w-0 rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
                 />
                 <input
@@ -456,6 +464,8 @@ export default async function FightSceneSearchPage({
                   aria-label="Year to"
                   defaultValue={params.yearTo ?? ""}
                   placeholder="2025"
+                  min={MIN_YEAR}
+                  max={MAX_YEAR}
                   className="w-1/2 min-w-0 rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
                 />
               </div>
