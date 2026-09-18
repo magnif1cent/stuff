@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Terms of Service — Kung Fu Sauce",
+  title: "Terms of Service",
   description: "The terms that govern your use of Kung Fu Sauce.",
 };
 

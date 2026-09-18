@@ -9,6 +9,9 @@ const DEFAULT_SIBLING_LIMIT = 6;
 // roster of students, so it gets its own, more generous cap before the
 // overflow badge kicks in -- see the per-parent limit in getLineageTree.
 const DEFAULT_GROUP_SIBLING_LIMIT = 12;
+// A generous cap, not a meaningful limit -- just enough to keep an admin
+// from pasting in an unbounded list by mistake.
+const MAX_ALIASES = 10;
 
 // A lineage node. Not always an actor -- `personId`/`profilePath` are null
 // for a bare figure (a historical sifu never credited in a film, or a
@@ -17,13 +20,15 @@ const DEFAULT_GROUP_SIBLING_LIMIT = 12;
 // Person, its display name/photo always come from the Person record rather
 // than the figure's own (possibly stale) `name` column. `isGroup` is always
 // false for an actor-linked figure -- a collective isn't a single trained
-// person.
+// person. `aliases` are other names/romanizations the same figure is
+// credited under -- see getPortrayals.
 export interface LineageFigureRef {
   id: string;
   name: string;
   profilePath: string | null;
   personId: string | null;
   isGroup: boolean;
+  aliases: string[];
 }
 
 interface PersonRef {
@@ -37,6 +42,7 @@ export const figureSelect = {
   name: true,
   personId: true,
   isGroup: true,
+  aliases: true,
   person: { select: { name: true, profilePath: true } },
 } as const;
 
@@ -45,6 +51,7 @@ type FigureRow = {
   name: string;
   personId: string | null;
   isGroup: boolean;
+  aliases: string[];
   person: { name: string; profilePath: string | null } | null;
 };
 
@@ -55,6 +62,7 @@ export function toFigureRef(row: FigureRow): LineageFigureRef {
     profilePath: row.person?.profilePath ?? null,
     personId: row.personId,
     isGroup: row.isGroup,
+    aliases: row.aliases,
   };
 }
 
@@ -76,7 +84,14 @@ export async function resolveFigureForPerson(personId: string): Promise<LineageF
     update: {},
     create: { name: person.name, personId },
   });
-  return { id: figure.id, name: person.name, profilePath: person.profilePath, personId: person.id, isGroup: false };
+  return {
+    id: figure.id,
+    name: person.name,
+    profilePath: person.profilePath,
+    personId: person.id,
+    isGroup: false,
+    aliases: figure.aliases,
+  };
 }
 
 // Read-only counterpart of the above -- used where creating a figure on the
@@ -108,7 +123,17 @@ export async function createOrReuseBareFigure(
     where: { personId: null, name: { equals: trimmed, mode: "insensitive" } },
   });
   const figure = existing ?? (await prisma.lineageFigure.create({ data: { name: trimmed, isGroup } }));
-  return { ok: true, figure: { id: figure.id, name: figure.name, profilePath: null, personId: null, isGroup: figure.isGroup } };
+  return {
+    ok: true,
+    figure: {
+      id: figure.id,
+      name: figure.name,
+      profilePath: null,
+      personId: null,
+      isGroup: figure.isGroup,
+      aliases: figure.aliases,
+    },
+  };
 }
 
 // Flips `isGroup` on an already-created bare figure -- for correcting one
@@ -128,7 +153,58 @@ export async function setFigureIsGroup(
     return { ok: false, error: "An actor-linked figure can't be marked as a group." };
   }
   const updated = await prisma.lineageFigure.update({ where: { id: figureId }, data: { isGroup } });
-  return { ok: true, figure: { id: updated.id, name: updated.name, profilePath: null, personId: null, isGroup: updated.isGroup } };
+  return {
+    ok: true,
+    figure: {
+      id: updated.id,
+      name: updated.name,
+      profilePath: null,
+      personId: null,
+      isGroup: updated.isGroup,
+      aliases: updated.aliases,
+    },
+  };
+}
+
+// Replaces a figure's full alias list -- other names/romanizations it's
+// credited under (see `aliases` on the schema and getPortrayals below).
+// Unlike isGroup, this isn't restricted to bare figures: an actor-linked
+// figure can plausibly have an alternate credited name too. Trims, drops
+// blanks and an alias that just repeats the figure's own current name, and
+// dedupes case-insensitively -- the same normalization createOrReuseBareFigure
+// already applies to a figure's primary name.
+export async function setFigureAliases(
+  figureId: string,
+  aliases: string[],
+): Promise<{ ok: true; figure: LineageFigureRef } | { ok: false; error: string }> {
+  const figure = await prisma.lineageFigure.findUnique({ where: { id: figureId }, select: { name: true } });
+  if (!figure) {
+    return { ok: false, error: "Figure not found." };
+  }
+
+  const seen = new Set<string>([figure.name.toLowerCase()]);
+  const cleaned: string[] = [];
+  for (const raw of aliases) {
+    const trimmed = raw.trim();
+    if (!trimmed) continue;
+    if (trimmed.length > MAX_FIGURE_NAME_LENGTH) {
+      return { ok: false, error: `Each alias must be ${MAX_FIGURE_NAME_LENGTH} characters or fewer.` };
+    }
+    const key = trimmed.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    cleaned.push(trimmed);
+  }
+  if (cleaned.length > MAX_ALIASES) {
+    return { ok: false, error: `At most ${MAX_ALIASES} aliases are allowed.` };
+  }
+
+  const updated = await prisma.lineageFigure.update({
+    where: { id: figureId },
+    data: { aliases: cleaned },
+    select: figureSelect,
+  });
+  return { ok: true, figure: toFigureRef(updated) };
 }
 
 // Bare figures only -- an actor-linked figure is auto-managed
@@ -190,31 +266,75 @@ export async function searchLineageFigures(
   };
 }
 
+// Lowercase and strip everything that isn't a letter or digit, so spacing
+// and punctuation variants of the same name collapse together --
+// "Wong Fei-Hung", "Wong Fei-hung", and "Wong Fei Hung" all normalize to
+// "wongfeihung". Deliberately not fuzzy/similarity matching (this repo
+// already has pg_trgm-based similarity() for "did you mean" in
+// fuzzy-search.ts): a false-positive portrayal misattributes an actor to
+// the wrong character, which a wrong search suggestion doesn't.
+export function normalizeCharacterName(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
 // A bare figure has no photo of its own, but the catalog often already
 // knows who's played them on screen -- CastCredit.characterName is exact
-// free text from TMDB, so this is a best-effort case-insensitive match, not
+// free text from TMDB, so this is a best-effort normalized-text match, not
 // a stored link (more than one actor can plausibly have played the same
 // figure across different films, so it couldn't be a single FK anyway).
 // Display-only enrichment: never used to resolve identity or write data.
-export async function getPortrayals(name: string): Promise<{ person: PersonRef; movieTitle: string }[]> {
-  const credits = await prisma.castCredit.findMany({
-    where: { characterName: { equals: name, mode: "insensitive" }, movie: { status: "APPROVED" } },
-    select: {
-      person: { select: { id: true, name: true, profilePath: true } },
-      movie: { select: { title: true, releaseDate: true } },
-    },
-    orderBy: { movie: { releaseDate: "asc" } },
-    take: 6,
-  });
-  const seen = new Set<string>();
-  const results: { person: PersonRef; movieTitle: string }[] = [];
+//
+// Single-word names are skipped entirely (see DECISIONS.md): a name with
+// no space is exactly the shape of a generic role reused across unrelated
+// films ("Monk", "Extra", "Dragon"), where matching would attribute
+// unrelated actors to the same "character". This is a heuristic, not a
+// guarantee -- it doesn't catch every collision -- but every genuine
+// recurring figure found in this catalog is multi-word, so it costs
+// nothing for the real cases this feature is for.
+//
+// No cap on distinct actors, and every year an actor played the role is
+// kept (not just their earliest) -- this renders into a list below the
+// tree with room to breathe (see DECISIONS.md), not the old fixed-width
+// node caption that capping at 3 actors and one year each was built for.
+//
+// Takes the figure's name plus any aliases together (not one call per
+// name, unioned by the caller) so a movie crediting the character under
+// either name still lands in the same combined list -- callers pass
+// `[figure.name, ...figure.aliases]`, see resolvePortrayalMarkers in
+// lineage-tree-body.tsx.
+export async function getPortrayals(names: string | string[]): Promise<{ person: PersonRef; years: number[] }[]> {
+  const normalizedNames = [
+    ...new Set(
+      (Array.isArray(names) ? names : [names]).filter((n) => n.trim().includes(" ")).map(normalizeCharacterName),
+    ),
+  ];
+  if (normalizedNames.length === 0) return [];
+
+  const credits = await prisma.$queryRaw<
+    { personId: string; personName: string; profilePath: string | null; releaseDate: Date | null }[]
+  >`
+    SELECT "Person"."id" AS "personId", "Person"."name" AS "personName", "Person"."profilePath",
+           "Movie"."releaseDate"
+    FROM "CastCredit"
+    JOIN "Person" ON "Person"."id" = "CastCredit"."personId"
+    JOIN "Movie" ON "Movie"."id" = "CastCredit"."movieId"
+    WHERE "Movie"."status" = 'APPROVED'
+      AND lower(regexp_replace("CastCredit"."characterName", '[^a-zA-Z0-9]', '', 'g')) = ANY(${normalizedNames}::text[])
+    ORDER BY "Movie"."releaseDate" ASC
+  `;
+
+  const order: string[] = [];
+  const byPerson = new Map<string, { person: PersonRef; years: number[] }>();
   for (const credit of credits) {
-    if (seen.has(credit.person.id)) continue;
-    seen.add(credit.person.id);
-    results.push({ person: credit.person, movieTitle: credit.movie.title });
-    if (results.length === 3) break;
+    let entry = byPerson.get(credit.personId);
+    if (!entry) {
+      entry = { person: { id: credit.personId, name: credit.personName, profilePath: credit.profilePath }, years: [] };
+      byPerson.set(credit.personId, entry);
+      order.push(credit.personId);
+    }
+    if (credit.releaseDate) entry.years.push(credit.releaseDate.getUTCFullYear());
   }
-  return results;
+  return order.map((id) => byPerson.get(id)!);
 }
 
 // --- Cycle detection -------------------------------------------------

@@ -10,6 +10,7 @@ import {
   PERSON_TRIBUTES_PAGE_SIZE,
 } from "@/lib/person-tributes";
 import { ActorTributesList } from "@/components/actor-tributes-list";
+import { Pagination } from "@/components/pagination";
 
 function pageHref(personId: string, page: number) {
   return page > 1 ? `/actors/${personId}/tributes?page=${page}` : `/actors/${personId}/tributes`;
@@ -94,27 +95,12 @@ export default async function PersonTributesPage({
             isAdmin={session?.user?.role === "ADMIN"}
           />
 
-          {totalPages > 1 && (
-            <div className="mt-8 flex items-center justify-center gap-4 text-sm">
-              {page > 1 ? (
-                <Link href={pageHref(personId, page - 1)} className="text-red-500 hover:underline">
-                  ← Previous
-                </Link>
-              ) : (
-                <span className="text-neutral-600">← Previous</span>
-              )}
-              <span className="text-neutral-400">
-                Page {page} of {totalPages} ({totalCount} tributes)
-              </span>
-              {page < totalPages ? (
-                <Link href={pageHref(personId, page + 1)} className="text-red-500 hover:underline">
-                  Next →
-                </Link>
-              ) : (
-                <span className="text-neutral-600">Next →</span>
-              )}
-            </div>
-          )}
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            buildHref={(p) => pageHref(personId, p)}
+            label={`${totalCount} tributes`}
+          />
         </>
       )}
     </div>

@@ -25,7 +25,16 @@ const ERA_SETTINGS_BASE = [
   { key: "MING", name: "Ming Dynasty", years: "1368–1644" },
   { key: "QING", name: "Qing Dynasty", years: "1644–1912" },
   { key: "REPUBLIC_ERA", name: "Republic of China", years: "1912–1949" },
-  { key: "MODERN", name: "Modern Day / Contemporary", years: "1949–present" },
+  // Five independent, flat entries rather than one "Modern" bucket -- same
+  // status as any dynasty above, not a parent/child grouping. Split out so
+  // the Historical Timeline page (see DECISIONS.md) doesn't have to cram
+  // the majority of the catalog into one band; POSTWAR_ERA is wider than
+  // the other four since real listings thin out fast before the 1970s.
+  { key: "POSTWAR_ERA", name: "1950s & 60s", years: "1949–1969" },
+  { key: "SEVENTIES", name: "1970s", years: "1970–1979" },
+  { key: "EIGHTIES", name: "1980s", years: "1980–1989" },
+  { key: "NINETIES", name: "1990s", years: "1990–1999" },
+  { key: "CONTEMPORARY", name: "2000s+", years: "2000–present" },
   { key: "OTHER", name: "Other / Unspecified", years: null },
 ] as const;
 

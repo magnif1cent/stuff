@@ -337,6 +337,13 @@ model LineageFigure {
   // it (cycle detection, primary-link promotion, search) is generic over
   // any figure and doesn't need to know this flag exists.
   isGroup  Boolean @default(false)
+  // Alternate names the same figure is credited or known under (a nickname,
+  // a different romanization of the same historical name). Unioned into the
+  // "Portrayed by" footnote lookup (getPortrayals in lib/lineage.ts)
+  // alongside `name`, so a movie crediting the character under any of these
+  // still surfaces that actor under this one figure instead of splintering
+  // across a second, unlinked figure for the other name.
+  aliases  String[] @default([])
   person   Person? @relation(fields: [personId], references: [id], onDelete: SetNull)
 
   sifuLinks    LineageRelation[] @relation("LineageSifu")
@@ -829,10 +836,25 @@ model FightSceneTag {
 // add anything missing. Deliberately not reusing the tags precedent yet —
 // see DECISIONS.md for why. Same plain many-to-many shape either way.
 model FightSceneStyle {
+  id      String  @id @default(cuid())
+  name    String  @unique
+  groupId String?
+
+  group       FightStyleGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  fightScenes FightScene[]
+}
+
+// Purely organizational: clusters styles (e.g. "Northern", "Southern",
+// "Internal") in the admin list and the /search/fights filter. Optional and
+// admin/reviewer-curated like FightSceneStyle itself — deleting a group
+// ungroups its styles rather than deleting them (onDelete: SetNull above),
+// since the group is just a label, not part of what a style means. Not
+// applied to FightSceneMove — moves weren't asked to be grouped.
+model FightStyleGroup {
   id   String @id @default(cuid())
   name String @unique
 
-  fightScenes FightScene[]
+  styles FightSceneStyle[]
 }
 
 model FightSceneMove {

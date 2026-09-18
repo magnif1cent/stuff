@@ -1,12 +1,18 @@
 import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getFightSceneRatingSummaries, getFightSceneAdminRatingSummaries, getFightSceneFavoriteCounts } from "@/lib/fight-scenes";
+import {
+  getFightSceneRatingSummaries,
+  getFightSceneAdminRatingSummaries,
+  getFightSceneFavoriteCounts,
+  groupStylesByCategory,
+} from "@/lib/fight-scenes";
 import { parseRatingFilter } from "@/lib/rating-filter";
 import { FightSceneResultCard } from "@/components/fight-scene-result-card";
 import { RatingStarInput } from "@/components/rating-star-input";
 import { AutocompleteFilterInput } from "@/components/autocomplete-filter-input";
 import { FilterSheetProvider, FilterSheetTrigger, FilterSheetPanel } from "@/components/filter-sheet";
+import { Pagination } from "@/components/pagination";
 import type { Prisma } from "@/generated/prisma/client";
 
 export const metadata: Metadata = {
@@ -37,6 +43,12 @@ const SORT_OPTIONS = [
   { value: "editorRating", label: "Highest Editor Rated" },
   { value: "mostFavorited", label: "Most Favorited" },
 ] as const;
+
+// Same bounds as the admin TMDB discover route's MIN_YEAR/maxYear -- also
+// gives the year inputs' native up/down spinner a `min` to land on instead
+// of jumping to 1 when the field is empty.
+const MIN_YEAR = 1870;
+const MAX_YEAR = new Date().getFullYear() + 5;
 
 // Quick-access shortcuts into the movie year range, filtering on the same
 // yearFrom/yearTo the sidebar form already supports.
@@ -109,7 +121,10 @@ export default async function FightSceneSearchPage({
 
   const [tags, styles, moves, genres, countryRows] = await Promise.all([
     prisma.fightSceneTag.findMany({ orderBy: { name: "asc" } }),
-    prisma.fightSceneStyle.findMany({ orderBy: { name: "asc" } }),
+    prisma.fightSceneStyle.findMany({
+      orderBy: [{ group: { name: "asc" } }, { name: "asc" }],
+      include: { group: { select: { name: true } } },
+    }),
     prisma.fightSceneMove.findMany({ orderBy: { name: "asc" } }),
     prisma.genre.findMany({ orderBy: { name: "asc" } }),
     prisma.movie.findMany({
@@ -120,6 +135,7 @@ export default async function FightSceneSearchPage({
     }),
   ]);
   const countries = countryRows.map((m) => m.country!).filter(Boolean);
+  const styleGroups = groupStylesByCategory(styles);
 
   const hasFilters =
     selectedTags.length > 0 ||
@@ -314,22 +330,33 @@ export default async function FightSceneSearchPage({
 
             <div className="flex flex-col gap-1">
               <p className="text-xs text-neutral-400">Martial arts style (any of)</p>
-              <div className="flex flex-wrap gap-2 rounded-md border border-neutral-700 bg-neutral-950 p-2">
+              <div className="flex flex-col gap-2 rounded-md border border-neutral-700 bg-neutral-950 p-2">
                 {styles.length === 0 && <span className="text-sm text-neutral-500">No styles yet</span>}
-                {styles.map((s) => (
-                  <label
-                    key={s.id}
-                    className="flex cursor-pointer items-center gap-1.5 rounded-full border border-neutral-700 px-2 py-1 text-xs text-neutral-300 has-checked:border-red-600 has-checked:bg-red-950/40 has-checked:text-red-300"
-                  >
-                    <input
-                      type="checkbox"
-                      name="style"
-                      value={s.name}
-                      defaultChecked={selectedStyles.includes(s.name)}
-                      className="sr-only"
-                    />
-                    {s.name}
-                  </label>
+                {styleGroups.map((group, i) => (
+                  <div key={group.label ?? `ungrouped-${i}`}>
+                    {styleGroups.length > 1 && (
+                      <p className="mb-1 text-[10px] tracking-wide text-neutral-500 uppercase">
+                        {group.label ?? "Other"}
+                      </p>
+                    )}
+                    <div className="flex flex-wrap gap-2">
+                      {group.styles.map((s) => (
+                        <label
+                          key={s.id}
+                          className="flex cursor-pointer items-center gap-1.5 rounded-full border border-neutral-700 px-2 py-1 text-xs text-neutral-300 has-checked:border-red-600 has-checked:bg-red-950/40 has-checked:text-red-300"
+                        >
+                          <input
+                            type="checkbox"
+                            name="style"
+                            value={s.name}
+                            defaultChecked={selectedStyles.includes(s.name)}
+                            className="sr-only"
+                          />
+                          {s.name}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>
@@ -427,6 +454,8 @@ export default async function FightSceneSearchPage({
                   aria-label="Year from"
                   defaultValue={params.yearFrom ?? ""}
                   placeholder="1970"
+                  min={MIN_YEAR}
+                  max={MAX_YEAR}
                   className="w-1/2 min-w-0 rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
                 />
                 <input
@@ -435,6 +464,8 @@ export default async function FightSceneSearchPage({
                   aria-label="Year to"
                   defaultValue={params.yearTo ?? ""}
                   placeholder="2025"
+                  min={MIN_YEAR}
+                  max={MAX_YEAR}
                   className="w-1/2 min-w-0 rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
                 />
               </div>
@@ -461,9 +492,12 @@ export default async function FightSceneSearchPage({
         </FilterSheetPanel>
 
         <div className="order-1 min-w-0 flex-1 sm:order-2">
-          <h1 className="mb-4 font-serif text-xl font-bold text-white">
-            {query ? <>Fights matching &ldquo;{query}&rdquo;</> : "Browse Fights"}
-          </h1>
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+            <h1 className="font-serif text-xl font-bold text-white">
+              {query ? <>Fights matching &ldquo;{query}&rdquo;</> : "Browse Fights"}
+            </h1>
+            <FilterSheetTrigger activeCount={sheetFilterCount} />
+          </div>
 
           {/* Quick-access shortcuts into a filtered/sorted view — a faster
               path than the sidebar form for the handful of values (a sort
@@ -479,7 +513,6 @@ export default async function FightSceneSearchPage({
               named exception as the one actor prominent enough on this site
               to warrant his own one-click shortcut. */}
           <div className="mb-6 flex flex-wrap gap-2">
-            <FilterSheetTrigger activeCount={sheetFilterCount} />
             <a
               href={sort === "memberRating" ? "/search/fights" : "/search/fights?sort=memberRating"}
               className={bubbleClass(sort === "memberRating")}
@@ -561,27 +594,12 @@ export default async function FightSceneSearchPage({
                 })}
               </div>
 
-              {totalPages > 1 && (
-                <div className="mt-8 flex items-center justify-center gap-4 text-sm">
-                  {page > 1 ? (
-                    <a href={pageHref(params, page - 1)} className="text-red-500 hover:underline">
-                      ← Previous
-                    </a>
-                  ) : (
-                    <span className="text-neutral-600">← Previous</span>
-                  )}
-                  <span className="text-neutral-400">
-                    Page {page} of {totalPages} ({totalResults} results)
-                  </span>
-                  {page < totalPages ? (
-                    <a href={pageHref(params, page + 1)} className="text-red-500 hover:underline">
-                      Next →
-                    </a>
-                  ) : (
-                    <span className="text-neutral-600">Next →</span>
-                  )}
-                </div>
-              )}
+              <Pagination
+                page={page}
+                totalPages={totalPages}
+                buildHref={(p) => pageHref(params, p)}
+                label={`${totalResults} results`}
+              />
             </>
           )}
         </div>
