@@ -126,6 +126,33 @@ export function computeScaleTicks(): ScaleTick[] {
 export const CHRONOLOGICAL_KEYS = TIMELINE_ERA_LAYOUT.map((e) => e.key);
 export const LAYOUT_BY_KEY = new Map(TIMELINE_ERA_LAYOUT.map((e) => [e.key, e]));
 
+// How wide an era's name/years label is allowed to render before it has to
+// wrap -- used to be a flat 150px for every era regardless of how close its
+// neighbors' bands (and therefore their own labels) sit. That was harmless
+// while every band had wide neighbors, but several of the new, narrower
+// bands above (Shang, Spring & Autumn, Sui, Five Dynasties, ...) now sit
+// close enough to each other that two flat 150px boxes, each centered on
+// its own band, visibly overlapped. Deriving width from the actual gap to
+// the nearest neighbor's label center keeps every pair of adjacent labels
+// from colliding, while still granting the old 150px ceiling wherever nothing
+// nearby is that close. MIN_LABEL_WIDTH is a floor only -- no current band's
+// nearest-neighbor gap is actually this tight, it's a guard against a future
+// insertion getting packed in without a matching check on this width too.
+const MAX_LABEL_WIDTH = 150;
+const MIN_LABEL_WIDTH = 64;
+
+export function labelWidthForKey(key: EraSettingKey): number {
+  const idx = TIMELINE_ERA_LAYOUT.findIndex((e) => e.key === key);
+  if (idx === -1) return MAX_LABEL_WIDTH;
+  const layout = TIMELINE_ERA_LAYOUT[idx];
+  const center = (layout.px0 + layout.px1) / 2;
+  const prev = TIMELINE_ERA_LAYOUT[idx - 1];
+  const next = TIMELINE_ERA_LAYOUT[idx + 1];
+  const gapToPrev = prev ? center - (prev.px0 + prev.px1) / 2 : Infinity;
+  const gapToNext = next ? (next.px0 + next.px1) / 2 - center : Infinity;
+  return Math.max(MIN_LABEL_WIDTH, Math.min(MAX_LABEL_WIDTH, gapToPrev, gapToNext));
+}
+
 // Deterministic column/row packing, not a scatter layout -- same movie set
 // always renders at the same positions (no client JS, no hydration
 // mismatch risk). Columns fill left-to-right per row before wrapping, with
@@ -141,7 +168,12 @@ const ROW_HEIGHT = 13;
 // from the one value instead of three independently hand-tuned numbers
 // that happen to agree -- the kind of drift that already caused a real bug
 // once in this feature (the tooltip-clipping fix).
-export const AXIS_BASELINE_PX = 46;
+//
+// Raised from 46 to 66 to give the era name room to wrap onto a second line
+// (ERA_LABEL_HEIGHT in timeline-desktop.tsx moved by the same +20, so the
+// label's own bottom edge -- and the tick ruler further below it, which
+// isn't keyed off this constant at all -- don't shift).
+export const AXIS_BASELINE_PX = 66;
 const ROW_BASELINE = AXIS_BASELINE_PX + 4;
 
 export function columnsForWidth(width: number): number {

@@ -66,6 +66,7 @@ one.
 
 **Feature Decisions**
 
+- [Historical Timeline era labels wrap instead of truncating, and get a per-era width instead of a flat 150px](#historical-timeline-era-labels-wrap-instead-of-truncating-and-get-a-per-era-width-instead-of-a-flat-150px)
 - [Historical Setting gains five eras, closing three gaps in the vocabulary](#historical-setting-gains-five-eras-closing-three-gaps-in-the-vocabulary)
 - [Pagination extracted into one shared component, adding jump-to-page links everywhere at once](#pagination-extracted-into-one-shared-component-adding-jump-to-page-links-everywhere-at-once)
 - [Historical Timeline's axis-break disclosed with a tick ruler instead of a text note](#historical-timelines-axis-break-disclosed-with-a-tick-ruler-instead-of-a-text-note)
@@ -1273,6 +1274,13 @@ polish differently than a default-security reading would.
 - **Wired into CI** (`npm run test` in `build-and-lint`, alongside lint and build) — a test suite nobody runs on every push isn't protection, it's decoration.
 
 ## Feature Decisions
+
+### Historical Timeline era labels wrap instead of truncating, and get a per-era width instead of a flat 150px
+**PR #TBD.** Follow-up to "Historical Setting gains five eras" below, reported from a live screenshot right after that PR shipped: the new Legendary/Shang/Spring & Autumn/Warring States bands sit close enough together that their labels, each a flat 150px box centered on its own (now much narrower) band, visibly overlapped each other's text — plus a request that long names (e.g. "Five Dynasties & Ten Kin...") wrap instead of ending in an ellipsis.
+
+- **`labelWidthForKey()` (`timeline-layout.ts`) replaces the flat 150px width**, computing each era's label width from the actual gap to its nearest neighbor's label center (capped at the old 150px ceiling, floored at 64px as a guard for a future tightly-packed insertion, though no current band's real gap is anywhere near that floor). Guarantees adjacent label boxes never overlap regardless of how narrow their bands are — verified by a new regression test rather than trusting the arithmetic by eye.
+- **The era name wraps via `line-clamp-2`, not `truncate`** (the years sub-line stays `truncate`, single-line — wrapping both would need more vertical room than budgeted). `ERA_LABEL_HEIGHT` (26→46) and `AXIS_BASELINE_PX` (46→66) both moved by the same +20 so the label's bottom edge — and the tick ruler under it, which isn't keyed off `AXIS_BASELINE_PX` at all — don't shift; only the label's available height above that edge grows, giving room for a second wrapped line.
+- **Not verified against a live browser** — sandboxed-session limitation, same as other Timeline entries. The reported overlap and the ERA_LABEL_HEIGHT/AXIS_BASELINE_PX vertical math are both reasoned from the existing component's own positioning logic (bottom-anchored boxes grow upward with content) rather than rendered and checked pixel-for-pixel; worth a follow-up screenshot to confirm the 2-line budget is generous enough for the longest wrapped names ("Northern & Southern Dynasties" at ~88px, "Spring & Autumn Period" at ~80px). Checked via `npm run lint`, `npm run test` (a new `labelWidthForKey` non-overlap test alongside the existing layout-sync/non-overlap ones), and `npm run build`.
 
 ### Historical Setting gains five eras, closing three gaps in the vocabulary
 **PR #TBD.** Requested as "historical setting field is missing some eras" — the vocabulary in `src/lib/era-settings.ts` had three real chronological gaps: nothing between Legendary (before c. 2070 BC) and Warring States (475 BC), nothing between Jin (ends 420) and Tang (starts 618), and nothing between Tang (ends 907) and Song (starts 960). Asked which to close rather than guessing scope, since adding eras here also means hand-placing new bands in `TIMELINE_ERA_LAYOUT`'s pixel axis — all three were picked.
