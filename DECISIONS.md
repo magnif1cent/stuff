@@ -66,6 +66,7 @@ one.
 
 **Feature Decisions**
 
+- [Historical Setting gains five eras, closing three gaps in the vocabulary](#historical-setting-gains-five-eras-closing-three-gaps-in-the-vocabulary)
 - [Pagination extracted into one shared component, adding jump-to-page links everywhere at once](#pagination-extracted-into-one-shared-component-adding-jump-to-page-links-everywhere-at-once)
 - [Historical Timeline's axis-break disclosed with a tick ruler instead of a text note](#historical-timelines-axis-break-disclosed-with-a-tick-ruler-instead-of-a-text-note)
 - [Navbar regrouped by kind (entities, contribute, account) instead of one flat link list](#navbar-regrouped-by-kind-entities-contribute-account-instead-of-one-flat-link-list)
@@ -1272,6 +1273,14 @@ polish differently than a default-security reading would.
 - **Wired into CI** (`npm run test` in `build-and-lint`, alongside lint and build) — a test suite nobody runs on every push isn't protection, it's decoration.
 
 ## Feature Decisions
+
+### Historical Setting gains five eras, closing three gaps in the vocabulary
+**PR #TBD.** Requested as "historical setting field is missing some eras" — the vocabulary in `src/lib/era-settings.ts` had three real chronological gaps: nothing between Legendary (before c. 2070 BC) and Warring States (475 BC), nothing between Jin (ends 420) and Tang (starts 618), and nothing between Tang (ends 907) and Song (starts 960). Asked which to close rather than guessing scope, since adding eras here also means hand-placing new bands in `TIMELINE_ERA_LAYOUT`'s pixel axis — all three were picked.
+
+- **New keys**: `SHANG` (Shang Dynasty, c. 1600–1046 BC) and `SPRING_AUTUMN` (Spring & Autumn Period, 770–475 BC) before Warring States; `NORTHERN_SOUTHERN` (Northern & Southern Dynasties, 420–589) and `SUI` (Sui Dynasty, 581–618) between Jin and Tang; `FIVE_DYNASTIES` (Five Dynasties & Ten Kingdoms, 907–960) between Tang and Song. Western Zhou (1046–771 BC) stays uncovered between Shang and Spring & Autumn — narrower scope than "every dynasty," matching what was actually asked for.
+- **Timeline axis positions derived from the existing ~0.878px/year rate, not eyeballed.** Reverse-engineering `TIMELINE_ERA_LAYOUT`'s existing pre-break bands (Han's 375px/426yr, Ming's 243px/276yr, etc.) showed a consistent scale, and the Jin→Tang and Tang→Song gaps already sized out almost exactly to that scale applied to the real 420–618 and 907–960 spans — strong evidence those two gaps were left deliberately unfilled for eras not yet added, not just slack. `NORTHERN_SOUTHERN`/`SUI` and `FIVE_DYNASTIES` slot into those gaps with no shift to `TANG`, `SONG`, or anything after. `SHANG`/`SPRING_AUTUMN` had no such reserved gap (Legendary's 130px end abuts Warring States' start directly), so inserting them at the same scale pushes every subsequent band right by 745px — `AXIS_BREAK_PX` (2270→3015) and `TIMELINE_AXIS_WIDTH` (3245→3990) shifted by the same amount to stay consistent.
+- **`ERA_SETTINGS` (era-settings.ts) is the only vocabulary source** — the dropdown (`EraSettingControl`), `/timeline/[era]`, and `isEraSettingKey` all derive from it directly, so no separate list needed updating for those; only `TIMELINE_ERA_LAYOUT` needed a matching manual entry per new key, which `timeline.test.ts`'s existing "has a layout entry for every chronological era" regression test already guards.
+- **Not verified against a live browser** — sandboxed-session limitation, same as other Timeline entries above. Checked via `npm run lint`, `npm run test` (existing layout-sync and non-overlap tests both cover the new bands), and `npm run build`.
 
 ### Fight Styles gain optional groups, via a real FightStyleGroup table
 **PR #TBD.** Requested as "can I add some groupings to Fight Styles" — clarified into two open questions before touching the schema: whether a group should be free text on each style or its own admin-curated table, and whether grouping should be admin-only or also show up where members/searchers interact with styles. Went with a real `FightStyleGroup` table (own name, independently rename/delete-able, rather than a plain string column that would let "Northern"/"northern" drift into two groups) and both admin and member-facing, since a category is only useful once it's visible where a style is actually picked or filtered.

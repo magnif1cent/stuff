@@ -13,28 +13,37 @@ import { ERA_SETTINGS, type EraSettingKey } from "@/lib/era-settings";
 // any DISPLAYED year text; these numbers are rendering-only.
 export const TIMELINE_ERA_LAYOUT: { key: EraSettingKey; px0: number; px1: number }[] = [
   { key: "LEGENDARY", px0: 0, px1: 130 },
-  { key: "WARRING_STATES", px0: 130, px1: 353 },
-  { key: "QIN", px0: 353, px1: 366 },
-  { key: "HAN", px0: 366, px1: 741 },
-  { key: "THREE_KINGDOMS", px0: 741, px1: 794 },
-  { key: "JIN", px0: 794, px1: 917 },
-  { key: "TANG", px0: 1092, px1: 1346 },
-  { key: "SONG", px0: 1393, px1: 1673 },
-  { key: "YUAN", px0: 1673, px1: 1751 },
-  { key: "MING", px0: 1751, px1: 1994 },
-  { key: "QING", px0: 1994, px1: 2229 },
-  { key: "REPUBLIC_ERA", px0: 2229, px1: 2262 },
-  { key: "POSTWAR_ERA", px0: 2286, px1: 2532 },
-  { key: "SEVENTIES", px0: 2532, px1: 2643 },
-  { key: "EIGHTIES", px0: 2643, px1: 2754 },
-  { key: "NINETIES", px0: 2754, px1: 2865 },
-  { key: "CONTEMPORARY", px0: 2865, px1: 3185 },
+  { key: "SHANG", px0: 130, px1: 616 },
+  { key: "SPRING_AUTUMN", px0: 616, px1: 875 },
+  { key: "WARRING_STATES", px0: 875, px1: 1098 },
+  { key: "QIN", px0: 1098, px1: 1111 },
+  { key: "HAN", px0: 1111, px1: 1486 },
+  { key: "THREE_KINGDOMS", px0: 1486, px1: 1539 },
+  { key: "JIN", px0: 1539, px1: 1662 },
+  // Fills what used to be a bare 175px gap here, already sized (at the same
+  // ~0.878px/year rate as everything else pre-break) for real 420-618 span
+  // this pair now covers -- see the comment by these keys in era-settings.ts.
+  { key: "NORTHERN_SOUTHERN", px0: 1662, px1: 1806 },
+  { key: "SUI", px0: 1806, px1: 1837 },
+  { key: "TANG", px0: 1837, px1: 2091 },
+  // Likewise fills the old Tang->Song gap (was 2091-2138 with nothing in it).
+  { key: "FIVE_DYNASTIES", px0: 2091, px1: 2138 },
+  { key: "SONG", px0: 2138, px1: 2418 },
+  { key: "YUAN", px0: 2418, px1: 2496 },
+  { key: "MING", px0: 2496, px1: 2739 },
+  { key: "QING", px0: 2739, px1: 2974 },
+  { key: "REPUBLIC_ERA", px0: 2974, px1: 3007 },
+  { key: "POSTWAR_ERA", px0: 3031, px1: 3277 },
+  { key: "SEVENTIES", px0: 3277, px1: 3388 },
+  { key: "EIGHTIES", px0: 3388, px1: 3499 },
+  { key: "NINETIES", px0: 3499, px1: 3610 },
+  { key: "CONTEMPORARY", px0: 3610, px1: 3930 },
 ];
 
 // The gap between Republic of China's band and Postwar's is where the
 // scale changes -- drawn as a visible break, never hidden.
-export const AXIS_BREAK_PX = 2270;
-export const TIMELINE_AXIS_WIDTH = 3245;
+export const AXIS_BREAK_PX = 3015;
+export const TIMELINE_AXIS_WIDTH = 3990;
 
 // Real calendar year range for each band a scale-disclosure tick ruler
 // covers -- deliberately scoped to Qing onward, not the whole axis. Every
