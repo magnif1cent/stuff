@@ -14,12 +14,20 @@
 // point: the dropdown options and edit-history entries.
 const ERA_SETTINGS_BASE = [
   { key: "LEGENDARY", name: "Legendary / Mythological", years: "before c. 2070 BC" },
+  { key: "SHANG", name: "Shang Dynasty", years: "c. 1600–1046 BC" },
+  { key: "SPRING_AUTUMN", name: "Spring & Autumn Period", years: "770–475 BC" },
   { key: "WARRING_STATES", name: "Warring States", years: "475–221 BC" },
   { key: "QIN", name: "Qin Dynasty", years: "221–206 BC" },
   { key: "HAN", name: "Han Dynasty", years: "206 BC–220 AD" },
   { key: "THREE_KINGDOMS", name: "Three Kingdoms", years: "220–280" },
   { key: "JIN", name: "Jin Dynasty", years: "266–420" },
+  // Fills what was previously a bare gap in the axis between Jin and Tang
+  // (see TIMELINE_ERA_LAYOUT) -- the two eras' real ranges abut (420/589)
+  // the same way Jin/Three Kingdoms already do above, not a new pattern.
+  { key: "NORTHERN_SOUTHERN", name: "Northern & Southern Dynasties", years: "420–589" },
+  { key: "SUI", name: "Sui Dynasty", years: "581–618" },
   { key: "TANG", name: "Tang Dynasty", years: "618–907" },
+  { key: "FIVE_DYNASTIES", name: "Five Dynasties & Ten Kingdoms", years: "907–960" },
   { key: "SONG", name: "Song Dynasty", years: "960–1279" },
   { key: "YUAN", name: "Yuan Dynasty", years: "1271–1368" },
   { key: "MING", name: "Ming Dynasty", years: "1368–1644" },

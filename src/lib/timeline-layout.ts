@@ -13,28 +13,44 @@ import { ERA_SETTINGS, type EraSettingKey } from "@/lib/era-settings";
 // any DISPLAYED year text; these numbers are rendering-only.
 export const TIMELINE_ERA_LAYOUT: { key: EraSettingKey; px0: number; px1: number }[] = [
   { key: "LEGENDARY", px0: 0, px1: 130 },
-  { key: "WARRING_STATES", px0: 130, px1: 353 },
-  { key: "QIN", px0: 353, px1: 366 },
-  { key: "HAN", px0: 366, px1: 741 },
-  { key: "THREE_KINGDOMS", px0: 741, px1: 794 },
-  { key: "JIN", px0: 794, px1: 917 },
-  { key: "TANG", px0: 1092, px1: 1346 },
-  { key: "SONG", px0: 1393, px1: 1673 },
-  { key: "YUAN", px0: 1673, px1: 1751 },
-  { key: "MING", px0: 1751, px1: 1994 },
-  { key: "QING", px0: 1994, px1: 2229 },
-  { key: "REPUBLIC_ERA", px0: 2229, px1: 2262 },
-  { key: "POSTWAR_ERA", px0: 2286, px1: 2532 },
-  { key: "SEVENTIES", px0: 2532, px1: 2643 },
-  { key: "EIGHTIES", px0: 2643, px1: 2754 },
-  { key: "NINETIES", px0: 2754, px1: 2865 },
-  { key: "CONTEMPORARY", px0: 2865, px1: 3185 },
+  // Shang and Spring & Autumn get a compressed fixed allotment, same
+  // treatment as Legendary above -- NOT the ~0.878px/year rate the rest of
+  // this table uses. At full scale they'd add 745px (554yr + 295yr) for two
+  // eras next to no real movie in the catalog is ever set in, pushing that
+  // much "No movies yet" band in front of Warring States, where content
+  // actually starts. Sized a bit larger than Legendary's 130px combined,
+  // small enough to stay a rounding error on the axis either way.
+  { key: "SHANG", px0: 130, px1: 220 },
+  { key: "SPRING_AUTUMN", px0: 220, px1: 290 },
+  { key: "WARRING_STATES", px0: 290, px1: 513 },
+  { key: "QIN", px0: 513, px1: 526 },
+  { key: "HAN", px0: 526, px1: 901 },
+  { key: "THREE_KINGDOMS", px0: 901, px1: 954 },
+  { key: "JIN", px0: 954, px1: 1077 },
+  // Fills what used to be a bare 175px gap here, already sized (at the same
+  // ~0.878px/year rate as everything else pre-break) for real 420-618 span
+  // this pair now covers -- see the comment by these keys in era-settings.ts.
+  { key: "NORTHERN_SOUTHERN", px0: 1077, px1: 1221 },
+  { key: "SUI", px0: 1221, px1: 1252 },
+  { key: "TANG", px0: 1252, px1: 1506 },
+  // Likewise fills the old Tang->Song gap (was 2091-2138 with nothing in it).
+  { key: "FIVE_DYNASTIES", px0: 1506, px1: 1553 },
+  { key: "SONG", px0: 1553, px1: 1833 },
+  { key: "YUAN", px0: 1833, px1: 1911 },
+  { key: "MING", px0: 1911, px1: 2154 },
+  { key: "QING", px0: 2154, px1: 2389 },
+  { key: "REPUBLIC_ERA", px0: 2389, px1: 2422 },
+  { key: "POSTWAR_ERA", px0: 2446, px1: 2692 },
+  { key: "SEVENTIES", px0: 2692, px1: 2803 },
+  { key: "EIGHTIES", px0: 2803, px1: 2914 },
+  { key: "NINETIES", px0: 2914, px1: 3025 },
+  { key: "CONTEMPORARY", px0: 3025, px1: 3345 },
 ];
 
 // The gap between Republic of China's band and Postwar's is where the
 // scale changes -- drawn as a visible break, never hidden.
-export const AXIS_BREAK_PX = 2270;
-export const TIMELINE_AXIS_WIDTH = 3245;
+export const AXIS_BREAK_PX = 2430;
+export const TIMELINE_AXIS_WIDTH = 3405;
 
 // Real calendar year range for each band a scale-disclosure tick ruler
 // covers -- deliberately scoped to Qing onward, not the whole axis. Every
@@ -110,6 +126,33 @@ export function computeScaleTicks(): ScaleTick[] {
 export const CHRONOLOGICAL_KEYS = TIMELINE_ERA_LAYOUT.map((e) => e.key);
 export const LAYOUT_BY_KEY = new Map(TIMELINE_ERA_LAYOUT.map((e) => [e.key, e]));
 
+// How wide an era's name/years label is allowed to render before it has to
+// wrap -- used to be a flat 150px for every era regardless of how close its
+// neighbors' bands (and therefore their own labels) sit. That was harmless
+// while every band had wide neighbors, but several of the new, narrower
+// bands above (Shang, Spring & Autumn, Sui, Five Dynasties, ...) now sit
+// close enough to each other that two flat 150px boxes, each centered on
+// its own band, visibly overlapped. Deriving width from the actual gap to
+// the nearest neighbor's label center keeps every pair of adjacent labels
+// from colliding, while still granting the old 150px ceiling wherever nothing
+// nearby is that close. MIN_LABEL_WIDTH is a floor only -- no current band's
+// nearest-neighbor gap is actually this tight, it's a guard against a future
+// insertion getting packed in without a matching check on this width too.
+const MAX_LABEL_WIDTH = 150;
+const MIN_LABEL_WIDTH = 64;
+
+export function labelWidthForKey(key: EraSettingKey): number {
+  const idx = TIMELINE_ERA_LAYOUT.findIndex((e) => e.key === key);
+  if (idx === -1) return MAX_LABEL_WIDTH;
+  const layout = TIMELINE_ERA_LAYOUT[idx];
+  const center = (layout.px0 + layout.px1) / 2;
+  const prev = TIMELINE_ERA_LAYOUT[idx - 1];
+  const next = TIMELINE_ERA_LAYOUT[idx + 1];
+  const gapToPrev = prev ? center - (prev.px0 + prev.px1) / 2 : Infinity;
+  const gapToNext = next ? (next.px0 + next.px1) / 2 - center : Infinity;
+  return Math.max(MIN_LABEL_WIDTH, Math.min(MAX_LABEL_WIDTH, gapToPrev, gapToNext));
+}
+
 // Deterministic column/row packing, not a scatter layout -- same movie set
 // always renders at the same positions (no client JS, no hydration
 // mismatch risk). Columns fill left-to-right per row before wrapping, with
@@ -125,7 +168,12 @@ const ROW_HEIGHT = 13;
 // from the one value instead of three independently hand-tuned numbers
 // that happen to agree -- the kind of drift that already caused a real bug
 // once in this feature (the tooltip-clipping fix).
-export const AXIS_BASELINE_PX = 46;
+//
+// Raised from 46 to 66 to give the era name room to wrap onto a second line
+// (ERA_LABEL_HEIGHT in timeline-desktop.tsx moved by the same +20, so the
+// label's own bottom edge -- and the tick ruler further below it, which
+// isn't keyed off this constant at all -- don't shift).
+export const AXIS_BASELINE_PX = 66;
 const ROW_BASELINE = AXIS_BASELINE_PX + 4;
 
 export function columnsForWidth(width: number): number {

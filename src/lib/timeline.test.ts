@@ -4,6 +4,7 @@ import {
   compareByRatingDesc,
   computeDotLayout,
   computeScaleTicks,
+  labelWidthForKey,
   TIMELINE_ERA_LAYOUT,
   type TimelineMovie,
 } from "@/lib/timeline";
@@ -36,6 +37,24 @@ describe("TIMELINE_ERA_LAYOUT stays in sync with ERA_SETTINGS", () => {
     const sorted = [...TIMELINE_ERA_LAYOUT].sort((a, b) => a.px0 - b.px0);
     for (let i = 1; i < sorted.length; i++) {
       expect(sorted[i].px0).toBeGreaterThanOrEqual(sorted[i - 1].px1);
+    }
+  });
+});
+
+describe("labelWidthForKey", () => {
+  // Regression guard: several bands added alongside this test (Shang,
+  // Spring & Autumn, Sui, Five Dynasties, ...) sit close enough to their
+  // neighbors that a flat label width -- the previous behavior -- made
+  // adjacent era labels visibly overlap on screen.
+  it("never lets two adjacent eras' label boxes overlap", () => {
+    for (let i = 1; i < TIMELINE_ERA_LAYOUT.length; i++) {
+      const prev = TIMELINE_ERA_LAYOUT[i - 1];
+      const cur = TIMELINE_ERA_LAYOUT[i];
+      const prevCenter = (prev.px0 + prev.px1) / 2;
+      const curCenter = (cur.px0 + cur.px1) / 2;
+      const prevRight = prevCenter + labelWidthForKey(prev.key) / 2;
+      const curLeft = curCenter - labelWidthForKey(cur.key) / 2;
+      expect(curLeft).toBeGreaterThanOrEqual(prevRight - 0.001); // float slop
     }
   });
 });

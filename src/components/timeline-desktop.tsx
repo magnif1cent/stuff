@@ -7,6 +7,7 @@ import { resolvePosterUrl, isTmdbUrl } from "@/lib/tmdb";
 import {
   computeDotLayout,
   computeScaleTicks,
+  labelWidthForKey,
   overflowBadgeBottom,
   TIMELINE_AXIS_WIDTH,
   TIMELINE_ERA_LAYOUT,
@@ -18,7 +19,11 @@ import {
 
 // Reserved below AXIS_BASELINE_PX for the era name/years label; the scale-
 // tick ruler gets whatever's left under that, down to the plot's own floor.
-const ERA_LABEL_HEIGHT = 26;
+// 46 -> 26 originally fit a single-line name; raised by +20 alongside
+// AXIS_BASELINE_PX's own +20 so a name that wraps to a second line (see
+// labelWidthForKey) has room without the label's bottom edge -- and the
+// tick ruler under it -- moving.
+const ERA_LABEL_HEIGHT = 46;
 
 // Headroom above the baseline for the tallest dot stack plus its hover
 // tooltip -- verified once (see DECISIONS.md) at 434px above whatever the
@@ -257,6 +262,7 @@ export function TimelineDesktop({ eras }: { eras: TimelineEraData[] }) {
             const width = layout.px1 - layout.px0;
             const dots = computeDotLayout(layout, era.movies);
             const overflow = era.totalCount > era.movies.length;
+            const labelWidth = labelWidthForKey(era.key);
 
             return (
               <div key={era.key}>
@@ -265,12 +271,19 @@ export function TimelineDesktop({ eras }: { eras: TimelineEraData[] }) {
                   style={{
                     left: layout.px0 + width / 2,
                     bottom: AXIS_BASELINE_PX - ERA_LABEL_HEIGHT,
-                    width: 150,
+                    width: labelWidth,
                     transform: "translateX(-50%)",
                   }}
                 >
-                  <p className="truncate text-xs font-semibold text-neutral-300">{era.name}</p>
-                  <p className="mt-0.5 text-[10px] text-neutral-600">{era.years}</p>
+                  {/* line-clamp-2, not truncate -- a name too long for its
+                      available width (see labelWidthForKey) wraps onto a
+                      second line instead of ending in "...", with ellipsis
+                      only as the last resort if it still doesn't fit two
+                      lines. The years line stays single-line/truncated: it's
+                      the secondary detail, and wrapping it too would need
+                      more vertical room than ERA_LABEL_HEIGHT budgets for. */}
+                  <p className="line-clamp-2 text-xs font-semibold text-neutral-300">{era.name}</p>
+                  <p className="mt-0.5 truncate text-[10px] text-neutral-600">{era.years}</p>
                 </div>
 
                 {/* A band with real movies always gets at least one dot, so
