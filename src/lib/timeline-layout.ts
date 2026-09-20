@@ -44,7 +44,22 @@ export const TIMELINE_ERA_LAYOUT: { key: EraSettingKey; px0: number; px1: number
   { key: "SEVENTIES", px0: 2692, px1: 2803 },
   { key: "EIGHTIES", px0: 2803, px1: 2914 },
   { key: "NINETIES", px0: 2914, px1: 3025 },
-  { key: "CONTEMPORARY", px0: 3025, px1: 3345 },
+  // Was 320px (px1: 3345) -- sized so cols*MAX_ROWS_PER_ERA (see
+  // desktopCapForKey below) could reach the 80-dot ceiling without stacking
+  // dots into many cramped rows. But that ceiling is actually already
+  // reached at cols=10 (10*8=80) -- every column past that widens the band
+  // with zero extra dot capacity, it just lets the existing capacity spread
+  // across fewer rows. Confirmed as real, visible dead space from a live
+  // screenshot (not just the trailing-margin gap fixed separately): the
+  // catalog doesn't have anywhere near 80 approved Contemporary movies yet,
+  // so the band was mostly empty past wherever the real dots ended. 180px
+  // (cols=20) still comfortably out-widens every other post-break band
+  // (Postwar/70s/80s/90s top out at 111-246px) to reflect it being the
+  // open-ended, typically-most-populous one, without the extra ~140px this
+  // had no content to fill. Trade-off: at cols=20, reaching the real 80-dot
+  // ceiling now takes 4 rows instead of 3 -- still well under
+  // MAX_ROWS_PER_ERA (8), so no premature "+N more" overflow either way.
+  { key: "CONTEMPORARY", px0: 3025, px1: 3205 },
 ];
 
 // The gap between Republic of China's band and Postwar's is where the
@@ -54,7 +69,7 @@ export const AXIS_BREAK_PX = 2430;
 // between Republic of China and Postwar (2422->2446) -- not the flat 60px
 // this used to be, which read as extra dead space at the true end of the
 // scrollable axis with nothing after it to justify the room.
-export const TIMELINE_AXIS_WIDTH = 3369;
+export const TIMELINE_AXIS_WIDTH = 3229;
 
 // Real calendar year range for each band a scale-disclosure tick ruler
 // covers -- deliberately scoped to Qing onward, not the whole axis. Every

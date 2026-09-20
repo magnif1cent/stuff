@@ -66,6 +66,7 @@ one.
 
 **Feature Decisions**
 
+- [Contemporary's timeline band narrowed from 320px to 180px, since its extra width bought no real dot capacity](#contemporarys-timeline-band-narrowed-from-320px-to-180px-since-its-extra-width-bought-no-real-dot-capacity)
 - [Historical Timeline era labels wrap instead of truncating, and get a per-era width instead of a flat 150px](#historical-timeline-era-labels-wrap-instead-of-truncating-and-get-a-per-era-width-instead-of-a-flat-150px)
 - [Historical Setting gains five eras, closing three gaps in the vocabulary](#historical-setting-gains-five-eras-closing-three-gaps-in-the-vocabulary)
 - [Pagination extracted into one shared component, adding jump-to-page links everywhere at once](#pagination-extracted-into-one-shared-component-adding-jump-to-page-links-everywhere-at-once)
@@ -1274,6 +1275,14 @@ polish differently than a default-security reading would.
 - **Wired into CI** (`npm run test` in `build-and-lint`, alongside lint and build) — a test suite nobody runs on every push isn't protection, it's decoration.
 
 ## Feature Decisions
+
+### Contemporary's timeline band narrowed from 320px to 180px, since its extra width bought no real dot capacity
+**PR #TBD.** Follow-up to the trailing-margin trim below, reported from a second live screenshot after that PR merged: the visible dot cluster under "2000s+" ended well short of both the band's own edge and the scrollable area's, with only cosmetic effect from the earlier 36px trim.
+
+- **The extra width was never actually buying dot capacity.** `desktopCapForKey()` caps every band at `min(80, cols * MAX_ROWS_PER_ERA)` — with `MAX_ROWS_PER_ERA` at 8, the 80-dot ceiling is already hit at `cols=10` (80px-ish of band width). Every column past that just spreads the same 80-dot ceiling across fewer rows; it doesn't raise it. Contemporary's 320px (`cols=35`) bought room to show 80 dots in ~3 rows instead of ~8 — real value if the catalog actually has that many approved Contemporary movies, but the screenshot showed nowhere near that, so most of the width was rendering nothing.
+- **Narrowed to 180px (`cols=20`)**, not all the way to the 90px floor that still hits the cap — kept it visibly the widest of the five post-break eras (Postwar/70s/80s/90s run 111–246px) since it's still the open-ended, typically-most-populous one, just not 320px's worth of margin for content that isn't there yet.
+- **Sized from the screenshot, not the real database.** This session has no live `DATABASE_URL`, so there's no way to query the actual approved Contemporary count — 180px is a judgment call reasoned from how much of the band the visible dots occupied, not a measured number. If the catalog's Contemporary count grows enough to push past `cols=20`'s comfortable row count, this may need widening again (it still has headroom to 4 rows at the full 80-dot ceiling before hitting `MAX_ROWS_PER_ERA`).
+- **Not verified against a live browser** — sandboxed-session limitation, same as every other Timeline entry above. Checked via `npm run lint`, `npm run test` (existing `TIMELINE_ERA_LAYOUT`/`labelWidthForKey` regression tests unaffected, since Contemporary has no era after it and its label was already capped at `MAX_LABEL_WIDTH`), and `npm run build`.
 
 ### Historical Timeline era labels wrap instead of truncating, and get a per-era width instead of a flat 150px
 **PR #TBD.** Follow-up to "Historical Setting gains five eras" below, reported from a live screenshot right after that PR shipped: the new Legendary/Shang/Spring & Autumn/Warring States bands sit close enough together that their labels, each a flat 150px box centered on its own (now much narrower) band, visibly overlapped each other's text — plus a request that long names (e.g. "Five Dynasties & Ten Kin...") wrap instead of ending in an ellipsis.
