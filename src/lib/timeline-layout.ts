@@ -50,7 +50,11 @@ export const TIMELINE_ERA_LAYOUT: { key: EraSettingKey; px0: number; px1: number
 // The gap between Republic of China's band and Postwar's is where the
 // scale changes -- drawn as a visible break, never hidden.
 export const AXIS_BREAK_PX = 2430;
-export const TIMELINE_AXIS_WIDTH = 3405;
+// 24px past Contemporary's own px1 -- same small trailing gap already used
+// between Republic of China and Postwar (2422->2446) -- not the flat 60px
+// this used to be, which read as extra dead space at the true end of the
+// scrollable axis with nothing after it to justify the room.
+export const TIMELINE_AXIS_WIDTH = 3369;
 
 // Real calendar year range for each band a scale-disclosure tick ruler
 // covers -- deliberately scoped to Qing onward, not the whole axis. Every
