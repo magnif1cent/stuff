@@ -7,8 +7,10 @@ import { ERA_SETTINGS, type EraSettingKey } from "@/lib/era-settings";
 //     Jin 266-420 vs Three Kingdoms 220-280) -- fine as display text, not
 //     fine as adjacent axis bands, which need non-overlapping boundaries.
 //  2. The five most recent eras are deliberately NOT drawn at the same
-//     px/year scale as everything before them (see AXIS_BREAK_PX below) --
-//     a purely date-driven formula would undo that on its own.
+//     px/year scale as everything before them (see AXIS_BREAK_PX below), and
+//     Legendary/Shang/Spring & Autumn are deliberately NOT drawn to scale at
+//     all (see ANCIENT_AXIS_BREAK_PX below) -- a purely date-driven formula
+//     would undo either on its own.
 // eraSettingYears(key) from era-settings.ts remains the source of truth for
 // any DISPLAYED year text; these numbers are rendering-only.
 export const TIMELINE_ERA_LAYOUT: { key: EraSettingKey; px0: number; px1: number }[] = [
@@ -73,10 +75,14 @@ export const TIMELINE_AXIS_WIDTH = 3229;
 
 // Real calendar year range for each band a scale-disclosure tick ruler
 // covers -- deliberately scoped to Qing onward, not the whole axis. Every
-// dynasty before Qing already sits at one roughly-consistent px/year rate
-// (see the comment atop this file), so there's no scale change to disclose
-// there; Qing through Contemporary is exactly the stretch where the rate
-// changes at AXIS_BREAK_PX, which is the one thing this ruler exists to
+// dynasty from Warring States through Qing already sits at one roughly-
+// consistent px/year rate (see the comment atop this file) -- Legendary,
+// Shang, and Spring & Autumn are the one exception, disclosed separately by
+// ANCIENT_AXIS_BREAK_PX below rather than by this ruler, since they aren't
+// on a per-year scale at all (see their own comment above) -- so there's no
+// OTHER scale change to disclose here; Qing through Contemporary is exactly
+// the stretch where the rate changes at AXIS_BREAK_PX, which is the one
+// thing this ruler exists to
 // make visible. Kept separate from TIMELINE_ERA_LAYOUT (not merged into
 // it) since most eras have no meaningful single "year" to tick against --
 // Warring States/Han/etc. span centuries at a scale where a 10-year tick
@@ -144,6 +150,14 @@ export function computeScaleTicks(): ScaleTick[] {
 // isn't a point in time and is surfaced separately, off the axis.
 export const CHRONOLOGICAL_KEYS = TIMELINE_ERA_LAYOUT.map((e) => e.key);
 export const LAYOUT_BY_KEY = new Map(TIMELINE_ERA_LAYOUT.map((e) => [e.key, e]));
+
+// Where the ancient section's fixed-bucket compression (Legendary, Shang,
+// Spring & Autumn -- see their own comment in TIMELINE_ERA_LAYOUT above)
+// ends and the consistent ~0.878px/year scale begins, disclosed the same
+// way AXIS_BREAK_PX discloses the modern one. Derived from Warring States'
+// own px0 rather than a second hand-copied number, so it can't silently
+// drift out of sync with the layout table above if these bands move again.
+export const ANCIENT_AXIS_BREAK_PX = LAYOUT_BY_KEY.get("WARRING_STATES")!.px0;
 
 // How wide an era's name/years label is allowed to render before it has to
 // wrap -- used to be a flat 150px for every era regardless of how close its

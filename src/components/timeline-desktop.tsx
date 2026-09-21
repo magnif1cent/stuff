@@ -12,6 +12,7 @@ import {
   TIMELINE_AXIS_WIDTH,
   TIMELINE_ERA_LAYOUT,
   AXIS_BREAK_PX,
+  ANCIENT_AXIS_BREAK_PX,
   AXIS_BASELINE_PX,
   type TimelineEraData,
   type EraSettingKey,
@@ -52,6 +53,25 @@ const JUMP_LEFT_MARGIN = 32;
 // mentally treating it as a 1-5 scale; on the real 1-10 scale that barely
 // filtered anything out.
 const RATING_FILTER_OPTIONS = [0, 6, 8] as const;
+
+// Both places the axis's scale changes, each disclosed with the same
+// hatched-marker-plus-hover-tooltip treatment rather than silently -- one
+// array so the two breaks can't drift into different markup/behavior from
+// each other, and mapped over in both the main axis and the minimap below.
+const AXIS_BREAKS = [
+  {
+    px: ANCIENT_AXIS_BREAK_PX,
+    ariaLabel:
+      "Scale change: Legendary, Shang, and Spring & Autumn are compressed into a fixed width each, not drawn to real calendar scale -- everything from Warring States onward is",
+    tooltip: "Scale change — compressed, not to real scale, before this point",
+  },
+  {
+    px: AXIS_BREAK_PX,
+    ariaLabel:
+      "Scale change: the axis compresses less per year from the 1950s onward than it does before, shown by how much tighter the tick marks below are packed on either side",
+    tooltip: "Scale change — more axis per year from here on",
+  },
+];
 
 // Closest band to x, not just the one strictly containing it -- a plain
 // `x >= px0 && x < px1` check has two failure modes a chip click can
@@ -207,30 +227,33 @@ export function TimelineDesktop({ eras }: { eras: TimelineEraData[] }) {
 
       <div ref={scrollRef} className="rail-scrollbar relative overflow-x-auto overflow-y-hidden pb-5 pl-4 sm:pl-6 lg:pl-10">
         <div className="relative" style={{ width: TIMELINE_AXIS_WIDTH, height: PLOT_HEIGHT_ABOVE_BASELINE + AXIS_BASELINE_PX }}>
-          {/* axis-break: the scale changes here, marked rather than hidden.
-              The hatch pattern alone (plus the tick ruler's own density
-              change) discloses THAT something changes, but not WHY -- to
-              anyone who hasn't read this feature's own history, it can read
-              as a rendering glitch instead. This adds an explicit legend,
-              opt-in via hover/focus rather than a permanent caption, so it
-              doesn't reintroduce the "note" this feature deliberately moved
-              away from (see DECISIONS.md). */}
-          <div className="group absolute top-0" style={{ left: AXIS_BREAK_PX, bottom: AXIS_BASELINE_PX, width: 12 }}>
-            <button
-              type="button"
-              aria-label="Scale change: the axis compresses less per year from the 1950s onward than it does before, shown by how much tighter the tick marks below are packed on either side"
-              className="absolute inset-0 cursor-help border-0 p-0"
-              style={{
-                background: "repeating-linear-gradient(-55deg, var(--color-neutral-950) 0 3px, var(--color-neutral-900) 3px 6px)",
-              }}
-            />
-            <div
-              className="pointer-events-none absolute left-1/2 z-20 -translate-x-1/2 rounded-md border border-neutral-700 bg-neutral-900 p-2 text-center text-[11px] whitespace-nowrap text-neutral-300 opacity-0 shadow-lg transition group-hover:opacity-100 group-focus-within:opacity-100"
-              style={{ bottom: 14 }}
-            >
-              Scale change — less axis per year from here on
+          {/* axis-breaks: every place the scale changes, marked rather than
+              hidden. The hatch pattern alone (plus the tick ruler's own
+              density change, at the modern one) discloses THAT something
+              changes, but not WHY -- to anyone who hasn't read this
+              feature's own history, it can read as a rendering glitch
+              instead. This adds an explicit legend, opt-in via hover/focus
+              rather than a permanent caption, so it doesn't reintroduce the
+              "note" this feature deliberately moved away from (see
+              DECISIONS.md). */}
+          {AXIS_BREAKS.map((brk) => (
+            <div key={brk.px} className="group absolute top-0" style={{ left: brk.px, bottom: AXIS_BASELINE_PX, width: 12 }}>
+              <button
+                type="button"
+                aria-label={brk.ariaLabel}
+                className="absolute inset-0 cursor-help border-0 p-0"
+                style={{
+                  background: "repeating-linear-gradient(-55deg, var(--color-neutral-950) 0 3px, var(--color-neutral-900) 3px 6px)",
+                }}
+              />
+              <div
+                className="pointer-events-none absolute left-1/2 z-20 -translate-x-1/2 rounded-md border border-neutral-700 bg-neutral-900 p-2 text-center text-[11px] whitespace-nowrap text-neutral-300 opacity-0 shadow-lg transition group-hover:opacity-100 group-focus-within:opacity-100"
+                style={{ bottom: 14 }}
+              >
+                {brk.tooltip}
+              </div>
             </div>
-          </div>
+          ))}
 
           {/* one continuous axis line under every band */}
           <div className="absolute right-0 left-0 h-0.5 bg-neutral-700" style={{ bottom: AXIS_BASELINE_PX }} />
@@ -401,15 +424,18 @@ export function TimelineDesktop({ eras }: { eras: TimelineEraData[] }) {
             );
           })}
 
-          {/* the same scale-change break, shrunk down */}
-          <div
-            className="absolute top-0.5 bottom-0"
-            style={{
-              left: `calc(${(AXIS_BREAK_PX / TIMELINE_AXIS_WIDTH) * 100}% - 1px)`,
-              width: 2,
-              background: "repeating-linear-gradient(-55deg, var(--color-neutral-900) 0 2px, var(--color-neutral-700) 2px 4px)",
-            }}
-          />
+          {/* the same scale-change breaks, shrunk down */}
+          {AXIS_BREAKS.map((brk) => (
+            <div
+              key={brk.px}
+              className="absolute top-0.5 bottom-0"
+              style={{
+                left: `calc(${(brk.px / TIMELINE_AXIS_WIDTH) * 100}% - 1px)`,
+                width: 2,
+                background: "repeating-linear-gradient(-55deg, var(--color-neutral-900) 0 2px, var(--color-neutral-700) 2px 4px)",
+              }}
+            />
+          ))}
 
           {/* current viewport indicator -- drag anywhere on the track (or
               this box) to pan the axis above */}

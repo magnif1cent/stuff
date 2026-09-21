@@ -66,6 +66,7 @@ one.
 
 **Feature Decisions**
 
+- [A second scale-change legend added, for the ancient (Legendary/Shang/Spring & Autumn) compression](#a-second-scale-change-legend-added-for-the-ancient-legendaryshangspring--autumn-compression)
 - [Contemporary's timeline band narrowed from 320px to 180px, since its extra width bought no real dot capacity](#contemporarys-timeline-band-narrowed-from-320px-to-180px-since-its-extra-width-bought-no-real-dot-capacity)
 - [Historical Timeline era labels wrap instead of truncating, and get a per-era width instead of a flat 150px](#historical-timeline-era-labels-wrap-instead-of-truncating-and-get-a-per-era-width-instead-of-a-flat-150px)
 - [Historical Setting gains five eras, closing three gaps in the vocabulary](#historical-setting-gains-five-eras-closing-three-gaps-in-the-vocabulary)
@@ -1275,6 +1276,16 @@ polish differently than a default-security reading would.
 - **Wired into CI** (`npm run test` in `build-and-lint`, alongside lint and build) — a test suite nobody runs on every push isn't protection, it's decoration.
 
 ## Feature Decisions
+
+### A second scale-change legend added, for the ancient (Legendary/Shang/Spring & Autumn) compression
+**PR #TBD.** Asked directly: since the modern axis-break (Republic of China → Postwar) already gets a hatched marker + hover tooltip so its scale change is never silent, should the same apply where Legendary/Shang/Spring & Autumn's fixed-bucket compression gives way to the real ~0.878px/year scale at Warring States? Agreed and built, reusing the exact same pattern rather than inventing a new one.
+
+- **`ANCIENT_AXIS_BREAK_PX` (`timeline-layout.ts`) is derived from `WARRING_STATES`'s own `px0`**, not a second hand-copied pixel number — this session already had to recompute `TIMELINE_ERA_LAYOUT`'s numbers three separate times for other reasons, so a break marker that could silently drift out of sync with the layout table felt like exactly the kind of bug worth designing out up front.
+- **Both breaks now come from one `AXIS_BREAKS` array, `.map()`'d in both the main axis and the minimap**, rather than duplicating the hatch-marker/tooltip markup a second time — keeps the two breaks' behavior from drifting apart from each other the way the layout-vs-marker split above was guarded against.
+- **No matching tick ruler for the ancient break**, unlike the modern one. `computeScaleTicks()`'s tick-density explanation only works for a real per-year scale; Legendary/Shang/Spring & Autumn aren't on one at all (fixed buckets regardless of duration), so there's nothing for a tick ruler to meaningfully show there. The hatched marker + tooltip carries the whole explanation on its own for this one.
+- **Fixed a stale copy bug found while duplicating the pattern**: the existing modern-break tooltip read "Scale change — less axis per year from here on," which has the direction backwards (post-break eras get *more* room per year, not less — confirmed against both the README and the tooltip's own adjacent `aria-label`, which already had it right). Corrected to "more axis per year from here on" as part of this same change, since getting the wording right mattered for writing the new marker's parallel copy anyway.
+- **Also corrected a now-stale comment on `computeScaleTicks()`** that claimed "every dynasty before Qing already sits at one roughly-consistent px/year rate" — no longer true since the ancient eras above aren't on that rate; narrowed to "every dynasty from Warring States through Qing."
+- **Not verified against a live browser** — sandboxed-session limitation, same as every other Timeline entry above. Checked via `npm run lint`, `npm run test`, and `npm run build`.
 
 ### Contemporary's timeline band narrowed from 320px to 180px, since its extra width bought no real dot capacity
 **PR #TBD.** Follow-up to the trailing-margin trim below, reported from a second live screenshot after that PR merged: the visible dot cluster under "2000s+" ended well short of both the band's own edge and the scrollable area's, with only cosmetic effect from the earlier 36px trim.
