@@ -931,6 +931,14 @@ model MemberList {
   // whole film. Off doesn't clear existing `rank`/`note` values on entries,
   // it just stops the page from reading them.
   isRanked  Boolean  @default(false)
+  // Off (default) keeps lists public, as every list was before this flag
+  // existed. On hides the list from everyone but its owner: its permalink
+  // 404s for anyone else, and it drops out of /lists, the leaderboard, the
+  // activity feed, other members' view of the owner's profile, and likers'
+  // Liked tab. Existing likes aren't deleted on the way private, just hidden,
+  // so flipping it back to public restores them. See PUBLIC_LIST_WHERE in
+  // src/lib/lists.ts.
+  isPrivate Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

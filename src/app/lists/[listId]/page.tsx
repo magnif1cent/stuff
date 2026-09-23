@@ -6,7 +6,7 @@ import { getFightSceneRatingSummaries } from "@/lib/fight-scenes";
 import { LikeListButton } from "@/components/like-list-button";
 import { CloneListButton } from "@/components/clone-list-button";
 import { ListDetailsForm } from "@/components/list-details-form";
-import { ListRankToggle } from "@/components/list-rank-toggle";
+import { ListPrivacyToggle, ListRankToggle } from "@/components/list-rank-toggle";
 import { ListItemRows, type ReelItem } from "@/components/list-item-rows";
 
 export default async function PublicListPage({ params }: { params: Promise<{ listId: string }> }) {
@@ -31,11 +31,13 @@ export default async function PublicListPage({ params }: { params: Promise<{ lis
     },
   });
 
-  if (!list) {
+  const isOwnList = session?.user?.id === list?.userId;
+  // A private list 404s for everyone but its owner — same response as a
+  // list that doesn't exist, so its existence isn't leaked either.
+  if (!list || (list.isPrivate && !isOwnList)) {
     notFound();
   }
 
-  const isOwnList = session?.user?.id === list.userId;
   const myLike = session?.user
     ? await prisma.memberListLike.findUnique({
         where: { userId_listId: { userId: session.user.id, listId } },
@@ -118,11 +120,21 @@ export default async function PublicListPage({ params }: { params: Promise<{ lis
             Ranked
           </span>
         )}
+        {list.isPrivate && (
+          <span className="rounded-full border border-neutral-700 bg-neutral-900 px-2.5 py-0.5 font-mono text-[10px] tracking-wide text-neutral-300 uppercase">
+            Private
+          </span>
+        )}
       </div>
       {list.description && <p className="mt-2 max-w-2xl text-sm text-neutral-300">{list.description}</p>}
       <div className="mt-4 mb-6">
         {isOwnList ? (
-          <ListDetailsForm listId={list.id} initialName={list.name} initialDescription={list.description} />
+          <>
+            <ListDetailsForm listId={list.id} initialName={list.name} initialDescription={list.description} />
+            <div className="mt-3">
+              <ListPrivacyToggle listId={list.id} initialIsPrivate={list.isPrivate} />
+            </div>
+          </>
         ) : (
           <div className="flex flex-wrap items-center gap-3">
             <LikeListButton

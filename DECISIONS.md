@@ -67,6 +67,7 @@ one.
 
 **Feature Decisions**
 
+- [Lists gain a private option, public stays the default](#lists-gain-a-private-option-public-stays-the-default)
 - [A second scale-change legend added, for the ancient (Legendary/Shang/Spring & Autumn) compression](#a-second-scale-change-legend-added-for-the-ancient-legendaryshangspring--autumn-compression)
 - [Contemporary's timeline band narrowed from 320px to 180px, since its extra width bought no real dot capacity](#contemporarys-timeline-band-narrowed-from-320px-to-180px-since-its-extra-width-bought-no-real-dot-capacity)
 - [Historical Timeline era labels wrap instead of truncating, and get a per-era width instead of a flat 150px](#historical-timeline-era-labels-wrap-instead-of-truncating-and-get-a-per-era-width-instead-of-a-flat-150px)
@@ -1288,6 +1289,16 @@ polish differently than a default-security reading would.
 - **Not verified**: which crawlers actually generate the traffic. This session had no access to Vercel logs or the Neon dashboard beyond the owner's screenshots, so the effect of this PR should be judged from the Monitoring graph a day or two after it deploys.
 
 ## Feature Decisions
+
+### Lists gain a private option, public stays the default
+**PR #TBD.** Asked directly: let members mark a custom list private instead of public. Lists had been public by design with "no private option" (README's Member Lists section said so explicitly), so this reverses that call. Favorites/Watchlist are unaffected and stay private, as they always were.
+
+- **A boolean `MemberList.isPrivate`, default `false`**, not a `visibility` enum. Considered a three-state enum (public / unlisted / private) but nothing asked for "unlisted" (reachable by link, just not browsable), and a boolean is what `isRanked` already uses on the same model. Migrating a boolean to an enum later is cheap if unlisted is ever wanted. The default keeps every existing list, and every new one, public, so nothing changes for anyone who never touches the toggle.
+- **Private means owner-only everywhere, through one shared filter.** `PUBLIC_LIST_WHERE` (`src/lib/lists.ts`) is applied to every read path that shows lists to someone other than their owner: `/lists` browse, both leaderboard rankings (Most-Liked Lists, and Top Curators, which now only counts movies in public lists), the Community Activity feed, another member's view of the owner's profile, and a liker's Liked tab. The Activity feed hides private lists even on the owner's own profile, since it's the same public feed for every viewer.
+- **A private permalink 404s for anyone else**, the same response as a list that doesn't exist, rather than a "this list is private" page that would confirm it exists. The like and clone APIs return the same 404 for a private list.
+- **Likes on a list that goes private are hidden, not deleted.** Going private and back to public restores its like count and its place in likers' Liked tabs. Deleting them would make a quick privacy flip destroy data the owner can't get back.
+- **The toggle lives on the list's own page, not at creation time.** It's a checkbox under the Edit list panel, built by generalizing `ListRankToggle` into a shared `ListFlagToggle` rather than copying it. The create form on the profile stays name-only, so creating a list is still one field. The profile's list manager shows a "Private" badge per list so the state is visible without opening each one.
+- **Not verified against a live database or browser** (sandboxed session). Checked via `npx prisma validate`, `npm run lint`, `npm run test`, and `npm run build`.
 
 ### A second scale-change legend added, for the ancient (Legendary/Shang/Spring & Autumn) compression
 **PR #TBD.** Asked directly: since the modern axis-break (Republic of China → Postwar) already gets a hatched marker + hover tooltip so its scale change is never silent, should the same apply where Legendary/Shang/Spring & Autumn's fixed-bucket compression gives way to the real ~0.878px/year scale at Warring States? Agreed and built, reusing the exact same pattern rather than inventing a new one.

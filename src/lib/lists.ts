@@ -14,6 +14,11 @@ export type ListCoverTile =
   | { kind: "MOVIE"; title: string; posterPath: string | null; posterOverrideUrl: string | null }
   | { kind: "FIGHT_SCENE"; title: string; youtubeVideoId: string };
 
+// Every surface that shows lists to someone other than their owner (browse,
+// leaderboard, activity feed, another member's profile, a liker's Liked tab)
+// filters on this, so "private" means the same thing everywhere.
+export const PUBLIC_LIST_WHERE = { isPrivate: false } as const;
+
 // Only lists with at least one item are worth browsing — an empty list is
 // still a private-in-practice draft until its owner adds something to it.
 const NON_EMPTY_WHERE = {
@@ -35,12 +40,12 @@ function searchWhere(query: string) {
 }
 
 export function getPublicListsCount(query: string = "") {
-  return prisma.memberList.count({ where: { AND: [NON_EMPTY_WHERE, searchWhere(query)] } });
+  return prisma.memberList.count({ where: { AND: [PUBLIC_LIST_WHERE, NON_EMPTY_WHERE, searchWhere(query)] } });
 }
 
 export async function getPublicListsPage(page: number, sort: ListsSort, query: string = "") {
   const lists = await prisma.memberList.findMany({
-    where: { AND: [NON_EMPTY_WHERE, searchWhere(query)] },
+    where: { AND: [PUBLIC_LIST_WHERE, NON_EMPTY_WHERE, searchWhere(query)] },
     include: {
       user: { select: { username: true } },
       _count: { select: { entries: true, fightSceneEntries: true, likes: true } },
