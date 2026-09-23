@@ -476,6 +476,8 @@ Each slide prefers a fight scene clip over the static TMDB backdrop:
 3. Vercel's Build Command (`vercel.json`'s `buildCommand`, running `scripts/vercel-build.sh` via the `vercel-build` npm script) runs `prisma migrate deploy` against whichever database that environment's `DATABASE_URL` points at, then `next build` — no manual migration step needed on deploy. It retries `migrate deploy` a few times before failing the build, since the Preview environment's database is one static Neon branch shared across every open PR (see `DECISIONS.md`), so concurrent deployments can transiently collide on Prisma's migration lock.
 4. Update the Google OAuth redirect URI to your production domain.
 
+**Keeping database compute down (Neon Free plan).** Neon bills for the time its compute is awake, and it only sleeps after 5 minutes without a query. Every page on this site renders per request (the nonce CSP in `src/proxy.ts` and the navbar's `auth()` both force it), so any visitor or crawler request, even a trickle, keeps the database awake. `src/app/robots.ts` keeps well-behaved crawlers out of `/api/`, `/admin`, account/auth pages, `/search`, and sort/filter/query URL variants to reduce that. On Neon's side, set the production compute's autoscaling max to 0.25 CU (Branches → production → Edit compute) so each awake hour costs the minimum. See `DECISIONS.md` ("Neon compute kept awake around the clock") for the full analysis and the larger, deferred fix.
+
 ## Footer & About Page
 
 Every page has a site-wide footer (`src/components/footer.tsx`) with
