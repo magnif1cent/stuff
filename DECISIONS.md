@@ -1291,7 +1291,7 @@ polish differently than a default-security reading would.
 ## Feature Decisions
 
 ### Lists gain a private option, public stays the default
-**PR #TBD.** Asked directly: let members mark a custom list private instead of public. Lists had been public by design with "no private option" (README's Member Lists section said so explicitly), so this reverses that call. Favorites/Watchlist are unaffected and stay private, as they always were.
+**PR #178.** Asked directly: let members mark a custom list private instead of public. Lists had been public by design with "no private option" (README's Member Lists section said so explicitly), so this reverses that call. Favorites/Watchlist are unaffected and stay private, as they always were.
 
 - **A boolean `MemberList.isPrivate`, default `false`**, not a `visibility` enum. Considered a three-state enum (public / unlisted / private) but nothing asked for "unlisted" (reachable by link, just not browsable), and a boolean is what `isRanked` already uses on the same model. Migrating a boolean to an enum later is cheap if unlisted is ever wanted. The default keeps every existing list, and every new one, public, so nothing changes for anyone who never touches the toggle.
 - **Private means owner-only everywhere, through one shared filter.** `PUBLIC_LIST_WHERE` (`src/lib/lists.ts`) is applied to every read path that shows lists to someone other than their owner: `/lists` browse, both leaderboard rankings (Most-Liked Lists, and Top Curators, which now only counts movies in public lists), the Community Activity feed, another member's view of the owner's profile, and a liker's Liked tab. The Activity feed hides private lists even on the owner's own profile, since it's the same public feed for every viewer.
