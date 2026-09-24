@@ -67,6 +67,7 @@ one.
 
 **Feature Decisions**
 
+- [List page actions moved into one side panel, ranking into an edit page](#list-page-actions-moved-into-one-side-panel-ranking-into-an-edit-page)
 - [Lists gain a private option, public stays the default](#lists-gain-a-private-option-public-stays-the-default)
 - [A second scale-change legend added, for the ancient (Legendary/Shang/Spring & Autumn) compression](#a-second-scale-change-legend-added-for-the-ancient-legendaryshangspring--autumn-compression)
 - [Contemporary's timeline band narrowed from 320px to 180px, since its extra width bought no real dot capacity](#contemporarys-timeline-band-narrowed-from-320px-to-180px-since-its-extra-width-bought-no-real-dot-capacity)
@@ -1290,6 +1291,17 @@ polish differently than a default-security reading would.
 
 ## Feature Decisions
 
+### List page actions moved into one side panel, ranking into an edit page
+**PR #178.** Adding the privacy control stacked a second checkbox under "Edit list" and above the item rows, which looked cluttered. Mocked up three directions with the site owner: a settings card with a Public/Private switch (too tall, especially stacked on a phone), a compact row of pills with a dropdown (small, but tiny tap targets and a chip-with-a-switch that read ambiguously), and a Letterboxd-style actions panel beside the list. The owner picked the panel.
+
+- **One panel, rows depend on who's looking.** `ListActionsPanel` (`src/components/list-actions.tsx`) replaces `ListDetailsForm`, `ListRankToggle`, `LikeListButton` and `CloneListButton`. The owner gets a Private/Public status header with like and item counts, then Edit list, Make this list private/public, Copy link (public only) and Delete list. A visitor gets a Like button, the counts, Clone and Copy link.
+- **Privacy is an action, not a setting.** "Make this list private" is one row whose label flips once used, with a line underneath saying what will happen, rather than a checkbox where "unchecked" has to mean public.
+- **Ranking moved to a new `/lists/[id]/edit` page**, with name and description. It's set once and rarely changed, so it no longer takes space on the list page every visit, and it now lives in exactly one place.
+- **Below `lg` the panel collapses into a ⋯ bottom sheet** (`ListActionsMobile`). A side column doesn't fit a phone, and stacking the panel above the list would push the first item off the first screen. A visitor keeps a visible Like button beside the ⋯, since liking is their main action. The two layouts share one `useListActions` hook, so they can't drift apart in behavior.
+- **Delete moved onto the list page** (it was only on the profile's list manager). It confirms with the browser's own dialog, then returns to the owner's profile.
+- **Card (poster-grid) view was mocked up too, and deferred** — see Deferred & Backlog.
+- **Not verified against a live database or browser** (sandboxed session). Checked via `npm run lint`, `npm run test`, and `npm run build`; the layout needs a look on the Vercel preview, especially the bottom sheet on a real phone.
+
 ### Lists gain a private option, public stays the default
 **PR #178.** Asked directly: let members mark a custom list private instead of public. Lists had been public by design with "no private option" (README's Member Lists section said so explicitly), so this reverses that call. Favorites/Watchlist are unaffected and stay private, as they always were.
 
@@ -1297,7 +1309,7 @@ polish differently than a default-security reading would.
 - **Private means owner-only everywhere, through one shared filter.** `PUBLIC_LIST_WHERE` (`src/lib/lists.ts`) is applied to every read path that shows lists to someone other than their owner: `/lists` browse, both leaderboard rankings (Most-Liked Lists, and Top Curators, which now only counts movies in public lists), the Community Activity feed, another member's view of the owner's profile, and a liker's Liked tab. The Activity feed hides private lists even on the owner's own profile, since it's the same public feed for every viewer.
 - **A private permalink 404s for anyone else**, the same response as a list that doesn't exist, rather than a "this list is private" page that would confirm it exists. The like and clone APIs return the same 404 for a private list.
 - **Likes on a list that goes private are hidden, not deleted.** Going private and back to public restores its like count and its place in likers' Liked tabs. Deleting them would make a quick privacy flip destroy data the owner can't get back.
-- **The toggle lives on the list's own page, not at creation time.** It's a checkbox under the Edit list panel, built by generalizing `ListRankToggle` into a shared `ListFlagToggle` rather than copying it. The create form on the profile stays name-only, so creating a list is still one field. The profile's list manager shows a "Private" badge per list so the state is visible without opening each one.
+- **The control lives on the list's own page, not at creation time.** The create form on the profile stays name-only, so creating a list is still one field. It started as a "Private list" checkbox, then moved into the list's actions panel in the same PR (see the next entry). The profile's list manager shows a "Private" badge per list so the state is visible without opening each one.
 - **Not verified against a live database or browser** (sandboxed session). Checked via `npx prisma validate`, `npm run lint`, `npm run test`, and `npm run build`.
 
 ### A second scale-change legend added, for the ancient (Legendary/Shang/Spring & Autumn) compression
