@@ -67,6 +67,8 @@ one.
 
 **Feature Decisions**
 
+- [List page actions moved into one side panel, ranking into an edit page](#list-page-actions-moved-into-one-side-panel-ranking-into-an-edit-page)
+- [Lists gain a private option, public stays the default](#lists-gain-a-private-option-public-stays-the-default)
 - [A second scale-change legend added, for the ancient (Legendary/Shang/Spring & Autumn) compression](#a-second-scale-change-legend-added-for-the-ancient-legendaryshangspring--autumn-compression)
 - [Contemporary's timeline band narrowed from 320px to 180px, since its extra width bought no real dot capacity](#contemporarys-timeline-band-narrowed-from-320px-to-180px-since-its-extra-width-bought-no-real-dot-capacity)
 - [Historical Timeline era labels wrap instead of truncating, and get a per-era width instead of a flat 150px](#historical-timeline-era-labels-wrap-instead-of-truncating-and-get-a-per-era-width-instead-of-a-flat-150px)
@@ -1288,6 +1290,27 @@ polish differently than a default-security reading would.
 - **Not verified**: which crawlers actually generate the traffic. This session had no access to Vercel logs or the Neon dashboard beyond the owner's screenshots, so the effect of this PR should be judged from the Monitoring graph a day or two after it deploys.
 
 ## Feature Decisions
+
+### List page actions moved into one side panel, ranking into an edit page
+**PR #178.** Adding the privacy control stacked a second checkbox under "Edit list" and above the item rows, which looked cluttered. Mocked up three directions with the site owner: a settings card with a Public/Private switch (too tall, especially stacked on a phone), a compact row of pills with a dropdown (small, but tiny tap targets and a chip-with-a-switch that read ambiguously), and a Letterboxd-style actions panel beside the list. The owner picked the panel.
+
+- **One panel, rows depend on who's looking.** `ListActionsPanel` (`src/components/list-actions.tsx`) replaces `ListDetailsForm`, `ListRankToggle`, `LikeListButton` and `CloneListButton`. The owner gets a Private/Public status header with like and item counts, then Edit list, Make this list private/public, Copy link (public only) and Delete list. A visitor gets a Like button, the counts, Clone and Copy link.
+- **Privacy is an action, not a setting.** "Make this list private" is one row whose label flips once used, with a line underneath saying what will happen, rather than a checkbox where "unchecked" has to mean public.
+- **Ranking moved to a new `/lists/[id]/edit` page**, with name and description. It's set once and rarely changed, so it no longer takes space on the list page every visit, and it now lives in exactly one place.
+- **Below `lg`, a row of labeled buttons, not a menu.** The first build collapsed the panel into a ⋯ button that opened a bottom sheet, with a full-width Like button beside it for visitors. On a real phone the owner found both wrong: the ⋯ didn't say what it hid, and the full-width Like read as the page's main call to action. Replaced with one row of pills sized to their labels (`ListActionsMobile`): Edit / Make private or public / Share for the owner, Like · count / Clone / Share for a visitor. Delete left the row on purpose (too easy to hit in a quick-tap row) and moved to the bottom of the edit page. Ranking stays on the edit page on phones too; a one-tap shortcut (tapping the RANKED badge, or a "Rank items" link) was offered and declined, since ranking is set once. Both layouts share one `useListActions` hook, so they can't drift apart in behavior.
+- **Delete moved onto the list page** (it was only on the profile's list manager). It confirms with the browser's own dialog, then returns to the owner's profile.
+- **Card (poster-grid) view was mocked up too, and deferred** — see Deferred & Backlog.
+- **Not verified against a live database or browser** (sandboxed session). Checked via `npm run lint`, `npm run test`, and `npm run build`; the layout needs a look on the Vercel preview, especially the bottom sheet on a real phone.
+
+### Lists gain a private option, public stays the default
+**PR #178.** Asked directly: let members mark a custom list private instead of public. Lists had been public by design with "no private option" (README's Member Lists section said so explicitly), so this reverses that call. Favorites/Watchlist are unaffected and stay private, as they always were.
+
+- **A boolean `MemberList.isPrivate`, default `false`**, not a `visibility` enum. Considered a three-state enum (public / unlisted / private) but nothing asked for "unlisted" (reachable by link, just not browsable), and a boolean is what `isRanked` already uses on the same model. Migrating a boolean to an enum later is cheap if unlisted is ever wanted. The default keeps every existing list, and every new one, public, so nothing changes for anyone who never touches the toggle.
+- **Private means owner-only everywhere, through one shared filter.** `PUBLIC_LIST_WHERE` (`src/lib/lists.ts`) is applied to every read path that shows lists to someone other than their owner: `/lists` browse, both leaderboard rankings (Most-Liked Lists, and Top Curators, which now only counts movies in public lists), the Community Activity feed, another member's view of the owner's profile, and a liker's Liked tab. The Activity feed hides private lists even on the owner's own profile, since it's the same public feed for every viewer.
+- **A private permalink 404s for anyone else**, the same response as a list that doesn't exist, rather than a "this list is private" page that would confirm it exists. The like and clone APIs return the same 404 for a private list.
+- **Likes on a list that goes private are hidden, not deleted.** Going private and back to public restores its like count and its place in likers' Liked tabs. Deleting them would make a quick privacy flip destroy data the owner can't get back.
+- **The control lives on the list's own page, not at creation time.** The create form on the profile stays name-only, so creating a list is still one field. It started as a "Private list" checkbox, then moved into the list's actions panel in the same PR (see the next entry). The profile's list manager shows a "Private" badge per list so the state is visible without opening each one.
+- **Not verified against a live database or browser** (sandboxed session). Checked via `npx prisma validate`, `npm run lint`, `npm run test`, and `npm run build`.
 
 ### A second scale-change legend added, for the ancient (Legendary/Shang/Spring & Autumn) compression
 **PR #TBD.** Asked directly: since the modern axis-break (Republic of China → Postwar) already gets a hatched marker + hover tooltip so its scale change is never silent, should the same apply where Legendary/Shang/Spring & Autumn's fixed-bucket compression gives way to the real ~0.878px/year scale at Warring States? Agreed and built, reusing the exact same pattern rather than inventing a new one.
@@ -5737,3 +5760,15 @@ separately-linked `LineageFigure` for the same person.
   graph -- see "LineageTreeBody rewritten as computed SVG layout" above)
   or something simpler, like a flat searchable list of every figure with
   links into their centered pages.
+- **Card (poster-grid) view for a list's own page** — mocked up during
+  the list-privacy work (PR #178) as a Letterboxd-style grid/rows switch:
+  5 posters across on desktop, 3 on a phone, rank number in each card's
+  corner, fight scenes marked with a play icon and a FIGHT tag. Put on hold
+  by the site owner, not rejected. Open problems to solve first: fight
+  scene thumbnails are wide YouTube stills that don't fit a tall poster
+  card (heavy crop or letterboxing); per-item notes and the reorder
+  buttons have no room on a card, so a ranked list would need to default
+  to rows for its owner or get a separate reorder mode; and the view
+  choice should probably be remembered per viewer (cards for unranked
+  lists and visitors, rows for ranked lists). Build it as its own PR, on
+  top of whichever list-page layout ships.

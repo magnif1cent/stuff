@@ -5,10 +5,9 @@ import Link from "next/link";
 import { MovieCard, type MovieCardData } from "@/components/movie-card";
 import { FightSceneResultCard, type FightSceneResult } from "@/components/fight-scene-result-card";
 import type { AddToListItem } from "@/components/add-to-list-control";
+import type { MemberList } from "@/generated/prisma/client";
 
-export interface MemberListData {
-  id: string;
-  name: string;
+export interface MemberListData extends Pick<MemberList, "id" | "name" | "isPrivate"> {
   movies: MovieCardData[];
   fightScenes: (FightSceneResult & { initialLists: AddToListItem[]; initialFavorite: boolean })[];
   // True totals — movies/fightScenes above are capped to
@@ -51,7 +50,7 @@ export function MemberListManager({
     }
     setLists((prev) => [
       ...prev,
-      { id: body.list.id, name: body.list.name, movies: [], fightScenes: [], totalMovieCount: 0, totalFightSceneCount: 0 },
+      { id: body.list.id, name: body.list.name, isPrivate: body.list.isPrivate, movies: [], fightScenes: [], totalMovieCount: 0, totalFightSceneCount: 0 },
     ]);
     setNewName("");
   }
@@ -107,7 +106,8 @@ export function MemberListManager({
 
       {lists.length === 0 && (
         <p className="text-sm text-neutral-500">
-          You haven&rsquo;t created any lists yet. Lists are public — anyone with the link can view one.
+          You haven&rsquo;t created any lists yet. Lists are public by default — anyone with the link can view one.
+          You can make a list private from its own page.
         </p>
       )}
 
@@ -132,8 +132,13 @@ export function MemberListManager({
             ) : (
               <>
                 <h2 className="text-lg font-semibold text-white">{list.name}</h2>
+                {list.isPrivate && (
+                  <span className="rounded-full border border-neutral-700 bg-neutral-900 px-2 py-0.5 font-mono text-[10px] tracking-wide text-neutral-300 uppercase">
+                    Private
+                  </span>
+                )}
                 <Link href={`/lists/${list.id}`} className="text-xs text-neutral-400 underline hover:text-white">
-                  Public link
+                  {list.isPrivate ? "Open list" : "Public link"}
                 </Link>
                 <button
                   onClick={() => {
