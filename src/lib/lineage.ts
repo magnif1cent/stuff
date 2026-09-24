@@ -648,8 +648,17 @@ export async function getLineageTree(
   for (let level = 0; level < down && parents.length > 0; level++) {
     const groups: DescendantGroup[] = [];
     for (const parent of parents) {
+      // Not filtered to isPrimary: true -- that flag answers "which of MY
+      // earlier links positions ME in MY OWN ancestor chain," a question
+      // that only matters looking upward from the student. Looking downward
+      // from the sifu, every recorded student belongs in their descendant
+      // fan, whether or not this happens to be that student's primary pick
+      // among possibly several. Filtering this to primary-only hid a
+      // student here whenever this sifu was their secondary connection --
+      // visible from the student's own page, but showing "no lineage
+      // recorded" on the sifu's.
       const links = await prisma.lineageRelation.findMany({
-        where: { sifuId: parent.id, isPrimary: true },
+        where: { sifuId: parent.id },
         orderBy: { createdAt: "asc" },
         select: { student: { select: figureSelect } },
       });
@@ -669,13 +678,12 @@ export async function getLineageTree(
     descendantLevels.push(groups);
     parents = groups.flatMap((g) => g.children);
     // Reached the bottom of the requested window -- check whether any of
-    // the last level's figures have primary students of their own (as
-    // opposed to `groups.length === 0` above, which means there's
-    // genuinely nothing further); the caller can ask again with a larger
-    // `down` to see them.
+    // the last level's figures have students of their own (as opposed to
+    // `groups.length === 0` above, which means there's genuinely nothing
+    // further); the caller can ask again with a larger `down` to see them.
     if (level === down - 1) {
       const more = await prisma.lineageRelation.findFirst({
-        where: { sifuId: { in: parents.map((p) => p.id) }, isPrimary: true },
+        where: { sifuId: { in: parents.map((p) => p.id) } },
         select: { id: true },
       });
       descendantsTruncated = !!more;
