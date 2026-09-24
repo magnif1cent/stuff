@@ -32,6 +32,12 @@ export const resendVerificationLimiter = makeLimiter("resend-verification", 3, "
 // unauthenticated and must not reveal whether the email has an account, so
 // it can't be keyed by identity without leaking exactly that.
 export const forgotPasswordLimiter = makeLimiter("forgot-password", 5, "10 m");
+// Same reasoning as forgotPasswordLimiter — the unauthenticated resend flow
+// (reachable from the login page once sign-in is blocked on an unverified
+// account) must stay anti-enumeration too, so it's IP-keyed like
+// forgot-password rather than reusing resendVerificationLimiter above,
+// which is keyed by an already-authenticated user id.
+export const resendVerificationPublicLimiter = makeLimiter("resend-verification-public", 5, "10 m");
 
 // Content-creation surfaces: looser limits, keyed by user id — spam/abuse
 // deterrent rather than a credential-attack defense, so the threshold is

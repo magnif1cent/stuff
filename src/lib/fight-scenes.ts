@@ -9,6 +9,7 @@ export const MAX_FIGHT_SCENE_TITLE_LENGTH = 200;
 export const MAX_FIGHT_SCENE_TAG_NAME_LENGTH = 40;
 export const MAX_FIGHT_SCENE_STYLE_NAME_LENGTH = 40;
 export const MAX_FIGHT_SCENE_MOVE_NAME_LENGTH = 40;
+export const MAX_FIGHT_STYLE_GROUP_NAME_LENGTH = 40;
 
 export interface FightSceneRatingSummary {
   average: number | null;
@@ -77,13 +78,29 @@ export function getFightSceneTags() {
   return prisma.fightSceneTag.findMany({ orderBy: { name: "asc" } });
 }
 
-export function getFightSceneStyles() {
-  return prisma.fightSceneStyle.findMany({ orderBy: { name: "asc" } });
+// Flattens the optional group relation into a plain groupName, so callers
+// that only need it for display (the member-facing style picker) don't have
+// to deal with the nested shape.
+export async function getFightSceneStyles() {
+  const styles = await prisma.fightSceneStyle.findMany({
+    orderBy: { name: "asc" },
+    include: { group: { select: { name: true } } },
+  });
+  return styles.map(({ group, ...style }) => ({ ...style, groupName: group?.name ?? null }));
 }
 
 export function getFightSceneMoves() {
   return prisma.fightSceneMove.findMany({ orderBy: { name: "asc" } });
 }
+
+export function getFightStyleGroups() {
+  return prisma.fightStyleGroup.findMany({ orderBy: { name: "asc" } });
+}
+
+// Re-exported for existing callers/imports — the implementation moved to
+// style-groups.ts (a prisma-free module) so a client component can import it
+// directly without pulling prisma into the browser bundle.
+export { groupStylesByCategory } from "@/lib/style-groups";
 
 export async function getFightSceneRatingSummaries(
   fightSceneIds: string[],

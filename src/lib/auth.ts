@@ -1,4 +1,4 @@
-import NextAuth from "next-auth";
+import NextAuth, { CredentialsSignin } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
@@ -6,6 +6,18 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { generateUniqueUsername } from "@/lib/username";
 import { checkRateLimit, loginLimiter } from "@/lib/rate-limit";
+
+// Thrown by authorize() below instead of returning null, so the sign-in
+// server action (src/app/login/actions.ts) can tell "wrong password" apart
+// from "right password, unverified account" and point the member at
+// resending the verification email instead of a generic "invalid
+// credentials" message. Auth.js propagates a thrown authorize() error as-is
+// through a server-action signIn() call rather than rewrapping it (confirmed
+// against @auth/core's own callback/credentials source), so `code` survives
+// to the catch block.
+export class EmailNotVerifiedSignInError extends CredentialsSignin {
+  code = "email_not_verified";
+}
 
 // Fixed, valid bcrypt hash (cost 12, matching real password hashes) used
 // only to keep bcrypt.compare()'s timing consistent when no real account
@@ -83,6 +95,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const valid = await bcrypt.compare(password, user?.passwordHash ?? DUMMY_PASSWORD_HASH);
         if (!user?.passwordHash || !valid) {
           return null;
+        }
+
+        // Checked only after the password is confirmed correct — proving you
+        // hold the account's own password already establishes who's asking,
+        // so surfacing "this account exists and isn't verified" here doesn't
+        // reopen the enumeration gap the DUMMY_PASSWORD_HASH comparison above
+        // exists to close.
+        if (!user.emailVerified) {
+          throw new EmailNotVerifiedSignInError();
         }
 
         return {

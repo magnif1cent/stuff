@@ -146,6 +146,11 @@ model Movie {
   // different poster without depending on what TMDB happens to have.
   posterOverrideUrl String?
   backdropPath   String?
+  // Admin-picked alternate from TMDB's own backdrop gallery for this movie
+  // (see /movie/{id}/images) that takes precedence over backdropPath above.
+  // Always a TMDB image URL, not an upload -- unlike posterOverrideUrl,
+  // there's no file-upload path for backdrops.
+  backdropOverrideUrl String?
   runtime        Int?
   director       String?
   country        String?
@@ -332,6 +337,13 @@ model LineageFigure {
   // it (cycle detection, primary-link promotion, search) is generic over
   // any figure and doesn't need to know this flag exists.
   isGroup  Boolean @default(false)
+  // Alternate names the same figure is credited or known under (a nickname,
+  // a different romanization of the same historical name). Unioned into the
+  // "Portrayed by" footnote lookup (getPortrayals in lib/lineage.ts)
+  // alongside `name`, so a movie crediting the character under any of these
+  // still surfaces that actor under this one figure instead of splintering
+  // across a second, unlinked figure for the other name.
+  aliases  String[] @default([])
   person   Person? @relation(fields: [personId], references: [id], onDelete: SetNull)
 
   sifuLinks    LineageRelation[] @relation("LineageSifu")
@@ -824,10 +836,25 @@ model FightSceneTag {
 // add anything missing. Deliberately not reusing the tags precedent yet —
 // see DECISIONS.md for why. Same plain many-to-many shape either way.
 model FightSceneStyle {
+  id      String  @id @default(cuid())
+  name    String  @unique
+  groupId String?
+
+  group       FightStyleGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  fightScenes FightScene[]
+}
+
+// Purely organizational: clusters styles (e.g. "Northern", "Southern",
+// "Internal") in the admin list and the /search/fights filter. Optional and
+// admin/reviewer-curated like FightSceneStyle itself — deleting a group
+// ungroups its styles rather than deleting them (onDelete: SetNull above),
+// since the group is just a label, not part of what a style means. Not
+// applied to FightSceneMove — moves weren't asked to be grouped.
+model FightStyleGroup {
   id   String @id @default(cuid())
   name String @unique
 
-  fightScenes FightScene[]
+  styles FightSceneStyle[]
 }
 
 model FightSceneMove {
@@ -904,6 +931,14 @@ model MemberList {
   // whole film. Off doesn't clear existing `rank`/`note` values on entries,
   // it just stops the page from reading them.
   isRanked  Boolean  @default(false)
+  // Off (default) keeps lists public, as every list was before this flag
+  // existed. On hides the list from everyone but its owner: its permalink
+  // 404s for anyone else, and it drops out of /lists, the leaderboard, the
+  // activity feed, other members' view of the owner's profile, and likers'
+  // Liked tab. Existing likes aren't deleted on the way private, just hidden,
+  // so flipping it back to public restores them. See PUBLIC_LIST_WHERE in
+  // src/lib/lists.ts.
+  isPrivate Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

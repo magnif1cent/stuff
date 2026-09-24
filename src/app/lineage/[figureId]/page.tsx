@@ -16,6 +16,8 @@ export async function generateMetadata({
 
 const DEFAULT_UP = 3;
 const DEFAULT_DOWN = 3;
+const DEFAULT_SIBLINGS = 8;
+const DEFAULT_GROUP_SIBLINGS = 12;
 
 // The lineage page for a figure with no actor page to live under -- a
 // historical sifu never credited in a film, or a character like Ip Man
@@ -29,14 +31,18 @@ export default async function LineageFigurePage({
   searchParams,
 }: {
   params: Promise<{ figureId: string }>;
-  searchParams: Promise<{ up?: string; down?: string }>;
+  searchParams: Promise<{ up?: string; down?: string; siblings?: string; groupSiblings?: string }>;
 }) {
   const { figureId } = await params;
-  const { up: upParam, down: downParam } = await searchParams;
+  const { up: upParam, down: downParam, siblings: siblingsParam, groupSiblings: groupSiblingsParam } = await searchParams;
   const up = Number(upParam) || DEFAULT_UP;
   const down = Number(downParam) || DEFAULT_DOWN;
+  const siblings = Number(siblingsParam) || DEFAULT_SIBLINGS;
+  const groupSiblings = Number(groupSiblingsParam) || DEFAULT_GROUP_SIBLINGS;
 
-  const tree = await getLineageTree(figureId, { up, down, siblingLimit: 8 }).catch(() => null);
+  const tree = await getLineageTree(figureId, { up, down, siblingLimit: siblings, groupSiblingLimit: groupSiblings }).catch(
+    () => null,
+  );
   if (!tree) {
     notFound();
   }
@@ -44,11 +50,11 @@ export default async function LineageFigurePage({
   // actor-linked figure, but redirect into the canonical URL anyway in
   // case someone lands here directly (a bookmark, a stale link).
   if (tree.center.personId) {
-    redirect(`/actors/${tree.center.personId}/lineage?up=${up}&down=${down}`);
+    redirect(`/actors/${tree.center.personId}/lineage?up=${up}&down=${down}&siblings=${siblings}&groupSiblings=${groupSiblings}`);
   }
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-4 py-10">
+    <div className="w-full px-4 py-10">
       <h1 className="mb-1 text-2xl font-bold text-white">{tree.center.name}&rsquo;s Lineage</h1>
       <p className="mb-8 text-sm text-neutral-500">
         Earlier generations appear above, later ones below. &ldquo;Lineage&rdquo; is our tribute to the martial
@@ -56,7 +62,7 @@ export default async function LineageFigurePage({
         reach out if you spot something to fix.
       </p>
 
-      <LineageTreeBody tree={tree} up={up} down={down} />
+      <LineageTreeBody tree={tree} up={up} down={down} siblings={siblings} groupSiblings={groupSiblings} />
     </div>
   );
 }

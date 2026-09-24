@@ -5,7 +5,7 @@ import Image from "next/image";
 import { tmdbImageUrl } from "@/lib/tmdb";
 import { AdminLineageFigurePicker, type LineageFigureRef } from "@/components/admin-lineage-figure-picker";
 import { GroupIcon } from "@/components/lineage-group-icon";
-import { MAX_LINEAGE_NOTE_LENGTH } from "@/lib/lineage-constants";
+import { MAX_FIGURE_NAME_LENGTH, MAX_LINEAGE_NOTE_LENGTH } from "@/lib/lineage-constants";
 
 interface DescendantGroup {
   parent: LineageFigureRef;
@@ -72,6 +72,8 @@ export function AdminLineageTree() {
   const [addNote, setAddNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [figureBusy, setFigureBusy] = useState(false);
+  const [aliasInput, setAliasInput] = useState("");
+  const [aliasBusy, setAliasBusy] = useState(false);
 
   async function loadTree(figure: LineageFigureRef, nextDepth: { up: number; down: number } = DEFAULT_DEPTH) {
     setSelected(figure);
@@ -79,6 +81,7 @@ export function AdminLineageTree() {
     setLoading(true);
     setError(null);
     setAddMode(null);
+    setAliasInput("");
     const res = await fetch(`/api/admin/lineage/tree?figureId=${figure.id}&up=${nextDepth.up}&down=${nextDepth.down}`);
     setLoading(false);
     if (!res.ok) {
@@ -143,6 +146,39 @@ export function AdminLineageTree() {
       return;
     }
     await loadTree(tree.center, depth);
+  }
+
+  // Both alias actions PATCH the figure's *full* next list (there's no
+  // separate add/remove endpoint) -- computed here from the tree's current
+  // aliases plus or minus one, same pattern as toggleGroup's "send the next
+  // value, re-fetch the tree" round trip.
+  async function saveAliases(nextAliases: string[]) {
+    if (!tree) return;
+    setAliasBusy(true);
+    setError(null);
+    const res = await fetch(`/api/admin/lineage/figures/${tree.center.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ aliases: nextAliases }),
+    });
+    setAliasBusy(false);
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error ?? "Something went wrong.");
+      return;
+    }
+    setAliasInput("");
+    await loadTree(tree.center, depth);
+  }
+
+  function addAlias() {
+    if (!tree || !aliasInput.trim()) return;
+    saveAliases([...(tree.center.aliases ?? []), aliasInput.trim()]);
+  }
+
+  function removeAlias(alias: string) {
+    if (!tree) return;
+    saveAliases((tree.center.aliases ?? []).filter((a) => a !== alias));
   }
 
   // Deletes the centered bare figure and, via the schema's cascade, every
@@ -270,6 +306,60 @@ export function AdminLineageTree() {
               </button>
             </div>
           )}
+
+          <div className="flex w-72 flex-col gap-1.5 rounded-md border border-neutral-800 p-3">
+            <p className="text-[11px] font-semibold text-neutral-300">Also known as</p>
+            <p className="text-[10px] text-neutral-500">
+              Other names this figure is credited under -- combined into one &ldquo;Portrayed by&rdquo; list on the
+              public tree.
+            </p>
+            {(tree.center.aliases ?? []).length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {tree.center.aliases!.map((alias) => (
+                  <span
+                    key={alias}
+                    className="flex items-center gap-1 rounded-full border border-neutral-700 bg-neutral-900 px-2 py-0.5 text-[11px] text-neutral-300"
+                  >
+                    {alias}
+                    <button
+                      type="button"
+                      onClick={() => removeAlias(alias)}
+                      disabled={aliasBusy}
+                      aria-label={`Remove alias ${alias}`}
+                      className="text-neutral-500 hover:text-red-400 disabled:opacity-50"
+                    >
+                      &times;
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            <div className="flex gap-1.5">
+              <input
+                type="text"
+                value={aliasInput}
+                onChange={(e) => setAliasInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    addAlias();
+                  }
+                }}
+                maxLength={MAX_FIGURE_NAME_LENGTH}
+                disabled={aliasBusy}
+                placeholder="Add alternate name…"
+                className="min-w-0 flex-1 rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1 text-xs text-neutral-100 focus:border-red-600 focus:outline-none disabled:opacity-50"
+              />
+              <button
+                type="button"
+                onClick={addAlias}
+                disabled={aliasBusy || !aliasInput.trim()}
+                className="rounded-md bg-neutral-800 px-2.5 py-1 text-[11px] font-semibold text-neutral-300 hover:bg-neutral-700 disabled:opacity-50"
+              >
+                Add
+              </button>
+            </div>
+          </div>
 
           {addMode && (
             <div className="w-72 rounded-md border border-neutral-700 bg-neutral-900 p-3">

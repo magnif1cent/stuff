@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { FightSceneTag } from "@/generated/prisma/client";
+import { PencilIcon, TrashIcon } from "@/components/action-icons";
 
 type TagItem = Pick<FightSceneTag, "id" | "name"> & { _count: { fightScenes: number } };
 
@@ -129,11 +130,21 @@ export function AdminFightSceneTags({ initialTags }: { initialTags: TagItem[] })
                   <span>
                     {tag._count.fightScenes} scene{tag._count.fightScenes === 1 ? "" : "s"}
                   </span>
-                  <button onClick={() => startEdit(tag)} className="text-neutral-400 hover:text-white">
-                    Rename
+                  <button
+                    onClick={() => startEdit(tag)}
+                    aria-label={`Rename ${tag.name}`}
+                    title="Rename"
+                    className="text-neutral-400 hover:text-white"
+                  >
+                    <PencilIcon />
                   </button>
-                  <button onClick={() => handleDelete(tag.id)} className="text-neutral-400 hover:text-red-400">
-                    Delete
+                  <button
+                    onClick={() => handleDelete(tag.id)}
+                    aria-label={`Delete ${tag.name}`}
+                    title="Delete"
+                    className="text-neutral-400 hover:text-red-400"
+                  >
+                    <TrashIcon />
                   </button>
                 </div>
               </>

@@ -9,7 +9,7 @@ export default async function AdminFightSceneMovesPage() {
 
   return (
     <div className="max-w-2xl">
-      <h1 className="mb-2 text-2xl font-bold text-white">Fight scene moves</h1>
+      <h1 className="mb-2 text-2xl font-bold text-white">Fight moves</h1>
       <p className="mb-6 text-sm text-neutral-400">
         Named techniques members pick from when tagging a fight scene (e.g. &ldquo;Flying Kick&rdquo;,
         &ldquo;Leg Sweep&rdquo;). Members can&rsquo;t create new moves — only assign from this list.

@@ -14,18 +14,35 @@
 // point: the dropdown options and edit-history entries.
 const ERA_SETTINGS_BASE = [
   { key: "LEGENDARY", name: "Legendary / Mythological", years: "before c. 2070 BC" },
+  { key: "SHANG", name: "Shang Dynasty", years: "c. 1600–1046 BC" },
+  { key: "SPRING_AUTUMN", name: "Spring & Autumn Period", years: "770–475 BC" },
   { key: "WARRING_STATES", name: "Warring States", years: "475–221 BC" },
   { key: "QIN", name: "Qin Dynasty", years: "221–206 BC" },
   { key: "HAN", name: "Han Dynasty", years: "206 BC–220 AD" },
   { key: "THREE_KINGDOMS", name: "Three Kingdoms", years: "220–280" },
   { key: "JIN", name: "Jin Dynasty", years: "266–420" },
+  // Fills what was previously a bare gap in the axis between Jin and Tang
+  // (see TIMELINE_ERA_LAYOUT) -- the two eras' real ranges abut (420/589)
+  // the same way Jin/Three Kingdoms already do above, not a new pattern.
+  { key: "NORTHERN_SOUTHERN", name: "Northern & Southern Dynasties", years: "420–589" },
+  { key: "SUI", name: "Sui Dynasty", years: "581–618" },
   { key: "TANG", name: "Tang Dynasty", years: "618–907" },
+  { key: "FIVE_DYNASTIES", name: "Five Dynasties & Ten Kingdoms", years: "907–960" },
   { key: "SONG", name: "Song Dynasty", years: "960–1279" },
   { key: "YUAN", name: "Yuan Dynasty", years: "1271–1368" },
   { key: "MING", name: "Ming Dynasty", years: "1368–1644" },
   { key: "QING", name: "Qing Dynasty", years: "1644–1912" },
   { key: "REPUBLIC_ERA", name: "Republic of China", years: "1912–1949" },
-  { key: "MODERN", name: "Modern Day / Contemporary", years: "1949–present" },
+  // Five independent, flat entries rather than one "Modern" bucket -- same
+  // status as any dynasty above, not a parent/child grouping. Split out so
+  // the Historical Timeline page (see DECISIONS.md) doesn't have to cram
+  // the majority of the catalog into one band; POSTWAR_ERA is wider than
+  // the other four since real listings thin out fast before the 1970s.
+  { key: "POSTWAR_ERA", name: "1950s & 60s", years: "1949–1969" },
+  { key: "SEVENTIES", name: "1970s", years: "1970–1979" },
+  { key: "EIGHTIES", name: "1980s", years: "1980–1989" },
+  { key: "NINETIES", name: "1990s", years: "1990–1999" },
+  { key: "CONTEMPORARY", name: "2000s+", years: "2000–present" },
   { key: "OTHER", name: "Other / Unspecified", years: null },
 ] as const;
 

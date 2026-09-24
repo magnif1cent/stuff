@@ -14,6 +14,12 @@ export function Footer() {
         <Link href="/tops" className="text-sm text-neutral-400 hover:text-white">
           Top 100
         </Link>
+        <Link href="/terms" className="text-sm text-neutral-400 hover:text-white">
+          Terms
+        </Link>
+        <Link href="/privacy" className="text-sm text-neutral-400 hover:text-white">
+          Privacy
+        </Link>
       </div>
       <BuildVersion />
     </footer>

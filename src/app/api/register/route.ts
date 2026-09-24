@@ -48,18 +48,28 @@ export async function POST(request: Request) {
   // display (username, below) — usernameLower is the real uniqueness key.
   const usernameLower = username.toLowerCase();
 
-  const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
-  if (existing) {
-    return NextResponse.json({ error: "An account with that email already exists." }, { status: 409 });
-  }
-
+  // Username collisions stay a real, immediate error — usernames are public
+  // handles (profile URLs, attribution on posts/ratings), not something to
+  // protect, and the member needs to know to pick another one. Checked
+  // before the email lookup below so a taken username is never masked by
+  // the anti-enumeration response that email existence gets.
   const existingUsername = await prisma.user.findUnique({ where: { usernameLower } });
   if (existingUsername) {
     return NextResponse.json({ error: "That username is already taken." }, { status: 409 });
   }
 
+  const existingEmail = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+  if (existingEmail) {
+    // Anti-enumeration, same shape as /api/forgot-password and
+    // /api/resend-verification-public: never reveal whether an email
+    // already has an account. Silently no-op — no new account, no email —
+    // and return the identical success response a real registration gets,
+    // so the two are indistinguishable from the response alone.
+    return NextResponse.json({ ok: true });
+  }
+
   const passwordHash = await hashPassword(password);
-  const user = await prisma.user.create({
+  await prisma.user.create({
     data: {
       username,
       usernameLower,
@@ -78,5 +88,5 @@ export async function POST(request: Request) {
     console.error("Failed to send verification email:", error);
   }
 
-  return NextResponse.json({ id: user.id, email: user.email });
+  return NextResponse.json({ ok: true });
 }

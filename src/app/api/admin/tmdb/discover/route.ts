@@ -1,12 +1,31 @@
 import { NextResponse } from "next/server";
 import { requireAdminSession } from "@/lib/require-admin";
-import { discoverMoviesByKeywords, getTmdbMovieDetails } from "@/lib/tmdb";
+import {
+  discoverMoviesByCast,
+  discoverMoviesByCompany,
+  discoverMoviesByKeywords,
+  extractTopBilledCast,
+  getTmdbMovieDetails,
+} from "@/lib/tmdb";
 import { prisma } from "@/lib/prisma";
 import { tmdbErrorResponse } from "@/lib/api-error";
 
 // TMDB refuses to serve page 501+ even when total_pages reports higher.
 const MAX_DISCOVER_PAGE = 500;
 const DISPLAY_CAST_COUNT = 3;
+const MIN_YEAR = 1870;
+
+type ParsedYear = { ok: true; year: number | undefined } | { ok: false; error: string };
+
+function parseYearParam(value: string | null, paramName: string): ParsedYear {
+  if (!value) return { ok: true, year: undefined };
+  const year = Number(value);
+  const maxYear = new Date().getFullYear() + 5;
+  if (!Number.isInteger(year) || year < MIN_YEAR || year > maxYear) {
+    return { ok: false, error: `${paramName} must be a year between ${MIN_YEAR} and ${maxYear}` };
+  }
+  return { ok: true, year };
+}
 
 export async function GET(request: Request) {
   const session = await requireAdminSession();
@@ -16,15 +35,43 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const keywordsParam = url.searchParams.get("keywords");
-  if (!keywordsParam) {
-    return NextResponse.json({ error: "Missing query parameter keywords" }, { status: 400 });
+  const personIdParam = url.searchParams.get("personId");
+  const companyIdParam = url.searchParams.get("companyId");
+  const providedFilterCount = [keywordsParam, personIdParam, companyIdParam].filter((v) => v !== null).length;
+  if (providedFilterCount === 0) {
+    return NextResponse.json(
+      { error: "Missing query parameter keywords, personId, or companyId" },
+      { status: 400 },
+    );
   }
-  const keywordIds = keywordsParam
-    .split(",")
-    .map((id) => Number(id))
-    .filter((id) => Number.isInteger(id));
-  if (keywordIds.length === 0) {
-    return NextResponse.json({ error: "keywords must be a comma-separated list of keyword ids" }, { status: 400 });
+  if (providedFilterCount > 1) {
+    return NextResponse.json(
+      { error: "Provide only one of keywords, personId, or companyId" },
+      { status: 400 },
+    );
+  }
+
+  let keywordIds: number[] = [];
+  let personId: number | null = null;
+  let companyId: number | null = null;
+  if (keywordsParam) {
+    keywordIds = keywordsParam
+      .split(",")
+      .map((id) => Number(id))
+      .filter((id) => Number.isInteger(id));
+    if (keywordIds.length === 0) {
+      return NextResponse.json({ error: "keywords must be a comma-separated list of keyword ids" }, { status: 400 });
+    }
+  } else if (personIdParam) {
+    personId = Number(personIdParam);
+    if (!Number.isInteger(personId)) {
+      return NextResponse.json({ error: "personId must be an integer" }, { status: 400 });
+    }
+  } else {
+    companyId = Number(companyIdParam);
+    if (!Number.isInteger(companyId)) {
+      return NextResponse.json({ error: "companyId must be an integer" }, { status: 400 });
+    }
   }
 
   const page = Number(url.searchParams.get("page") ?? "1");
@@ -37,8 +84,30 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "country must be a 2-letter ISO 3166-1 code (e.g. HK)" }, { status: 400 });
   }
 
+  const parsedYearFrom = parseYearParam(url.searchParams.get("yearFrom"), "yearFrom");
+  if (!parsedYearFrom.ok) {
+    return NextResponse.json({ error: parsedYearFrom.error }, { status: 400 });
+  }
+  const parsedYearTo = parseYearParam(url.searchParams.get("yearTo"), "yearTo");
+  if (!parsedYearTo.ok) {
+    return NextResponse.json({ error: parsedYearTo.error }, { status: 400 });
+  }
+  if (parsedYearFrom.year && parsedYearTo.year && parsedYearFrom.year > parsedYearTo.year) {
+    return NextResponse.json({ error: "yearFrom must be less than or equal to yearTo" }, { status: 400 });
+  }
+
+  const discoverOptions = {
+    originCountry: countryParam ?? undefined,
+    yearFrom: parsedYearFrom.year,
+    yearTo: parsedYearTo.year,
+  };
+
   try {
-    const discovered = await discoverMoviesByKeywords(keywordIds, page, countryParam ?? undefined);
+    const discovered = personId
+      ? await discoverMoviesByCast(personId, page, discoverOptions)
+      : companyId
+        ? await discoverMoviesByCompany(companyId, page, discoverOptions)
+        : await discoverMoviesByKeywords(keywordIds, page, discoverOptions);
 
     const alreadyImported = await prisma.movie.findMany({
       where: { tmdbId: { in: discovered.results.map((r) => r.id) } },
@@ -53,12 +122,7 @@ export async function GET(request: Request) {
     const results = await Promise.all(
       discovered.results.map(async (movie) => {
         const details = await getTmdbMovieDetails(movie.id).catch(() => null);
-        const topCast = details
-          ? [...details.credits.cast]
-              .sort((a, b) => a.order - b.order)
-              .slice(0, DISPLAY_CAST_COUNT)
-              .map((c) => c.name)
-          : [];
+        const topCast = details ? extractTopBilledCast(details, DISPLAY_CAST_COUNT) : [];
 
         return {
           tmdbId: movie.id,
@@ -82,6 +146,11 @@ export async function GET(request: Request) {
       totalResults: discovered.total_results,
     });
   } catch (error) {
-    return tmdbErrorResponse(`Failed to discover TMDB movies for keywords ${keywordsParam}:`, error);
+    const subject = personId
+      ? `person ${personId}`
+      : companyId
+        ? `company ${companyId}`
+        : `keywords ${keywordsParam}`;
+    return tmdbErrorResponse(`Failed to discover TMDB movies for ${subject}:`, error);
   }
 }

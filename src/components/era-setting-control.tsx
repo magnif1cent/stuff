@@ -103,7 +103,7 @@ export function EraSettingControl({
           </select>
           <button
             onClick={handleSave}
-            disabled={saving}
+            disabled={saving || selected === (era ?? "")}
             className="rounded-md bg-red-700 px-2 py-1 text-xs font-medium text-white hover:bg-red-600 disabled:opacity-50"
           >
             {saving ? "Saving…" : "Save"}

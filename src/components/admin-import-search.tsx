@@ -1,11 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import type { TmdbMovieSearchResult } from "@/lib/tmdb";
+import Image from "next/image";
+import { tmdbImageUrl, type TmdbMovieSearchResult } from "@/lib/tmdb";
 import { AdminKeywordImport } from "@/components/admin-keyword-import";
+import { AdminActorImport } from "@/components/admin-actor-import";
+import { AdminStudioImport } from "@/components/admin-studio-import";
 
 export function AdminImportSearch() {
-  const [mode, setMode] = useState<"title" | "keyword">("title");
+  const [mode, setMode] = useState<"title" | "keyword" | "actor" | "studio">("title");
 
   return (
     <div>
@@ -26,9 +29,27 @@ export function AdminImportSearch() {
         >
           By keyword
         </button>
+        <button
+          onClick={() => setMode("actor")}
+          className={`px-3 py-2 text-sm font-medium ${
+            mode === "actor" ? "border-b-2 border-red-600 text-white" : "text-neutral-400 hover:text-white"
+          }`}
+        >
+          By actor
+        </button>
+        <button
+          onClick={() => setMode("studio")}
+          className={`px-3 py-2 text-sm font-medium ${
+            mode === "studio" ? "border-b-2 border-red-600 text-white" : "text-neutral-400 hover:text-white"
+          }`}
+        >
+          By studio
+        </button>
       </div>
 
       {mode === "keyword" && <AdminKeywordImport />}
+      {mode === "actor" && <AdminActorImport />}
+      {mode === "studio" && <AdminStudioImport />}
       {mode === "title" && <TitleSearch />}
     </div>
   );
@@ -94,29 +115,39 @@ function TitleSearch() {
       {message && <p className="mb-4 text-sm text-neutral-300">{message}</p>}
 
       <ul className="flex flex-col gap-3">
-        {results.map((movie) => (
-          <li
-            key={movie.id}
-            className="flex items-center justify-between gap-4 rounded-md border border-neutral-800 bg-neutral-900 p-3"
-          >
-            <div>
-              <p className="font-medium text-white">
-                {movie.title}{" "}
-                <span className="text-neutral-500">
-                  {movie.release_date ? `(${movie.release_date.slice(0, 4)})` : ""}
-                </span>
-              </p>
-              <p className="line-clamp-2 max-w-xl text-sm text-neutral-400">{movie.overview}</p>
-            </div>
-            <button
-              onClick={() => handleImport(movie.id)}
-              disabled={importingId === movie.id}
-              className="shrink-0 rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-100 hover:bg-neutral-800 disabled:opacity-50"
+        {results.map((movie) => {
+          const posterUrl = tmdbImageUrl(movie.poster_path, "w200");
+          return (
+            <li
+              key={movie.id}
+              className="flex items-center justify-between gap-4 rounded-md border border-neutral-800 bg-neutral-900 p-3"
             >
-              {importingId === movie.id ? "Importing…" : "Import"}
-            </button>
-          </li>
-        ))}
+              <div className="flex gap-3">
+                <div className="relative h-24 w-16 shrink-0 overflow-hidden rounded-sm bg-neutral-800">
+                  {posterUrl && (
+                    <Image src={posterUrl} alt="" fill unoptimized sizes="64px" className="object-cover" />
+                  )}
+                </div>
+                <div>
+                  <p className="font-medium text-white">
+                    {movie.title}{" "}
+                    <span className="text-neutral-500">
+                      {movie.release_date ? `(${movie.release_date.slice(0, 4)})` : ""}
+                    </span>
+                  </p>
+                  <p className="line-clamp-2 max-w-xl text-sm text-neutral-400">{movie.overview}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => handleImport(movie.id)}
+                disabled={importingId === movie.id}
+                className="shrink-0 rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-100 hover:bg-neutral-800 disabled:opacity-50"
+              >
+                {importingId === movie.id ? "Importing…" : "Import"}
+              </button>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

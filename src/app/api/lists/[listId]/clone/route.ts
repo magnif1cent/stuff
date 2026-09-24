@@ -54,7 +54,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ lis
       fightSceneEntries: { where: { fightScene: { isDeleted: false } } },
     },
   });
-  if (!source) {
+  // A private list is indistinguishable from a missing one to anyone but
+  // its owner — same 404 its permalink page gives them.
+  if (!source || (source.isPrivate && source.userId !== session.user.id)) {
     return NextResponse.json({ error: "List not found." }, { status: 404 });
   }
   if (source.userId === session.user.id) {
