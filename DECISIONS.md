@@ -5748,3 +5748,15 @@ separately-linked `LineageFigure` for the same person.
   graph -- see "LineageTreeBody rewritten as computed SVG layout" above)
   or something simpler, like a flat searchable list of every figure with
   links into their centered pages.
+- **Card (poster-grid) view for a list's own page** — mocked up during
+  the list-privacy work (PR #178) as a Letterboxd-style grid/rows switch:
+  5 posters across on desktop, 3 on a phone, rank number in each card's
+  corner, fight scenes marked with a play icon and a FIGHT tag. Put on hold
+  by the site owner, not rejected. Open problems to solve first: fight
+  scene thumbnails are wide YouTube stills that don't fit a tall poster
+  card (heavy crop or letterboxing); per-item notes and the reorder
+  buttons have no room on a card, so a ranked list would need to default
+  to rows for its owner or get a separate reorder mode; and the view
+  choice should probably be remembered per viewer (cards for unranked
+  lists and visitors, rows for ranked lists). Build it as its own PR, on
+  top of whichever list-page layout ships.
