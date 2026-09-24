@@ -7,7 +7,7 @@ import type { MemberList } from "@/generated/prisma/client";
 
 // Everything you can *do* to a list on its own page, gathered into one place
 // (see DECISIONS.md, "List page actions moved into one side panel"): a
-// side panel at lg:+, and a compact row plus a bottom sheet below that.
+// side panel at lg:+, and a row of labeled buttons below that.
 // Both render from the same props and share their fetch logic through
 // useListActions, so the two layouts can't drift apart in behavior.
 
@@ -62,6 +62,21 @@ function useListActions({ listId, ownerUsername, likeCount: initialLikeCount, in
     }
   }
 
+  // Phones get the OS share sheet where the browser has one; everywhere
+  // else (and if it's unavailable) this is the same as Copy link.
+  async function share() {
+    const url = `${window.location.origin}/lists/${listId}`;
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({ url });
+        return;
+      } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") return;
+      }
+    }
+    await copyLink();
+  }
+
   async function deleteList() {
     if (!window.confirm("Delete this list? This can't be undone.")) return;
     setBusy("delete");
@@ -113,7 +128,7 @@ function useListActions({ listId, ownerUsername, likeCount: initialLikeCount, in
     router.push(`/lists/${body.list.id}`);
   }
 
-  return { busy, error, copied, liked, likeCount, setPrivate, copyLink, deleteList, toggleLike, cloneList };
+  return { busy, error, copied, liked, likeCount, setPrivate, copyLink, share, deleteList, toggleLike, cloneList };
 }
 
 type Actions = ReturnType<typeof useListActions>;
@@ -144,15 +159,13 @@ const ICONS = {
   clone: "M10 8h9a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-9a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2ZM16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3",
   heart: "M12 21s-7.5-4.6-9.6-9.2C.9 8.4 3 4.5 6.7 4.5c2.1 0 3.6 1.1 5.3 3 1.7-1.9 3.2-3 5.3-3 3.7 0 5.8 3.9 4.3 7.3C19.5 16.4 12 21 12 21Z",
   chevron: "m9 6 6 6-6 6",
-  dots: "M5 12h.01M12 12h.01M19 12h.01",
 };
 
 const ROW =
   "flex min-h-11 w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm text-neutral-100 transition hover:bg-neutral-800 disabled:opacity-50";
 
-// The owner's and a visitor's action rows, shared verbatim by the side panel
-// and the mobile sheet — only the surrounding chrome differs between them.
-function ActionRows({ props, actions, onDone }: { props: ListActionsProps; actions: Actions; onDone?: () => void }) {
+// The owner's and a visitor's action rows in the side panel.
+function ActionRows({ props, actions }: { props: ListActionsProps; actions: Actions }) {
   const { listId, isOwner, isPrivate, itemCount } = props;
   const { busy, copied } = actions;
 
@@ -167,10 +180,7 @@ function ActionRows({ props, actions, onDone }: { props: ListActionsProps; actio
         <button
           type="button"
           disabled={busy === "privacy"}
-          onClick={async () => {
-            await actions.setPrivate(!isPrivate);
-            onDone?.();
-          }}
+          onClick={() => actions.setPrivate(!isPrivate)}
           className={`${ROW} items-start`}
         >
           <Icon d={isPrivate ? ICONS.globe : ICONS.lock} className="mt-0.5 h-4 w-4 text-neutral-400" />
@@ -309,74 +319,83 @@ export function ListActionsPanel(props: ListActionsProps) {
   );
 }
 
-// Below lg: a visitor keeps a visible Like button (their main action) next
-// to a ⋯ button; the owner gets only the ⋯ button. Either opens a bottom
-// sheet holding the same rows as the desktop panel.
+const PILL =
+  "inline-flex h-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3.5 text-sm font-medium transition disabled:opacity-60";
+const PILL_PLAIN = `${PILL} border-neutral-700 bg-neutral-900 text-neutral-100 hover:border-neutral-600`;
+
+// Below lg: one row of labeled buttons instead of the side panel — no
+// hidden menu, so every action is visible and says what it does. Delete
+// isn't here (a destructive action in a quick-tap row is too easy to hit);
+// on phones it lives at the bottom of the Edit page instead.
 export function ListActionsMobile(props: ListActionsProps) {
   const actions = useListActions(props);
-  const [open, setOpen] = useState(false);
-  const { isOwner, isPrivate } = props;
+  const { listId, isOwner, isPrivate, itemCount } = props;
+  const { busy, copied, liked, likeCount } = actions;
 
-  useEffect(() => {
-    if (!open) return;
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
-    }
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [open]);
+  const shareButton = (
+    <button type="button" onClick={actions.share} className={PILL_PLAIN}>
+      <Icon d={ICONS.link} className="h-4 w-4 text-neutral-400" />
+      {copied ? "Copied" : "Share"}
+    </button>
+  );
 
   return (
-    <>
-      <div className="flex items-center gap-2">
-        {!isOwner && <LikeButton actions={actions} className="min-h-11 flex-1 rounded-full border px-4" />}
-        <button
-          type="button"
-          aria-label="List actions"
-          aria-haspopup="dialog"
-          aria-expanded={open}
-          onClick={() => setOpen(true)}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-neutral-700 bg-neutral-900 text-neutral-200 hover:border-neutral-600"
-        >
-          <Icon d={ICONS.dots} className="h-5 w-5" />
-        </button>
-      </div>
-      {!open && actions.error && <p className="mt-2 text-xs text-red-500">{actions.error}</p>}
-
-      {open && (
-        <div
-          className="fixed inset-0 z-50 bg-black/70"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setOpen(false);
-          }}
-        >
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-label="List actions"
-            className="absolute inset-x-0 bottom-0 flex max-h-[85dvh] flex-col overflow-y-auto rounded-t-2xl border-t border-neutral-700 bg-neutral-900 px-2 pt-2 pb-6"
-          >
-            <div aria-hidden="true" className="mx-auto mt-1 mb-3 h-1 w-9 rounded-full bg-neutral-600" />
-            {isOwner && (
-              <div className="mx-2 mb-2 rounded-lg bg-neutral-800 p-3">
-                <PrivacyStatus isPrivate={isPrivate} />
-              </div>
-            )}
-            <div className="flex flex-col gap-0.5 [&>*]:min-h-13 [&>*]:text-base">
-              <ActionRows props={props} actions={actions} onDone={() => setOpen(false)} />
-              {isOwner && <DeleteRow actions={actions} />}
-            </div>
-            {actions.error && <p className="px-3 pt-2 text-xs text-red-500">{actions.error}</p>}
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap gap-2">
+        {isOwner ? (
+          <>
+            <Link href={`/lists/${listId}/edit`} className={PILL_PLAIN}>
+              <Icon d={ICONS.pencil} className="h-4 w-4 text-neutral-400" />
+              Edit
+            </Link>
             <button
               type="button"
-              onClick={() => setOpen(false)}
-              className="mt-2 min-h-12 rounded-xl border border-neutral-700 bg-neutral-950 text-[15px] font-semibold text-neutral-200"
+              disabled={busy === "privacy"}
+              onClick={() => actions.setPrivate(!isPrivate)}
+              className={PILL_PLAIN}
             >
-              Cancel
+              <Icon d={isPrivate ? ICONS.globe : ICONS.lock} className="h-4 w-4 text-neutral-400" />
+              {busy === "privacy" ? "Saving…" : isPrivate ? "Make public" : "Make private"}
             </button>
-          </div>
-        </div>
+            {!isPrivate && shareButton}
+          </>
+        ) : (
+          <>
+            <button
+              type="button"
+              aria-pressed={liked}
+              disabled={busy === "like"}
+              onClick={actions.toggleLike}
+              className={`${PILL} ${
+                liked
+                  ? "border-red-900 bg-red-950 text-red-400"
+                  : "border-neutral-700 bg-neutral-900 text-neutral-100 hover:border-neutral-600"
+              }`}
+            >
+              <svg viewBox="0 0 24 24" fill={liked ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" aria-hidden="true" className="h-4 w-4">
+                <path d={ICONS.heart} />
+              </svg>
+              {liked ? "Liked" : "Like"}
+              {likeCount > 0 && <span className="opacity-70">· {likeCount}</span>}
+            </button>
+            {itemCount > 0 && (
+              <button type="button" disabled={busy === "clone"} onClick={actions.cloneList} className={PILL_PLAIN}>
+                <Icon d={ICONS.clone} className="h-4 w-4 text-neutral-400" />
+                {busy === "clone" ? "Cloning…" : "Clone"}
+              </button>
+            )}
+            {shareButton}
+          </>
+        )}
+      </div>
+      {isOwner && (
+        <p className="text-xs text-neutral-500">
+          {isPrivate
+            ? "Only you can see this list."
+            : `♥ ${likeCount} ${likeCount === 1 ? "like" : "likes"} · anyone with the link can view it.`}
+        </p>
       )}
-    </>
+      {actions.error && <p className="text-xs text-red-500">{actions.error}</p>}
+    </div>
   );
 }

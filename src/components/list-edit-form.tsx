@@ -9,13 +9,36 @@ import { MEMBER_LIST_DESCRIPTION_MAX_LENGTH, MEMBER_LIST_NAME_MAX_LENGTH } from 
 // The list's /edit page. Ranking lives here with name and description
 // rather than as a checkbox above the item rows: it's set once, not
 // flipped on every visit, so it doesn't earn space on the list page itself.
-export function ListEditForm({ list }: { list: Pick<MemberList, "id" | "name" | "description" | "isRanked"> }) {
+export function ListEditForm({
+  list,
+  ownerUsername,
+}: {
+  list: Pick<MemberList, "id" | "name" | "description" | "isRanked">;
+  ownerUsername: string;
+}) {
   const [name, setName] = useState(list.name);
   const [description, setDescription] = useState(list.description ?? "");
   const [isRanked, setIsRanked] = useState(list.isRanked);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const router = useRouter();
+
+  // Delete lives here as well as in the desktop side panel: the phone
+  // layout's button row leaves it out, so this is its only place there.
+  async function deleteList() {
+    if (!window.confirm("Delete this list? This can't be undone.")) return;
+    setDeleting(true);
+    setError(null);
+    const res = await fetch(`/api/lists/${list.id}`, { method: "DELETE" });
+    if (!res.ok) {
+      setDeleting(false);
+      const body = await res.json().catch(() => ({}));
+      setError(body.error ?? "Couldn't delete this list.");
+      return;
+    }
+    router.push(`/members/${ownerUsername}`);
+  }
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
@@ -106,6 +129,18 @@ export function ListEditForm({ list }: { list: Pick<MemberList, "id" | "name" | 
         >
           Cancel
         </Link>
+      </div>
+
+      <div className="mt-6 flex flex-col gap-1.5 border-t border-neutral-800 pt-5">
+        <button
+          type="button"
+          onClick={deleteList}
+          disabled={deleting}
+          className="min-h-11 rounded-md border border-red-900 text-sm text-red-400 hover:bg-red-950/40 disabled:opacity-50"
+        >
+          {deleting ? "Deleting…" : "Delete this list…"}
+        </button>
+        <p className="text-center text-xs text-neutral-500">Deleting can&rsquo;t be undone.</p>
       </div>
     </form>
   );

@@ -10,7 +10,7 @@ export default async function EditListPage({ params }: { params: Promise<{ listI
 
   const list = await prisma.memberList.findUnique({
     where: { id: listId },
-    select: { id: true, userId: true, name: true, description: true, isRanked: true },
+    select: { id: true, userId: true, name: true, description: true, isRanked: true, user: { select: { username: true } } },
   });
 
   // Owner-only, and the same 404 anyone else gets for a private list, so
@@ -25,7 +25,7 @@ export default async function EditListPage({ params }: { params: Promise<{ listI
         ← Back to list
       </Link>
       <h1 className="mt-1 mb-6 text-2xl font-bold text-white">Edit list</h1>
-      <ListEditForm list={list} />
+      <ListEditForm list={list} ownerUsername={list.user.username} />
     </div>
   );
 }
