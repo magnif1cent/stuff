@@ -5,6 +5,7 @@ import { getRatingSummaries } from "@/lib/ratings";
 import { getFightSceneRatingSummaries } from "@/lib/fight-scenes";
 import { ListActionsMobile, ListActionsPanel, type ListActionsProps } from "@/components/list-actions";
 import { ListItemRows, type ReelItem } from "@/components/list-item-rows";
+import { ListAddItems } from "@/components/list-add-items";
 
 export default async function PublicListPage({ params }: { params: Promise<{ listId: string }> }) {
   const { listId } = await params;
@@ -145,9 +146,20 @@ export default async function PublicListPage({ params }: { params: Promise<{ lis
         <div className="mt-4 lg:hidden">
           <ListActionsMobile {...actionsProps} />
         </div>
+        {isOwnList && (
+          <div className="mt-6">
+            <ListAddItems
+              listId={list.id}
+              isRanked={list.isRanked}
+              order={reelItems.map((item) => ({ kind: item.kind, id: item.id }))}
+            />
+          </div>
+        )}
         <div className="mt-6">
           {reelItems.length === 0 ? (
-            <p className="text-neutral-400">Nothing in this list yet.</p>
+            <p className="text-neutral-400">
+              {isOwnList ? "Nothing in this list yet. Search above to add a movie or fight." : "Nothing in this list yet."}
+            </p>
           ) : (
             <ListItemRows listId={list.id} initialItems={reelItems} isRanked={list.isRanked} isOwnList={isOwnList} />
           )}

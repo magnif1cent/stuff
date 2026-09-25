@@ -388,13 +388,6 @@ export function ListActionsMobile(props: ListActionsProps) {
           </>
         )}
       </div>
-      {isOwner && (
-        <p className="text-xs text-neutral-500">
-          {isPrivate
-            ? "Only you can see this list."
-            : `♥ ${likeCount} ${likeCount === 1 ? "like" : "likes"} · anyone with the link can view it.`}
-        </p>
-      )}
       {actions.error && <p className="text-xs text-red-500">{actions.error}</p>}
     </div>
   );

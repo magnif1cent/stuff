@@ -157,7 +157,7 @@ export function MemberListManager({
           </div>
           {list.movies.length === 0 && list.fightScenes.length === 0 ? (
             <p className="text-sm text-neutral-400">
-              Nothing here yet — add movies or fight scenes from their own pages.
+              Nothing here yet — open the list to search and add movies or fights.
             </p>
           ) : (
             <div className="flex flex-wrap items-end gap-4">
