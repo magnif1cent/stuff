@@ -67,6 +67,7 @@ one.
 
 **Feature Decisions**
 
+- [Owners can search and add movies and fights from the list page itself](#owners-can-search-and-add-movies-and-fights-from-the-list-page-itself)
 - [List page actions moved into one side panel, ranking into an edit page](#list-page-actions-moved-into-one-side-panel-ranking-into-an-edit-page)
 - [Lists gain a private option, public stays the default](#lists-gain-a-private-option-public-stays-the-default)
 - [A second scale-change legend added, for the ancient (Legendary/Shang/Spring & Autumn) compression](#a-second-scale-change-legend-added-for-the-ancient-legendaryshangspring--autumn-compression)
@@ -1290,6 +1291,21 @@ polish differently than a default-security reading would.
 - **Not verified**: which crawlers actually generate the traffic. This session had no access to Vercel logs or the Neon dashboard beyond the owner's screenshots, so the effect of this PR should be judged from the Monitoring graph a day or two after it deploys.
 
 ## Feature Decisions
+
+### Owners can search and add movies and fights from the list page itself
+**PR #TBD.** Before this, the only way to put something in a list was the add-to-list control on each movie's or fight's own page, so building a list meant leaving it for every item. Asked directly for a way to search and add from within the list.
+
+- **One box for both kinds**, with results grouped under Movies and Fights, rather than two separate searches or a type switch. A list already mixes both in one reel, and most searches ("Drunken Master") are meaningful for both.
+- **A list-scoped endpoint (`/api/lists/[id]/search`), not a reuse of `/api/search`.** It needs to say which results are already in *this* list, so the UI can show "In list ✓" instead of an Add button that would silently no-op. Movie matching copies the navbar search's title/cast/director logic; fights match on their own title or their movie's.
+- **Results inline under the box, not a floating dropdown.** A popover over the list fights the on-screen keyboard on a phone and covers the items you're adding next to; pushing the list down is plainer but works the same at every width.
+- **The box stays open after an add**, so adding several items from one search doesn't mean retyping it.
+- **Changes after reviewing the first mockup with the site owner:**
+  - **An added item says where it landed.** New items go to the bottom of a ranked list, which in a long list is off screen and rarely where they belong, so a just-added result shows "Added as #N" plus a one-tap **Move to top** (the existing reorder endpoint, re-submitting the whole order). Unranked lists just say "Added ✓", since new items show first there anyway.
+  - **An ✕ clears the search.** Phones have no Escape key, and twelve results push the list far down.
+  - **Fights sort top-rated first**, not newest first: a movie-title search can match many fights from one film, so the API pulls up to 30 candidates, sorts by average rating in memory, and returns the top 6.
+  - **The phone owner row lost its "♥ N likes · anyone with the link…" line**, to keep the stack above the list short now that the search box sits there too. The PRIVATE badge still shows privacy.
+- **Known gap:** your own not-yet-approved movie submissions don't appear in this search (approved movies only, same as the navbar search). They can still be added from their own page.
+- **Not verified against a live database or browser** (sandboxed session). Checked via `npm run lint`, `npm run test`, and `npm run build`.
 
 ### List page actions moved into one side panel, ranking into an edit page
 **PR #178.** Adding the privacy control stacked a second checkbox under "Edit list" and above the item rows, which looked cluttered. Mocked up three directions with the site owner: a settings card with a Public/Private switch (too tall, especially stacked on a phone), a compact row of pills with a dropdown (small, but tiny tap targets and a chip-with-a-switch that read ambiguously), and a Letterboxd-style actions panel beside the list. The owner picked the panel.
