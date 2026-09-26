@@ -1,23 +1,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { resolvePosterUrl, isTmdbUrl } from "@/lib/tmdb";
+import { timeAgo } from "@/lib/time-ago";
 import type {
   DiscussionActivityItem,
   FightSceneActivityItem,
   ListActivityItem,
   RecentActivity,
 } from "@/lib/activity";
-
-function timeAgo(date: Date) {
-  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
-  if (seconds < 60) return "just now";
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
 
 function ByLine({ username, createdAt }: { username: string; createdAt: Date }) {
   return (

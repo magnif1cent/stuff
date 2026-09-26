@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -16,8 +15,9 @@ import { ProfileStatsStrip } from "@/components/profile-stats-strip";
 import { ActivityFeed, ListCard } from "@/components/activity-feed";
 import { getRecentActivity } from "@/lib/activity";
 import { detectSocialPlatform } from "@/lib/profile";
-import { MEMBER_LIST_PROFILE_PREVIEW_LIMIT } from "@/lib/member-lists";
-import { PUBLIC_LIST_WHERE } from "@/lib/lists";
+import { PUBLIC_LIST_WHERE, getMemberListCards } from "@/lib/lists";
+import { timeAgo } from "@/lib/time-ago";
+import { MemberListCard } from "@/components/member-list-card";
 import { SocialIcon } from "@/components/social-icon";
 import type { Movie } from "@/generated/prisma/client";
 
@@ -139,29 +139,10 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
             orderBy: { createdAt: "desc" },
           })
         : [],
-      // Capped to MEMBER_LIST_PROFILE_PREVIEW_LIMIT per relation — unlike
-      // /lists/[listId] (a single list, fully rendered), this page loads
-      // every list a member owns in one request, so an unbounded fetch here
-      // scales with (list count) × (items per list) on every profile visit.
-      // `_count` carries the true totals so the UI can link out to the full
-      // list rather than silently showing a partial one.
-      prisma.memberList.findMany({
-        where: { userId: profileUser.id, ...(isOwner ? {} : PUBLIC_LIST_WHERE) },
-        include: {
-          entries: {
-            include: { movie: true },
-            orderBy: { createdAt: "desc" },
-            take: MEMBER_LIST_PROFILE_PREVIEW_LIMIT,
-          },
-          fightSceneEntries: {
-            include: { fightScene: { include: fightSceneCardInclude } },
-            orderBy: { createdAt: "desc" },
-            take: MEMBER_LIST_PROFILE_PREVIEW_LIMIT,
-          },
-          _count: { select: { entries: true, fightSceneEntries: true } },
-        },
-        orderBy: { createdAt: "asc" },
-      }),
+      // One summary card per list (cover, description, counts) rather than
+      // the lists' items — see getMemberListCards. Private lists only for
+      // the owner.
+      getMemberListCards(profileUser.id, isOwner),
       // Which lists this member has liked — unlike lists themselves, a like
       // is never shown publicly anywhere else in the app (list permalinks
       // only ever show an aggregate count), so this stays owner-only too.
@@ -211,34 +192,15 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
     .filter((e) => !e.fightScene.isDeleted)
     .map((e) => e.fightScene);
 
-  const visibleMemberLists = memberLists.map((list) => ({
-    ...list,
-    entries: isOwner ? list.entries : list.entries.filter((entry) => entry.movie.status === "APPROVED"),
-    // Same reasoning as pending movies: a soft-deleted fight scene shouldn't
-    // linger visibly just because it was saved before deletion.
-    fightSceneEntries: list.fightSceneEntries.filter((entry) => !entry.fightScene.isDeleted),
-  }));
 
   const allListedMovieIds = [
     ...favorites,
     ...watchlist,
     ...pendingSubmissions,
-    ...visibleMemberLists.flatMap((list) => list.entries.map((entry) => entry.movie)),
   ].map((m) => m.id);
   const ratingSummaries = await getRatingSummaries(allListedMovieIds);
 
-  const withRatings = (movie: Movie) => ({
-    ...movie,
-    communityAverage: ratingSummaries.get(movie.id)?.average ?? null,
-    communityCount: ratingSummaries.get(movie.id)?.count ?? 0,
-  });
-
-  const allListedFightScenesById = new Map(
-    [...visibleMemberLists.flatMap((list) => list.fightSceneEntries.map((e) => e.fightScene)), ...favoriteFightScenes].map(
-      (scene) => [scene.id, scene],
-    ),
-  );
-  const allListedFightScenes = [...allListedFightScenesById.values()];
+  const allListedFightScenes = favoriteFightScenes;
   const [memberSceneSummaries, editorSceneSummaries] = await Promise.all([
     getFightSceneRatingSummaries(allListedFightScenes.map((s) => s.id)),
     getFightSceneAdminRatingSummaries(allListedFightScenes.map((s) => s.id)),
@@ -290,18 +252,7 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
     initialFavorite: viewerFightSceneFavorites.some((e) => e.fightSceneId === scene.id),
   });
 
-  const memberListData = visibleMemberLists.map((list) => ({
-    id: list.id,
-    name: list.name,
-    isPrivate: list.isPrivate,
-    movies: list.entries.map((entry) => withRatings(entry.movie)),
-    fightScenes: list.fightSceneEntries.map((entry) => withSceneListState(entry.fightScene)),
-    // True totals, not just what's shown — the queries above cap each
-    // relation at MEMBER_LIST_PROFILE_PREVIEW_LIMIT, so a list bigger than
-    // that needs to tell the UI more exists rather than silently truncating.
-    totalMovieCount: list._count.entries,
-    totalFightSceneCount: list._count.fightSceneEntries,
-  }));
+  const memberListCards = memberLists.map(({ updatedAt, ...list }) => ({ ...list, updatedLabel: timeAgo(updatedAt) }));
 
   const favoriteFightSceneData = favoriteFightScenes.map(withSceneListState);
 
@@ -313,55 +264,17 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
     listName: like.list.name,
   }));
 
-  const listsPanel =
-    memberListData.length === 0 && !isOwner ? (
-      <p className="text-sm text-neutral-500">No public lists yet.</p>
-    ) : isOwner ? (
-      <MemberListManager initialLists={memberListData} viewerSignedIn={!!session?.user} />
-    ) : (
-      memberListData.map((list) => {
-        const shownCount = list.movies.length + list.fightScenes.length;
-        const totalCount = list.totalMovieCount + list.totalFightSceneCount;
-        return (
-          <section key={list.id} className="mb-8">
-            <div className="mb-3 flex items-center gap-3">
-              <h3 className="text-lg font-semibold text-white">{list.name}</h3>
-              <Link href={`/lists/${list.id}`} className="text-xs text-neutral-400 underline hover:text-white">
-                Permalink
-              </Link>
-            </div>
-            {list.movies.length === 0 && list.fightScenes.length === 0 ? (
-              <p className="text-sm text-neutral-400">Nothing in this list yet.</p>
-            ) : (
-              <div className="flex flex-wrap items-end gap-4">
-                {list.movies.map((movie) => (
-                  <MovieCard key={movie.id} movie={movie} size="compact" />
-                ))}
-                {list.fightScenes.map((scene) => (
-                  <FightSceneResultCard
-                    key={scene.id}
-                    scene={scene}
-                    initialLists={scene.initialLists}
-                    signedIn={!!session?.user}
-                    initialFavorite={scene.initialFavorite}
-                    size="compact"
-                  />
-                ))}
-                {totalCount > shownCount && (
-                  <Link
-                    href={`/lists/${list.id}`}
-                    className="flex h-28 w-28 shrink-0 items-center justify-center rounded-md border border-neutral-800 text-center text-xs text-neutral-400 hover:border-neutral-600 hover:text-white"
-                  >
-                    View full list
-                    <br />({totalCount - shownCount} more)
-                  </Link>
-                )}
-              </div>
-            )}
-          </section>
-        );
-      })
-    );
+  const listsPanel = isOwner ? (
+    <MemberListManager initialLists={memberListCards} />
+  ) : memberListCards.length === 0 ? (
+    <p className="text-sm text-neutral-500">No public lists yet.</p>
+  ) : (
+    <div className="grid gap-3.5 md:grid-cols-2">
+      {memberListCards.map((list) => (
+        <MemberListCard key={list.id} list={list} />
+      ))}
+    </div>
+  );
 
   const socialPlatform = profileUser.websiteUrl ? detectSocialPlatform(profileUser.websiteUrl) : null;
 
@@ -444,10 +357,10 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
             },
             {
               key: "lists",
-              label: `Lists (${memberListData.length})`,
+              label: `Lists (${memberListCards.length})`,
               content: (
                 <ListsPanel
-                  mineLabel={`My Lists (${memberListData.length})`}
+                  mineLabel={`My Lists (${memberListCards.length})`}
                   mineContent={listsPanel}
                   likedLabel={`Liked (${likedLists.length})`}
                   likedContent={
