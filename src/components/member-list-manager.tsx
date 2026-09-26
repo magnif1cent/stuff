@@ -1,30 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { MovieCard, type MovieCardData } from "@/components/movie-card";
-import { FightSceneResultCard, type FightSceneResult } from "@/components/fight-scene-result-card";
-import type { AddToListItem } from "@/components/add-to-list-control";
-import type { MemberList } from "@/generated/prisma/client";
+import { MemberListCard, type MemberListCardProps } from "@/components/member-list-card";
 
-export interface MemberListData extends Pick<MemberList, "id" | "name" | "isPrivate"> {
-  movies: MovieCardData[];
-  fightScenes: (FightSceneResult & { initialLists: AddToListItem[]; initialFavorite: boolean })[];
-  // True totals — movies/fightScenes above are capped to
-  // MEMBER_LIST_PROFILE_PREVIEW_LIMIT per list (see the query in
-  // members/[username]/page.tsx), so a list bigger than that needs these to
-  // know there's more to link out to.
-  totalMovieCount: number;
-  totalFightSceneCount: number;
-}
-
-export function MemberListManager({
-  initialLists,
-  viewerSignedIn,
-}: {
-  initialLists: MemberListData[];
-  viewerSignedIn: boolean;
-}) {
+// The owner's own Lists tab: create, rename and delete, over the same
+// one-card-per-list layout visitors see (MemberListCard).
+export function MemberListManager({ initialLists }: { initialLists: MemberListCardProps[] }) {
   const [lists, setLists] = useState(initialLists);
   const [newName, setNewName] = useState("");
   const [creating, setCreating] = useState(false);
@@ -50,7 +31,18 @@ export function MemberListManager({
     }
     setLists((prev) => [
       ...prev,
-      { id: body.list.id, name: body.list.name, isPrivate: body.list.isPrivate, movies: [], fightScenes: [], totalMovieCount: 0, totalFightSceneCount: 0 },
+      {
+        id: body.list.id,
+        name: body.list.name,
+        description: null,
+        isPrivate: body.list.isPrivate,
+        isRanked: body.list.isRanked,
+        movieCount: 0,
+        fightSceneCount: 0,
+        likeCount: 0,
+        coverTiles: [],
+        updatedLabel: "just now",
+      },
     ]);
     setNewName("");
   }
@@ -84,6 +76,8 @@ export function MemberListManager({
     setLists((prev) => prev.filter((l) => l.id !== id));
   }
 
+  const linkButton = "min-h-8 pr-2 text-xs text-neutral-400 hover:text-white";
+
   return (
     <div>
       <form onSubmit={createList} className="mb-6 flex gap-2">
@@ -92,7 +86,8 @@ export function MemberListManager({
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
           placeholder="New list name…"
-          className="w-full max-w-xs rounded-md border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
+          aria-label="New list name"
+          className="w-full max-w-xs rounded-md border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-base text-neutral-100 focus:border-red-600 focus:outline-none sm:text-sm"
         />
         <button
           type="submit"
@@ -104,91 +99,59 @@ export function MemberListManager({
       </form>
       {error && <p className="mb-4 text-sm text-red-500">{error}</p>}
 
-      {lists.length === 0 && (
+      {lists.length === 0 ? (
         <p className="text-sm text-neutral-500">
           You haven&rsquo;t created any lists yet. Lists are public by default — anyone with the link can view one.
           You can make a list private from its own page.
         </p>
-      )}
-
-      {lists.map((list) => (
-        <section key={list.id} className="mb-8">
-          <div className="mb-3 flex flex-wrap items-center gap-3">
-            {editingId === list.id ? (
-              <>
-                <input
-                  type="text"
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  className="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
-                />
-                <button onClick={() => rename(list.id)} className="text-sm text-red-500 hover:underline">
-                  Save
-                </button>
-                <button onClick={() => setEditingId(null)} className="text-sm text-neutral-400 hover:text-white">
-                  Cancel
-                </button>
-              </>
-            ) : (
-              <>
-                <h2 className="text-lg font-semibold text-white">{list.name}</h2>
-                {list.isPrivate && (
-                  <span className="rounded-full border border-neutral-700 bg-neutral-900 px-2 py-0.5 font-mono text-[10px] tracking-wide text-neutral-300 uppercase">
-                    Private
+      ) : (
+        <div className="grid gap-3.5 md:grid-cols-2">
+          {lists.map((list) => (
+            <MemberListCard
+              key={list.id}
+              list={list}
+              title={
+                editingId === list.id ? (
+                  <span className="flex flex-wrap items-center gap-2">
+                    <input
+                      type="text"
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      aria-label="List name"
+                      autoFocus
+                      className="rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1 text-base text-neutral-100 focus:border-red-600 focus:outline-none sm:text-sm"
+                    />
+                    <button onClick={() => rename(list.id)} className="text-sm text-red-500 hover:underline">
+                      Save
+                    </button>
+                    <button onClick={() => setEditingId(null)} className="text-sm text-neutral-400 hover:text-white">
+                      Cancel
+                    </button>
                   </span>
-                )}
-                <Link href={`/lists/${list.id}`} className="text-xs text-neutral-400 underline hover:text-white">
-                  {list.isPrivate ? "Open list" : "Public link"}
-                </Link>
-                <button
-                  onClick={() => {
-                    setEditingId(list.id);
-                    setEditName(list.name);
-                  }}
-                  className="text-xs text-neutral-400 hover:text-white"
-                >
-                  Rename
-                </button>
-                <button onClick={() => remove(list.id)} className="text-xs text-neutral-400 hover:text-red-400">
-                  Delete
-                </button>
-              </>
-            )}
-          </div>
-          {list.movies.length === 0 && list.fightScenes.length === 0 ? (
-            <p className="text-sm text-neutral-400">
-              Nothing here yet — open the list to search and add movies or fights.
-            </p>
-          ) : (
-            <div className="flex flex-wrap items-end gap-4">
-              {list.movies.map((movie) => (
-                <MovieCard key={movie.id} movie={movie} size="compact" />
-              ))}
-              {list.fightScenes.map((scene) => (
-                <FightSceneResultCard
-                  key={scene.id}
-                  scene={scene}
-                  initialLists={scene.initialLists}
-                  signedIn={viewerSignedIn}
-                  initialFavorite={scene.initialFavorite}
-                  size="compact"
-                />
-              ))}
-              {list.totalMovieCount + list.totalFightSceneCount > list.movies.length + list.fightScenes.length && (
-                <Link
-                  href={`/lists/${list.id}`}
-                  className="flex h-28 w-28 shrink-0 items-center justify-center rounded-md border border-neutral-800 text-center text-xs text-neutral-400 hover:border-neutral-600 hover:text-white"
-                >
-                  View full list
-                  <br />
-                  ({list.totalMovieCount + list.totalFightSceneCount - list.movies.length - list.fightScenes.length}{" "}
-                  more)
-                </Link>
-              )}
-            </div>
-          )}
-        </section>
-      ))}
+                ) : undefined
+              }
+              actions={
+                editingId === list.id ? undefined : (
+                  <>
+                    <button
+                      onClick={() => {
+                        setEditingId(list.id);
+                        setEditName(list.name);
+                      }}
+                      className={linkButton}
+                    >
+                      Rename
+                    </button>
+                    <button onClick={() => remove(list.id)} className={`${linkButton} px-2 hover:text-red-400`}>
+                      Delete
+                    </button>
+                  </>
+                )
+              }
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

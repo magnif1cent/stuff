@@ -67,6 +67,7 @@ one.
 
 **Feature Decisions**
 
+- [Profile Lists tab shows one card per list, not each list's items](#profile-lists-tab-shows-one-card-per-list-not-each-lists-items)
 - [Owners can search and add movies and fights from the list page itself](#owners-can-search-and-add-movies-and-fights-from-the-list-page-itself)
 - [List page actions moved into one side panel, ranking into an edit page](#list-page-actions-moved-into-one-side-panel-ranking-into-an-edit-page)
 - [Lists gain a private option, public stays the default](#lists-gain-a-private-option-public-stays-the-default)
@@ -1291,6 +1292,15 @@ polish differently than a default-security reading would.
 - **Not verified**: which crawlers actually generate the traffic. This session had no access to Vercel logs or the Neon dashboard beyond the owner's screenshots, so the effect of this PR should be judged from the Monitoring graph a day or two after it deploys.
 
 ## Feature Decisions
+
+### Profile Lists tab shows one card per list, not each list's items
+**PR #TBD.** Asked directly, from a screenshot of the profile: remove "Open list" and make the list name the link, replace each list's row of movie cards with one card per list, and put the list's description on it — the per-list rows don't scale once a member has several lists. Mocked up and approved before building.
+
+- **A card, not a row of items.** Each list gets a cover collage, name (the link), Private/Ranked badges, a two-line description and a counts line (items, movies, fights, likes, "updated 3d ago"). This replaces rendering up to 6 movies and 6 fights per list inline (`MEMBER_LIST_PROFILE_PREVIEW_LIMIT`, now removed), which is what made the tab grow with every list — the earlier "Lists scale hardening" entry only capped that rather than fixing it.
+- **Kept a small cover collage**, reusing `ListCoverCollage` from `/lists`, even though the ask was a single card: it costs no extra height and makes lists recognizable at a glance. `getMemberListCards` (`src/lib/lists.ts`) shares its cover-tile query with the `/lists` browse page (`coverEntriesInclude` / `toCoverTiles`), so both covers are built the same way.
+- **"No description" shows for lists without one**, faint and italic, rather than collapsing the space, so every card keeps the same shape.
+- **The relative "updated" label is formatted on the server** (`timeAgo`, moved to `src/lib/time-ago.ts` from the activity feed), since the owner's cards render in a client component and a client-computed time could disagree with the server's at hydration.
+- **Not verified against a live database or browser** (sandboxed session). Checked via `npm run lint`, `npm run test`, and `npm run build`.
 
 ### Owners can search and add movies and fights from the list page itself
 **PR #TBD.** Before this, the only way to put something in a list was the add-to-list control on each movie's or fight's own page, so building a list meant leaving it for every item. Asked directly for a way to search and add from within the list.
