@@ -175,6 +175,7 @@ one.
 - [Lineage: descendant layout switched from flat subtree width to row-by-row contours](#lineage-descendant-layout-switched-from-flat-subtree-width-to-row-by-row-contours)
 - [Lineage: figures gain `aliases`, unioned into the "Portrayed by" lookup](#lineage-figures-gain-aliases-unioned-into-the-portrayed-by-lookup)
 - [Lineage: interactive pan/zoom on the full-tree pages, not a fit-to-width scale](#lineage-interactive-panzoom-on-the-full-tree-pages-not-a-fit-to-width-scale)
+- [Lineage: pan/zoom narrowed to mobile only, not every viewport on the full-tree pages](#lineage-panzoom-narrowed-to-mobile-only-not-every-viewport-on-the-full-tree-pages)
 - [Fight Styles gain optional groups, via a real FightStyleGroup table](#fight-styles-gain-optional-groups-via-a-real-fightstylegroup-table)
 - [Navbar wordmark switched from a plain serif to all-caps Anton](#navbar-wordmark-switched-from-a-plain-serif-to-all-caps-anton)
 - [Historical Timeline gains era quick-jump chips, a minimap, and in-place rating filtering](#historical-timeline-gains-era-quick-jump-chips-a-minimap-and-in-place-rating-filtering)
@@ -5598,6 +5599,29 @@ screen on both sides simultaneously.
   as-is — that's about an unbounded whole-graph view, a different and still
   unbuilt page, though `LineageTreeZoom` is now a real, reusable answer to
   the "should it be zoomable" question raised there if that page gets built.
+
+### Lineage: pan/zoom narrowed to mobile only, not every viewport on the full-tree pages
+**PR #TBD.** Immediate follow-up to the entry above: the ask was mobile-only
+all along, not "on both full-tree pages regardless of device" as shipped.
+Desktop already has native scroll and drag; a transform-based pan surface
+there would hijack the mouse wheel and click-drag on what would otherwise
+be an ordinary scrolling page, for no benefit a mouse-and-trackpad user
+actually needed — the entire justification for interactive zoom (a phone
+screen genuinely can't show a 13-row tree at a legible scale) doesn't hold
+on a monitor with far more room to begin with.
+
+`LineageTreeZoom` now checks `window.matchMedia("(max-width: 767px)")` (with
+a `change` listener, so a resize or orientation flip is caught too, not just
+whatever the width was on load) and renders the exact same plain
+`overflow-x-auto` layout the small actor-page teaser already uses whenever
+that query doesn't match, falling back to it by default until the check
+resolves after mount — the server has no viewport to check at render time,
+so defaulting to the plain (non-transform) layout for that first paint is
+also what keeps this hydration-safe, since it's exactly what the server
+already rendered. `zoomable` on `LineageTreeBody` is unchanged and still
+means "this page may offer pan/zoom" (still just the two full-tree pages,
+never the teaser) — the device check inside `LineageTreeZoom` is a second,
+narrower gate on top of it, not a replacement for it.
 
 - **Drag-and-drop reordering for ranked list items** — `ListItemRows`
   (`src/components/list-item-rows.tsx`) now has move-to-top/move-to-bottom
