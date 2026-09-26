@@ -4,6 +4,7 @@ import { tmdbImageUrl } from "@/lib/tmdb";
 import { getPortrayals, type LineageTree, type LineageFigureRef } from "@/lib/lineage";
 import { buildLayout, type LayoutNode } from "@/lib/lineage-tree-layout";
 import { GroupIcon } from "@/components/lineage-group-icon";
+import { LineageTreeZoom } from "@/components/lineage-tree-zoom";
 
 // A bare figure's own page (or CastCredit lookup for "portrayed by") is
 // keyed by figureId; an actor-linked figure's is keyed by their personId --
@@ -179,12 +180,17 @@ export async function LineageTreeBody({
   down,
   siblings,
   groupSiblings,
+  zoomable = false,
 }: {
   tree: LineageTree;
   up: number;
   down: number;
   siblings: number;
   groupSiblings: number;
+  // Pan/zoom is opt-in -- only the full-tree pages want it. The small
+  // inline teaser on an actor's own page stays fixed-scale, embedded in
+  // the page's normal scroll, same as before. See LineageTreeZoom.
+  zoomable?: boolean;
 }) {
   const isEmpty = tree.ancestors.length === 0 && tree.secondarySifus.length === 0 && tree.descendantLevels.length === 0;
   const layout = buildLayout(tree);
@@ -207,51 +213,60 @@ export async function LineageTreeBody({
         </Link>
       )}
 
-      <div className="max-w-full overflow-x-auto">
-        <div className="relative mx-auto" style={{ width: layout.width, height: layout.height }}>
-          <svg
-            className="absolute inset-0"
-            width={layout.width}
-            height={layout.height}
-            viewBox={`0 0 ${layout.width} ${layout.height}`}
-          >
-            <defs>
-              <marker id="lineage-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                <path d="M0,0 L10,5 L0,10 Z" fill="#4d3a26" />
-              </marker>
-            </defs>
-            {layout.lines.map((line, i) => (
-              <line
-                key={i}
-                x1={line.x1}
-                y1={line.y1}
-                x2={line.x2}
-                y2={line.y2}
-                stroke="#4d3a26"
-                strokeWidth={2}
-                strokeDasharray={line.dashed ? "4 4" : undefined}
-                markerEnd={!line.dashed && line.arrowhead ? "url(#lineage-arrow)" : undefined}
+      {(() => {
+        const treeSvg = (
+          <div className="relative mx-auto" style={{ width: layout.width, height: layout.height }}>
+            <svg
+              className="absolute inset-0"
+              width={layout.width}
+              height={layout.height}
+              viewBox={`0 0 ${layout.width} ${layout.height}`}
+            >
+              <defs>
+                <marker id="lineage-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path d="M0,0 L10,5 L0,10 Z" fill="#4d3a26" />
+                </marker>
+              </defs>
+              {layout.lines.map((line, i) => (
+                <line
+                  key={i}
+                  x1={line.x1}
+                  y1={line.y1}
+                  x2={line.x2}
+                  y2={line.y2}
+                  stroke="#4d3a26"
+                  strokeWidth={2}
+                  strokeDasharray={line.dashed ? "4 4" : undefined}
+                  markerEnd={!line.dashed && line.arrowhead ? "url(#lineage-arrow)" : undefined}
+                />
+              ))}
+            </svg>
+            {layout.nodes.map((node) => (
+              <TreeNode
+                key={node.id}
+                node={node}
+                marker={markerByNodeId.get(node.id)}
+                moreHref={
+                  node.kind === "overflow"
+                    ? treeUrl(
+                        node.overflowParentIsGroup
+                          ? { groupSiblings: groupSiblings + (node.overflowCount ?? 0) }
+                          : { siblings: siblings + (node.overflowCount ?? 0) },
+                      )
+                    : undefined
+                }
               />
             ))}
-          </svg>
-          {layout.nodes.map((node) => (
-            <TreeNode
-              key={node.id}
-              node={node}
-              marker={markerByNodeId.get(node.id)}
-              moreHref={
-                node.kind === "overflow"
-                  ? treeUrl(
-                      node.overflowParentIsGroup
-                        ? { groupSiblings: groupSiblings + (node.overflowCount ?? 0) }
-                        : { siblings: siblings + (node.overflowCount ?? 0) },
-                    )
-                  : undefined
-              }
-            />
-          ))}
-        </div>
-      </div>
+          </div>
+        );
+        return zoomable ? (
+          <LineageTreeZoom width={layout.width} height={layout.height}>
+            {treeSvg}
+          </LineageTreeZoom>
+        ) : (
+          <div className="max-w-full overflow-x-auto">{treeSvg}</div>
+        );
+      })()}
 
       {tree.descendantsTruncated && (
         <Link href={treeUrl({ down: down + 3 })} className="text-xs text-neutral-500 hover:text-neutral-300">
