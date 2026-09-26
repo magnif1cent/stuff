@@ -174,6 +174,7 @@ one.
 - [Lineage: descendant layout sized by subtree width, not per-level nudging](#lineage-descendant-layout-sized-by-subtree-width-not-per-level-nudging)
 - [Lineage: descendant layout switched from flat subtree width to row-by-row contours](#lineage-descendant-layout-switched-from-flat-subtree-width-to-row-by-row-contours)
 - [Lineage: figures gain `aliases`, unioned into the "Portrayed by" lookup](#lineage-figures-gain-aliases-unioned-into-the-portrayed-by-lookup)
+- [Lineage: interactive pan/zoom on the full-tree pages, not a fit-to-width scale](#lineage-interactive-panzoom-on-the-full-tree-pages-not-a-fit-to-width-scale)
 - [Fight Styles gain optional groups, via a real FightStyleGroup table](#fight-styles-gain-optional-groups-via-a-real-fightstylegroup-table)
 - [Navbar wordmark switched from a plain serif to all-caps Anton](#navbar-wordmark-switched-from-a-plain-serif-to-all-caps-anton)
 - [Historical Timeline gains era quick-jump chips, a minimap, and in-place rating filtering](#historical-timeline-gains-era-quick-jump-chips-a-minimap-and-in-place-rating-filtering)
@@ -5549,6 +5550,54 @@ separately-linked `LineageFigure` for the same person.
   `npm run test` (including two new `getPortrayals` cases in
   `lineage.test.ts` covering the array form's single-word short-circuit and
   its "at least one multi-word entry still attempts the lookup" case).
+
+### Lineage: interactive pan/zoom on the full-tree pages, not a fit-to-width scale
+**PR #TBD.** Reported against a real production tree (Wong Kei-Ying's, `up=3
+down=9`): the view was scrolled to a spot where a name was cut off on
+*both* the left and right edges at once, with no way to see either without
+losing the other — 13 rows tall, wide enough at some levels to overflow the
+screen on both sides simultaneously.
+
+- **Rejected: scale the whole tree to fit the screen width.** Floated first
+  as the cheap fix (compute one scale factor from `layout.width`, no gesture
+  handling, no new dependency), and talked out of it once the actual
+  tradeoff was traced through: `transform: scale()` shrinks width and height
+  together, so a tree wide enough to need much shrinking also shrinks its
+  13-row *height* by the same factor — the fix for "can't see the edges"
+  would have made "can't read the text" worse on exactly the tree that
+  prompted this. A single fixed scale structurally cannot serve both "see
+  the whole shape" and "read a specific branch" at once when a tree is both
+  deep and wide; only interactive zoom can, by letting the viewer pick
+  which one they want moment to moment.
+- **`react-zoom-pan-pinch` over hand-rolled touch-delta math.** A mature,
+  maintained library (MIT, `react: "*"` peer range, no conflicts with React
+  19) already solves the failure mode hand-rolled gesture code is prone to
+  here: telling a tap on a node's `<Link>` apart from the start of a
+  drag/pinch. Rolling that disambiguation by hand risked breaking the
+  tree's primary navigation (click any node to re-center) for the sake of
+  the zoom feature.
+- **Scoped to the two full-tree pages only** (`/actors/[personId]/lineage`,
+  `/lineage/[figureId]`) **— not** the small inline teaser on an actor's own
+  page (`up=1 down=1`, capped low, embedded in an otherwise normally-
+  scrolling page). The teaser stays exactly as before: fixed scale, plain
+  horizontal `overflow-x-auto`. Capturing pan/pinch gestures inside a small
+  card on a page that's meant to just scroll would fight the page far more
+  than it would help, and the teaser already has a "View full lineage →"
+  link for the case where someone actually wants to explore.
+- **`LineageTreeBody` stays a Server Component.** It still does its
+  `getPortrayals` lookups server-side, unchanged. The new `zoomable` prop
+  (default `false`) conditionally wraps the already-rendered tree markup in
+  `LineageTreeZoom` (`src/components/lineage-tree-zoom.tsx`, `"use client"`)
+  instead, which receives that markup as `children` — composition rather
+  than converting the whole render path to a Client Component. The wrapper
+  gets an explicit, bounded viewport height (not sized to the tree's own,
+  potentially much larger, natural dimensions) — `react-zoom-pan-pinch` pans
+  and zooms *within* that fixed box; the page itself no longer grows to a
+  13-row tree's full height the way the teaser's plain-scroll layout would.
+- Leaves the "separate page for the entire lineage" backlog item (above)
+  as-is — that's about an unbounded whole-graph view, a different and still
+  unbuilt page, though `LineageTreeZoom` is now a real, reusable answer to
+  the "should it be zoomable" question raised there if that page gets built.
 
 - **Drag-and-drop reordering for ranked list items** — `ListItemRows`
   (`src/components/list-item-rows.tsx`) now has move-to-top/move-to-bottom
