@@ -107,7 +107,10 @@ export default async function SearchPage({
   const yearFrom = params.yearFrom ? Number(params.yearFrom) : undefined;
   const yearTo = params.yearTo ? Number(params.yearTo) : undefined;
   const hasFights = params.fights === "1";
-  const sort = SORT_OPTIONS.some((o) => o.value === params.sort) ? params.sort! : "relevance";
+  // "Relevance" only means something with search text; without it the
+  // results are already newest-first, so say so in the dropdown instead.
+  const defaultSort = query ? "relevance" : "newest";
+  const sort = SORT_OPTIONS.some((o) => o.value === params.sort) ? params.sort! : defaultSort;
 
   const [genres, countryRows] = await Promise.all([
     prisma.genre.findMany({ orderBy: { name: "asc" } }),
@@ -341,7 +344,7 @@ export default async function SearchPage({
                   type="number"
                   aria-label="Year from"
                   defaultValue={params.yearFrom ?? ""}
-                  placeholder="1970"
+                  placeholder="From"
                   min={MIN_YEAR}
                   max={MAX_YEAR}
                   className="w-1/2 min-w-0 rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
@@ -351,7 +354,7 @@ export default async function SearchPage({
                   type="number"
                   aria-label="Year to"
                   defaultValue={params.yearTo ?? ""}
-                  placeholder="2025"
+                  placeholder="To"
                   min={MIN_YEAR}
                   max={MAX_YEAR}
                   className="w-1/2 min-w-0 rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
@@ -381,9 +384,16 @@ export default async function SearchPage({
 
         <div className="min-w-0 flex-1 sm:order-2">
           <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-            <h1 className="font-serif text-xl font-bold text-white">
-              {query ? <>Search results for &ldquo;{query}&rdquo;</> : "Browse movies"}
-            </h1>
+            <div className="flex items-baseline gap-3">
+              <h1 className="font-serif text-xl font-bold text-white">
+                {query ? <>Search results for &ldquo;{query}&rdquo;</> : "Browse movies"}
+              </h1>
+              {totalResults > 0 && (
+                <span className="text-sm text-neutral-500">
+                  {totalResults} {totalResults === 1 ? "movie" : "movies"}
+                </span>
+              )}
+            </div>
             <FilterSheetTrigger activeCount={sheetFilterCount} />
           </div>
 

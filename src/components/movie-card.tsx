@@ -65,7 +65,7 @@ export function MovieCard({ movie, size = "default" }: { movie: MovieCardData; s
         ) : null}
       </div>
       <div>
-        <p className="truncate text-sm font-medium text-neutral-100 group-hover:text-red-500">
+        <p title={movie.title} className="truncate text-sm font-medium text-neutral-100 group-hover:text-red-500">
           {movie.title}
         </p>
         <div className="flex items-center gap-2 text-xs text-neutral-500">

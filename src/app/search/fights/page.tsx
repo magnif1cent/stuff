@@ -484,7 +484,7 @@ export default async function FightSceneSearchPage({
                   type="number"
                   aria-label="Year from"
                   defaultValue={params.yearFrom ?? ""}
-                  placeholder="1970"
+                  placeholder="From"
                   min={MIN_YEAR}
                   max={MAX_YEAR}
                   className="w-1/2 min-w-0 rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
@@ -494,7 +494,7 @@ export default async function FightSceneSearchPage({
                   type="number"
                   aria-label="Year to"
                   defaultValue={params.yearTo ?? ""}
-                  placeholder="2025"
+                  placeholder="To"
                   min={MIN_YEAR}
                   max={MAX_YEAR}
                   className="w-1/2 min-w-0 rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
