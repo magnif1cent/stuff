@@ -12,6 +12,10 @@ export type MovieCardData = Pick<
   communityAverage?: number | null;
   communityCount?: number;
   recommendedBy?: MovieRecommender[];
+  // Catalogued (non-deleted) fight scenes -- the clips actually watchable
+  // on the site, not the member-edited Fight Count. Omitted by callers
+  // that don't fetch it; no badge renders either way when it's 0.
+  fightCount?: number;
 };
 
 // "compact" is used on the member profile page, where several sections of
@@ -50,6 +54,15 @@ export function MovieCard({ movie, size = "default" }: { movie: MovieCardData; s
             <RecommendedBadges recommenders={movie.recommendedBy} size="lg" />
           </div>
         )}
+        {/* Top-right, opposite the recommendation badges (top-left). */}
+        {movie.fightCount ? (
+          <div
+            title={`${movie.fightCount} fight scene${movie.fightCount === 1 ? "" : "s"}`}
+            className="absolute top-2 right-2 rounded-full bg-black/75 px-2 py-0.5 text-xs font-semibold text-white shadow backdrop-blur-sm"
+          >
+            {movie.fightCount} {movie.fightCount === 1 ? "fight" : "fights"}
+          </div>
+        ) : null}
       </div>
       <div>
         <p className="truncate text-sm font-medium text-neutral-100 group-hover:text-red-500">
