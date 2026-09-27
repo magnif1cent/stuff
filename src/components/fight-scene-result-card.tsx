@@ -78,10 +78,16 @@ export function FightSceneResultCard({
           {scene.title}
         </Link>
         <p className="truncate text-[10px]" style={{ color: TICKET_MUTED }}>
-          <span className="font-bold" style={{ color: TICKET_STAMP }}>
-            ★ {memberLabel}
-          </span>{" "}
-          ({scene.memberRatingCount})
+          {scene.memberRatingCount > 0 ? (
+            <>
+              <span className="font-bold" style={{ color: TICKET_STAMP }}>
+                ★ {memberLabel}
+              </span>{" "}
+              ({scene.memberRatingCount})
+            </>
+          ) : (
+            "No ratings yet"
+          )}
         </p>
       </div>
     );
@@ -118,7 +124,12 @@ export function FightSceneResultCard({
         />
       </div>
 
-      <Link href={permalink} className="mt-3 block truncate text-lg font-bold hover:opacity-70" style={{ fontFamily: "Georgia, serif" }}>
+      <Link
+        href={permalink}
+        title={scene.title}
+        className="mt-3 block truncate text-lg font-bold hover:opacity-70"
+        style={{ fontFamily: "Georgia, serif" }}
+      >
         {scene.title}
       </Link>
       {scene.cast.length > 0 && (
@@ -179,12 +190,20 @@ export function FightSceneResultCard({
 
       <div className="mt-3 flex items-center justify-between gap-2 border-t pt-3" style={{ borderColor: "#b8ab8c" }}>
         <p className="text-sm">
-          <span className="font-bold" style={{ color: TICKET_STAMP }}>
-            ★ {memberLabel}
-          </span>{" "}
-          <span className="text-xs" style={{ color: TICKET_MUTED }}>
-            ({scene.memberRatingCount})
-          </span>
+          {scene.memberRatingCount > 0 ? (
+            <>
+              <span className="font-bold" style={{ color: TICKET_STAMP }}>
+                ★ {memberLabel}
+              </span>{" "}
+              <span className="text-xs" style={{ color: TICKET_MUTED }}>
+                ({scene.memberRatingCount})
+              </span>
+            </>
+          ) : (
+            <span className="text-xs" style={{ color: TICKET_MUTED }}>
+              No ratings yet
+            </span>
+          )}
         </p>
         <div className="flex shrink-0 items-center gap-3">
           <FavoriteButton

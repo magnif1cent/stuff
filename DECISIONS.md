@@ -5632,6 +5632,38 @@ means "this page may offer pan/zoom" (still just the two full-tree pages,
 never the teaser) — the device check inside `LineageTreeZoom` is a second,
 narrower gate on top of it, not a replacement for it.
 
+### `/search/fights` style filter collapses per group, via plain `<details>`, not client JS
+**PR #TBD.** Raised during a UI review of `/search/fights`: the Style
+filter (`FightStyleGroup` clustering, see "Fight Styles gain optional
+groups" above) had grown to several dozen checkboxes across half a dozen
+always-expanded categories, pushing every field below it — Actor, member/
+editor rating, genre, country, year range, sort — well below the fold on
+both the desktop sidebar and the mobile filter sheet (same underlying
+form either way, see "Search sidebar filter forms become a bottom sheet"
+above).
+
+- **Native `<details>`/`<summary>` per category, not a client-side
+  accordion component.** `/search/fights` is a plain server component with
+  no `"use client"` anywhere in it — the has-checked: CSS trick already
+  used for the checkbox pills avoids JS entirely, and a hand-rolled
+  accordion (open/close state, animation) would have been the first client
+  state this specific file ever needed, for a purely cosmetic collapse.
+  `<details>` needs none of that, and a checkbox inside a closed one still
+  submits with the form — collapsing a group never silently drops its
+  selection.
+- **A group opens by default only when one of its own styles is already
+  checked** (computed server-side from the same `selectedStyles` the
+  checkboxes themselves use), not always-collapsed. An active filter
+  hidden inside its own collapsed category — with no visual sign it's
+  even selected — would have been a worse regression than the long list
+  it replaces.
+- **Left the "Martial arts move" and "Tags" facets flat**, uncollapsed —
+  Move has no group concept at all (see "Fight Styles gain optional
+  groups": grouping was deliberately Style-only), and Tags is a short,
+  site-curated list that's never grown past a handful of values, unlike
+  Style's now-sprawling, admin-editable vocabulary. Nothing to cluster by
+  in either case, so nothing to collapse.
+
 - **Drag-and-drop reordering for ranked list items** — `ListItemRows`
   (`src/components/list-item-rows.tsx`) now has move-to-top/move-to-bottom
   buttons alongside up/down (see **Feature Decisions** above), covering the
