@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -124,7 +125,21 @@ export default async function PublicListPage({ params }: { params: Promise<{ lis
   return (
     <div className="mx-auto flex w-full max-w-6xl gap-10 px-4 py-10">
       <div className="min-w-0 flex-1">
-        <p className="mb-1 text-sm text-neutral-400">List by {list.user.username}</p>
+        {/* Back to where lists live: the owner's profile, then its Lists tab
+            (?tab=lists opens that tab directly). */}
+        <nav aria-label="Breadcrumb" className="mb-2 flex flex-wrap items-center gap-1.5 text-sm text-neutral-400">
+          <Link href={`/members/${list.user.username}`} className="hover:text-white">
+            {list.user.username}
+          </Link>
+          <BreadcrumbChevron />
+          <Link href={`/members/${list.user.username}?tab=lists`} className="hover:text-white">
+            Lists
+          </Link>
+          <BreadcrumbChevron />
+          <span aria-current="page" className="min-w-0 truncate text-neutral-200">
+            {list.name}
+          </span>
+        </nav>
         <div className="mb-1 flex flex-wrap items-center gap-3">
           <h1 className="text-2xl font-bold text-white">{list.name}</h1>
           {list.isRanked && (
@@ -169,5 +184,13 @@ export default async function PublicListPage({ params }: { params: Promise<{ lis
         <ListActionsPanel {...actionsProps} />
       </div>
     </div>
+  );
+}
+
+function BreadcrumbChevron() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="h-3 w-3 shrink-0 text-neutral-600">
+      <path d="M9 18l6-6-6-6" />
+    </svg>
   );
 }

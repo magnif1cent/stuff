@@ -97,8 +97,15 @@ function FightSceneRow({
   );
 }
 
-export default async function MemberProfilePage({ params }: { params: Promise<{ username: string }> }) {
+export default async function MemberProfilePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ username: string }>;
+  searchParams: Promise<{ tab?: string }>;
+}) {
   const { username } = await params;
+  const { tab: initialTab } = await searchParams;
   const session = await auth();
 
   // Case-insensitive: /members/NashPopoB and /members/nashpopob resolve to
@@ -315,6 +322,8 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
 
       {isOwner ? (
         <ProfileTabs
+          key={initialTab ?? "default"}
+          initialTab={initialTab}
           tabs={[
             {
               key: "profile",
@@ -381,6 +390,8 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
         />
       ) : (
         <ProfileTabs
+          key={initialTab ?? "default"}
+          initialTab={initialTab}
           tabs={[
             {
               key: "lists",
