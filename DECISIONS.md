@@ -1299,7 +1299,7 @@ polish differently than a default-security reading would.
 ## Feature Decisions
 
 ### Movie cards on `/search` show a fight-count badge, with a "Has fight scenes" filter and "Most Fights" sort
-**PR #TBD.** From a review of the movie browse page: on a fight-scene site, nothing on a movie card said whether the movie had any fights catalogued.
+**PR #190.** From a review of the movie browse page: on a fight-scene site, nothing on a movie card said whether the movie had any fights catalogued.
 
 - **The badge counts catalogued fight scenes (non-deleted), not the member-edited Fight Count** (`Movie.trueFightCount`). On a browse page, the useful question is "what can I watch here", and only catalogued scenes answer it. The Fight Count estimates how many fights the film has in total, whether clipped or not, and stays on the movie page.
 - **A plain "N fights" text label, not an icon.** Mocked up with crossed swords ("⚔ 3") and a Phosphor fist icon. Swords suggest weapons, when many fights are hand-to-hand; a raised fist reads as protest or solidarity. Either icon needs guessing on phones, which have no hover tooltip. The text fits even two-up on phones ("12 fights").
