@@ -67,6 +67,7 @@ one.
 
 **Feature Decisions**
 
+- [Movie cards on `/search` show a fight-count badge, with a "Has fight scenes" filter and "Most Fights" sort](#movie-cards-on-search-show-a-fight-count-badge-with-a-has-fight-scenes-filter-and-most-fights-sort)
 - [Fight result cards shrunk: actions on the thumbnail, two-up on phones, one capped chip line](#fight-result-cards-shrunk-actions-on-the-thumbnail-two-up-on-phones-one-capped-chip-line)
 - ["My Lists" back in the account menu, plus a breadcrumb on list pages](#my-lists-back-in-the-account-menu-plus-a-breadcrumb-on-list-pages)
 - [Profile Lists tab shows one card per list, not each list's items](#profile-lists-tab-shows-one-card-per-list-not-each-lists-items)
@@ -1296,6 +1297,17 @@ polish differently than a default-security reading would.
 - **Not verified**: which crawlers actually generate the traffic. This session had no access to Vercel logs or the Neon dashboard beyond the owner's screenshots, so the effect of this PR should be judged from the Monitoring graph a day or two after it deploys.
 
 ## Feature Decisions
+
+### Movie cards on `/search` show a fight-count badge, with a "Has fight scenes" filter and "Most Fights" sort
+**PR #190.** From a review of the movie browse page: on a fight-scene site, nothing on a movie card said whether the movie had any fights catalogued.
+
+- **The badge counts catalogued fight scenes (non-deleted), not the member-edited Fight Count** (`Movie.trueFightCount`). On a browse page, the useful question is "what can I watch here", and only catalogued scenes answer it. The Fight Count estimates how many fights the film has in total, whether clipped or not, and stays on the movie page.
+- **A plain "N fights" text label, not an icon.** Mocked up with crossed swords ("⚔ 3") and a Phosphor fist icon. Swords suggest weapons, when many fights are hand-to-hand; a raised fist reads as protest or solidarity. Either icon needs guessing on phones, which have no hover tooltip. The text fits even two-up on phones ("12 fights").
+- **Badge top-right, only when > 0,** opposite the recommendation badges (top-left), so movies with no fights keep a clean poster.
+- **Counts come from one `groupBy` over all non-deleted scenes**, not an `IN` list of result ids. "Most Fights" has to sort the full result set, not just the page, and an unfiltered browse is the whole catalog anyway. The same map feeds the badges. It's one row per movie that has scenes, in line with the page's existing load-everything-then-page approach (itself a known scaling limit).
+- **"Most Fights" ties keep the query's own order** (a stable sort), so equal counts fall back to newest first when browsing.
+- **"Has fight scenes" is a sidebar toggle** (`?fights=1`), styled like `/search/fights`' pill checkboxes. The movies page has no quick-filter bubble row yet, which would be its natural second home.
+- Checked against a local database with seeded scenes (including a deleted one, which correctly doesn't count), at desktop and phone widths.
 
 ### Fight result cards shrunk: actions on the thumbnail, two-up on phones, one capped chip line
 **PR #188.** Asked directly to find ways to shrink the `FightSceneResultCard` ("Fight Ticket") grid card on `/search/fights`, then to consider mobile. Several ideas were mocked up and chosen one at a time from screenshots.
