@@ -18,11 +18,15 @@ export function FavoriteButton({
   fightSceneId,
   initialFavorite,
   signedIn,
+  variant = "default",
 }: {
   movieId: string;
   fightSceneId: string;
   initialFavorite: boolean;
   signedIn: boolean;
+  // "overlay" is a small round button meant to sit on top of a thumbnail
+  // (the fight result card), instead of a full-size bordered button.
+  variant?: "default" | "overlay";
 }) {
   const [favorite, setFavorite] = useState(initialFavorite);
   const [error, setError] = useState<string | null>(null);
@@ -49,13 +53,27 @@ export function FavoriteButton({
       <button
         onClick={toggle}
         title={favorite ? "Favorited" : "Favorite"}
-        className={`flex h-10 w-10 items-center justify-center rounded-md border text-neutral-400 hover:border-neutral-500 hover:text-white ${
-          favorite ? "border-red-600 bg-red-700 text-white hover:text-white" : "border-neutral-700"
-        }`}
+        className={
+          variant === "overlay"
+            ? `flex h-8 w-8 items-center justify-center rounded-full text-white shadow backdrop-blur-sm ${
+                favorite ? "bg-red-700 hover:bg-red-600" : "bg-black/60 hover:bg-black/80"
+              }`
+            : `flex h-10 w-10 items-center justify-center rounded-md border text-neutral-400 hover:border-neutral-500 hover:text-white ${
+                favorite ? "border-red-600 bg-red-700 text-white hover:text-white" : "border-neutral-700"
+              }`
+        }
       >
         <HeartIcon filled={favorite} />
       </button>
-      {error && <p className="absolute right-0 top-full z-10 mt-1 w-40 text-xs text-red-500">{error}</p>}
+      {error && (
+        <p
+          className={`absolute right-0 top-full z-10 mt-1 w-40 text-xs text-red-500 ${
+            variant === "overlay" ? "rounded bg-neutral-950/90 p-1" : ""
+          }`}
+        >
+          {error}
+        </p>
+      )}
     </div>
   );
 }

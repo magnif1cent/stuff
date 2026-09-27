@@ -102,26 +102,59 @@ export function FightSceneResultCard({
           "polygon(0 10px, 10px 0, calc(100% - 10px) 0, 100% 10px, 100% calc(100% - 10px), calc(100% - 10px) 100%, 10px 100%, 0 calc(100% - 10px))",
       }}
     >
-      <Link
-        href={`/movies/${scene.movieId}`}
-        title={`${scene.movie.title}${year ? ` (${year})` : ""}`}
-        className="flex items-baseline gap-1 text-sm font-bold tracking-wide uppercase hover:opacity-70"
-      >
-        <span className="min-w-0 truncate">{scene.movie.title}</span>
-        {year && (
-          <span className="shrink-0 font-normal" style={{ color: TICKET_MUTED }}>
-            ({year})
-          </span>
-        )}
-      </Link>
+      <div className="flex items-baseline justify-between gap-2">
+        <Link
+          href={`/movies/${scene.movieId}`}
+          title={`${scene.movie.title}${year ? ` (${year})` : ""}`}
+          className="flex min-w-0 items-baseline gap-1 text-sm font-bold tracking-wide uppercase hover:opacity-70"
+        >
+          <span className="min-w-0 truncate">{scene.movie.title}</span>
+          {year && (
+            <span className="shrink-0 font-normal" style={{ color: TICKET_MUTED }}>
+              ({year})
+            </span>
+          )}
+        </Link>
+        {/* Rating lives in the header now that the footer row is gone. */}
+        <p className="shrink-0 text-xs" title={`${scene.memberRatingCount} member rating${scene.memberRatingCount === 1 ? "" : "s"}`}>
+          {scene.memberRatingCount > 0 ? (
+            <>
+              <span className="font-bold" style={{ color: TICKET_STAMP }}>
+                ★ {memberLabel}
+              </span>{" "}
+              <span style={{ color: TICKET_MUTED }}>({scene.memberRatingCount})</span>
+            </>
+          ) : (
+            <span style={{ color: TICKET_MUTED }}>★ —</span>
+          )}
+        </p>
+      </div>
 
-      <div className="mt-3 border-t-2 border-dashed pt-3" style={{ borderColor: "#b8ab8c" }}>
+      {/* Favorite/save sit on the thumbnail as siblings of its link (not
+          inside it) so they aren't nested interactive elements. */}
+      <div className="relative mt-3">
         <FightSceneThumbnail
           href={permalink}
           videoId={scene.youtubeVideoId}
           title={scene.title}
           inkColor={TICKET_INK}
+          fullWidth
         />
+        <div className="absolute top-2 right-2 flex items-center gap-1.5">
+          <FavoriteButton
+            movieId={scene.movieId}
+            fightSceneId={scene.id}
+            initialFavorite={initialFavorite}
+            signedIn={signedIn}
+            variant="overlay"
+          />
+          <AddToListControl
+            target={{ type: "fightScene", id: scene.id }}
+            initialLists={initialLists}
+            signedIn={signedIn}
+            variant="overlay"
+          />
+        </div>
       </div>
 
       <Link
@@ -186,39 +219,6 @@ export function FightSceneResultCard({
             ✓ Verified
           </span>
         )}
-      </div>
-
-      <div className="mt-3 flex items-center justify-between gap-2 border-t pt-3" style={{ borderColor: "#b8ab8c" }}>
-        <p className="text-sm">
-          {scene.memberRatingCount > 0 ? (
-            <>
-              <span className="font-bold" style={{ color: TICKET_STAMP }}>
-                ★ {memberLabel}
-              </span>{" "}
-              <span className="text-xs" style={{ color: TICKET_MUTED }}>
-                ({scene.memberRatingCount})
-              </span>
-            </>
-          ) : (
-            <span className="text-xs" style={{ color: TICKET_MUTED }}>
-              No ratings yet
-            </span>
-          )}
-        </p>
-        <div className="flex shrink-0 items-center gap-3">
-          <FavoriteButton
-            movieId={scene.movieId}
-            fightSceneId={scene.id}
-            initialFavorite={initialFavorite}
-            signedIn={signedIn}
-          />
-          <AddToListControl
-            target={{ type: "fightScene", id: scene.id }}
-            initialLists={initialLists}
-            signedIn={signedIn}
-            variant="icon"
-          />
-        </div>
       </div>
     </div>
   );
