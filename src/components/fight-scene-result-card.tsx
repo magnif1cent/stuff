@@ -10,7 +10,8 @@ import { FightSceneThumbnail } from "@/components/fight-scene-thumbnail";
 // across scenes with wildly different cast-tag counts.
 const MAX_FEATURED_CAST = 2;
 
-// Same idea for chips (styles, moves, then tags, all in one row): a scene
+// Same idea for chips (tags first, as the clickable filters, then styles
+// and moves, all in one row): a scene
 // can carry a dozen, and letting them wrap made one card (and so its whole grid row, which
 // stretches to match) several lines taller than its neighbors. Show this
 // many per row — fewer on phones, where the grid goes two-up — and fold
@@ -142,10 +143,10 @@ export function FightSceneResultCard({
         />
         {/* Rating sits on the thumbnail rather than in the header so it
             doesn't squeeze the movie title, especially two-up on phones.
-            Hidden until a scene has at least one rating. */}
+            Hidden until a scene has at least one rating. pointer-events-none
+            so a tap on it still reaches the thumbnail link underneath. */}
         {scene.memberRatingCount > 0 && (
           <span
-            title={`${scene.memberRatingCount} member rating${scene.memberRatingCount === 1 ? "" : "s"}`}
             className="pointer-events-none absolute bottom-1.5 left-1.5 rounded-full bg-black/70 px-2 py-0.5 text-[10px] text-white sm:bottom-2 sm:left-2 sm:text-xs"
           >
             <span className="font-bold">★ {memberLabel}</span> <span className="text-white/70">({scene.memberRatingCount})</span>
@@ -179,10 +180,11 @@ export function FightSceneResultCard({
           {scene.title}
         </Link>
         {/* A small check next to the title instead of a "Verified" pill in
-            the tag row — nearly every scene is verified, so the pill spent a
-            lot of room saying little. */}
+            the tag row, which took a whole chip slot (and could push the
+            row onto a second line) for a yes/no flag. */}
         {scene.isVerified && (
           <span
+            role="img"
             title="Verified"
             aria-label="Verified"
             className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full text-[9px] leading-none sm:h-4 sm:w-4 sm:text-[10px]"
@@ -208,13 +210,13 @@ export function FightSceneResultCard({
 
       <ChipRow
         chips={[
-          ...(scene.styles ?? []).map((style) => ({ id: style.id, name: style.name, color: TICKET_STAMP })),
-          ...(scene.moves ?? []).map((move) => ({ id: move.id, name: move.name, color: TICKET_MOVE })),
           ...scene.tags.map((tag) => ({
             id: tag.id,
             name: tag.name,
             href: `/search/fights?tag=${encodeURIComponent(tag.name)}`,
           })),
+          ...(scene.styles ?? []).map((style) => ({ id: style.id, name: style.name, color: TICKET_STAMP })),
+          ...(scene.moves ?? []).map((move) => ({ id: move.id, name: move.name, color: TICKET_MOVE })),
         ]}
         moreHref={permalink}
       />
