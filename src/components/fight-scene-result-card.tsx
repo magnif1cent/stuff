@@ -10,6 +10,14 @@ import { FightSceneThumbnail } from "@/components/fight-scene-thumbnail";
 // across scenes with wildly different cast-tag counts.
 const MAX_FEATURED_CAST = 2;
 
+// Same idea for chips (styles, moves, then tags, all in one row): a scene
+// can carry a dozen, and letting them wrap made one card (and so its whole grid row, which
+// stretches to match) several lines taller than its neighbors. Show this
+// many per row — fewer on phones, where the grid goes two-up — and fold
+// the rest into a "+N" chip linking to the scene page.
+const MAX_CHIPS_PHONE = 1;
+const MAX_CHIPS = 2;
+
 // Same "Fight Ticket" palette as fight-scene-section.tsx — kept in sync
 // manually since this is a read-only result card, not the interactive one.
 const TICKET_INK = "#1a1712";
@@ -198,42 +206,79 @@ export function FightSceneResultCard({
         </p>
       )}
 
-      {((scene.styles?.length ?? 0) > 0 || (scene.moves?.length ?? 0) > 0) && (
-        <div className="mt-2 flex flex-wrap gap-1 sm:mt-3 sm:gap-1.5">
-          {scene.styles?.map((style) => (
-            <span
-              key={style.id}
-              className="px-2 py-0.5 text-[10px] font-bold tracking-wide uppercase"
-              style={{ border: `1px solid ${TICKET_STAMP}`, color: TICKET_STAMP }}
-            >
-              {style.name}
-            </span>
-          ))}
-          {scene.moves?.map((move) => (
-            <span
-              key={move.id}
-              className="px-2 py-0.5 text-[10px] font-bold tracking-wide uppercase"
-              style={{ border: `1px solid ${TICKET_MOVE}`, color: TICKET_MOVE }}
-            >
-              {move.name}
-            </span>
-          ))}
-        </div>
-      )}
+      <ChipRow
+        chips={[
+          ...(scene.styles ?? []).map((style) => ({ id: style.id, name: style.name, color: TICKET_STAMP })),
+          ...(scene.moves ?? []).map((move) => ({ id: move.id, name: move.name, color: TICKET_MOVE })),
+          ...scene.tags.map((tag) => ({
+            id: tag.id,
+            name: tag.name,
+            href: `/search/fights?tag=${encodeURIComponent(tag.name)}`,
+          })),
+        ]}
+        moreHref={permalink}
+      />
+    </div>
+  );
+}
 
-      {scene.tags.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-1 sm:mt-3 sm:gap-1.5">
-          {scene.tags.map((tag) => (
-            <Link
-              key={tag.id}
-              href={`/search/fights?tag=${encodeURIComponent(tag.name)}`}
-              className="border px-1.5 py-0.5 text-[9px] tracking-wide uppercase underline underline-offset-2 hover:opacity-70 sm:px-2 sm:text-[10px]"
-              style={{ borderColor: TICKET_INK }}
-            >
-              {tag.name}
-            </Link>
-          ))}
-        </div>
+type Chip = { id: string; name: string; href?: string; color?: string };
+
+// One non-wrapping line of chips: the first MAX_CHIPS (MAX_CHIPS_PHONE
+// below sm), each truncating if two long names don't fit, then a "+N"
+// chip for the rest. Tag chips are links (href) in ink; style/move chips
+// are plain, bold, and in their own color.
+function ChipRow({ chips, moreHref }: { chips: Chip[]; moreHref: string }) {
+  if (chips.length === 0) return null;
+
+  const chipClass = "min-w-0 truncate border px-1.5 py-0.5 text-[9px] tracking-wide uppercase sm:px-2 sm:text-[10px]";
+  const moreClass = "shrink-0 border px-1.5 py-0.5 text-[9px] tracking-wide hover:opacity-70 sm:px-2 sm:text-[10px]";
+  const rest = (from: number) => chips.slice(from).map((c) => c.name).join(", ");
+
+  return (
+    <div className="mt-2 flex gap-1 sm:mt-3 sm:gap-1.5">
+      {chips.slice(0, MAX_CHIPS).map((chip, i) => {
+        const className = `${chipClass} ${i >= MAX_CHIPS_PHONE ? "hidden sm:block" : "block"}`;
+        return chip.href ? (
+          <Link
+            key={chip.id}
+            href={chip.href}
+            title={chip.name}
+            className={`${className} underline underline-offset-2 hover:opacity-70`}
+            style={{ borderColor: TICKET_INK }}
+          >
+            {chip.name}
+          </Link>
+        ) : (
+          <span
+            key={chip.id}
+            title={chip.name}
+            className={`${className} font-bold`}
+            style={{ borderColor: chip.color, color: chip.color }}
+          >
+            {chip.name}
+          </span>
+        );
+      })}
+      {chips.length > MAX_CHIPS_PHONE && (
+        <Link
+          href={moreHref}
+          title={rest(MAX_CHIPS_PHONE)}
+          className={`${moreClass} sm:hidden`}
+          style={{ borderColor: TICKET_MUTED, color: TICKET_MUTED }}
+        >
+          +{chips.length - MAX_CHIPS_PHONE}
+        </Link>
+      )}
+      {chips.length > MAX_CHIPS && (
+        <Link
+          href={moreHref}
+          title={rest(MAX_CHIPS)}
+          className={`${moreClass} hidden sm:block`}
+          style={{ borderColor: TICKET_MUTED, color: TICKET_MUTED }}
+        >
+          +{chips.length - MAX_CHIPS}
+        </Link>
       )}
     </div>
   );
