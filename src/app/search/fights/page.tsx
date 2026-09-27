@@ -599,7 +599,7 @@ export default async function FightSceneSearchPage({
             </p>
           ) : (
             <>
-              <div className="flex flex-wrap gap-4">
+              <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:gap-4">
                 {pagedScenes.map((scene) => {
                   const memberSummary = memberSummaries.get(scene.id);
                   const editorSummary = editorSummaries.get(scene.id);

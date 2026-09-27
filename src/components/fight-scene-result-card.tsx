@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import type { FightScene, FightSceneTag, FightSceneStyle, FightSceneMove, Movie, Person } from "@/generated/prisma/client";
 import { AddToListControl, type AddToListItem } from "@/components/add-to-list-control";
@@ -41,6 +42,7 @@ export function FightSceneResultCard({
   signedIn = false,
   initialFavorite = false,
   size = "default",
+  thumbnailBadge,
 }: {
   scene: FightSceneResult;
   initialLists?: AddToListItem[];
@@ -53,6 +55,9 @@ export function FightSceneResultCard({
   // needs. Keeps the cream ticket identity, drops everything but the
   // thumbnail, title, and rating.
   size?: "default" | "compact";
+  // Extra control pinned to the thumbnail's top-left corner (the actor
+  // page's signature-vote button), opposite the favorite/save buttons.
+  thumbnailBadge?: ReactNode;
 }) {
   const year = scene.movie.releaseDate ? new Date(scene.movie.releaseDate).getFullYear() : null;
   const permalink = `/movies/${scene.movieId}/fights/${scene.id}`;
@@ -95,44 +100,31 @@ export function FightSceneResultCard({
 
   return (
     <div
-      className="relative w-64 shrink-0 bg-[#e8dcc4] p-4 font-mono"
+      // Full width of its grid cell on phones (the grids go two-up there),
+      // fixed ticket width from sm up.
+      className="relative w-full min-w-0 bg-[#e8dcc4] p-3 font-mono sm:w-64 sm:shrink-0 sm:p-4"
       style={{
         color: TICKET_INK,
         clipPath:
           "polygon(0 10px, 10px 0, calc(100% - 10px) 0, 100% 10px, 100% calc(100% - 10px), calc(100% - 10px) 100%, 10px 100%, 0 calc(100% - 10px))",
       }}
     >
-      <div className="flex items-baseline justify-between gap-2">
-        <Link
-          href={`/movies/${scene.movieId}`}
-          title={`${scene.movie.title}${year ? ` (${year})` : ""}`}
-          className="flex min-w-0 items-baseline gap-1 text-sm font-bold tracking-wide uppercase hover:opacity-70"
-        >
-          <span className="min-w-0 truncate">{scene.movie.title}</span>
-          {year && (
-            <span className="shrink-0 font-normal" style={{ color: TICKET_MUTED }}>
-              ({year})
-            </span>
-          )}
-        </Link>
-        {/* Rating lives in the header now that the footer row is gone. */}
-        <p className="shrink-0 text-xs" title={`${scene.memberRatingCount} member rating${scene.memberRatingCount === 1 ? "" : "s"}`}>
-          {scene.memberRatingCount > 0 ? (
-            <>
-              <span className="font-bold" style={{ color: TICKET_STAMP }}>
-                ★ {memberLabel}
-              </span>{" "}
-              <span style={{ color: TICKET_MUTED }}>({scene.memberRatingCount})</span>
-            </>
-          ) : (
-            <span style={{ color: TICKET_MUTED }}>★ —</span>
-          )}
-        </p>
-      </div>
+      <Link
+        href={`/movies/${scene.movieId}`}
+        title={`${scene.movie.title}${year ? ` (${year})` : ""}`}
+        className="flex items-baseline gap-1 text-[11px] font-bold tracking-wide uppercase hover:opacity-70 sm:text-sm"
+      >
+        <span className="min-w-0 truncate">{scene.movie.title}</span>
+        {year && (
+          <span className="shrink-0 font-normal" style={{ color: TICKET_MUTED }}>
+            ({year})
+          </span>
+        )}
+      </Link>
 
       {/* Favorite/save sit on the thumbnail as siblings of its link (not
           inside it) so they aren't nested interactive elements. */}
-      <div className="relative mt-3">
+      <div className="relative mt-2 sm:mt-3">
         <FightSceneThumbnail
           href={permalink}
           videoId={scene.youtubeVideoId}
@@ -140,7 +132,19 @@ export function FightSceneResultCard({
           inkColor={TICKET_INK}
           fullWidth
         />
-        <div className="absolute top-2 right-2 flex items-center gap-1.5">
+        {/* Rating sits on the thumbnail rather than in the header so it
+            doesn't squeeze the movie title, especially two-up on phones.
+            Hidden until a scene has at least one rating. */}
+        {scene.memberRatingCount > 0 && (
+          <span
+            title={`${scene.memberRatingCount} member rating${scene.memberRatingCount === 1 ? "" : "s"}`}
+            className="pointer-events-none absolute bottom-1.5 left-1.5 rounded-full bg-black/70 px-2 py-0.5 text-[10px] text-white sm:bottom-2 sm:left-2 sm:text-xs"
+          >
+            <span className="font-bold">★ {memberLabel}</span> <span className="text-white/70">({scene.memberRatingCount})</span>
+          </span>
+        )}
+        {thumbnailBadge && <div className="absolute top-1.5 left-1.5 sm:top-2 sm:left-2">{thumbnailBadge}</div>}
+        <div className="absolute top-1.5 right-1.5 flex items-center gap-1 sm:top-2 sm:right-2 sm:gap-1.5">
           <FavoriteButton
             movieId={scene.movieId}
             fightSceneId={scene.id}
@@ -160,13 +164,13 @@ export function FightSceneResultCard({
       <Link
         href={permalink}
         title={scene.title}
-        className="mt-3 block truncate text-lg font-bold hover:opacity-70"
+        className="mt-2 block truncate text-sm font-bold hover:opacity-70 sm:mt-3 sm:text-lg"
         style={{ fontFamily: "Georgia, serif" }}
       >
         {scene.title}
       </Link>
       {scene.cast.length > 0 && (
-        <p className="mt-0.5 truncate text-[11px] tracking-wide uppercase" style={{ color: TICKET_MUTED }}>
+        <p className="mt-0.5 truncate text-[10px] tracking-wide uppercase sm:text-[11px]" style={{ color: TICKET_MUTED }}>
           Featuring{" "}
           {scene.cast.slice(0, MAX_FEATURED_CAST).map((c, i) => (
             <span key={c.person.id}>
@@ -181,7 +185,7 @@ export function FightSceneResultCard({
       )}
 
       {((scene.styles?.length ?? 0) > 0 || (scene.moves?.length ?? 0) > 0) && (
-        <div className="mt-3 flex flex-wrap gap-1.5">
+        <div className="mt-2 flex flex-wrap gap-1 sm:mt-3 sm:gap-1.5">
           {scene.styles?.map((style) => (
             <span
               key={style.id}
@@ -203,19 +207,19 @@ export function FightSceneResultCard({
         </div>
       )}
 
-      <div className="mt-3 flex flex-wrap gap-1.5">
+      <div className="mt-2 flex flex-wrap gap-1 sm:mt-3 sm:gap-1.5">
         {scene.tags.map((tag) => (
           <Link
             key={tag.id}
             href={`/search/fights?tag=${encodeURIComponent(tag.name)}`}
-            className="border px-2 py-0.5 text-[10px] tracking-wide uppercase underline underline-offset-2 hover:opacity-70"
+            className="border px-1.5 py-0.5 text-[9px] tracking-wide sm:px-2 sm:text-[10px] uppercase underline underline-offset-2 hover:opacity-70"
             style={{ borderColor: TICKET_INK }}
           >
             {tag.name}
           </Link>
         ))}
         {scene.isVerified && (
-          <span className="px-2 py-0.5 text-[10px] tracking-wide uppercase" style={{ background: TICKET_INK, color: "#e8dcc4" }}>
+          <span className="px-1.5 py-0.5 text-[9px] tracking-wide uppercase sm:px-2 sm:text-[10px]" style={{ background: TICKET_INK, color: "#e8dcc4" }}>
             ✓ Verified
           </span>
         )}
