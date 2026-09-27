@@ -133,40 +133,42 @@ export function FightSceneResultCard({
 
       {/* Favorite/save sit on the thumbnail as siblings of its link (not
           inside it) so they aren't nested interactive elements. */}
-      <div className="relative mt-2 sm:mt-3">
-        <FightSceneThumbnail
-          href={permalink}
-          videoId={scene.youtubeVideoId}
-          title={scene.title}
-          inkColor={TICKET_INK}
-          fullWidth
-        />
-        {/* Rating sits on the thumbnail rather than in the header so it
-            doesn't squeeze the movie title, especially two-up on phones.
-            Hidden until a scene has at least one rating. pointer-events-none
-            so a tap on it still reaches the thumbnail link underneath. */}
-        {scene.memberRatingCount > 0 && (
-          <span
-            className="pointer-events-none absolute bottom-1.5 left-1.5 rounded-full bg-black/70 px-2 py-0.5 text-[10px] text-white sm:bottom-2 sm:left-2 sm:text-xs"
-          >
-            <span className="font-bold">★ {memberLabel}</span> <span className="text-white/70">({scene.memberRatingCount})</span>
-          </span>
-        )}
-        {thumbnailBadge && <div className="absolute top-1.5 left-1.5 sm:top-2 sm:left-2">{thumbnailBadge}</div>}
-        <div className="absolute top-1.5 right-1.5 flex items-center gap-1 sm:top-2 sm:right-2 sm:gap-1.5">
-          <FavoriteButton
-            movieId={scene.movieId}
-            fightSceneId={scene.id}
-            initialFavorite={initialFavorite}
-            signedIn={signedIn}
-            variant="overlay"
+      <div className="mt-2 border-t-2 border-dashed pt-2 sm:mt-3 sm:pt-3" style={{ borderColor: "#b8ab8c" }}>
+        <div className="relative">
+          <FightSceneThumbnail
+            href={permalink}
+            videoId={scene.youtubeVideoId}
+            title={scene.title}
+            inkColor={TICKET_INK}
+            fullWidth
           />
-          <AddToListControl
-            target={{ type: "fightScene", id: scene.id }}
-            initialLists={initialLists}
-            signedIn={signedIn}
-            variant="overlay"
-          />
+          {/* Rating sits on the thumbnail rather than in the header so it
+              doesn't squeeze the movie title, especially two-up on phones.
+              Hidden until a scene has at least one rating. pointer-events-none
+              so a tap on it still reaches the thumbnail link underneath. */}
+          {scene.memberRatingCount > 0 && (
+            <span
+              className="pointer-events-none absolute bottom-1.5 left-1.5 rounded-full bg-black/70 px-2 py-0.5 text-[10px] text-white sm:bottom-2 sm:left-2 sm:text-xs"
+            >
+              <span className="font-bold">★ {memberLabel}</span> <span className="text-white/70">({scene.memberRatingCount})</span>
+            </span>
+          )}
+          {thumbnailBadge && <div className="absolute top-1.5 left-1.5 sm:top-2 sm:left-2">{thumbnailBadge}</div>}
+          <div className="absolute top-1.5 right-1.5 flex items-center gap-1 sm:top-2 sm:right-2 sm:gap-1.5">
+            <FavoriteButton
+              movieId={scene.movieId}
+              fightSceneId={scene.id}
+              initialFavorite={initialFavorite}
+              signedIn={signedIn}
+              variant="overlay"
+            />
+            <AddToListControl
+              target={{ type: "fightScene", id: scene.id }}
+              initialLists={initialLists}
+              signedIn={signedIn}
+              variant="overlay"
+            />
+          </div>
         </div>
       </div>
 
