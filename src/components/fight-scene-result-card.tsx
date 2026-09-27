@@ -161,14 +161,29 @@ export function FightSceneResultCard({
         </div>
       </div>
 
-      <Link
-        href={permalink}
-        title={scene.title}
-        className="mt-2 block truncate text-sm font-bold hover:opacity-70 sm:mt-3 sm:text-lg"
-        style={{ fontFamily: "Georgia, serif" }}
-      >
-        {scene.title}
-      </Link>
+      <div className="mt-2 flex items-center gap-1.5 sm:mt-3">
+        <Link
+          href={permalink}
+          title={scene.title}
+          className="min-w-0 truncate text-sm font-bold hover:opacity-70 sm:text-lg"
+          style={{ fontFamily: "Georgia, serif" }}
+        >
+          {scene.title}
+        </Link>
+        {/* A small check next to the title instead of a "Verified" pill in
+            the tag row — nearly every scene is verified, so the pill spent a
+            lot of room saying little. */}
+        {scene.isVerified && (
+          <span
+            title="Verified"
+            aria-label="Verified"
+            className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full text-[9px] leading-none sm:h-4 sm:w-4 sm:text-[10px]"
+            style={{ background: TICKET_INK, color: "#e8dcc4" }}
+          >
+            ✓
+          </span>
+        )}
+      </div>
       {scene.cast.length > 0 && (
         <p className="mt-0.5 truncate text-[10px] tracking-wide uppercase sm:text-[11px]" style={{ color: TICKET_MUTED }}>
           {scene.cast.slice(0, MAX_FEATURED_CAST).map((c, i) => (
@@ -206,23 +221,20 @@ export function FightSceneResultCard({
         </div>
       )}
 
-      <div className="mt-2 flex flex-wrap gap-1 sm:mt-3 sm:gap-1.5">
-        {scene.tags.map((tag) => (
-          <Link
-            key={tag.id}
-            href={`/search/fights?tag=${encodeURIComponent(tag.name)}`}
-            className="border px-1.5 py-0.5 text-[9px] tracking-wide sm:px-2 sm:text-[10px] uppercase underline underline-offset-2 hover:opacity-70"
-            style={{ borderColor: TICKET_INK }}
-          >
-            {tag.name}
-          </Link>
-        ))}
-        {scene.isVerified && (
-          <span className="px-1.5 py-0.5 text-[9px] tracking-wide uppercase sm:px-2 sm:text-[10px]" style={{ background: TICKET_INK, color: "#e8dcc4" }}>
-            ✓ Verified
-          </span>
-        )}
-      </div>
+      {scene.tags.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1 sm:mt-3 sm:gap-1.5">
+          {scene.tags.map((tag) => (
+            <Link
+              key={tag.id}
+              href={`/search/fights?tag=${encodeURIComponent(tag.name)}`}
+              className="border px-1.5 py-0.5 text-[9px] tracking-wide uppercase underline underline-offset-2 hover:opacity-70 sm:px-2 sm:text-[10px]"
+              style={{ borderColor: TICKET_INK }}
+            >
+              {tag.name}
+            </Link>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
