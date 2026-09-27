@@ -115,7 +115,13 @@ export default async function SearchPage({
   const countries = countryRows.map((m) => m.country!).filter(Boolean);
 
   const filterWhere = buildFilterWhere(genre, director, actor, country, yearFrom, yearTo);
-  const hasFilters = Object.keys(filterWhere).length > 0 || memberRating !== undefined || editorRating !== undefined;
+  // Counts only the filters a user actually set -- not filterWhere's keys,
+  // which always include the status: "APPROVED" guard and so made this
+  // always true, silently disabling the fuzzy fallback below.
+  const hasFilters =
+    Boolean(genre || director || actor || country || yearFrom || yearTo) ||
+    memberRating !== undefined ||
+    editorRating !== undefined;
 
   let results: Movie[] = [];
   let usedFuzzyFallback = false;
@@ -141,7 +147,10 @@ export default async function SearchPage({
       results = await findSimilarMovies(query);
       usedFuzzyFallback = results.length > 0;
     }
-  } else if (hasFilters) {
+  } else {
+    // No query: browse the whole (filtered) catalog, newest first -- same
+    // as /search/fights, rather than prompting for input before showing
+    // anything.
     results = await prisma.movie.findMany({ where: filterWhere, orderBy: { releaseDate: "desc" } });
   }
 
@@ -169,7 +178,6 @@ export default async function SearchPage({
     );
   }
 
-  const searched = query.length > 0 || hasFilters;
   const sheetFilterCount =
     (query.length > 0 ? 1 : 0) +
     (genre.length > 0 ? 1 : 0) +
@@ -355,9 +363,7 @@ export default async function SearchPage({
             <FilterSheetTrigger activeCount={sheetFilterCount} />
           </div>
 
-          {!searched ? (
-            <p className="text-neutral-400">Enter a movie title or actor name, or set a filter, to browse the catalog.</p>
-          ) : totalResults === 0 ? (
+          {totalResults === 0 ? (
             <p className="text-neutral-400">
               No movies matched your search.{" "}
               <Link href="/movies/submit" className="text-red-500 hover:underline">
