@@ -67,6 +67,7 @@ one.
 
 **Feature Decisions**
 
+- ["My Lists" back in the account menu, plus a breadcrumb on list pages](#my-lists-back-in-the-account-menu-plus-a-breadcrumb-on-list-pages)
 - [Profile Lists tab shows one card per list, not each list's items](#profile-lists-tab-shows-one-card-per-list-not-each-lists-items)
 - [Owners can search and add movies and fights from the list page itself](#owners-can-search-and-add-movies-and-fights-from-the-list-page-itself)
 - [List page actions moved into one side panel, ranking into an edit page](#list-page-actions-moved-into-one-side-panel-ranking-into-an-edit-page)
@@ -1294,6 +1295,14 @@ polish differently than a default-security reading would.
 - **Not verified**: which crawlers actually generate the traffic. This session had no access to Vercel logs or the Neon dashboard beyond the owner's screenshots, so the effect of this PR should be judged from the Monitoring graph a day or two after it deploys.
 
 ## Feature Decisions
+
+### "My Lists" back in the account menu, plus a breadcrumb on list pages
+**PR #TBD.** Reported directly: after clicking into a list from the profile, there was no way back — the page's only mention of the owner, "List by {username}", was plain text. The owner's first instinct was the account menu rather than a breadcrumb; asked for an honest take, the recommendation was both, since they solve different problems.
+
+- **Reverses the earlier call to drop "My Lists" from the account menu** (see the navbar regrouping entry: it was dropped because `/my-lists` could only land on the profile's first tab, making it a duplicate of "My Profile"). `ProfileTabs` now takes an `initialTab` from `?tab=`, so "My Lists" opens the Lists tab directly and is no longer a duplicate. `/my-lists` redirects there too.
+- **The breadcrumb stays anyway** (username › Lists › list name, same markup as the fight pages' breadcrumb). The account menu only helps with *your own* lists; someone viewing another member's list — from `/lists`, the activity feed or a shared link — needs a way to that member's profile and other lists, which only an on-page link gives.
+- **Switching profile tabs writes `?tab=` back with `replaceState`** (no new history entry), so browser back from a list returns to the Lists tab rather than resetting to Profile. `ProfileTabs` is keyed on the param so following a `?tab=` link while already on the profile switches tabs. Known small gap: if you navigate to `?tab=lists`, switch to another tab, then pick "My Lists" again, the server param hasn't changed, so the tab doesn't switch back.
+- **Not verified against a live database or browser** (sandboxed session). Checked via `npm run lint`, `npm run test`, and `npm run build`.
 
 ### Profile Lists tab shows one card per list, not each list's items
 **PR #TBD.** Asked directly, from a screenshot of the profile: remove "Open list" and make the list name the link, replace each list's row of movie cards with one card per list, and put the list's description on it — the per-list rows don't scale once a member has several lists. Mocked up and approved before building.
