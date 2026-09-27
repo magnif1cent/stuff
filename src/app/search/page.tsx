@@ -378,13 +378,12 @@ export default async function SearchPage({
                   No exact matches for &ldquo;{query}&rdquo; — showing similar titles instead.
                 </p>
               )}
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-[repeat(auto-fill,minmax(9rem,1fr))]">
+              <div className="flex flex-wrap gap-4">
                 {pagedResults.map((movie) => {
                   const summary = ratingSummaries.get(movie.id);
                   return (
                     <MovieCard
                       key={movie.id}
-                      size="fluid"
                       movie={{
                         ...movie,
                         communityAverage: summary?.average ?? null,

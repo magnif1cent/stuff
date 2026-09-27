@@ -21,9 +21,6 @@ export type MovieCardData = Pick<
 const SIZE_CLASSES = {
   default: { link: "w-40 sm:w-48", sizes: "(max-width: 640px) 160px, 192px" },
   compact: { link: "w-28 sm:w-32", sizes: "(max-width: 640px) 112px, 128px" },
-  // Takes its width from the parent grid cell instead of a fixed size, so a
-  // grid of them fills the row at any viewport rather than leaving a gap.
-  fluid: { link: "w-full min-w-0", sizes: "(max-width: 640px) 50vw, 200px" },
 } as const;
 
 export function MovieCard({ movie, size = "default" }: { movie: MovieCardData; size?: keyof typeof SIZE_CLASSES }) {

@@ -67,7 +67,6 @@ one.
 
 **Feature Decisions**
 
-- [`/search` movie results fill the row with a stretching grid, trading some poster size for density](#search-movie-results-fill-the-row-with-a-stretching-grid-trading-some-poster-size-for-density)
 - [Fight result cards shrunk: actions on the thumbnail, two-up on phones, one capped chip line](#fight-result-cards-shrunk-actions-on-the-thumbnail-two-up-on-phones-one-capped-chip-line)
 - ["My Lists" back in the account menu, plus a breadcrumb on list pages](#my-lists-back-in-the-account-menu-plus-a-breadcrumb-on-list-pages)
 - [Profile Lists tab shows one card per list, not each list's items](#profile-lists-tab-shows-one-card-per-list-not-each-lists-items)
@@ -1297,13 +1296,6 @@ polish differently than a default-security reading would.
 - **Not verified**: which crawlers actually generate the traffic. This session had no access to Vercel logs or the Neon dashboard beyond the owner's screenshots, so the effect of this PR should be judged from the Monitoring graph a day or two after it deploys.
 
 ## Feature Decisions
-
-### `/search` movie results fill the row with a stretching grid, trading some poster size for density
-**PR #TBD.** From a review of the movie browse page. Results were fixed 192px `MovieCard`s in a wrapping row, which left a gap at the right that varied with viewport width. It was small on a 1280px desktop (~24px), but on a tablet only two posters fit, with ~110px empty beside them.
-
-- **A grid with a minimum column width, not fixed-width cards.** `grid-cols-2` on phones, `repeat(auto-fill, minmax(9rem, 1fr))` from `sm` up, with `MovieCard` getting a new `fluid` size that takes its width from the grid cell. Other `MovieCard` callers keep their fixed sizes.
-- **Chose the denser option (9rem minimum) over keeping today's poster size (11rem).** The 11rem version looked the same as before on desktop, and on tablets stretched two posters to ~246px wide. The 9rem version gives 5 per row on desktop (~155px, about 20% smaller posters than before), 3 on tablets, and 2 evenly spaced on phones.
-- Mocked up against a local database with placeholder posters (TMDB images aren't reachable from the dev sandbox) at 1280, 820 and 390px.
 
 ### Fight result cards shrunk: actions on the thumbnail, two-up on phones, one capped chip line
 **PR #188.** Asked directly to find ways to shrink the `FightSceneResultCard` ("Fight Ticket") grid card on `/search/fights`, then to consider mobile. Several ideas were mocked up and chosen one at a time from screenshots.
