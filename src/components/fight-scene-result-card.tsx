@@ -6,7 +6,7 @@ import { FavoriteButton } from "@/components/favorite-button";
 import { FightSceneThumbnail } from "@/components/fight-scene-thumbnail";
 
 // How many cast names to spell out before collapsing the rest into "& N
-// more" — keeps the "Featuring" line (and so the card's height) consistent
+// more" — keeps the cast line (and so the card's height) consistent
 // across scenes with wildly different cast-tag counts.
 const MAX_FEATURED_CAST = 2;
 
@@ -171,7 +171,6 @@ export function FightSceneResultCard({
       </Link>
       {scene.cast.length > 0 && (
         <p className="mt-0.5 truncate text-[10px] tracking-wide uppercase sm:text-[11px]" style={{ color: TICKET_MUTED }}>
-          Featuring{" "}
           {scene.cast.slice(0, MAX_FEATURED_CAST).map((c, i) => (
             <span key={c.person.id}>
               {i > 0 && ", "}
