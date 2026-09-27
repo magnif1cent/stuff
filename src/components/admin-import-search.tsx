@@ -154,22 +154,31 @@ function TitleSearch() {
                   <p className="line-clamp-2 max-w-xl text-sm text-neutral-400">{movie.overview}</p>
                 </div>
               </div>
-              {movie.catalogMovieId ? (
-                <Link
-                  href={`/movies/${movie.catalogMovieId}`}
-                  className="shrink-0 rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-300 hover:bg-neutral-800 hover:text-white"
-                >
-                  View
-                </Link>
-              ) : (
+              <div className="flex shrink-0 gap-2">
+                {movie.catalogMovieId && (
+                  <Link
+                    href={`/movies/${movie.catalogMovieId}`}
+                    className="rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-300 hover:bg-neutral-800 hover:text-white"
+                  >
+                    View
+                  </Link>
+                )}
+                {/* Still offered for movies already in the catalog: re-importing
+                    upserts, which refreshes the movie's data from TMDB. */}
                 <button
                   onClick={() => handleImport(movie.id)}
                   disabled={importingId === movie.id}
-                  className="shrink-0 rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-100 hover:bg-neutral-800 disabled:opacity-50"
+                  className="rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-100 hover:bg-neutral-800 disabled:opacity-50"
                 >
-                  {importingId === movie.id ? "Importing…" : "Import"}
+                  {importingId === movie.id
+                    ? movie.catalogMovieId
+                      ? "Re-importing…"
+                      : "Importing…"
+                    : movie.catalogMovieId
+                      ? "Re-import"
+                      : "Import"}
                 </button>
-              )}
+              </div>
             </li>
           );
         })}
