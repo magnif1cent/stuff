@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
+import type { Movie } from "@/generated/prisma/client";
 import { tmdbImageUrl, type TmdbMovieSearchResult } from "@/lib/tmdb";
 import { AdminKeywordImport } from "@/components/admin-keyword-import";
 import { AdminActorImport } from "@/components/admin-actor-import";
@@ -55,9 +57,13 @@ export function AdminImportSearch() {
   );
 }
 
+// Shape returned by /api/admin/tmdb/search: the raw TMDB result plus the
+// catalog movie's id when that TMDB title has already been imported.
+type TitleSearchResult = TmdbMovieSearchResult & { catalogMovieId: Movie["id"] | null };
+
 function TitleSearch() {
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<TmdbMovieSearchResult[]>([]);
+  const [results, setResults] = useState<TitleSearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [importingId, setImportingId] = useState<number | null>(null);
@@ -91,6 +97,9 @@ function TitleSearch() {
       return;
     }
     setMessage(`Imported "${body.movie.title}".`);
+    setResults((prev) =>
+      prev.map((movie) => (movie.id === tmdbId ? { ...movie, catalogMovieId: body.movie.id } : movie)),
+    );
   }
 
   return (
@@ -120,7 +129,9 @@ function TitleSearch() {
           return (
             <li
               key={movie.id}
-              className="flex items-center justify-between gap-4 rounded-md border border-neutral-800 bg-neutral-900 p-3"
+              className={`flex items-center justify-between gap-4 rounded-md border p-3 ${
+                movie.catalogMovieId ? "border-emerald-900/60 bg-neutral-900/60" : "border-neutral-800 bg-neutral-900"
+              }`}
             >
               <div className="flex gap-3">
                 <div className="relative h-24 w-16 shrink-0 overflow-hidden rounded-sm bg-neutral-800">
@@ -134,17 +145,31 @@ function TitleSearch() {
                     <span className="text-neutral-500">
                       {movie.release_date ? `(${movie.release_date.slice(0, 4)})` : ""}
                     </span>
+                    {movie.catalogMovieId && (
+                      <span className="ml-2 rounded-sm bg-emerald-900/50 px-1.5 py-0.5 align-middle text-xs font-medium text-emerald-300">
+                        In catalog
+                      </span>
+                    )}
                   </p>
                   <p className="line-clamp-2 max-w-xl text-sm text-neutral-400">{movie.overview}</p>
                 </div>
               </div>
-              <button
-                onClick={() => handleImport(movie.id)}
-                disabled={importingId === movie.id}
-                className="shrink-0 rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-100 hover:bg-neutral-800 disabled:opacity-50"
-              >
-                {importingId === movie.id ? "Importing…" : "Import"}
-              </button>
+              {movie.catalogMovieId ? (
+                <Link
+                  href={`/movies/${movie.catalogMovieId}`}
+                  className="shrink-0 rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-300 hover:bg-neutral-800 hover:text-white"
+                >
+                  View
+                </Link>
+              ) : (
+                <button
+                  onClick={() => handleImport(movie.id)}
+                  disabled={importingId === movie.id}
+                  className="shrink-0 rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-100 hover:bg-neutral-800 disabled:opacity-50"
+                >
+                  {importingId === movie.id ? "Importing…" : "Import"}
+                </button>
+              )}
             </li>
           );
         })}
