@@ -50,16 +50,22 @@ export function FightSceneThumbnail({
   videoId,
   title,
   inkColor,
+  fullWidth = false,
 }: {
   href: string;
   videoId: string;
   title: string;
   inkColor: string;
+  // Fill the card's width with no frame, instead of the default small,
+  // centered, ink-bordered thumbnail.
+  fullWidth?: boolean;
 }) {
   return (
     <Link
       href={href}
-      className="group/thumb relative mx-auto block aspect-video w-2/3 max-w-[180px] overflow-hidden border-[3px]"
+      className={`group/thumb relative block aspect-video overflow-hidden ${
+        fullWidth ? "w-full" : "mx-auto w-2/3 max-w-[180px] border-[3px]"
+      }`}
       style={{ borderColor: inkColor, backgroundColor: inkColor }}
     >
       <YoutubeThumbnailImage videoId={videoId} title={title} />

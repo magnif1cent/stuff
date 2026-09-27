@@ -23,8 +23,13 @@ function entryBodyKey(target: ListTarget) {
 
 const ICON_BUTTON_CLASS =
   "flex h-10 w-10 items-center justify-center rounded-sm border border-neutral-700 text-neutral-400 hover:border-neutral-500 hover:text-neutral-100";
+// Small round button meant to sit on top of a thumbnail (fight result card).
+const OVERLAY_BUTTON_CLASS =
+  "flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white shadow backdrop-blur-sm hover:bg-black/80";
 const TEXT_BUTTON_CLASS =
   "font-cond rounded-sm border border-neutral-700 px-3 py-1.5 text-sm tracking-wide text-neutral-300 uppercase hover:bg-neutral-800";
+
+const BUTTON_CLASS = { button: TEXT_BUTTON_CLASS, icon: ICON_BUTTON_CLASS, overlay: OVERLAY_BUTTON_CLASS };
 
 function BookmarkIcon() {
   return (
@@ -43,7 +48,7 @@ export function AddToListControl({
   target: ListTarget;
   initialLists: AddToListItem[];
   signedIn: boolean;
-  variant?: "button" | "icon";
+  variant?: "button" | "icon" | "overlay";
 }) {
   const [open, setOpen] = useState(false);
   const [lists, setLists] = useState(initialLists);
@@ -88,8 +93,8 @@ export function AddToListControl({
 
   if (!signedIn) {
     return (
-      <Link href="/login" title="Save to list" className={variant === "icon" ? ICON_BUTTON_CLASS : TEXT_BUTTON_CLASS}>
-        {variant === "icon" ? <BookmarkIcon /> : "+ Add to list"}
+      <Link href="/login" title="Save to list" className={BUTTON_CLASS[variant]}>
+        {variant === "button" ? "+ Add to list" : <BookmarkIcon />}
       </Link>
     );
   }
@@ -152,9 +157,9 @@ export function AddToListControl({
         ref={buttonRef}
         onClick={() => setOpen((v) => !v)}
         title="Save to list"
-        className={variant === "icon" ? ICON_BUTTON_CLASS : TEXT_BUTTON_CLASS}
+        className={BUTTON_CLASS[variant]}
       >
-        {variant === "icon" ? <BookmarkIcon /> : "+ Add to list"}
+        {variant === "button" ? "+ Add to list" : <BookmarkIcon />}
       </button>
       {open && menuPos &&
         createPortal(

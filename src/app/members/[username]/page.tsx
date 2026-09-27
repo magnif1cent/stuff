@@ -81,7 +81,7 @@ function FightSceneRow({
       {scenes.length === 0 ? (
         <p className="text-sm text-neutral-400">Nothing here yet.</p>
       ) : (
-        <div className="flex flex-wrap gap-4">
+        <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:gap-4">
           {scenes.map((scene) => (
             <FightSceneResultCard
               key={scene.id}

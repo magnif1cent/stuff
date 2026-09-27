@@ -67,6 +67,7 @@ one.
 
 **Feature Decisions**
 
+- [Fight result cards shrunk: actions on the thumbnail, two-up on phones, one capped chip line](#fight-result-cards-shrunk-actions-on-the-thumbnail-two-up-on-phones-one-capped-chip-line)
 - ["My Lists" back in the account menu, plus a breadcrumb on list pages](#my-lists-back-in-the-account-menu-plus-a-breadcrumb-on-list-pages)
 - [Profile Lists tab shows one card per list, not each list's items](#profile-lists-tab-shows-one-card-per-list-not-each-lists-items)
 - [Owners can search and add movies and fights from the list page itself](#owners-can-search-and-add-movies-and-fights-from-the-list-page-itself)
@@ -1295,6 +1296,20 @@ polish differently than a default-security reading would.
 - **Not verified**: which crawlers actually generate the traffic. This session had no access to Vercel logs or the Neon dashboard beyond the owner's screenshots, so the effect of this PR should be judged from the Monitoring graph a day or two after it deploys.
 
 ## Feature Decisions
+
+### Fight result cards shrunk: actions on the thumbnail, two-up on phones, one capped chip line
+**PR #188.** Asked directly to find ways to shrink the `FightSceneResultCard` ("Fight Ticket") grid card on `/search/fights`, then to consider mobile. Several ideas were mocked up and chosen one at a time from screenshots.
+
+- **Favorite/save moved onto the thumbnail** as small round overlay buttons (new `overlay` variants of `FavoriteButton` and `AddToListControl`), and the thumbnail fills the card width with no ink frame. That removed the footer row. **The dashed divider under the movie header was removed and then put back:** with the frame and footer gone it's most of what still reads as a "ticket" (header as a torn-off stub), it matches the full scene card in `fight-scene-section.tsx`, and it costs a fixed ~14px (~10px on phones), so it doesn't reintroduce uneven rows. Desktop cards only got ~10% shorter (the bigger thumbnail used most of the saved height); the bigger win is on phones.
+- **Phones get a two-up grid** (`grid grid-cols-2` below `sm`, the old wrapping row of fixed 256px cards from `sm` up) with tighter type and padding. Before this, a phone showed one 256px card per row with a dead strip beside it. The card is `w-full` below `sm`, so it relies on its parent being that grid — currently repeated in the three places that render it (search, actor-page grid, member profiles).
+- **Member rating moved to a pill on the thumbnail**, not the header: in the header it squeezed the movie title badly at two-up widths. **The pill is hidden for unrated scenes**, which drops the "No ratings yet" text PR #187 had just added — deliberate, per the site owner: there's no room for that text on the card any more.
+- **"Verified" pill replaced by a small ✓ after the scene title**, and **the "Featuring" label dropped** from the cast line.
+- **Tags, styles and moves share one non-wrapping chip line** — tags first (they're the clickable filters), then the first two chips overall (one on phones), the rest folded into a "+N" chip linking to the scene page. Real data showed a 9-tag scene wrapping onto four lines, and since grid rows stretch to their tallest card, that one scene made its whole row taller.
+- **The actor page's signature-vote button moved into a `thumbnailBadge` slot** (thumbnail top-left). It had been absolutely positioned over the card's top-right corner, where it would have covered the new layout.
+- **Tried and reverted: wrapping the scene title to two lines.** Rows stretch to their tallest card, so one long title grew the whole row; always reserving two lines would have undone the height savings. Titles stay on one line, truncated, with the full title on hover.
+- **Deferred — shorter titles at entry:** many scene titles are pasted YouTube video titles that repeat the movie name, year and cast ("Hero 2004 Jet Li vs Donnie Yen"). A 50–60 character limit and a hint on the add/edit form would fix the cause of the truncation. Considered and skipped for now.
+- **Known trade-offs left as is:** overlay buttons are 32px (under the usual 44px tap target) and sit on the thumbnail link, so a near miss opens the scene; the rating pill can cover a YouTube thumbnail's own corner badge.
+- **Not verified against a live database** in this session; checked with sample data on a throwaway page at phone and desktop widths, plus `npm run lint`, typecheck and `npm run build`. The site owner checked it with real data on the Vercel preview.
 
 ### "My Lists" back in the account menu, plus a breadcrumb on list pages
 **PR #TBD.** Reported directly: after clicking into a list from the profile, there was no way back — the page's only mention of the owner, "List by {username}", was plain text. The owner's first instinct was the account menu rather than a breadcrumb; asked for an honest take, the recommendation was both, since they solve different problems.
