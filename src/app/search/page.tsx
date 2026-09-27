@@ -26,6 +26,7 @@ interface SearchPageParams {
   editorRating?: string;
   yearFrom?: string;
   yearTo?: string;
+  fights?: string;
   sort?: string;
   page?: string;
 }
@@ -35,6 +36,7 @@ const SORT_OPTIONS = [
   { value: "rating", label: "Highest Rated" },
   { value: "newest", label: "Newest" },
   { value: "oldest", label: "Oldest" },
+  { value: "fights", label: "Most Fights" },
 ] as const;
 
 const PAGE_SIZE = 24;
@@ -52,6 +54,7 @@ function buildFilterWhere(
   country: string,
   yearFrom?: number,
   yearTo?: number,
+  hasFights?: boolean,
 ) {
   const where: Prisma.MovieWhereInput = { status: "APPROVED" };
   if (genre) where.genres = { some: { name: genre } };
@@ -66,6 +69,7 @@ function buildFilterWhere(
       ...(yearTo ? { lt: new Date(Date.UTC(yearTo + 1, 0, 1)) } : {}),
     };
   }
+  if (hasFights) where.fightScenes = { some: { isDeleted: false } };
   return where;
 }
 
@@ -80,6 +84,7 @@ function pageHref(params: SearchPageParams, page: number) {
   if (params.editorRating) search.set("editorRating", params.editorRating);
   if (params.yearFrom) search.set("yearFrom", params.yearFrom);
   if (params.yearTo) search.set("yearTo", params.yearTo);
+  if (params.fights === "1") search.set("fights", "1");
   if (params.sort) search.set("sort", params.sort);
   if (page > 1) search.set("page", String(page));
   const qs = search.toString();
@@ -101,6 +106,7 @@ export default async function SearchPage({
   const editorRating = parseRatingFilter(params.editorRating);
   const yearFrom = params.yearFrom ? Number(params.yearFrom) : undefined;
   const yearTo = params.yearTo ? Number(params.yearTo) : undefined;
+  const hasFights = params.fights === "1";
   const sort = SORT_OPTIONS.some((o) => o.value === params.sort) ? params.sort! : "relevance";
 
   const [genres, countryRows] = await Promise.all([
@@ -114,12 +120,12 @@ export default async function SearchPage({
   ]);
   const countries = countryRows.map((m) => m.country!).filter(Boolean);
 
-  const filterWhere = buildFilterWhere(genre, director, actor, country, yearFrom, yearTo);
+  const filterWhere = buildFilterWhere(genre, director, actor, country, yearFrom, yearTo, hasFights);
   // Counts only the filters a user actually set -- not filterWhere's keys,
   // which always include the status: "APPROVED" guard and so made this
   // always true, silently disabling the fuzzy fallback below.
   const hasFilters =
-    Boolean(genre || director || actor || country || yearFrom || yearTo) ||
+    Boolean(genre || director || actor || country || yearFrom || yearTo || hasFights) ||
     memberRating !== undefined ||
     editorRating !== undefined;
 
@@ -154,10 +160,16 @@ export default async function SearchPage({
     results = await prisma.movie.findMany({ where: filterWhere, orderBy: { releaseDate: "desc" } });
   }
 
-  const [ratingSummaries, editorRatingSummaries] = await Promise.all([
+  // Per-movie catalogued fight scene counts across the whole catalog (one
+  // row per movie that has any), used for both the "Most Fights" sort and
+  // the cards' badge. Grouping everything avoids an IN list of every result
+  // id, which on an unfiltered browse is the whole catalog anyway.
+  const [ratingSummaries, editorRatingSummaries, fightCountRows] = await Promise.all([
     getRatingSummaries(results.map((m) => m.id)),
     getEditorsRatingSummaries(results.map((m) => m.id)),
+    prisma.fightScene.groupBy({ by: ["movieId"], where: { isDeleted: false }, _count: { _all: true } }),
   ]);
+  const fightCountByMovieId = new Map(fightCountRows.map((r) => [r.movieId, r._count._all]));
 
   if (memberRating !== undefined) {
     results = results.filter((m) => (ratingSummaries.get(m.id)?.average ?? 0) >= memberRating);
@@ -176,6 +188,12 @@ export default async function SearchPage({
     results = [...results].sort(
       (a, b) => (a.releaseDate?.getTime() ?? Infinity) - (b.releaseDate?.getTime() ?? Infinity),
     );
+  } else if (sort === "fights") {
+    // Stable sort, so ties keep the query's own order (newest first when
+    // browsing, match order when searching).
+    results = [...results].sort(
+      (a, b) => (fightCountByMovieId.get(b.id) ?? 0) - (fightCountByMovieId.get(a.id) ?? 0),
+    );
   }
 
   const sheetFilterCount =
@@ -186,21 +204,13 @@ export default async function SearchPage({
     (country.length > 0 ? 1 : 0) +
     (memberRating !== undefined ? 1 : 0) +
     (editorRating !== undefined ? 1 : 0) +
-    (yearFrom !== undefined || yearTo !== undefined ? 1 : 0);
+    (yearFrom !== undefined || yearTo !== undefined ? 1 : 0) +
+    (hasFights ? 1 : 0);
   const totalResults = results.length;
   const totalPages = Math.max(1, Math.ceil(totalResults / PAGE_SIZE));
   const page = Math.min(Math.max(1, Number(params.page) || 1), totalPages);
   const pagedResults = results.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-  const pagedIds = pagedResults.map((m) => m.id);
-  const [recommendationsByMovieId, fightCountRows] = await Promise.all([
-    getMovieRecommendationsByMovieIds(pagedIds),
-    prisma.fightScene.groupBy({
-      by: ["movieId"],
-      where: { movieId: { in: pagedIds }, isDeleted: false },
-      _count: { _all: true },
-    }),
-  ]);
-  const fightCountByMovieId = new Map(fightCountRows.map((r) => [r.movieId, r._count._all]));
+  const recommendationsByMovieId = await getMovieRecommendationsByMovieIds(pagedResults.map((m) => m.id));
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-10 sm:flex-row">
@@ -317,6 +327,11 @@ export default async function SearchPage({
               <p className="text-xs text-neutral-400">Movie editor rating (min.)</p>
               <RatingStarInput name="editorRating" initialValue={params.editorRating ?? ""} />
             </div>
+
+            <label className="flex w-fit cursor-pointer items-center gap-1.5 rounded-full border border-neutral-700 px-2.5 py-1 text-xs text-neutral-300 has-checked:border-red-600 has-checked:bg-red-950/40 has-checked:text-red-300">
+              <input type="checkbox" name="fights" value="1" defaultChecked={hasFights} className="sr-only" />
+              Has fight scenes
+            </label>
 
             <div className="flex flex-col gap-1">
               <p className="text-xs text-neutral-400">Year range</p>
