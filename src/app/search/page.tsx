@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getRatingSummaries, getEditorsRatingSummaries } from "@/lib/ratings";
 import { getMovieRecommendationsByMovieIds } from "@/lib/movie-recommendations";
@@ -213,7 +214,20 @@ export default async function SearchPage({
   const totalPages = Math.max(1, Math.ceil(totalResults / PAGE_SIZE));
   const page = Math.min(Math.max(1, Number(params.page) || 1), totalPages);
   const pagedResults = results.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-  const recommendationsByMovieId = await getMovieRecommendationsByMovieIds(pagedResults.map((m) => m.id));
+  const pagedIds = pagedResults.map((m) => m.id);
+  const session = await auth();
+  const [recommendationsByMovieId, watchlistRows] = await Promise.all([
+    getMovieRecommendationsByMovieIds(pagedIds),
+    // Only for signed-in members -- the card's Watchlist toggle isn't shown
+    // to anyone else, so there's nothing to look up.
+    session?.user
+      ? prisma.listEntry.findMany({
+          where: { userId: session.user.id, listType: "WATCHLIST", movieId: { in: pagedIds } },
+          select: { movieId: true },
+        })
+      : [],
+  ]);
+  const watchlistedIds = new Set(watchlistRows.map((r) => r.movieId));
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-10 sm:flex-row">
@@ -418,6 +432,7 @@ export default async function SearchPage({
                   return (
                     <MovieCard
                       key={movie.id}
+                      initialWatchlist={session?.user ? watchlistedIds.has(movie.id) : undefined}
                       movie={{
                         ...movie,
                         communityAverage: summary?.average ?? null,

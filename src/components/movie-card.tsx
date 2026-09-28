@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { resolvePosterUrl, isTmdbUrl } from "@/lib/tmdb";
 import { RecommendedBadges } from "@/components/recommended-badge";
+import { WatchlistToggle } from "@/components/watchlist-toggle";
 import type { MovieRecommender } from "@/lib/movie-recommendations";
 import type { Movie } from "@/generated/prisma/client";
 
@@ -27,12 +28,24 @@ const SIZE_CLASSES = {
   compact: { link: "w-28 sm:w-32", sizes: "(max-width: 640px) 112px, 128px" },
 } as const;
 
-export function MovieCard({ movie, size = "default" }: { movie: MovieCardData; size?: keyof typeof SIZE_CLASSES }) {
+export function MovieCard({
+  movie,
+  size = "default",
+  initialWatchlist,
+}: {
+  movie: MovieCardData;
+  size?: keyof typeof SIZE_CLASSES;
+  // Pass a boolean (the signed-in member's current state) to show the
+  // one-tap Watchlist toggle beside the title; omit it and the card renders
+  // exactly as before. Only /search passes it for now.
+  initialWatchlist?: boolean;
+}) {
   const posterUrl = resolvePosterUrl(movie, "w342");
   const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : null;
   const { link, sizes } = SIZE_CLASSES[size];
+  const withToggle = initialWatchlist !== undefined;
 
-  return (
+  const card = (
     <Link href={`/movies/${movie.id}`} className={`group flex shrink-0 flex-col gap-2 ${link}`}>
       <div className="relative aspect-2/3 w-full overflow-hidden rounded-md bg-neutral-800">
         {posterUrl ? (
@@ -64,7 +77,9 @@ export function MovieCard({ movie, size = "default" }: { movie: MovieCardData; s
           </div>
         ) : null}
       </div>
-      <div>
+      {/* Room on the right for the Watchlist toggle, which sits beside the
+          title outside this link (a button can't be nested in a link). */}
+      <div className={withToggle ? "pr-8" : undefined}>
         <p title={movie.title} className="truncate text-sm font-medium text-neutral-100 group-hover:text-red-500">
           {movie.title}
         </p>
@@ -79,5 +94,15 @@ export function MovieCard({ movie, size = "default" }: { movie: MovieCardData; s
         </div>
       </div>
     </Link>
+  );
+
+  if (!withToggle) return card;
+  return (
+    <div className="relative shrink-0">
+      {card}
+      <div className="absolute right-0 bottom-0">
+        <WatchlistToggle movieId={movie.id} initialOn={initialWatchlist} />
+      </div>
+    </div>
   );
 }

@@ -67,6 +67,7 @@ one.
 
 **Feature Decisions**
 
+- [One-tap Watchlist toggle on `/search` movie cards, members only](#one-tap-watchlist-toggle-on-search-movie-cards-members-only)
 - [Movie cards on `/search` show a fight-count badge, with a "Has fight scenes" filter and "Most Fights" sort](#movie-cards-on-search-show-a-fight-count-badge-with-a-has-fight-scenes-filter-and-most-fights-sort)
 - [Fight result cards shrunk: actions on the thumbnail, two-up on phones, one capped chip line](#fight-result-cards-shrunk-actions-on-the-thumbnail-two-up-on-phones-one-capped-chip-line)
 - ["My Lists" back in the account menu, plus a breadcrumb on list pages](#my-lists-back-in-the-account-menu-plus-a-breadcrumb-on-list-pages)
@@ -1297,6 +1298,16 @@ polish differently than a default-security reading would.
 - **Not verified**: which crawlers actually generate the traffic. This session had no access to Vercel logs or the Neon dashboard beyond the owner's screenshots, so the effect of this PR should be judged from the Monitoring graph a day or two after it deploys.
 
 ## Feature Decisions
+
+### One-tap Watchlist toggle on `/search` movie cards, members only
+**PR #TBD.** Asked whether movie cards should allow adding to lists, as fight cards already do. The first proposal put one bookmark icon on each card, opening a menu of Watchlist, Favorites and custom lists. Asked for feedback on it, the honest critique cut it down, and the site owner picked the reduced version:
+
+- **Watchlist only, one tap, no menu.** "Save for later" is the action that matters while browsing. Favorites are for movies you've seen, usually set from the movie's own page. Three kinds of list behind one small icon was more than a card needs. Custom lists and Favorites stay on the movie page.
+- **A clock icon, not a bookmark.** On fight cards the bookmark means "save to a custom list", so reusing it for Watchlist would give the same icon two meanings. The "on Watchlist" state uses the movie page's existing blue.
+- **`/search` only for now,** the main browse page. It can extend to the home page rows if members use it.
+- **Signed-in members only.** Anonymous visitors would only ever get a login prompt, so for most visitors it would be clutter. Signed-out pages don't run the extra Watchlist query either.
+- **`MovieCard` isn't restructured:** with `initialWatchlist` set, it wraps the card and puts the button beside the title, outside the card's link (a button can't be nested in a link). The title gets right padding so it truncates before the button. Without the prop, every other page renders exactly as before.
+- **Known quirks left as is:** the toggle doesn't refresh other on-page copies of the same movie (there are none on `/search`). An unverified member gets the API's "verify your email" error inline, the same as the movie page's buttons.
 
 ### Movie cards on `/search` show a fight-count badge, with a "Has fight scenes" filter and "Most Fights" sort
 **PR #190.** From a review of the movie browse page: on a fight-scene site, nothing on a movie card said whether the movie had any fights catalogued.
