@@ -6,7 +6,12 @@ import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { tmdbImageUrl, getTmdbPersonDetails } from "@/lib/tmdb";
-import { getFightSceneRatingSummaries, getFightSceneAdminRatingSummaries, getFightSceneFavoriteCounts } from "@/lib/fight-scenes";
+import {
+  getFightSceneRatingSummaries,
+  getFightSceneAdminRatingSummaries,
+  getFightSceneFavoriteCounts,
+  getFightSceneCountsByMovieIds,
+} from "@/lib/fight-scenes";
 import { MovieRailTrack } from "@/components/movie-rail";
 import { ActorBio } from "@/components/actor-bio";
 import { FilmographyList, type FilmographyRow } from "@/components/filmography-list";
@@ -128,7 +133,10 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
   // A pending (not yet admin-approved) movie is excluded the same way it's
   // excluded from every other public listing.
   const movies = person.castCredits.map((c) => c.movie).filter((m) => m.status === "APPROVED");
-  const ratingSummaries = await getRatingSummaries(movies.map((m) => m.id));
+  const [ratingSummaries, fightCountByMovieId] = await Promise.all([
+    getRatingSummaries(movies.map((m) => m.id)),
+    getFightSceneCountsByMovieIds(movies.map((m) => m.id)),
+  ]);
 
   const fightScenes = person.fightSceneAppearances
     .map((a) => a.fightScene)
@@ -269,7 +277,12 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
     .slice(0, KNOWN_FOR_COUNT)
     .map((movie) => {
       const summary = ratingSummaries.get(movie.id);
-      return { ...movie, communityAverage: summary?.average ?? null, communityCount: summary?.count ?? 0 };
+      return {
+        ...movie,
+        communityAverage: summary?.average ?? null,
+        communityCount: summary?.count ?? 0,
+        fightCount: fightCountByMovieId.get(movie.id) ?? 0,
+      };
     });
 
   const filmographyRows: FilmographyRow[] = person.castCredits

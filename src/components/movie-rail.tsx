@@ -86,7 +86,12 @@ export function MovieRailTrack({
         {movies.map((movie) => (
           <div key={movie.id} className="relative shrink-0">
             <MovieCard movie={movie} size={cardSize} />
-            {overlays?.[movie.id] && <div className="absolute top-2 right-2">{overlays[movie.id]}</div>}
+            {/* Same top-right corner as MovieCard's "N fights" badge, so drop
+                below it when there is one. The overlay can't live inside the
+                card itself -- the card is a link, and overlays are buttons. */}
+            {overlays?.[movie.id] && (
+              <div className={`absolute right-2 ${movie.fightCount ? "top-9" : "top-2"}`}>{overlays[movie.id]}</div>
+            )}
           </div>
         ))}
       </div>

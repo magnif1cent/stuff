@@ -2,7 +2,11 @@ import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getRatingSummaries } from "@/lib/ratings";
-import { getFightSceneRatingSummaries, getFightSceneAdminRatingSummaries } from "@/lib/fight-scenes";
+import {
+  getFightSceneRatingSummaries,
+  getFightSceneAdminRatingSummaries,
+  getFightSceneCountsByMovieIds,
+} from "@/lib/fight-scenes";
 import { MovieCard } from "@/components/movie-card";
 import { FightSceneResultCard, type FightSceneResult } from "@/components/fight-scene-result-card";
 import type { AddToListItem } from "@/components/add-to-list-control";
@@ -31,12 +35,14 @@ async function MovieRow({
   title,
   movies,
   ratingSummaries,
+  fightCounts,
 }: {
   // Omitted when rendered as a tab panel — the tab label already names the
   // section, so repeating it as a heading inside the panel is redundant.
   title?: string;
   movies: Pick<Movie, "id" | "title" | "releaseDate" | "posterPath" | "posterOverrideUrl" | "tmdbRating">[];
   ratingSummaries: Awaited<ReturnType<typeof getRatingSummaries>>;
+  fightCounts: Map<string, number>;
 }) {
   return (
     <section className="mb-8">
@@ -55,6 +61,7 @@ async function MovieRow({
                   ...movie,
                   communityAverage: summary?.average ?? null,
                   communityCount: summary?.count ?? 0,
+                  fightCount: fightCounts.get(movie.id) ?? 0,
                 }}
               />
             );
@@ -205,7 +212,10 @@ export default async function MemberProfilePage({
     ...watchlist,
     ...pendingSubmissions,
   ].map((m) => m.id);
-  const ratingSummaries = await getRatingSummaries(allListedMovieIds);
+  const [ratingSummaries, fightCountByMovieId] = await Promise.all([
+    getRatingSummaries(allListedMovieIds),
+    getFightSceneCountsByMovieIds(allListedMovieIds),
+  ]);
 
   const allListedFightScenes = favoriteFightScenes;
   const [memberSceneSummaries, editorSceneSummaries] = await Promise.all([
@@ -347,17 +357,17 @@ export default async function MemberProfilePage({
             {
               key: "favorites",
               label: `Favorites (${favorites.length})`,
-              content: <MovieRow movies={favorites} ratingSummaries={ratingSummaries} />,
+              content: <MovieRow movies={favorites} ratingSummaries={ratingSummaries} fightCounts={fightCountByMovieId} />,
             },
             {
               key: "watchlist",
               label: `Watchlist (${watchlist.length})`,
-              content: <MovieRow movies={watchlist} ratingSummaries={ratingSummaries} />,
+              content: <MovieRow movies={watchlist} ratingSummaries={ratingSummaries} fightCounts={fightCountByMovieId} />,
             },
             {
               key: "pending",
               label: `Pending (${pendingSubmissions.length})`,
-              content: <MovieRow movies={pendingSubmissions} ratingSummaries={ratingSummaries} />,
+              content: <MovieRow movies={pendingSubmissions} ratingSummaries={ratingSummaries} fightCounts={fightCountByMovieId} />,
             },
             {
               key: "fight-scenes",

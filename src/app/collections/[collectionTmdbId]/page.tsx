@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getRatingSummaries, getCollectionRatingSummary } from "@/lib/ratings";
+import { getFightSceneCountsByMovieIds } from "@/lib/fight-scenes";
 import { MovieCard } from "@/components/movie-card";
 
 export default async function CollectionPage({
@@ -26,9 +27,10 @@ export default async function CollectionPage({
     notFound();
   }
 
-  const [ratingSummaries, collectionSummary] = await Promise.all([
+  const [ratingSummaries, collectionSummary, fightCountByMovieId] = await Promise.all([
     getRatingSummaries(movies.map((m) => m.id)),
     getCollectionRatingSummary(collectionTmdbId),
+    getFightSceneCountsByMovieIds(movies.map((m) => m.id)),
   ]);
 
   // Reached either from the Leaderboard's Top Franchises section or from a
@@ -74,6 +76,7 @@ export default async function CollectionPage({
                 ...movie,
                 communityAverage: summary?.average ?? null,
                 communityCount: summary?.count ?? 0,
+                fightCount: fightCountByMovieId.get(movie.id) ?? 0,
               }}
             />
           );
