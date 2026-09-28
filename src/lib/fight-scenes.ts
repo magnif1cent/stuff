@@ -187,6 +187,20 @@ export async function getFightSceneFavoriteCounts(fightSceneIds: string[]): Prom
   return new Map(rows.map((row) => [row.fightSceneId, row._count._all]));
 }
 
+// Catalogued (non-deleted) fight scenes per movie, for MovieCard's "N fights"
+// badge. Movies with none are simply absent from the map.
+export async function getFightSceneCountsByMovieIds(movieIds: string[]): Promise<Map<string, number>> {
+  if (movieIds.length === 0) return new Map();
+
+  const rows = await prisma.fightScene.groupBy({
+    by: ["movieId"],
+    where: { movieId: { in: movieIds }, isDeleted: false },
+    _count: { _all: true },
+  });
+
+  return new Map(rows.map((row) => [row.movieId, row._count._all]));
+}
+
 // Picks one verified fight scene per movie to preview as a hero clip:
 // highest member rating, falling back to editor rating, falling back to
 // whichever was tagged first (stable rather than random across page loads).
