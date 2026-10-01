@@ -1300,7 +1300,7 @@ polish differently than a default-security reading would.
 ## Feature Decisions
 
 ### One-tap Watchlist toggle on `/search` movie cards, members only
-**PR #TBD.** Asked whether movie cards should allow adding to lists, as fight cards already do. The first proposal put one bookmark icon on each card, opening a menu of Watchlist, Favorites and custom lists. Asked for feedback on it, the honest critique cut it down, and the site owner picked the reduced version:
+**PR #192.** Asked whether movie cards should allow adding to lists, as fight cards already do. The first proposal put one bookmark icon on each card, opening a menu of Watchlist, Favorites and custom lists. Asked for feedback on it, the honest critique cut it down, and the site owner picked the reduced version:
 
 - **Watchlist only, one tap, no menu.** "Save for later" is the action that matters while browsing. Favorites are for movies you've seen, usually set from the movie's own page. Three kinds of list behind one small icon was more than a card needs. Custom lists and Favorites stay on the movie page.
 - **A clock icon, not a bookmark.** On fight cards the bookmark means "save to a custom list", so reusing it for Watchlist would give the same icon two meanings. The "on Watchlist" state uses the movie page's existing blue.
