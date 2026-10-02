@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
-import { getTmdbMovieDetails, extractUsCertification, extractOriginalLanguageName } from "@/lib/tmdb";
+import { getTmdbMovieDetails, getTmdbPersonDetails, extractUsCertification, extractOriginalLanguageName } from "@/lib/tmdb";
+import { getWikidataNativeName } from "@/lib/wikidata";
 
 const MAX_CAST = 30;
 
@@ -92,10 +93,22 @@ export async function importMovieFromTmdb(tmdbId: number, options: ImportMovieOp
   await prisma.castCredit.deleteMany({ where: { movieId: movie.id } });
 
   for (const castMember of topCast) {
+    // Only ever looked up for a person genuinely new to the catalog -- not
+    // on every re-cast in another movie, and not live per actor-page view
+    // (unlike the existing TMDB bio fetch on that page). See DECISIONS.md.
+    const existing = await prisma.person.findUnique({ where: { tmdbId: castMember.id } });
+    const nativeName = existing ? null : await fetchNativeName(castMember.id);
+
     const person = await prisma.person.upsert({
       where: { tmdbId: castMember.id },
       update: { name: castMember.name, profilePath: castMember.profile_path },
-      create: { tmdbId: castMember.id, name: castMember.name, profilePath: castMember.profile_path },
+      create: {
+        tmdbId: castMember.id,
+        name: castMember.name,
+        profilePath: castMember.profile_path,
+        nativeName: nativeName?.name,
+        nativeNameLanguage: nativeName?.language,
+      },
     });
 
     await prisma.castCredit.create({
@@ -109,4 +122,20 @@ export async function importMovieFromTmdb(tmdbId: number, options: ImportMovieOp
   }
 
   return movie;
+}
+
+// TMDB's own also_known_as/translations fields turned out unreliable for
+// this (wrong-language picks, missing entries even for famous actors -- see
+// DECISIONS.md), so this cross-references Wikidata by IMDb id instead.
+// Never throws: a missing imdb_id, an unreachable Wikidata, or no match are
+// all the same "nothing to show" outcome, and none of them should ever fail
+// a movie import.
+async function fetchNativeName(tmdbPersonId: number) {
+  try {
+    const person = await getTmdbPersonDetails(tmdbPersonId);
+    if (!person.imdb_id) return null;
+    return await getWikidataNativeName(person.imdb_id);
+  } catch {
+    return null;
+  }
 }

@@ -267,6 +267,7 @@ export interface TmdbPersonDetails {
   deathday: string | null;
   place_of_birth: string | null;
   profile_path: string | null;
+  imdb_id: string | null;
 }
 
 export async function getTmdbPersonDetails(tmdbId: number) {
