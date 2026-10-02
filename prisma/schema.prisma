@@ -286,6 +286,19 @@ model Person {
   tmdbId      Int     @unique
   name        String
   profilePath String?
+  // This actor's name in their native script (e.g. "甄子丹"), sourced from
+  // Wikidata's P1559 ("name in native language") via a cross-reference on
+  // IMDb id -- not from TMDB's own also_known_as/translations, which turned
+  // out to mix in community-added transliterations with no reliable way to
+  // tell a real native name from a translated one (see DECISIONS.md).
+  // Fetched once, the first time this person is cast in an imported movie
+  // (see importMovieFromTmdb) -- null here just means no Wikidata match was
+  // found, not that the lookup hasn't run yet.
+  nativeName         String?
+  // BCP-47-ish tag from Wikidata's own iso_639_1-style code on the matched
+  // claim (e.g. "yue", "zh-cn", "th") -- kept alongside the name mostly for
+  // debugging/admin visibility, not currently used to drive any UI logic.
+  nativeNameLanguage String?
 
   castCredits CastCredit[]
   fightSceneAppearances FightSceneCast[]

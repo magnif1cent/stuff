@@ -183,6 +183,7 @@ one.
 - [Fight Styles gain optional groups, via a real FightStyleGroup table](#fight-styles-gain-optional-groups-via-a-real-fightstylegroup-table)
 - [Navbar wordmark switched from a plain serif to all-caps Anton](#navbar-wordmark-switched-from-a-plain-serif-to-all-caps-anton)
 - [Historical Timeline gains era quick-jump chips, a minimap, and in-place rating filtering](#historical-timeline-gains-era-quick-jump-chips-a-minimap-and-in-place-rating-filtering)
+- [Actor native-language name sourced from Wikidata, not TMDB](#actor-native-language-name-sourced-from-wikidata-not-tmdb)
 
 **Deferred & Backlog**
 
@@ -5702,6 +5703,70 @@ above).
   site-curated list that's never grown past a handful of values, unlike
   Style's now-sprawling, admin-editable vocabulary. Nothing to cluster by
   in either case, so nothing to collapse.
+
+### Actor native-language name sourced from Wikidata, not TMDB
+**PR #TBD.** The movie page already shows `originalTitle` straight from
+TMDB (see "Five more TMDB fields captured" above) — the equivalent ask for
+people ("show Donnie Yen's name as 甄子丹") looked like the same kind of
+free import-time field, but TMDB has no `original_name`/`original_language`
+pairing for a person the way it does for a movie, and the two fields that
+look like substitutes both turned out unreliable on inspection against real
+actors (Donnie Yen, Jackie Chan, Bruce Lee, Michelle Yeoh, Tony Jaa, Zhang
+Ziyi, plus Iko Uwais and Tom Hanks as Latin-script negative controls):
+
+- **`also_known_as`** is a flat, unordered, community-typed alias list with
+  no language tagging at all — a "pick the first non-Latin-script entry"
+  heuristic over it returned wrong-language transliterations (Greek for
+  Bruce Lee, Punjabi for Zhang Ziyi, Arabic for the Latin-script Iko Uwais)
+  as often as it returned the right answer, and for the two most famous
+  names tested (Donnie Yen, Jackie Chan) the real Chinese name wasn't even
+  present in the list to find.
+- **`/person/{id}/translations`'s `data.primary` flag** looked more
+  promising — a real structured field, and it correctly pointed at the
+  Chinese name for Donnie Yen, Jackie Chan, and Zhang Ziyi — but it's
+  evidently just as community-maintained as `also_known_as`: it was marked
+  `true` on the *English* translation for both Bruce Lee and Michelle Yeoh,
+  despite their real Chinese names sitting unflagged in the same response,
+  and wasn't set on any translation at all for Tony Jaa.
+
+Landed on **Wikidata** instead, cross-referenced by IMDb id rather than by
+name (TMDB's own cast credit already gives an exact TMDB person id; its
+`/person/{id}` gives that person's `imdb_id`; a SPARQL query on Wikidata's
+`wdt:P345` finds the matching entity and reads its `P1559` "name in native
+language" claim) — exact id-to-id joins the whole way, so romanization
+variance in an actor's English name is never a factor. Re-running the same
+8-actor test against Wikidata found no wrong-language picks at all: correct
+native names for Donnie Yen, Jackie Chan, Bruce Lee, Tony Jaa, and Zhang
+Ziyi, and a clean empty result (not a wrong one) for Iko Uwais and Tom
+Hanks. The one real miss was Michelle Yeoh, who has no `P1559` claim on
+Wikidata either — treated the same as any other "TMDB/Wikidata just doesn't
+have this" gap elsewhere in the catalog: shown as absent, never guessed.
+
+Implementation follows the `originalTitle` precedent in one way and departs
+from it in another:
+
+- **Fetched once, at import time, not live per page view.** Unlike the
+  actor page's existing TMDB biography fetch (live on every `/actors/[id]`
+  render, see "Movie/actor SEO metadata and actor-page TMDB bios" above),
+  the Wikidata lookup only runs inside `importMovieFromTmdb`, and only on
+  the `create` branch of the cast-member `Person.upsert()` — i.e. the first
+  time a given actor is ever added to the catalog, never on a re-cast in a
+  later movie. Wikidata's public SPARQL endpoint is meant for occasional/
+  bulk queries, not a live per-request dependency the way TMDB's REST API
+  is, so it gets the same "pay once, ever" treatment as `originalTitle`
+  rather than the bio's live-fetch treatment.
+- **A second external dependency, accepted deliberately.** This is the
+  first feature in the app that calls out to something other than TMDB
+  (besides Upstash/Turnstile/Sentry, which are infrastructure, not content
+  data). Justified here specifically because TMDB's own fields were tested
+  and found unreliable — not a precedent for reaching for a third-party
+  source whenever TMDB's data is merely inconvenient.
+- **Stored on `Person.nativeName`/`nativeNameLanguage`, nullable, no
+  backfill.** Mirrors `Movie.originalTitle`/`originalLanguage`. Because the
+  lookup only fires on person creation, an actor already in the catalog
+  before this shipped won't retroactively get one — closing that gap, if
+  it's worth closing, is a one-off maintenance script, not part of the
+  normal import flow.
 
 - **Drag-and-drop reordering for ranked list items** — `ListItemRows`
   (`src/components/list-item-rows.tsx`) now has move-to-top/move-to-bottom
