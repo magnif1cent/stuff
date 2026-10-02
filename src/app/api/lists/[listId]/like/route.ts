@@ -14,7 +14,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ lis
 
   const { listId } = await params;
   const list = await prisma.memberList.findUnique({ where: { id: listId } });
-  if (!list) {
+  // A private list is indistinguishable from a missing one to anyone but
+  // its owner — same 404 its permalink page gives them.
+  if (!list || (list.isPrivate && list.userId !== session.user.id)) {
     return NextResponse.json({ error: "List not found." }, { status: 404 });
   }
   if (list.userId === session.user.id) {

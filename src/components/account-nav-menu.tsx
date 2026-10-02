@@ -7,8 +7,8 @@ import { useClickOutside } from "@/hooks/use-click-outside";
 
 // Click-to-toggle avatar+username menu, same interaction pattern as
 // NavDropdown. Kept as its own component rather than reusing NavDropdown
-// directly: the trigger needs an avatar prefix, and one of its two items is
-// an action (sign out) rather than a link.
+// directly: the trigger needs an avatar prefix, and one of its items is an
+// action (sign out) rather than a link.
 export function AccountNavMenu({ username }: { username: string }) {
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -58,6 +58,14 @@ export function AccountNavMenu({ username }: { username: string }) {
             className="block rounded px-3 py-1.5 text-sm whitespace-nowrap text-neutral-100 hover:bg-neutral-700"
           >
             My Profile
+          </Link>
+          {/* Opens the profile straight on its Lists tab (?tab=lists). */}
+          <Link
+            href={`/members/${username}?tab=lists`}
+            onClick={() => setOpen(false)}
+            className="block rounded px-3 py-1.5 text-sm whitespace-nowrap text-neutral-100 hover:bg-neutral-700"
+          >
+            My Lists
           </Link>
           <div className="my-1 border-t border-neutral-700" />
           <button

@@ -12,6 +12,12 @@ export interface LineageFigureRef {
   profilePath: string | null;
   personId: string | null;
   isGroup: boolean;
+  // Optional here (unlike the server-side LineageFigureRef this mirrors):
+  // most places this type gets built client-side (picking a search result,
+  // adding a new figure) don't have alias data on hand and don't need it --
+  // only the centered figure in AdminLineageTree actually displays/edits
+  // its own aliases, straight from the tree API's response.
+  aliases?: string[];
 }
 
 interface ActorSearchResult {

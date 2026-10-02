@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { PUBLIC_LIST_WHERE } from "@/lib/lists";
 
 // Grouped by type rather than one merged/sorted list — a burst of one type
 // (e.g. several fight scenes tagged in a row) shouldn't be able to push the
@@ -72,9 +73,10 @@ export async function getRecentActivity(limit = PER_TYPE_LIMIT, userId?: string)
         movie: moviePosterSelect,
       },
     }),
-    // Lists are public by design from creation, so no extra filtering needed.
+    // Private lists never appear, even on the owner's own profile Activity
+    // tab — this feed is the same public feed for every viewer.
     prisma.memberList.findMany({
-      where: userId ? { userId } : undefined,
+      where: { ...PUBLIC_LIST_WHERE, ...(userId ? { userId } : {}) },
       orderBy: { createdAt: "desc" },
       take: limit,
       select: {

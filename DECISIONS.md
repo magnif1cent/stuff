@@ -63,9 +63,22 @@ one.
 - [Sign-in itself now requires a verified email, closing the gap the auto-login reversal deliberately left open](#sign-in-itself-now-requires-a-verified-email-closing-the-gap-the-auto-login-reversal-deliberately-left-open)
 - [Registration enumeration finally closed, reversing the earlier "not doing" call](#registration-enumeration-finally-closed-reversing-the-earlier-not-doing-call)
 - [Vitest introduced as the project's first test runner](#vitest-introduced-as-the-projects-first-test-runner)
+- [Neon compute kept awake around the clock: every page renders per request](#neon-compute-kept-awake-around-the-clock-every-page-renders-per-request)
 
 **Feature Decisions**
 
+- [One-tap Watchlist toggle on `/search` movie cards, members only](#one-tap-watchlist-toggle-on-search-movie-cards-members-only)
+- [Movie cards on `/search` show a fight-count badge, with a "Has fight scenes" filter and "Most Fights" sort](#movie-cards-on-search-show-a-fight-count-badge-with-a-has-fight-scenes-filter-and-most-fights-sort)
+- [Fight result cards shrunk: actions on the thumbnail, two-up on phones, one capped chip line](#fight-result-cards-shrunk-actions-on-the-thumbnail-two-up-on-phones-one-capped-chip-line)
+- ["My Lists" back in the account menu, plus a breadcrumb on list pages](#my-lists-back-in-the-account-menu-plus-a-breadcrumb-on-list-pages)
+- [Profile Lists tab shows one card per list, not each list's items](#profile-lists-tab-shows-one-card-per-list-not-each-lists-items)
+- [Owners can search and add movies and fights from the list page itself](#owners-can-search-and-add-movies-and-fights-from-the-list-page-itself)
+- [List page actions moved into one side panel, ranking into an edit page](#list-page-actions-moved-into-one-side-panel-ranking-into-an-edit-page)
+- [Lists gain a private option, public stays the default](#lists-gain-a-private-option-public-stays-the-default)
+- [A second scale-change legend added, for the ancient (Legendary/Shang/Spring & Autumn) compression](#a-second-scale-change-legend-added-for-the-ancient-legendaryshangspring--autumn-compression)
+- [Contemporary's timeline band narrowed from 320px to 180px, since its extra width bought no real dot capacity](#contemporarys-timeline-band-narrowed-from-320px-to-180px-since-its-extra-width-bought-no-real-dot-capacity)
+- [Historical Timeline era labels wrap instead of truncating, and get a per-era width instead of a flat 150px](#historical-timeline-era-labels-wrap-instead-of-truncating-and-get-a-per-era-width-instead-of-a-flat-150px)
+- [Historical Setting gains five eras, closing three gaps in the vocabulary](#historical-setting-gains-five-eras-closing-three-gaps-in-the-vocabulary)
 - [Pagination extracted into one shared component, adding jump-to-page links everywhere at once](#pagination-extracted-into-one-shared-component-adding-jump-to-page-links-everywhere-at-once)
 - [Historical Timeline's axis-break disclosed with a tick ruler instead of a text note](#historical-timelines-axis-break-disclosed-with-a-tick-ruler-instead-of-a-text-note)
 - [Navbar regrouped by kind (entities, contribute, account) instead of one flat link list](#navbar-regrouped-by-kind-entities-contribute-account-instead-of-one-flat-link-list)
@@ -162,6 +175,11 @@ one.
 - [Lineage: groups are a normal figure in the owner's own row, not a lateral position](#lineage-groups-are-a-normal-figure-in-the-owners-own-row-not-a-lateral-position)
 - [Lineage: bare figures get a delete/toggle-group escape hatch, cascade over block-if-linked](#lineage-bare-figures-get-a-deletetoggle-group-escape-hatch-cascade-over-block-if-linked)
 - [Lineage: the "+N more" overflow badge became a real link, and the page container widened](#lineage-the-n-more-overflow-badge-became-a-real-link-and-the-page-container-widened)
+- [Lineage: descendant layout sized by subtree width, not per-level nudging](#lineage-descendant-layout-sized-by-subtree-width-not-per-level-nudging)
+- [Lineage: descendant layout switched from flat subtree width to row-by-row contours](#lineage-descendant-layout-switched-from-flat-subtree-width-to-row-by-row-contours)
+- [Lineage: figures gain `aliases`, unioned into the "Portrayed by" lookup](#lineage-figures-gain-aliases-unioned-into-the-portrayed-by-lookup)
+- [Lineage: interactive pan/zoom on the full-tree pages, not a fit-to-width scale](#lineage-interactive-panzoom-on-the-full-tree-pages-not-a-fit-to-width-scale)
+- [Lineage: pan/zoom narrowed to mobile only, not every viewport on the full-tree pages](#lineage-panzoom-narrowed-to-mobile-only-not-every-viewport-on-the-full-tree-pages)
 - [Fight Styles gain optional groups, via a real FightStyleGroup table](#fight-styles-gain-optional-groups-via-a-real-fightstylegroup-table)
 - [Navbar wordmark switched from a plain serif to all-caps Anton](#navbar-wordmark-switched-from-a-plain-serif-to-all-caps-anton)
 - [Historical Timeline gains era quick-jump chips, a minimap, and in-place rating filtering](#historical-timeline-gains-era-quick-jump-chips-a-minimap-and-in-place-rating-filtering)
@@ -1268,7 +1286,140 @@ polish differently than a default-security reading would.
 - **A regression test asserts `TIMELINE_ERA_LAYOUT` covers every `ERA_SETTINGS` key** (except `OTHER`) — this table is hand-maintained and the axis derives its rendered era list FROM it, not the other way around, so a future era added to the vocabulary without a matching layout entry would previously have just silently never appeared on the timeline instead of failing anything.
 - **Wired into CI** (`npm run test` in `build-and-lint`, alongside lint and build) — a test suite nobody runs on every push isn't protection, it's decoration.
 
+### Neon compute kept awake around the clock: every page renders per request
+**PR #177.** Prompted by Neon's "Approaching limit" warning: 92.6% of the Free plan's monthly compute allowance used by the 22nd. Neon bills for the time the compute is awake (CU × hours), and the compute only scales to zero after 5 minutes with no queries. Production's Monitoring graph showed it awake nearly all day at the 0.25 CU minimum, with near-zero CPU and zero inserted/updated/deleted rows: no heavy work at all, just a steady trickle of reads arriving often enough to never let it sleep. At 0.25 CU, never sleeping costs ~180 CU-hours a month, well past the allowance.
+
+- **Key finding — nothing on this site is cacheable, so every request reaches the database.** Three existing decisions compound: the nonce CSP in `src/proxy.ts` (see "Security headers and a nonce-based CSP added") forces every page to render per request, since a per-request nonce can't be baked into a cached page; `navbar.tsx` calls `auth()` in the root layout, which does the same site-wide; and `auth.ts`'s `jwt` callback queries `User` on every session check for signed-in visitors (see "Poster upload MIME sniffing, and JWT sessions invalidated on password change"). So any request for any page, from a crawler, an uptime checker, or an idle signed-in tab, wakes the compute. `page.tsx`'s `revalidate = 3600` on the home page is a no-op for the same reason. The cost is set by how *often* something asks, not by how much traffic there is.
+- **Fixed now (the cheap, low-risk part):**
+  - `SessionProvider` removed from the root layout (`src/components/providers.tsx` deleted). Nothing in the app calls `useSession()`, so it did no useful work, but with no `session` prop it fetched `/api/auth/session` (and so ran the DB-querying `jwt` callback) on every full page load, again on every tab refocus, and again on cross-tab broadcasts. `signIn()`/`signOut()` from `next-auth/react` don't need the provider (they fall back to a no-op session refresh and redirect), confirmed against the installed `next-auth/react.js`.
+  - `src/app/robots.ts` added (there was no `robots.txt` at all). It keeps well-behaved crawlers out of `/api/`, `/admin`, account/auth pages, all of `/search`, and sort/filter/query variants of otherwise-crawlable pages (`?sort=`, `?tag=`, `?verified=`, `?set=`, `?q=`), which are effectively infinite URL spaces for the same content. `?page=` pagination stays crawlable so list pages are still discoverable in full.
+- **Deferred — the structural fix, left as an explicit trade-off for the site owner:** making public pages actually cacheable, so a crawler gets a cached page and never touches Postgres. That means replacing the nonce CSP with a static one (giving up `'strict-dynamic'`/nonce protection against injected scripts) and moving the navbar's session read to the client. It reverses a deliberate security decision, so it isn't done here. Related lever: caching the password-change check in the JWT and re-checking the DB only every few minutes instead of every request. That trades the "other sessions are locked out immediately after a reset" guarantee for "within a few minutes".
+- **Not a code change, but part of the fix:** production's compute autoscaling max was 2 CU; lowering it to 0.25 CU in Neon caps what each awake hour can cost. `robots.txt` only affects crawlers that honor it. If the graph still shows the compute awake around the clock afterward, check Vercel's logs for the user agents behind the overnight traffic before reaching for the deferred fix above.
+- **Not verified**: which crawlers actually generate the traffic. This session had no access to Vercel logs or the Neon dashboard beyond the owner's screenshots, so the effect of this PR should be judged from the Monitoring graph a day or two after it deploys.
+
 ## Feature Decisions
+
+### One-tap Watchlist toggle on `/search` movie cards, members only
+**PR #192.** Asked whether movie cards should allow adding to lists, as fight cards already do. The first proposal put one bookmark icon on each card, opening a menu of Watchlist, Favorites and custom lists. Asked for feedback on it, the honest critique cut it down, and the site owner picked the reduced version:
+
+- **Watchlist only, one tap, no menu.** "Save for later" is the action that matters while browsing. Favorites are for movies you've seen, usually set from the movie's own page. Three kinds of list behind one small icon was more than a card needs. Custom lists and Favorites stay on the movie page.
+- **A clock icon, not a bookmark.** On fight cards the bookmark means "save to a custom list", so reusing it for Watchlist would give the same icon two meanings. The "on Watchlist" state uses the movie page's existing blue.
+- **`/search` only for now,** the main browse page. It can extend to the home page rows if members use it.
+- **Signed-in members only.** Anonymous visitors would only ever get a login prompt, so for most visitors it would be clutter. Signed-out pages don't run the extra Watchlist query either.
+- **`MovieCard` isn't restructured:** with `initialWatchlist` set, it wraps the card and puts the button beside the title, outside the card's link (a button can't be nested in a link). The title gets right padding so it truncates before the button. Without the prop, every other page renders exactly as before.
+- **Known quirks left as is:** the toggle doesn't refresh other on-page copies of the same movie (there are none on `/search`). An unverified member gets the API's "verify your email" error inline, the same as the movie page's buttons.
+
+### Movie cards on `/search` show a fight-count badge, with a "Has fight scenes" filter and "Most Fights" sort
+**PR #190.** From a review of the movie browse page: on a fight-scene site, nothing on a movie card said whether the movie had any fights catalogued.
+
+- **The badge counts catalogued fight scenes (non-deleted), not the member-edited Fight Count** (`Movie.trueFightCount`). On a browse page, the useful question is "what can I watch here", and only catalogued scenes answer it. The Fight Count estimates how many fights the film has in total, whether clipped or not, and stays on the movie page.
+- **A plain "N fights" text label, not an icon.** Mocked up with crossed swords ("⚔ 3") and a Phosphor fist icon. Swords suggest weapons, when many fights are hand-to-hand; a raised fist reads as protest or solidarity. Either icon needs guessing on phones, which have no hover tooltip. The text fits even two-up on phones ("12 fights").
+- **Badge top-right, only when > 0,** opposite the recommendation badges (top-left), so movies with no fights keep a clean poster.
+- **Counts come from one `groupBy` over all non-deleted scenes**, not an `IN` list of result ids. "Most Fights" has to sort the full result set, not just the page, and an unfiltered browse is the whole catalog anyway. The same map feeds the badges. It's one row per movie that has scenes, in line with the page's existing load-everything-then-page approach (itself a known scaling limit).
+- **"Most Fights" ties keep the query's own order** (a stable sort), so equal counts fall back to newest first when browsing.
+- **"Has fight scenes" is a sidebar toggle** (`?fights=1`), styled like `/search/fights`' pill checkboxes. The movies page has no quick-filter bubble row yet, which would be its natural second home.
+- Checked against a local database with seeded scenes (including a deleted one, which correctly doesn't count), at desktop and phone widths.
+- **Follow-up (PR #191): the badge on every other `MovieCard` page.** The home page rails, "You Might Also Like", actor Known For, era pages, collection pages and profile Favorites/Watchlist/Pending all get it, through a shared `getFightSceneCountsByMovieIds` helper in `lib/fight-scenes.ts` (one `groupBy` per page, over only the movies it shows). On actor Known For, the rail's signature-vote button shares the badge's top-right corner and can't sit inside the card (the card is a link, the button a button), so the rail drops it below the badge when there is one. **Deliberately left out: the `/timeline` overview's small phone preview row**, whose movie shape lives in `timeline-layout.ts`, a module the browser also loads. Widening that shared type for a teaser row wasn't worth it; the full `/timeline/[era]` pages do show the badge.
+
+### Fight result cards shrunk: actions on the thumbnail, two-up on phones, one capped chip line
+**PR #188.** Asked directly to find ways to shrink the `FightSceneResultCard` ("Fight Ticket") grid card on `/search/fights`, then to consider mobile. Several ideas were mocked up and chosen one at a time from screenshots.
+
+- **Favorite/save moved onto the thumbnail** as small round overlay buttons (new `overlay` variants of `FavoriteButton` and `AddToListControl`), and the thumbnail fills the card width with no ink frame. That removed the footer row. **The dashed divider under the movie header was removed and then put back:** with the frame and footer gone it's most of what still reads as a "ticket" (header as a torn-off stub), it matches the full scene card in `fight-scene-section.tsx`, and it costs a fixed ~14px (~10px on phones), so it doesn't reintroduce uneven rows. Desktop cards only got ~10% shorter (the bigger thumbnail used most of the saved height); the bigger win is on phones.
+- **Phones get a two-up grid** (`grid grid-cols-2` below `sm`, the old wrapping row of fixed 256px cards from `sm` up) with tighter type and padding. Before this, a phone showed one 256px card per row with a dead strip beside it. The card is `w-full` below `sm`, so it relies on its parent being that grid — currently repeated in the three places that render it (search, actor-page grid, member profiles).
+- **Member rating moved to a pill on the thumbnail**, not the header: in the header it squeezed the movie title badly at two-up widths. **The pill is hidden for unrated scenes**, which drops the "No ratings yet" text PR #187 had just added — deliberate, per the site owner: there's no room for that text on the card any more.
+- **"Verified" pill replaced by a small ✓ after the scene title**, and **the "Featuring" label dropped** from the cast line.
+- **Tags, styles and moves share one non-wrapping chip line** — tags first (they're the clickable filters), then the first two chips overall (one on phones), the rest folded into a "+N" chip linking to the scene page. Real data showed a 9-tag scene wrapping onto four lines, and since grid rows stretch to their tallest card, that one scene made its whole row taller.
+- **The actor page's signature-vote button moved into a `thumbnailBadge` slot** (thumbnail top-left). It had been absolutely positioned over the card's top-right corner, where it would have covered the new layout.
+- **Tried and reverted: wrapping the scene title to two lines.** Rows stretch to their tallest card, so one long title grew the whole row; always reserving two lines would have undone the height savings. Titles stay on one line, truncated, with the full title on hover.
+- **Deferred — shorter titles at entry:** many scene titles are pasted YouTube video titles that repeat the movie name, year and cast ("Hero 2004 Jet Li vs Donnie Yen"). A 50–60 character limit and a hint on the add/edit form would fix the cause of the truncation. Considered and skipped for now.
+- **Known trade-offs left as is:** overlay buttons are 32px (under the usual 44px tap target) and sit on the thumbnail link, so a near miss opens the scene; the rating pill can cover a YouTube thumbnail's own corner badge.
+- **Not verified against a live database** in this session; checked with sample data on a throwaway page at phone and desktop widths, plus `npm run lint`, typecheck and `npm run build`. The site owner checked it with real data on the Vercel preview.
+
+### "My Lists" back in the account menu, plus a breadcrumb on list pages
+**PR #TBD.** Reported directly: after clicking into a list from the profile, there was no way back — the page's only mention of the owner, "List by {username}", was plain text. The owner's first instinct was the account menu rather than a breadcrumb; asked for an honest take, the recommendation was both, since they solve different problems.
+
+- **Reverses the earlier call to drop "My Lists" from the account menu** (see the navbar regrouping entry: it was dropped because `/my-lists` could only land on the profile's first tab, making it a duplicate of "My Profile"). `ProfileTabs` now takes an `initialTab` from `?tab=`, so "My Lists" opens the Lists tab directly and is no longer a duplicate. `/my-lists` redirects there too.
+- **The breadcrumb stays anyway** (username › Lists › list name, same markup as the fight pages' breadcrumb). The account menu only helps with *your own* lists; someone viewing another member's list — from `/lists`, the activity feed or a shared link — needs a way to that member's profile and other lists, which only an on-page link gives.
+- **Switching profile tabs writes `?tab=` back with `replaceState`** (no new history entry), so browser back from a list returns to the Lists tab rather than resetting to Profile. `ProfileTabs` is keyed on the param so following a `?tab=` link while already on the profile switches tabs. Known small gap: if you navigate to `?tab=lists`, switch to another tab, then pick "My Lists" again, the server param hasn't changed, so the tab doesn't switch back.
+- **Not verified against a live database or browser** (sandboxed session). Checked via `npm run lint`, `npm run test`, and `npm run build`.
+
+### Profile Lists tab shows one card per list, not each list's items
+**PR #TBD.** Asked directly, from a screenshot of the profile: remove "Open list" and make the list name the link, replace each list's row of movie cards with one card per list, and put the list's description on it — the per-list rows don't scale once a member has several lists. Mocked up and approved before building.
+
+- **A card, not a row of items.** Each list gets a cover collage, name (the link), Private/Ranked badges, a two-line description and a counts line (items, movies, fights, likes, "updated 3d ago"). This replaces rendering up to 6 movies and 6 fights per list inline (`MEMBER_LIST_PROFILE_PREVIEW_LIMIT`, now removed), which is what made the tab grow with every list — the earlier "Lists scale hardening" entry only capped that rather than fixing it.
+- **Kept a small cover collage**, reusing `ListCoverCollage` from `/lists`, even though the ask was a single card: it costs no extra height and makes lists recognizable at a glance. `getMemberListCards` (`src/lib/lists.ts`) shares its cover-tile query with the `/lists` browse page (`coverEntriesInclude` / `toCoverTiles`), so both covers are built the same way.
+- **"No description" shows for lists without one**, faint and italic, rather than collapsing the space, so every card keeps the same shape.
+- **The relative "updated" label is formatted on the server** (`timeAgo`, moved to `src/lib/time-ago.ts` from the activity feed), since the owner's cards render in a client component and a client-computed time could disagree with the server's at hydration.
+- **Not verified against a live database or browser** (sandboxed session). Checked via `npm run lint`, `npm run test`, and `npm run build`.
+
+### Owners can search and add movies and fights from the list page itself
+**PR #TBD.** Before this, the only way to put something in a list was the add-to-list control on each movie's or fight's own page, so building a list meant leaving it for every item. Asked directly for a way to search and add from within the list.
+
+- **One box for both kinds**, with results grouped under Movies and Fights, rather than two separate searches or a type switch. A list already mixes both in one reel, and most searches ("Drunken Master") are meaningful for both.
+- **A list-scoped endpoint (`/api/lists/[id]/search`), not a reuse of `/api/search`.** It needs to say which results are already in *this* list, so the UI can show "In list ✓" instead of an Add button that would silently no-op. Movie matching copies the navbar search's title/cast/director logic; fights match on their own title or their movie's.
+- **Results inline under the box, not a floating dropdown.** A popover over the list fights the on-screen keyboard on a phone and covers the items you're adding next to; pushing the list down is plainer but works the same at every width.
+- **The box stays open after an add**, so adding several items from one search doesn't mean retyping it.
+- **Changes after reviewing the first mockup with the site owner:**
+  - **An added item says where it landed.** New items go to the bottom of a ranked list, which in a long list is off screen and rarely where they belong, so a just-added result shows "Added as #N" plus a one-tap **Move to top** (the existing reorder endpoint, re-submitting the whole order). Unranked lists just say "Added ✓", since new items show first there anyway.
+  - **An ✕ clears the search.** Phones have no Escape key, and twelve results push the list far down.
+  - **Fights sort top-rated first**, not newest first: a movie-title search can match many fights from one film, so the API pulls up to 30 candidates, sorts by average rating in memory, and returns the top 6.
+  - **The phone owner row lost its "♥ N likes · anyone with the link…" line**, to keep the stack above the list short now that the search box sits there too. The PRIVATE badge still shows privacy.
+- **Known gap:** your own not-yet-approved movie submissions don't appear in this search (approved movies only, same as the navbar search). They can still be added from their own page.
+- **Not verified against a live database or browser** (sandboxed session). Checked via `npm run lint`, `npm run test`, and `npm run build`.
+
+### List page actions moved into one side panel, ranking into an edit page
+**PR #178.** Adding the privacy control stacked a second checkbox under "Edit list" and above the item rows, which looked cluttered. Mocked up three directions with the site owner: a settings card with a Public/Private switch (too tall, especially stacked on a phone), a compact row of pills with a dropdown (small, but tiny tap targets and a chip-with-a-switch that read ambiguously), and a Letterboxd-style actions panel beside the list. The owner picked the panel.
+
+- **One panel, rows depend on who's looking.** `ListActionsPanel` (`src/components/list-actions.tsx`) replaces `ListDetailsForm`, `ListRankToggle`, `LikeListButton` and `CloneListButton`. The owner gets a Private/Public status header with like and item counts, then Edit list, Make this list private/public, Copy link (public only) and Delete list. A visitor gets a Like button, the counts, Clone and Copy link.
+- **Privacy is an action, not a setting.** "Make this list private" is one row whose label flips once used, with a line underneath saying what will happen, rather than a checkbox where "unchecked" has to mean public.
+- **Ranking moved to a new `/lists/[id]/edit` page**, with name and description. It's set once and rarely changed, so it no longer takes space on the list page every visit, and it now lives in exactly one place.
+- **Below `lg`, a row of labeled buttons, not a menu.** The first build collapsed the panel into a ⋯ button that opened a bottom sheet, with a full-width Like button beside it for visitors. On a real phone the owner found both wrong: the ⋯ didn't say what it hid, and the full-width Like read as the page's main call to action. Replaced with one row of pills sized to their labels (`ListActionsMobile`): Edit / Make private or public / Share for the owner, Like · count / Clone / Share for a visitor. Delete left the row on purpose (too easy to hit in a quick-tap row) and moved to the bottom of the edit page. Ranking stays on the edit page on phones too; a one-tap shortcut (tapping the RANKED badge, or a "Rank items" link) was offered and declined, since ranking is set once. Both layouts share one `useListActions` hook, so they can't drift apart in behavior.
+- **Delete moved onto the list page** (it was only on the profile's list manager). It confirms with the browser's own dialog, then returns to the owner's profile.
+- **Card (poster-grid) view was mocked up too, and deferred** — see Deferred & Backlog.
+- **Not verified against a live database or browser** (sandboxed session). Checked via `npm run lint`, `npm run test`, and `npm run build`; the layout needs a look on the Vercel preview, especially the bottom sheet on a real phone.
+
+### Lists gain a private option, public stays the default
+**PR #178.** Asked directly: let members mark a custom list private instead of public. Lists had been public by design with "no private option" (README's Member Lists section said so explicitly), so this reverses that call. Favorites/Watchlist are unaffected and stay private, as they always were.
+
+- **A boolean `MemberList.isPrivate`, default `false`**, not a `visibility` enum. Considered a three-state enum (public / unlisted / private) but nothing asked for "unlisted" (reachable by link, just not browsable), and a boolean is what `isRanked` already uses on the same model. Migrating a boolean to an enum later is cheap if unlisted is ever wanted. The default keeps every existing list, and every new one, public, so nothing changes for anyone who never touches the toggle.
+- **Private means owner-only everywhere, through one shared filter.** `PUBLIC_LIST_WHERE` (`src/lib/lists.ts`) is applied to every read path that shows lists to someone other than their owner: `/lists` browse, both leaderboard rankings (Most-Liked Lists, and Top Curators, which now only counts movies in public lists), the Community Activity feed, another member's view of the owner's profile, and a liker's Liked tab. The Activity feed hides private lists even on the owner's own profile, since it's the same public feed for every viewer.
+- **A private permalink 404s for anyone else**, the same response as a list that doesn't exist, rather than a "this list is private" page that would confirm it exists. The like and clone APIs return the same 404 for a private list.
+- **Likes on a list that goes private are hidden, not deleted.** Going private and back to public restores its like count and its place in likers' Liked tabs. Deleting them would make a quick privacy flip destroy data the owner can't get back.
+- **The control lives on the list's own page, not at creation time.** The create form on the profile stays name-only, so creating a list is still one field. It started as a "Private list" checkbox, then moved into the list's actions panel in the same PR (see the next entry). The profile's list manager shows a "Private" badge per list so the state is visible without opening each one.
+- **Not verified against a live database or browser** (sandboxed session). Checked via `npx prisma validate`, `npm run lint`, `npm run test`, and `npm run build`.
+
+### A second scale-change legend added, for the ancient (Legendary/Shang/Spring & Autumn) compression
+**PR #TBD.** Asked directly: since the modern axis-break (Republic of China → Postwar) already gets a hatched marker + hover tooltip so its scale change is never silent, should the same apply where Legendary/Shang/Spring & Autumn's fixed-bucket compression gives way to the real ~0.878px/year scale at Warring States? Agreed and built, reusing the exact same pattern rather than inventing a new one.
+
+- **`ANCIENT_AXIS_BREAK_PX` (`timeline-layout.ts`) is derived from `WARRING_STATES`'s own `px0`**, not a second hand-copied pixel number — this session already had to recompute `TIMELINE_ERA_LAYOUT`'s numbers three separate times for other reasons, so a break marker that could silently drift out of sync with the layout table felt like exactly the kind of bug worth designing out up front.
+- **Both breaks now come from one `AXIS_BREAKS` array, `.map()`'d in both the main axis and the minimap**, rather than duplicating the hatch-marker/tooltip markup a second time — keeps the two breaks' behavior from drifting apart from each other the way the layout-vs-marker split above was guarded against.
+- **No matching tick ruler for the ancient break**, unlike the modern one. `computeScaleTicks()`'s tick-density explanation only works for a real per-year scale; Legendary/Shang/Spring & Autumn aren't on one at all (fixed buckets regardless of duration), so there's nothing for a tick ruler to meaningfully show there. The hatched marker + tooltip carries the whole explanation on its own for this one.
+- **Fixed a stale copy bug found while duplicating the pattern**: the existing modern-break tooltip read "Scale change — less axis per year from here on," which has the direction backwards (post-break eras get *more* room per year, not less — confirmed against both the README and the tooltip's own adjacent `aria-label`, which already had it right). Corrected to "more axis per year from here on" as part of this same change, since getting the wording right mattered for writing the new marker's parallel copy anyway.
+- **Also corrected a now-stale comment on `computeScaleTicks()`** that claimed "every dynasty before Qing already sits at one roughly-consistent px/year rate" — no longer true since the ancient eras above aren't on that rate; narrowed to "every dynasty from Warring States through Qing."
+- **Not verified against a live browser** — sandboxed-session limitation, same as every other Timeline entry above. Checked via `npm run lint`, `npm run test`, and `npm run build`.
+
+### Contemporary's timeline band narrowed from 320px to 180px, since its extra width bought no real dot capacity
+**PR #TBD.** Follow-up to the trailing-margin trim below, reported from a second live screenshot after that PR merged: the visible dot cluster under "2000s+" ended well short of both the band's own edge and the scrollable area's, with only cosmetic effect from the earlier 36px trim.
+
+- **The extra width was never actually buying dot capacity.** `desktopCapForKey()` caps every band at `min(80, cols * MAX_ROWS_PER_ERA)` — with `MAX_ROWS_PER_ERA` at 8, the 80-dot ceiling is already hit at `cols=10` (80px-ish of band width). Every column past that just spreads the same 80-dot ceiling across fewer rows; it doesn't raise it. Contemporary's 320px (`cols=35`) bought room to show 80 dots in ~3 rows instead of ~8 — real value if the catalog actually has that many approved Contemporary movies, but the screenshot showed nowhere near that, so most of the width was rendering nothing.
+- **Narrowed to 180px (`cols=20`)**, not all the way to the 90px floor that still hits the cap — kept it visibly the widest of the five post-break eras (Postwar/70s/80s/90s run 111–246px) since it's still the open-ended, typically-most-populous one, just not 320px's worth of margin for content that isn't there yet.
+- **Sized from the screenshot, not the real database.** This session has no live `DATABASE_URL`, so there's no way to query the actual approved Contemporary count — 180px is a judgment call reasoned from how much of the band the visible dots occupied, not a measured number. If the catalog's Contemporary count grows enough to push past `cols=20`'s comfortable row count, this may need widening again (it still has headroom to 4 rows at the full 80-dot ceiling before hitting `MAX_ROWS_PER_ERA`).
+- **Not verified against a live browser** — sandboxed-session limitation, same as every other Timeline entry above. Checked via `npm run lint`, `npm run test` (existing `TIMELINE_ERA_LAYOUT`/`labelWidthForKey` regression tests unaffected, since Contemporary has no era after it and its label was already capped at `MAX_LABEL_WIDTH`), and `npm run build`.
+
+### Historical Timeline era labels wrap instead of truncating, and get a per-era width instead of a flat 150px
+**PR #TBD.** Follow-up to "Historical Setting gains five eras" below, reported from a live screenshot right after that PR shipped: the new Legendary/Shang/Spring & Autumn/Warring States bands sit close enough together that their labels, each a flat 150px box centered on its own (now much narrower) band, visibly overlapped each other's text — plus a request that long names (e.g. "Five Dynasties & Ten Kin...") wrap instead of ending in an ellipsis.
+
+- **`labelWidthForKey()` (`timeline-layout.ts`) replaces the flat 150px width**, computing each era's label width from the actual gap to its nearest neighbor's label center (capped at the old 150px ceiling, floored at 64px as a guard for a future tightly-packed insertion, though no current band's real gap is anywhere near that floor). Guarantees adjacent label boxes never overlap regardless of how narrow their bands are — verified by a new regression test rather than trusting the arithmetic by eye.
+- **The era name wraps via `line-clamp-2`, not `truncate`** (the years sub-line stays `truncate`, single-line — wrapping both would need more vertical room than budgeted). `ERA_LABEL_HEIGHT` (26→46) and `AXIS_BASELINE_PX` (46→66) both moved by the same +20 so the label's bottom edge — and the tick ruler under it, which isn't keyed off `AXIS_BASELINE_PX` at all — don't shift; only the label's available height above that edge grows, giving room for a second wrapped line.
+- **Not verified against a live browser** — sandboxed-session limitation, same as other Timeline entries. The reported overlap and the ERA_LABEL_HEIGHT/AXIS_BASELINE_PX vertical math are both reasoned from the existing component's own positioning logic (bottom-anchored boxes grow upward with content) rather than rendered and checked pixel-for-pixel; worth a follow-up screenshot to confirm the 2-line budget is generous enough for the longest wrapped names ("Northern & Southern Dynasties" at ~88px, "Spring & Autumn Period" at ~80px). Checked via `npm run lint`, `npm run test` (a new `labelWidthForKey` non-overlap test alongside the existing layout-sync/non-overlap ones), and `npm run build`.
+
+### Historical Setting gains five eras, closing three gaps in the vocabulary
+**PR #TBD.** Requested as "historical setting field is missing some eras" — the vocabulary in `src/lib/era-settings.ts` had three real chronological gaps: nothing between Legendary (before c. 2070 BC) and Warring States (475 BC), nothing between Jin (ends 420) and Tang (starts 618), and nothing between Tang (ends 907) and Song (starts 960). Asked which to close rather than guessing scope, since adding eras here also means hand-placing new bands in `TIMELINE_ERA_LAYOUT`'s pixel axis — all three were picked.
+
+- **New keys**: `SHANG` (Shang Dynasty, c. 1600–1046 BC) and `SPRING_AUTUMN` (Spring & Autumn Period, 770–475 BC) before Warring States; `NORTHERN_SOUTHERN` (Northern & Southern Dynasties, 420–589) and `SUI` (Sui Dynasty, 581–618) between Jin and Tang; `FIVE_DYNASTIES` (Five Dynasties & Ten Kingdoms, 907–960) between Tang and Song. Western Zhou (1046–771 BC) stays uncovered between Shang and Spring & Autumn — narrower scope than "every dynasty," matching what was actually asked for.
+- **Timeline axis positions derived from the existing ~0.878px/year rate, not eyeballed — except Shang and Spring & Autumn, which are compressed like Legendary.** Reverse-engineering `TIMELINE_ERA_LAYOUT`'s existing pre-break bands (Han's 375px/426yr, Ming's 243px/276yr, etc.) showed a consistent scale, and the Jin→Tang and Tang→Song gaps already sized out almost exactly to that scale applied to the real 420–618 and 907–960 spans — strong evidence those two gaps were left deliberately unfilled for eras not yet added, not just slack. `NORTHERN_SOUTHERN`/`SUI` and `FIVE_DYNASTIES` slot into those gaps with no shift to `TANG`, `SONG`, or anything after. `SHANG`/`SPRING_AUTUMN` had no such reserved gap (Legendary's 130px end abuts Warring States' start directly), so a first pass inserted them at full scale too — 745px combined (554yr + 295yr), pushing the axis from 3245px to 3990px. Flagged after shipping ("adding the new eras stretch the graph much wider") and reconsidered: those two eras are unlikely to ever hold a real movie, so 745px of near-certain "No movies yet" band ahead of Warring States (where content starts) wasn't worth the proportionality. Reverted to a fixed 90px/70px allotment each — same non-proportional treatment Legendary already gets for its own unbounded span — cutting the total growth to 160px (`AXIS_BREAK_PX` 2270→2430, `TIMELINE_AXIS_WIDTH` 3245→3405).
+- **`ERA_SETTINGS` (era-settings.ts) is the only vocabulary source** — the dropdown (`EraSettingControl`), `/timeline/[era]`, and `isEraSettingKey` all derive from it directly, so no separate list needed updating for those; only `TIMELINE_ERA_LAYOUT` needed a matching manual entry per new key, which `timeline.test.ts`'s existing "has a layout entry for every chronological era" regression test already guards.
+- **Not verified against a live browser** — sandboxed-session limitation, same as other Timeline entries above. Checked via `npm run lint`, `npm run test` (existing layout-sync and non-overlap tests both cover the new bands), and `npm run build`.
 
 ### Fight Styles gain optional groups, via a real FightStyleGroup table
 **PR #TBD.** Requested as "can I add some groupings to Fight Styles" — clarified into two open questions before touching the schema: whether a group should be free text on each style or its own admin-curated table, and whether grouping should be admin-only or also show up where members/searchers interact with styles. Went with a real `FightStyleGroup` table (own name, independently rename/delete-able, rather than a plain string column that would let "Northern"/"northern" drift into two groups) and both admin and member-facing, since a category is only useful once it's visible where a style is actually picked or filtered.
@@ -5307,6 +5458,251 @@ tree like this one needed horizontal scrolling well before it needed to.
   (more generations, say) can't silently reset another already-expanded
   one (a sibling limit already bumped by an earlier click).
 
+### Lineage: descendant layout sized by subtree width, not per-level nudging
+**PR #TBD.** Bug report: on a wide real tree, one sifu's later child (Lau Kar-Wing,
+one of Lau Cham's three primary students) rendered at almost the exact same x as
+Lau Cham's own sibling (Chiu Kao), reading as if Lau Kar-Wing were Chiu Kao's
+student — and separately, Chiu Kao's own connector to its two real children
+(Chiu Chi-Ling, Chiu Wai) looked broken.
+
+- **Root cause, not two bugs.** `buildLayout`'s descendant pass previously
+  centered each parent's children directly under that parent, then, level by
+  level, nudged only the *next* cluster right by just enough to clear the
+  *immediately preceding* cluster's own child count. That sizing only looked
+  one level down — a branch's width two levels down (Lau Cham's 3-wide
+  grandchildren row) was invisible when the level above it (Lau Cham vs. Chiu
+  Kao, 2 siblings) decided how far apart to place them. The result: Chiu
+  Kao's own real position could land inside Lau Cham's now-wider
+  grandchildren span (the coincidental Lau-Kar-Wing alignment), and Chiu
+  Kao's connector — still drawn from its real, un-nudged position to its own
+  now-shifted-right children — left a gap between its stem and its own elbow
+  bar, since the bar's span was computed only from the (shifted) children,
+  never from the parent's own x.
+- **Fix: size every branch by its full subtree width, computed bottom-up,
+  before any node is positioned**, then lay out top-down with each parent
+  exactly centered over its own reserved band. A parent is now provably
+  never sharing a column with an unrelated node, and its own connector can't
+  gap, since the bar's span is always centered on the parent by construction
+  rather than derived independently from wherever the children ended up.
+  This replaces the per-level "nudge the next cluster right" pass entirely,
+  not just patches it — the earlier approach's blind spot (no downstream
+  look-ahead) can't be closed by nudging harder without effectively
+  recomputing the same subtree widths anyway.
+- **Pulled the layout math out of `LineageTreeBody` into `src/lib/lineage-
+  tree-layout.ts`**, unchanged in behavior for every other case (ancestors,
+  secondary sifus, single-child straight drops, overflow badges), so it's
+  reachable from a plain `vitest` unit test instead of needing a rendered
+  component — this repo's test config is already scoped to pure `src/lib`
+  logic (see `vitest.config.ts`), and a layout bug like this one is exactly
+  the kind of thing worth a regression test for (`lineage-tree-layout.test.ts`
+  asserts no two same-row nodes from different branches share an x, and that
+  every multi-child parent stays within its own children's span).
+
+### Lineage: descendant layout switched from flat subtree width to row-by-row contours
+**PR #TBD.** Follow-up report on the fix directly above: on Yu Jim-Yuen's real
+tree (eight Seven Little Fortunes, two of whom each head a stunt team a
+couple of generations further down), the previous PR's fix was no longer
+misattributing anyone, but the row of eight now looked visibly sprawled and
+unevenly spaced compared to how it rendered before either fix — flagged as
+"wrong" even though nothing was actually mis-linked.
+
+- **The subtree-width fix traded one blind spot for a different
+  over-correction.** Reserving a branch's full leaf count as its width holds
+  that reservation at *every* row the branch spans, not just the rows where
+  it's actually wide. Jackie Chan and Sammo Kam-Bo Hung each only get wide
+  three generations down (their own stunt teams' rosters); at the row they
+  actually share with their four plain, childless siblings, none of that
+  width is needed yet. The flat-width version still pushed those childless
+  siblings as far away as Jackie Chan's *widest* row, producing large,
+  uneven gaps next to a normal one-slot gap between two plain siblings.
+- **Fix: compare branches by row-by-row "contour" instead of total leaf
+  count** (the standard technique behind tools like Reingold–Tilford tree
+  layout, adapted to this app's one fixed branching shape rather than
+  pulling in a general graph-layout dependency — same reasoning as the
+  original "hand-rolled, not a library" call). Each subtree now carries its
+  own horizontal extent *per depth* relative to its root; a sibling is
+  placed only as far from its predecessor as needed to clear whatever that
+  predecessor actually has at each shared depth, with at least one slot of
+  clearance. A plain sibling next to a deep branch now sits its normal one
+  slot away, and that branch's own grandchildren are free to spread out
+  underneath the (now-vacated) column above them — safe, because a leaf
+  sibling has nothing rendered at that lower depth to be confused with.
+  Two branches that really do get wide at the same depth still end up
+  properly separated, since the comparison still holds at every depth both
+  sides occupy — verified by re-running the original Lau Cham/Chiu Kao
+  regression tests unchanged (still passing) alongside a new test for the
+  tight-packing case (`lineage-tree-layout.test.ts`).
+- **Centering convention**: a parent is centered over the mean of its
+  *direct* children/overflow badge's own positions, not the midpoint of
+  their full subtree spans — keeps the elbow bar (which only ever spans the
+  direct children) always straddling the parent's stem, and matches what
+  "centered under its parent" reads as to someone looking at the tree.
+
+### Lineage: figures gain `aliases`, unioned into the "Portrayed by" lookup
+**PR #TBD.** Reported case: the same historical figure (Lam Sai Wing, also
+widely known by the nickname "Porky Wing") could be credited under either
+name across different films' cast data, but `getPortrayals` only ever
+matched a figure's single `name` column — a movie crediting the nickname
+was silently missing from the figure's "Portrayed by" footnote, with no way
+to reconcile it short of creating (or already having created) a second,
+separately-linked `LineageFigure` for the same person.
+
+- **Schema-backed aliases over a hardcoded lookup table.** Considered a
+  small in-code `Record<string, string[]>` of known nickname pairs instead —
+  no migration, ships faster — but this app already treats "admin adds it
+  themselves, no deploy needed" as the default for lineage data (every other
+  correction here goes through `/admin/lineage`), and historical figures
+  with multiple romanizations/nicknames are expected to keep coming up, not
+  a one-off. `aliases String[] @default([])` added to `LineageFigure`
+  (`20260917030000_add_lineage_figure_aliases`); no unique/format constraint
+  on the array itself, same as `name` already has none.
+- **Not a merge tool.** A duplicate figure with its own links (sifu/students
+  already recorded against the wrong name) still needs those relinked onto
+  the canonical figure by hand before the duplicate is deleted — aliases
+  only solve the case where the second name never became its own linked
+  figure (or has since had its links cleared), which was true of the
+  reported case. A proper "merge figure A into B" action (reassign every
+  `LineageRelation` row, skipping ones that would collide with an existing
+  link or a cycle) was discussed but deferred — no second real case to
+  design it against yet, and it's a materially bigger surface (conflict
+  resolution, primary-link handling) than this fix needed.
+- **`getPortrayals` takes a name *or* an array of names/aliases** in one
+  call (`= ANY(...)` against the normalized `characterName` set) rather
+  than one call per name merged by the caller — the existing per-movie
+  actor aggregation inside the function already does exactly the dedup/
+  union-years work needed across multiple matched credits, so extending it
+  to accept multiple source names got that merging for free instead of
+  duplicating it at the call site. The one caller
+  (`resolvePortrayalMarkers` in `lineage-tree-body.tsx`) passes
+  `[figure.name, ...figure.aliases]`.
+- **Aliases aren't restricted to bare (non-actor) figures** the way
+  `isGroup`/delete are — an actor-linked figure is still, in principle, a
+  real person who could themselves be credited under more than one name.
+  No case for that has come up yet, but there's no reason to block it the
+  way marking a real actor's figure as a "group" would be nonsensical.
+- **Verified against a real local Postgres for once**, rather than the
+  usual sandboxed-session "no DATABASE_URL" limitation noted on other
+  schema-touching entries above: this session had a local `postgresql-16`
+  install available, so `prisma migrate deploy` ran for real (confirming
+  the hand-written array-column DDL applies cleanly), and a throwaway
+  script exercised `createOrReuseBareFigure` → `setFigureAliases` →
+  `getPortrayals` end-to-end against it with data shaped exactly like the
+  reported case (two `CastCredit` rows crediting the same figure under
+  "Lam Sai Wing" and "Porky Wing" respectively) — confirming the combined
+  lookup surfaces both actors where a name-only lookup would only surface
+  one, and that the dedup/blank/self-name cleanup in `setFigureAliases`
+  behaves as intended. This is what actually gave confidence in the raw
+  `= ANY(${normalizedNames}::text[])` query specifically, which the
+  DB-less `vitest` suite can only prove *doesn't* run (the single-word
+  short-circuit tests), not that it runs *correctly* — also backed by
+  `npx prisma validate`, `npm run lint`, `npm run build`, and
+  `npm run test` (including two new `getPortrayals` cases in
+  `lineage.test.ts` covering the array form's single-word short-circuit and
+  its "at least one multi-word entry still attempts the lookup" case).
+
+### Lineage: interactive pan/zoom on the full-tree pages, not a fit-to-width scale
+**PR #TBD.** Reported against a real production tree (Wong Kei-Ying's, `up=3
+down=9`): the view was scrolled to a spot where a name was cut off on
+*both* the left and right edges at once, with no way to see either without
+losing the other — 13 rows tall, wide enough at some levels to overflow the
+screen on both sides simultaneously.
+
+- **Rejected: scale the whole tree to fit the screen width.** Floated first
+  as the cheap fix (compute one scale factor from `layout.width`, no gesture
+  handling, no new dependency), and talked out of it once the actual
+  tradeoff was traced through: `transform: scale()` shrinks width and height
+  together, so a tree wide enough to need much shrinking also shrinks its
+  13-row *height* by the same factor — the fix for "can't see the edges"
+  would have made "can't read the text" worse on exactly the tree that
+  prompted this. A single fixed scale structurally cannot serve both "see
+  the whole shape" and "read a specific branch" at once when a tree is both
+  deep and wide; only interactive zoom can, by letting the viewer pick
+  which one they want moment to moment.
+- **`react-zoom-pan-pinch` over hand-rolled touch-delta math.** A mature,
+  maintained library (MIT, `react: "*"` peer range, no conflicts with React
+  19) already solves the failure mode hand-rolled gesture code is prone to
+  here: telling a tap on a node's `<Link>` apart from the start of a
+  drag/pinch. Rolling that disambiguation by hand risked breaking the
+  tree's primary navigation (click any node to re-center) for the sake of
+  the zoom feature.
+- **Scoped to the two full-tree pages only** (`/actors/[personId]/lineage`,
+  `/lineage/[figureId]`) **— not** the small inline teaser on an actor's own
+  page (`up=1 down=1`, capped low, embedded in an otherwise normally-
+  scrolling page). The teaser stays exactly as before: fixed scale, plain
+  horizontal `overflow-x-auto`. Capturing pan/pinch gestures inside a small
+  card on a page that's meant to just scroll would fight the page far more
+  than it would help, and the teaser already has a "View full lineage →"
+  link for the case where someone actually wants to explore.
+- **`LineageTreeBody` stays a Server Component.** It still does its
+  `getPortrayals` lookups server-side, unchanged. The new `zoomable` prop
+  (default `false`) conditionally wraps the already-rendered tree markup in
+  `LineageTreeZoom` (`src/components/lineage-tree-zoom.tsx`, `"use client"`)
+  instead, which receives that markup as `children` — composition rather
+  than converting the whole render path to a Client Component. The wrapper
+  gets an explicit, bounded viewport height (not sized to the tree's own,
+  potentially much larger, natural dimensions) — `react-zoom-pan-pinch` pans
+  and zooms *within* that fixed box; the page itself no longer grows to a
+  13-row tree's full height the way the teaser's plain-scroll layout would.
+- Leaves the "separate page for the entire lineage" backlog item (above)
+  as-is — that's about an unbounded whole-graph view, a different and still
+  unbuilt page, though `LineageTreeZoom` is now a real, reusable answer to
+  the "should it be zoomable" question raised there if that page gets built.
+
+### Lineage: pan/zoom narrowed to mobile only, not every viewport on the full-tree pages
+**PR #TBD.** Immediate follow-up to the entry above: the ask was mobile-only
+all along, not "on both full-tree pages regardless of device" as shipped.
+Desktop already has native scroll and drag; a transform-based pan surface
+there would hijack the mouse wheel and click-drag on what would otherwise
+be an ordinary scrolling page, for no benefit a mouse-and-trackpad user
+actually needed — the entire justification for interactive zoom (a phone
+screen genuinely can't show a 13-row tree at a legible scale) doesn't hold
+on a monitor with far more room to begin with.
+
+`LineageTreeZoom` now checks `window.matchMedia("(max-width: 767px)")` (with
+a `change` listener, so a resize or orientation flip is caught too, not just
+whatever the width was on load) and renders the exact same plain
+`overflow-x-auto` layout the small actor-page teaser already uses whenever
+that query doesn't match, falling back to it by default until the check
+resolves after mount — the server has no viewport to check at render time,
+so defaulting to the plain (non-transform) layout for that first paint is
+also what keeps this hydration-safe, since it's exactly what the server
+already rendered. `zoomable` on `LineageTreeBody` is unchanged and still
+means "this page may offer pan/zoom" (still just the two full-tree pages,
+never the teaser) — the device check inside `LineageTreeZoom` is a second,
+narrower gate on top of it, not a replacement for it.
+
+### `/search/fights` style filter collapses per group, via plain `<details>`, not client JS
+**PR #TBD.** Raised during a UI review of `/search/fights`: the Style
+filter (`FightStyleGroup` clustering, see "Fight Styles gain optional
+groups" above) had grown to several dozen checkboxes across half a dozen
+always-expanded categories, pushing every field below it — Actor, member/
+editor rating, genre, country, year range, sort — well below the fold on
+both the desktop sidebar and the mobile filter sheet (same underlying
+form either way, see "Search sidebar filter forms become a bottom sheet"
+above).
+
+- **Native `<details>`/`<summary>` per category, not a client-side
+  accordion component.** `/search/fights` is a plain server component with
+  no `"use client"` anywhere in it — the has-checked: CSS trick already
+  used for the checkbox pills avoids JS entirely, and a hand-rolled
+  accordion (open/close state, animation) would have been the first client
+  state this specific file ever needed, for a purely cosmetic collapse.
+  `<details>` needs none of that, and a checkbox inside a closed one still
+  submits with the form — collapsing a group never silently drops its
+  selection.
+- **A group opens by default only when one of its own styles is already
+  checked** (computed server-side from the same `selectedStyles` the
+  checkboxes themselves use), not always-collapsed. An active filter
+  hidden inside its own collapsed category — with no visual sign it's
+  even selected — would have been a worse regression than the long list
+  it replaces.
+- **Left the "Martial arts move" and "Tags" facets flat**, uncollapsed —
+  Move has no group concept at all (see "Fight Styles gain optional
+  groups": grouping was deliberately Style-only), and Tags is a short,
+  site-curated list that's never grown past a handful of values, unlike
+  Style's now-sprawling, admin-editable vocabulary. Nothing to cluster by
+  in either case, so nothing to collapse.
+
 - **Drag-and-drop reordering for ranked list items** — `ListItemRows`
   (`src/components/list-item-rows.tsx`) now has move-to-top/move-to-bottom
   buttons alongside up/down (see **Feature Decisions** above), covering the
@@ -5543,3 +5939,15 @@ tree like this one needed horizontal scrolling well before it needed to.
   graph -- see "LineageTreeBody rewritten as computed SVG layout" above)
   or something simpler, like a flat searchable list of every figure with
   links into their centered pages.
+- **Card (poster-grid) view for a list's own page** — mocked up during
+  the list-privacy work (PR #178) as a Letterboxd-style grid/rows switch:
+  5 posters across on desktop, 3 on a phone, rank number in each card's
+  corner, fight scenes marked with a play icon and a FIGHT tag. Put on hold
+  by the site owner, not rejected. Open problems to solve first: fight
+  scene thumbnails are wide YouTube stills that don't fit a tall poster
+  card (heavy crop or letterboxing); per-item notes and the reorder
+  buttons have no room on a card, so a ranked list would need to default
+  to rows for its owner or get a separate reorder mode; and the view
+  choice should probably be remembered per viewer (cards for unranked
+  lists and visitors, rows for ranked lists). Build it as its own PR, on
+  top of whichever list-page layout ships.

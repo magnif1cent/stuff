@@ -330,16 +330,22 @@ export default async function FightSceneSearchPage({
 
             <div className="flex flex-col gap-1">
               <p className="text-xs text-neutral-400">Martial arts style (any of)</p>
-              <div className="flex flex-col gap-2 rounded-md border border-neutral-700 bg-neutral-950 p-2">
+              {/* Dozens of styles across half a dozen categories would
+                  otherwise always render in full, pushing every field below
+                  this one (Actor, ratings, genre, country, year, sort) well
+                  below the fold. <details>/<summary> collapses each category
+                  with no client JS needed -- consistent with this being a
+                  plain server-rendered form -- and a category with an
+                  already-checked style opens by default so an active filter
+                  is never hidden by its own collapsed group. A single
+                  bucket (no named groups yet, or exactly one) isn't worth
+                  collapsing, so it renders flat like before groups existed. */}
+              <div className="flex flex-col gap-1 rounded-md border border-neutral-700 bg-neutral-950 p-2">
                 {styles.length === 0 && <span className="text-sm text-neutral-500">No styles yet</span>}
-                {styleGroups.map((group, i) => (
-                  <div key={group.label ?? `ungrouped-${i}`}>
-                    {styleGroups.length > 1 && (
-                      <p className="mb-1 text-[10px] tracking-wide text-neutral-500 uppercase">
-                        {group.label ?? "Other"}
-                      </p>
-                    )}
-                    <div className="flex flex-wrap gap-2">
+                {styleGroups.map((group, i) => {
+                  const key = group.label ?? `ungrouped-${i}`;
+                  const checkboxes = (
+                    <div className="flex flex-wrap gap-2 pt-1.5">
                       {group.styles.map((s) => (
                         <label
                           key={s.id}
@@ -356,8 +362,33 @@ export default async function FightSceneSearchPage({
                         </label>
                       ))}
                     </div>
-                  </div>
-                ))}
+                  );
+
+                  if (styleGroups.length <= 1) {
+                    return <div key={key}>{checkboxes}</div>;
+                  }
+
+                  const hasSelection = group.styles.some((s) => selectedStyles.includes(s.name));
+                  return (
+                    <details key={key} open={hasSelection} className="group">
+                      <summary className="flex cursor-pointer items-center gap-1.5 py-1 text-[10px] tracking-wide text-neutral-500 uppercase select-none marker:hidden [&::-webkit-details-marker]:hidden">
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="h-2.5 w-2.5 shrink-0 transition-transform group-open:rotate-90"
+                        >
+                          <path d="M9 18l6-6-6-6" />
+                        </svg>
+                        {group.label ?? "Other"}
+                      </summary>
+                      {checkboxes}
+                    </details>
+                  );
+                })}
               </div>
             </div>
 
@@ -453,7 +484,7 @@ export default async function FightSceneSearchPage({
                   type="number"
                   aria-label="Year from"
                   defaultValue={params.yearFrom ?? ""}
-                  placeholder="1970"
+                  placeholder="From"
                   min={MIN_YEAR}
                   max={MAX_YEAR}
                   className="w-1/2 min-w-0 rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
@@ -463,7 +494,7 @@ export default async function FightSceneSearchPage({
                   type="number"
                   aria-label="Year to"
                   defaultValue={params.yearTo ?? ""}
-                  placeholder="2025"
+                  placeholder="To"
                   min={MIN_YEAR}
                   max={MAX_YEAR}
                   className="w-1/2 min-w-0 rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
@@ -568,7 +599,7 @@ export default async function FightSceneSearchPage({
             </p>
           ) : (
             <>
-              <div className="flex flex-wrap gap-4">
+              <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:gap-4">
                 {pagedScenes.map((scene) => {
                   const memberSummary = memberSummaries.get(scene.id);
                   const editorSummary = editorSummaries.get(scene.id);

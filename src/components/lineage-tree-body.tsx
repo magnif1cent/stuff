@@ -2,7 +2,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { tmdbImageUrl } from "@/lib/tmdb";
 import { getPortrayals, type LineageTree, type LineageFigureRef } from "@/lib/lineage";
+import { buildLayout, type LayoutNode } from "@/lib/lineage-tree-layout";
 import { GroupIcon } from "@/components/lineage-group-icon";
+import { LineageTreeZoom } from "@/components/lineage-tree-zoom";
 
 // A bare figure's own page (or CastCredit lookup for "portrayed by") is
 // keyed by figureId; an actor-linked figure's is keyed by their personId --
@@ -15,197 +17,6 @@ function figureHref(figure: LineageFigureRef): string {
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/);
   return ((parts[0]?.[0] ?? "") + (parts[parts.length - 1]?.[0] ?? "")).toUpperCase();
-}
-
-// --- Layout ---------------------------------------------------------
-//
-// A hand-rolled layout, not a graph-layout library: this tree has exactly
-// one branching shape to handle (a single primary chain above, a single
-// primary chain of generations below, each level possibly fanning out to
-// several children) rather than an arbitrary graph, so plain arithmetic
-// covers it. Coordinates are computed in two passes -- first in
-// trunk-centered "relative" units (x=0 is the primary sifu/student chain,
-// row index counts generations away from the centered figure), then
-// shifted once by the tree's actual min/max extent so nothing renders at a
-// negative pixel position. See DECISIONS.md for why this replaced the
-// earlier flexbox-and-arrows rendering.
-//
-// A parent with more than one child/overflow slot connects via an elbow
-// (a vertical stem, a shared horizontal bar, then an even vertical drop
-// into each child) rather than a diagonal line straight from the parent to
-// each child -- see DECISIONS.md. Secondary "co-sifu" links and the
-// ancestor chain are unaffected: the ancestor chain never branches, and a
-// secondary link stays a plain diagonal on purpose (its dashed diagonal is
-// what visually marks it as not a primary descendant edge).
-
-const SLOT_W = 78;
-const ROW_H = 108;
-const PAD_X = 56;
-const PAD_Y = 52;
-
-interface LayoutNode {
-  id: string;
-  figure: LineageFigureRef;
-  kind: "ancestor" | "secondary" | "center" | "child" | "overflow";
-  x: number;
-  y: number;
-  overflowCount?: number;
-  // Which sibling-limit query param an overflow badge's "+N more" link
-  // should bump -- a group's own children are capped separately (a larger
-  // limit, since a team can run much bigger than one person's students),
-  // so which one applies depends on whether this overflow's parent is a
-  // group, not on the overflow node itself.
-  overflowParentIsGroup?: boolean;
-}
-interface LayoutLine {
-  x1: number;
-  y1: number;
-  x2: number;
-  y2: number;
-  dashed: boolean;
-  // Whether this segment is the one that actually reaches a node (and so
-  // should carry the arrowhead marker) -- false for the stem/bar segments
-  // of an elbow connector, which are purely intermediate.
-  arrowhead: boolean;
-}
-
-function buildLayout(tree: LineageTree) {
-  const nodes: LayoutNode[] = [];
-  const lines: LayoutLine[] = [];
-  const posById = new Map<string, { x: number; y: number }>();
-
-  const ancestorsReversed = [...tree.ancestors].reverse(); // oldest first
-  const A = ancestorsReversed.length;
-  ancestorsReversed.forEach((figure, i) => {
-    const row = -(A - i);
-    const y = row * ROW_H;
-    nodes.push({ id: figure.id, figure, kind: "ancestor", x: 0, y });
-    posById.set(figure.id, { x: 0, y });
-  });
-  for (let i = 0; i < A - 1; i++) {
-    const from = posById.get(ancestorsReversed[i].id)!;
-    const to = posById.get(ancestorsReversed[i + 1].id)!;
-    lines.push({ x1: from.x, y1: from.y, x2: to.x, y2: to.y, dashed: false, arrowhead: true });
-  }
-  if (A > 0) {
-    lines.push({ x1: 0, y1: -ROW_H, x2: 0, y2: 0, dashed: false, arrowhead: true });
-  }
-
-  const secondaryRowY = A > 0 ? -ROW_H : -ROW_H;
-  tree.secondarySifus.forEach((figure, i) => {
-    const x = (i + 1) * SLOT_W;
-    nodes.push({ id: figure.id, figure, kind: "secondary", x, y: secondaryRowY });
-    posById.set(figure.id, { x, y: secondaryRowY });
-    lines.push({ x1: x, y1: secondaryRowY, x2: 0, y2: 0, dashed: true, arrowhead: true });
-  });
-
-  nodes.push({ id: tree.center.id, figure: tree.center, kind: "center", x: 0, y: 0 });
-  posById.set(tree.center.id, { x: 0, y: 0 });
-
-  tree.descendantLevels.forEach((groups, levelIndex) => {
-    const y = (levelIndex + 1) * ROW_H;
-
-    // Each parent's own children are centered directly under that parent,
-    // not packed as one flat left-to-right sequence across the whole row.
-    // With several siblings where only some branch further (two of four
-    // children having their own students, say), a flat pack drifts a
-    // parent's children off onto a neighboring sibling's column instead --
-    // the connecting line is still technically correct, but the crossing
-    // reads as backwards. Overlap between two adjacent clusters (needs two
-    // branching parents close together, each with several children of
-    // their own) is resolved by nudging the later one right just enough to
-    // clear the earlier one.
-    const widths = groups.map((g) => g.children.length + (g.overflowCount > 0 ? 1 : 0));
-    const centers: number[] = [];
-    groups.forEach((group, i) => {
-      const desired = (posById.get(group.parent.id) ?? { x: 0, y: y - ROW_H }).x;
-      if (i === 0) {
-        centers.push(desired);
-      } else {
-        const minCenter = centers[i - 1] + ((widths[i - 1] + widths[i]) / 2) * SLOT_W;
-        centers.push(Math.max(desired, minCenter));
-      }
-    });
-
-    groups.forEach((group, i) => {
-      const parentPos = posById.get(group.parent.id) ?? { x: 0, y: y - ROW_H };
-      const w = widths[i];
-      let slot = 0;
-      // Every drop point under this parent (real children plus the
-      // overflow badge, if any) -- collected first so the connector can be
-      // drawn as one elbow (stem + shared bar + even drops) instead of a
-      // diagonal line per child radiating straight out of the parent.
-      const drops: { x: number; y: number; dashed: boolean }[] = [];
-      for (const child of group.children) {
-        const x = centers[i] + (slot - (w - 1) / 2) * SLOT_W;
-        slot++;
-        nodes.push({ id: child.id, figure: child, kind: "child", x, y });
-        posById.set(child.id, { x, y });
-        drops.push({ x, y, dashed: false });
-      }
-      if (group.overflowCount > 0) {
-        const x = centers[i] + (slot - (w - 1) / 2) * SLOT_W;
-        nodes.push({
-          id: `${group.parent.id}-overflow`,
-          figure: { id: "", name: `+${group.overflowCount} more`, profilePath: null, personId: null, isGroup: false },
-          kind: "overflow",
-          x,
-          y,
-          overflowCount: group.overflowCount,
-          overflowParentIsGroup: group.parent.isGroup,
-        });
-        drops.push({ x, y, dashed: true });
-      }
-
-      if (drops.length === 1) {
-        // The common case (a single child, no overflow) already lands
-        // exactly under the parent via `centers[i]` above, so a plain line
-        // is already a straight vertical drop -- no elbow needed.
-        const drop = drops[0];
-        lines.push({ x1: parentPos.x, y1: parentPos.y, x2: drop.x, y2: drop.y, dashed: drop.dashed, arrowhead: true });
-      } else if (drops.length > 1) {
-        const elbowY = parentPos.y + ROW_H / 2;
-        const dropXs = drops.map((d) => d.x);
-        lines.push({ x1: parentPos.x, y1: parentPos.y, x2: parentPos.x, y2: elbowY, dashed: false, arrowhead: false });
-        lines.push({
-          x1: Math.min(...dropXs),
-          y1: elbowY,
-          x2: Math.max(...dropXs),
-          y2: elbowY,
-          dashed: false,
-          arrowhead: false,
-        });
-        for (const drop of drops) {
-          lines.push({ x1: drop.x, y1: elbowY, x2: drop.x, y2: drop.y, dashed: drop.dashed, arrowhead: true });
-        }
-      }
-    });
-  });
-
-  const xs = nodes.map((n) => n.x);
-  const ys = nodes.map((n) => n.y);
-  const minX = Math.min(0, ...xs);
-  const maxX = Math.max(0, ...xs);
-  const minY = Math.min(0, ...ys);
-  const maxY = Math.max(0, ...ys);
-  const offsetX = -minX + PAD_X;
-  const offsetY = -minY + PAD_Y;
-  const width = maxX - minX + PAD_X * 2;
-  const height = maxY - minY + PAD_Y * 2;
-
-  return {
-    width,
-    height,
-    nodes: nodes.map((n) => ({ ...n, x: n.x + offsetX, y: n.y + offsetY })),
-    lines: lines.map((l) => ({
-      x1: l.x1 + offsetX,
-      y1: l.y1 + offsetY,
-      x2: l.x2 + offsetX,
-      y2: l.y2 + offsetY,
-      dashed: l.dashed,
-      arrowhead: l.arrowhead,
-    })),
-  };
 }
 
 // --- Rendering -------------------------------------------------------
@@ -317,7 +128,7 @@ async function resolvePortrayalMarkers(nodes: LayoutNode[]): Promise<{
   const portrayalsByNodeId = new Map<string, Awaited<ReturnType<typeof getPortrayals>>>();
   await Promise.all(
     bareNodes.map(async (n) => {
-      const portrayals = await getPortrayals(n.figure.name);
+      const portrayals = await getPortrayals([n.figure.name, ...n.figure.aliases]);
       if (portrayals.length > 0) portrayalsByNodeId.set(n.id, portrayals);
     }),
   );
@@ -369,12 +180,17 @@ export async function LineageTreeBody({
   down,
   siblings,
   groupSiblings,
+  zoomable = false,
 }: {
   tree: LineageTree;
   up: number;
   down: number;
   siblings: number;
   groupSiblings: number;
+  // Pan/zoom is opt-in -- only the full-tree pages want it. The small
+  // inline teaser on an actor's own page stays fixed-scale, embedded in
+  // the page's normal scroll, same as before. See LineageTreeZoom.
+  zoomable?: boolean;
 }) {
   const isEmpty = tree.ancestors.length === 0 && tree.secondarySifus.length === 0 && tree.descendantLevels.length === 0;
   const layout = buildLayout(tree);
@@ -397,51 +213,60 @@ export async function LineageTreeBody({
         </Link>
       )}
 
-      <div className="max-w-full overflow-x-auto">
-        <div className="relative mx-auto" style={{ width: layout.width, height: layout.height }}>
-          <svg
-            className="absolute inset-0"
-            width={layout.width}
-            height={layout.height}
-            viewBox={`0 0 ${layout.width} ${layout.height}`}
-          >
-            <defs>
-              <marker id="lineage-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                <path d="M0,0 L10,5 L0,10 Z" fill="#4d3a26" />
-              </marker>
-            </defs>
-            {layout.lines.map((line, i) => (
-              <line
-                key={i}
-                x1={line.x1}
-                y1={line.y1}
-                x2={line.x2}
-                y2={line.y2}
-                stroke="#4d3a26"
-                strokeWidth={2}
-                strokeDasharray={line.dashed ? "4 4" : undefined}
-                markerEnd={!line.dashed && line.arrowhead ? "url(#lineage-arrow)" : undefined}
+      {(() => {
+        const treeSvg = (
+          <div className="relative mx-auto" style={{ width: layout.width, height: layout.height }}>
+            <svg
+              className="absolute inset-0"
+              width={layout.width}
+              height={layout.height}
+              viewBox={`0 0 ${layout.width} ${layout.height}`}
+            >
+              <defs>
+                <marker id="lineage-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path d="M0,0 L10,5 L0,10 Z" fill="#4d3a26" />
+                </marker>
+              </defs>
+              {layout.lines.map((line, i) => (
+                <line
+                  key={i}
+                  x1={line.x1}
+                  y1={line.y1}
+                  x2={line.x2}
+                  y2={line.y2}
+                  stroke="#4d3a26"
+                  strokeWidth={2}
+                  strokeDasharray={line.dashed ? "4 4" : undefined}
+                  markerEnd={!line.dashed && line.arrowhead ? "url(#lineage-arrow)" : undefined}
+                />
+              ))}
+            </svg>
+            {layout.nodes.map((node) => (
+              <TreeNode
+                key={node.id}
+                node={node}
+                marker={markerByNodeId.get(node.id)}
+                moreHref={
+                  node.kind === "overflow"
+                    ? treeUrl(
+                        node.overflowParentIsGroup
+                          ? { groupSiblings: groupSiblings + (node.overflowCount ?? 0) }
+                          : { siblings: siblings + (node.overflowCount ?? 0) },
+                      )
+                    : undefined
+                }
               />
             ))}
-          </svg>
-          {layout.nodes.map((node) => (
-            <TreeNode
-              key={node.id}
-              node={node}
-              marker={markerByNodeId.get(node.id)}
-              moreHref={
-                node.kind === "overflow"
-                  ? treeUrl(
-                      node.overflowParentIsGroup
-                        ? { groupSiblings: groupSiblings + (node.overflowCount ?? 0) }
-                        : { siblings: siblings + (node.overflowCount ?? 0) },
-                    )
-                  : undefined
-              }
-            />
-          ))}
-        </div>
-      </div>
+          </div>
+        );
+        return zoomable ? (
+          <LineageTreeZoom width={layout.width} height={layout.height}>
+            {treeSvg}
+          </LineageTreeZoom>
+        ) : (
+          <div className="max-w-full overflow-x-auto">{treeSvg}</div>
+        );
+      })()}
 
       {tree.descendantsTruncated && (
         <Link href={treeUrl({ down: down + 3 })} className="text-xs text-neutral-500 hover:text-neutral-300">

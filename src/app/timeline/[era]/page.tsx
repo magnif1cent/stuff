@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { isEraSettingKey, eraSettingName, eraSettingYears } from "@/lib/era-settings";
 import { getRatingSummaries } from "@/lib/ratings";
+import { getFightSceneCountsByMovieIds } from "@/lib/fight-scenes";
 import { MovieCard } from "@/components/movie-card";
 import { Pagination } from "@/components/pagination";
 
@@ -49,7 +50,10 @@ export default async function TimelineEraPage({
   const page = Math.min(Math.max(1, Number(sp.page) || 1), totalPages);
   const pagedMovies = movies.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  const ratingSummaries = await getRatingSummaries(pagedMovies.map((m) => m.id));
+  const [ratingSummaries, fightCountByMovieId] = await Promise.all([
+    getRatingSummaries(pagedMovies.map((m) => m.id)),
+    getFightSceneCountsByMovieIds(pagedMovies.map((m) => m.id)),
+  ]);
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-10">
@@ -76,6 +80,7 @@ export default async function TimelineEraPage({
                 ...movie,
                 communityAverage: summary?.average ?? null,
                 communityCount: summary?.count ?? 0,
+                fightCount: fightCountByMovieId.get(movie.id) ?? 0,
               }}
             />
           );

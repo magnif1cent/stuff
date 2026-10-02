@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { getFightSceneCountsByMovieIds } from "@/lib/fight-scenes";
 import type { Prisma } from "@/generated/prisma/client";
 
 const GENRE_WEIGHT = 2;
@@ -14,6 +15,7 @@ export interface SimilarMovie {
   posterOverrideUrl: string | null;
   releaseDate: Date | null;
   tmdbRating: number | null;
+  fightCount: number;
 }
 
 // Blends three signals TMDB's own "similar movies" endpoint can't see --
@@ -71,16 +73,20 @@ export async function getSimilarMovies(movie: {
     return { candidate, score };
   });
 
-  return scored
+  const top = scored
     .filter((s) => s.score > 0)
     .sort((a, b) => b.score - a.score)
-    .slice(0, MAX_RESULTS)
-    .map((s) => ({
-      id: s.candidate.id,
-      title: s.candidate.title,
-      posterPath: s.candidate.posterPath,
-      posterOverrideUrl: s.candidate.posterOverrideUrl,
-      releaseDate: s.candidate.releaseDate,
-      tmdbRating: s.candidate.tmdbRating,
-    }));
+    .slice(0, MAX_RESULTS);
+  // Counted only for the handful actually shown, not every candidate.
+  const fightCounts = await getFightSceneCountsByMovieIds(top.map((s) => s.candidate.id));
+
+  return top.map((s) => ({
+    id: s.candidate.id,
+    title: s.candidate.title,
+    posterPath: s.candidate.posterPath,
+    posterOverrideUrl: s.candidate.posterOverrideUrl,
+    releaseDate: s.candidate.releaseDate,
+    tmdbRating: s.candidate.tmdbRating,
+    fightCount: fightCounts.get(s.candidate.id) ?? 0,
+  }));
 }

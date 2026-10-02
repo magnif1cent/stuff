@@ -53,19 +53,16 @@ export function FightSceneCollapsibleGrid({ entries }: { entries: FightSceneEntr
       {filtered.length === 0 ? (
         <p className="text-sm text-neutral-400">No fight scenes match that title.</p>
       ) : (
-        <div className="flex flex-wrap gap-4">
+        <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:gap-4">
           {visible.map(({ scene, initialLists, signedIn, initialFavorite }) => (
-            <div key={scene.id} className="relative">
-              <FightSceneResultCard
-                scene={scene}
-                initialLists={initialLists}
-                signedIn={signedIn}
-                initialFavorite={initialFavorite}
-              />
-              <div className="absolute top-3 right-3">
-                <SignatureVoteButton kind="fightScene" id={scene.id} />
-              </div>
-            </div>
+            <FightSceneResultCard
+              key={scene.id}
+              scene={scene}
+              initialLists={initialLists}
+              signedIn={signedIn}
+              initialFavorite={initialFavorite}
+              thumbnailBadge={<SignatureVoteButton kind="fightScene" id={scene.id} />}
+            />
           ))}
         </div>
       )}

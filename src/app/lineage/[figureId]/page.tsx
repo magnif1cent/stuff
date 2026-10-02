@@ -62,7 +62,7 @@ export default async function LineageFigurePage({
         reach out if you spot something to fix.
       </p>
 
-      <LineageTreeBody tree={tree} up={up} down={down} siblings={siblings} groupSiblings={groupSiblings} />
+      <LineageTreeBody tree={tree} up={up} down={down} siblings={siblings} groupSiblings={groupSiblings} zoomable />
     </div>
   );
 }

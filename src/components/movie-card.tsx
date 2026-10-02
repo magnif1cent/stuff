@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { resolvePosterUrl, isTmdbUrl } from "@/lib/tmdb";
 import { RecommendedBadges } from "@/components/recommended-badge";
+import { WatchlistToggle } from "@/components/watchlist-toggle";
 import type { MovieRecommender } from "@/lib/movie-recommendations";
 import type { Movie } from "@/generated/prisma/client";
 
@@ -12,6 +13,10 @@ export type MovieCardData = Pick<
   communityAverage?: number | null;
   communityCount?: number;
   recommendedBy?: MovieRecommender[];
+  // Catalogued (non-deleted) fight scenes -- the clips actually watchable
+  // on the site, not the member-edited Fight Count. Omitted by callers
+  // that don't fetch it; no badge renders either way when it's 0.
+  fightCount?: number;
 };
 
 // "compact" is used on the member profile page, where several sections of
@@ -23,12 +28,24 @@ const SIZE_CLASSES = {
   compact: { link: "w-28 sm:w-32", sizes: "(max-width: 640px) 112px, 128px" },
 } as const;
 
-export function MovieCard({ movie, size = "default" }: { movie: MovieCardData; size?: keyof typeof SIZE_CLASSES }) {
+export function MovieCard({
+  movie,
+  size = "default",
+  initialWatchlist,
+}: {
+  movie: MovieCardData;
+  size?: keyof typeof SIZE_CLASSES;
+  // Pass a boolean (the signed-in member's current state) to show the
+  // one-tap Watchlist toggle beside the title; omit it and the card renders
+  // exactly as before. Only /search passes it for now.
+  initialWatchlist?: boolean;
+}) {
   const posterUrl = resolvePosterUrl(movie, "w342");
   const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : null;
   const { link, sizes } = SIZE_CLASSES[size];
+  const withToggle = initialWatchlist !== undefined;
 
-  return (
+  const card = (
     <Link href={`/movies/${movie.id}`} className={`group flex shrink-0 flex-col gap-2 ${link}`}>
       <div className="relative aspect-2/3 w-full overflow-hidden rounded-md bg-neutral-800">
         {posterUrl ? (
@@ -50,9 +67,20 @@ export function MovieCard({ movie, size = "default" }: { movie: MovieCardData; s
             <RecommendedBadges recommenders={movie.recommendedBy} size="lg" />
           </div>
         )}
+        {/* Top-right, opposite the recommendation badges (top-left). */}
+        {movie.fightCount ? (
+          <div
+            title={`${movie.fightCount} fight scene${movie.fightCount === 1 ? "" : "s"}`}
+            className="absolute top-2 right-2 rounded-full bg-black/75 px-2 py-0.5 text-xs font-semibold text-white shadow backdrop-blur-sm"
+          >
+            {movie.fightCount} {movie.fightCount === 1 ? "fight" : "fights"}
+          </div>
+        ) : null}
       </div>
-      <div>
-        <p className="truncate text-sm font-medium text-neutral-100 group-hover:text-red-500">
+      {/* Room on the right for the Watchlist toggle, which sits beside the
+          title outside this link (a button can't be nested in a link). */}
+      <div className={withToggle ? "pr-8" : undefined}>
+        <p title={movie.title} className="truncate text-sm font-medium text-neutral-100 group-hover:text-red-500">
           {movie.title}
         </p>
         <div className="flex items-center gap-2 text-xs text-neutral-500">
@@ -66,5 +94,15 @@ export function MovieCard({ movie, size = "default" }: { movie: MovieCardData; s
         </div>
       </div>
     </Link>
+  );
+
+  if (!withToggle) return card;
+  return (
+    <div className="relative shrink-0">
+      {card}
+      <div className="absolute right-0 bottom-0">
+        <WatchlistToggle movieId={movie.id} initialOn={initialWatchlist} />
+      </div>
+    </div>
   );
 }

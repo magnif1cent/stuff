@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { getFeaturedMovies } from "@/lib/weekly-featured";
 import { getRatingSummaries, getTopRatedMovies } from "@/lib/ratings";
 import { getMovieRecommendationsByMovieIds } from "@/lib/movie-recommendations";
+import { getFightSceneCountsByMovieIds } from "@/lib/fight-scenes";
 import { getRecentEditorialReviews } from "@/lib/editorial-reviews";
 import { getLatestNewsPost } from "@/lib/news";
 import { getRecentActivity } from "@/lib/activity";
@@ -34,10 +35,11 @@ export default async function HomePage() {
     author: review.author,
   }));
 
-  const ratingSummaries = await getRatingSummaries(recent.map((m) => m.id));
-  const recommendationsByMovieId = await getMovieRecommendationsByMovieIds([
-    ...recent.map((m) => m.id),
-    ...topRated.map((m) => m.id),
+  const railMovieIds = [...recent.map((m) => m.id), ...topRated.map((m) => m.id)];
+  const [ratingSummaries, recommendationsByMovieId, fightCountByMovieId] = await Promise.all([
+    getRatingSummaries(recent.map((m) => m.id)),
+    getMovieRecommendationsByMovieIds(railMovieIds),
+    getFightSceneCountsByMovieIds(railMovieIds),
   ]);
 
   const recentWithRatings = recent.map((movie) => {
@@ -47,12 +49,14 @@ export default async function HomePage() {
       communityAverage: summary?.average ?? null,
       communityCount: summary?.count ?? 0,
       recommendedBy: recommendationsByMovieId.get(movie.id) ?? [],
+      fightCount: fightCountByMovieId.get(movie.id) ?? 0,
     };
   });
 
   const topRatedWithRecommendations = topRated.map((movie) => ({
     ...movie,
     recommendedBy: recommendationsByMovieId.get(movie.id) ?? [],
+    fightCount: fightCountByMovieId.get(movie.id) ?? 0,
   }));
 
   return (

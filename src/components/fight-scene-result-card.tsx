@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import type { FightScene, FightSceneTag, FightSceneStyle, FightSceneMove, Movie, Person } from "@/generated/prisma/client";
 import { AddToListControl, type AddToListItem } from "@/components/add-to-list-control";
@@ -5,9 +6,18 @@ import { FavoriteButton } from "@/components/favorite-button";
 import { FightSceneThumbnail } from "@/components/fight-scene-thumbnail";
 
 // How many cast names to spell out before collapsing the rest into "& N
-// more" — keeps the "Featuring" line (and so the card's height) consistent
+// more" — keeps the cast line (and so the card's height) consistent
 // across scenes with wildly different cast-tag counts.
 const MAX_FEATURED_CAST = 2;
+
+// Same idea for chips (tags first, as the clickable filters, then styles
+// and moves, all in one row): a scene
+// can carry a dozen, and letting them wrap made one card (and so its whole grid row, which
+// stretches to match) several lines taller than its neighbors. Show this
+// many per row — fewer on phones, where the grid goes two-up — and fold
+// the rest into a "+N" chip linking to the scene page.
+const MAX_CHIPS_PHONE = 1;
+const MAX_CHIPS = 2;
 
 // Same "Fight Ticket" palette as fight-scene-section.tsx — kept in sync
 // manually since this is a read-only result card, not the interactive one.
@@ -41,6 +51,7 @@ export function FightSceneResultCard({
   signedIn = false,
   initialFavorite = false,
   size = "default",
+  thumbnailBadge,
 }: {
   scene: FightSceneResult;
   initialLists?: AddToListItem[];
@@ -53,6 +64,9 @@ export function FightSceneResultCard({
   // needs. Keeps the cream ticket identity, drops everything but the
   // thumbnail, title, and rating.
   size?: "default" | "compact";
+  // Extra control pinned to the thumbnail's top-left corner (the actor
+  // page's signature-vote button), opposite the favorite/save buttons.
+  thumbnailBadge?: ReactNode;
 }) {
   const year = scene.movie.releaseDate ? new Date(scene.movie.releaseDate).getFullYear() : null;
   const permalink = `/movies/${scene.movieId}/fights/${scene.id}`;
@@ -78,10 +92,16 @@ export function FightSceneResultCard({
           {scene.title}
         </Link>
         <p className="truncate text-[10px]" style={{ color: TICKET_MUTED }}>
-          <span className="font-bold" style={{ color: TICKET_STAMP }}>
-            ★ {memberLabel}
-          </span>{" "}
-          ({scene.memberRatingCount})
+          {scene.memberRatingCount > 0 ? (
+            <>
+              <span className="font-bold" style={{ color: TICKET_STAMP }}>
+                ★ {memberLabel}
+              </span>{" "}
+              ({scene.memberRatingCount})
+            </>
+          ) : (
+            "No ratings yet"
+          )}
         </p>
       </div>
     );
@@ -89,7 +109,9 @@ export function FightSceneResultCard({
 
   return (
     <div
-      className="relative w-64 shrink-0 bg-[#e8dcc4] p-4 font-mono"
+      // Full width of its grid cell on phones (the grids go two-up there),
+      // fixed ticket width from sm up.
+      className="relative w-full min-w-0 bg-[#e8dcc4] p-3 font-mono sm:w-64 sm:shrink-0 sm:p-4"
       style={{
         color: TICKET_INK,
         clipPath:
@@ -99,7 +121,7 @@ export function FightSceneResultCard({
       <Link
         href={`/movies/${scene.movieId}`}
         title={`${scene.movie.title}${year ? ` (${year})` : ""}`}
-        className="flex items-baseline gap-1 text-sm font-bold tracking-wide uppercase hover:opacity-70"
+        className="flex items-baseline gap-1 text-[11px] font-bold tracking-wide uppercase hover:opacity-70 sm:text-sm"
       >
         <span className="min-w-0 truncate">{scene.movie.title}</span>
         {year && (
@@ -109,21 +131,73 @@ export function FightSceneResultCard({
         )}
       </Link>
 
-      <div className="mt-3 border-t-2 border-dashed pt-3" style={{ borderColor: "#b8ab8c" }}>
-        <FightSceneThumbnail
-          href={permalink}
-          videoId={scene.youtubeVideoId}
-          title={scene.title}
-          inkColor={TICKET_INK}
-        />
+      {/* Favorite/save sit on the thumbnail as siblings of its link (not
+          inside it) so they aren't nested interactive elements. */}
+      <div className="mt-2 border-t-2 border-dashed pt-2 sm:mt-3 sm:pt-3" style={{ borderColor: "#b8ab8c" }}>
+        <div className="relative">
+          <FightSceneThumbnail
+            href={permalink}
+            videoId={scene.youtubeVideoId}
+            title={scene.title}
+            inkColor={TICKET_INK}
+            fullWidth
+          />
+          {/* Rating sits on the thumbnail rather than in the header so it
+              doesn't squeeze the movie title, especially two-up on phones.
+              Hidden until a scene has at least one rating. pointer-events-none
+              so a tap on it still reaches the thumbnail link underneath. */}
+          {scene.memberRatingCount > 0 && (
+            <span
+              className="pointer-events-none absolute bottom-1.5 left-1.5 rounded-full bg-black/70 px-2 py-0.5 text-[10px] text-white sm:bottom-2 sm:left-2 sm:text-xs"
+            >
+              <span className="font-bold">★ {memberLabel}</span> <span className="text-white/70">({scene.memberRatingCount})</span>
+            </span>
+          )}
+          {thumbnailBadge && <div className="absolute top-1.5 left-1.5 sm:top-2 sm:left-2">{thumbnailBadge}</div>}
+          <div className="absolute top-1.5 right-1.5 flex items-center gap-1 sm:top-2 sm:right-2 sm:gap-1.5">
+            <FavoriteButton
+              movieId={scene.movieId}
+              fightSceneId={scene.id}
+              initialFavorite={initialFavorite}
+              signedIn={signedIn}
+              variant="overlay"
+            />
+            <AddToListControl
+              target={{ type: "fightScene", id: scene.id }}
+              initialLists={initialLists}
+              signedIn={signedIn}
+              variant="overlay"
+            />
+          </div>
+        </div>
       </div>
 
-      <Link href={permalink} className="mt-3 block truncate text-lg font-bold hover:opacity-70" style={{ fontFamily: "Georgia, serif" }}>
-        {scene.title}
-      </Link>
+      <div className="mt-2 flex items-center gap-1.5 sm:mt-3">
+        <Link
+          href={permalink}
+          title={scene.title}
+          className="min-w-0 truncate text-sm font-bold hover:opacity-70 sm:text-lg"
+          style={{ fontFamily: "Georgia, serif" }}
+        >
+          {scene.title}
+        </Link>
+        {/* A small check next to the title instead of a "Verified" pill in
+            the tag row, which took a whole chip slot (and could push the
+            row onto a second line) for a yes/no flag. */}
+        {scene.isVerified && (
+          <span
+            role="img"
+            title="Verified"
+            aria-label="Verified"
+            className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full text-[9px] leading-none sm:h-4 sm:w-4 sm:text-[10px]"
+            style={{ background: TICKET_INK, color: "#e8dcc4" }}
+          >
+            ✓
+          </span>
+        )}
+      </div>
       {scene.cast.length > 0 && (
-        <p className="mt-0.5 truncate text-[11px] tracking-wide uppercase" style={{ color: TICKET_MUTED }}>
-          Featuring{" "}
+        <p className="mt-0.5 truncate text-[10px] tracking-wide uppercase sm:text-[11px]" style={{ color: TICKET_MUTED }}>
           {scene.cast.slice(0, MAX_FEATURED_CAST).map((c, i) => (
             <span key={c.person.id}>
               {i > 0 && ", "}
@@ -136,71 +210,80 @@ export function FightSceneResultCard({
         </p>
       )}
 
-      {((scene.styles?.length ?? 0) > 0 || (scene.moves?.length ?? 0) > 0) && (
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          {scene.styles?.map((style) => (
-            <span
-              key={style.id}
-              className="px-2 py-0.5 text-[10px] font-bold tracking-wide uppercase"
-              style={{ border: `1px solid ${TICKET_STAMP}`, color: TICKET_STAMP }}
-            >
-              {style.name}
-            </span>
-          ))}
-          {scene.moves?.map((move) => (
-            <span
-              key={move.id}
-              className="px-2 py-0.5 text-[10px] font-bold tracking-wide uppercase"
-              style={{ border: `1px solid ${TICKET_MOVE}`, color: TICKET_MOVE }}
-            >
-              {move.name}
-            </span>
-          ))}
-        </div>
-      )}
+      <ChipRow
+        chips={[
+          ...scene.tags.map((tag) => ({
+            id: tag.id,
+            name: tag.name,
+            href: `/search/fights?tag=${encodeURIComponent(tag.name)}`,
+          })),
+          ...(scene.styles ?? []).map((style) => ({ id: style.id, name: style.name, color: TICKET_STAMP })),
+          ...(scene.moves ?? []).map((move) => ({ id: move.id, name: move.name, color: TICKET_MOVE })),
+        ]}
+        moreHref={permalink}
+      />
+    </div>
+  );
+}
 
-      <div className="mt-3 flex flex-wrap gap-1.5">
-        {scene.tags.map((tag) => (
+type Chip = { id: string; name: string; href?: string; color?: string };
+
+// One non-wrapping line of chips: the first MAX_CHIPS (MAX_CHIPS_PHONE
+// below sm), each truncating if two long names don't fit, then a "+N"
+// chip for the rest. Tag chips are links (href) in ink; style/move chips
+// are plain, bold, and in their own color.
+function ChipRow({ chips, moreHref }: { chips: Chip[]; moreHref: string }) {
+  if (chips.length === 0) return null;
+
+  const chipClass = "min-w-0 truncate border px-1.5 py-0.5 text-[9px] tracking-wide uppercase sm:px-2 sm:text-[10px]";
+  const moreClass = "shrink-0 border px-1.5 py-0.5 text-[9px] tracking-wide hover:opacity-70 sm:px-2 sm:text-[10px]";
+  const rest = (from: number) => chips.slice(from).map((c) => c.name).join(", ");
+
+  return (
+    <div className="mt-2 flex gap-1 sm:mt-3 sm:gap-1.5">
+      {chips.slice(0, MAX_CHIPS).map((chip, i) => {
+        const className = `${chipClass} ${i >= MAX_CHIPS_PHONE ? "hidden sm:block" : "block"}`;
+        return chip.href ? (
           <Link
-            key={tag.id}
-            href={`/search/fights?tag=${encodeURIComponent(tag.name)}`}
-            className="border px-2 py-0.5 text-[10px] tracking-wide uppercase underline underline-offset-2 hover:opacity-70"
+            key={chip.id}
+            href={chip.href}
+            title={chip.name}
+            className={`${className} underline underline-offset-2 hover:opacity-70`}
             style={{ borderColor: TICKET_INK }}
           >
-            {tag.name}
+            {chip.name}
           </Link>
-        ))}
-        {scene.isVerified && (
-          <span className="px-2 py-0.5 text-[10px] tracking-wide uppercase" style={{ background: TICKET_INK, color: "#e8dcc4" }}>
-            ✓ Verified
+        ) : (
+          <span
+            key={chip.id}
+            title={chip.name}
+            className={`${className} font-bold`}
+            style={{ borderColor: chip.color, color: chip.color }}
+          >
+            {chip.name}
           </span>
-        )}
-      </div>
-
-      <div className="mt-3 flex items-center justify-between gap-2 border-t pt-3" style={{ borderColor: "#b8ab8c" }}>
-        <p className="text-sm">
-          <span className="font-bold" style={{ color: TICKET_STAMP }}>
-            ★ {memberLabel}
-          </span>{" "}
-          <span className="text-xs" style={{ color: TICKET_MUTED }}>
-            ({scene.memberRatingCount})
-          </span>
-        </p>
-        <div className="flex shrink-0 items-center gap-3">
-          <FavoriteButton
-            movieId={scene.movieId}
-            fightSceneId={scene.id}
-            initialFavorite={initialFavorite}
-            signedIn={signedIn}
-          />
-          <AddToListControl
-            target={{ type: "fightScene", id: scene.id }}
-            initialLists={initialLists}
-            signedIn={signedIn}
-            variant="icon"
-          />
-        </div>
-      </div>
+        );
+      })}
+      {chips.length > MAX_CHIPS_PHONE && (
+        <Link
+          href={moreHref}
+          title={rest(MAX_CHIPS_PHONE)}
+          className={`${moreClass} sm:hidden`}
+          style={{ borderColor: TICKET_MUTED, color: TICKET_MUTED }}
+        >
+          +{chips.length - MAX_CHIPS_PHONE}
+        </Link>
+      )}
+      {chips.length > MAX_CHIPS && (
+        <Link
+          href={moreHref}
+          title={rest(MAX_CHIPS)}
+          className={`${moreClass} hidden sm:block`}
+          style={{ borderColor: TICKET_MUTED, color: TICKET_MUTED }}
+        >
+          +{chips.length - MAX_CHIPS}
+        </Link>
+      )}
     </div>
   );
 }
