@@ -465,17 +465,19 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
             />
           )}
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <div>
+        <div>
+          <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-2xl font-bold text-white">{person.name}</h1>
-            {person.nativeName && <p className="text-sm text-neutral-400 italic">{person.nativeName}</p>}
+            <ActorFavoriteButton
+              personId={person.id}
+              initialFavorite={!!myFavorite}
+              initialCount={favoriteCountMap.get(person.id) ?? 0}
+              signedIn={!!session?.user}
+            />
           </div>
-          <ActorFavoriteButton
-            personId={person.id}
-            initialFavorite={!!myFavorite}
-            initialCount={favoriteCountMap.get(person.id) ?? 0}
-            signedIn={!!session?.user}
-          />
+          {person.nativeName && (
+            <p className="font-native text-lg text-neutral-400">{person.nativeName}</p>
+          )}
         </div>
       </div>
 
