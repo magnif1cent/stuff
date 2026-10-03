@@ -185,6 +185,7 @@ one.
 - [Historical Timeline gains era quick-jump chips, a minimap, and in-place rating filtering](#historical-timeline-gains-era-quick-jump-chips-a-minimap-and-in-place-rating-filtering)
 - [Actor native-language name sourced from Wikidata, not TMDB](#actor-native-language-name-sourced-from-wikidata-not-tmdb)
 - [Lineage tree surfaces an actor-linked figure's native name as a hover flip, not a tooltip or a second line](#lineage-tree-surfaces-an-actor-linked-figures-native-name-as-a-hover-flip-not-a-tooltip-or-a-second-line)
+- [Actor page's native name: kept its own line, dropped italic, sized up](#actor-pages-native-name-kept-its-own-line-dropped-italic-sized-up)
 
 **Deferred & Backlog**
 
@@ -5827,6 +5828,49 @@ here. This only wires up the already-linked case.
   own API route, a materially separate surface from the public tree this
   change covers. Left as a possible follow-up, not assumed to want the
   same treatment without being asked.
+
+### Actor page's native name: kept its own line, dropped italic, sized up
+**PR #TBD.** Raised after reviewing a live screenshot (Jackie Chan's page):
+the original treatment — its own line under the display name, small and
+italic (see "Actor native-language name sourced from Wikidata" above) —
+had a real bug in it, not just a style quibble. CJK scripts have no native
+italic form, so the browser fakes one by skewing the glyph shapes, which
+reads as visibly wrong rather than stylish.
+
+An inline parenthetical ("Jackie Chan (成龍)," on the same line as the
+`<h1>`) was tried first, on the reasoning that it's the more common
+convention and needs no extra vertical space. Reverted on explicit
+instruction from the site owner, who wanted it back on its own line without
+parentheses — preference, not a bug, so no further litigating it. Landed
+on: same two-line layout as before, italic dropped (the actual bug), no
+parentheses, and bumped from `text-sm` to `text-lg` since the original size
+read as an afterthought once seen rendered next to a `text-2xl` name.
+A badge/chip treatment (matching "✓ Verified") and a hover-to-reveal
+matching the Lineage tree's flip were also considered and dropped — the
+former overstates a name as if it were a categorical status, the latter
+solves a space constraint (see the Lineage entry above) that doesn't exist
+on this page.
+
+Two more fixes landed in the same pass, after a review of this rendered
+result turned up both:
+
+- **A system CJK font stack (`--font-native` in `globals.css`)**, applied
+  via a `font-native` utility class — without it the native name has no
+  explicit `font-family` at all, so it falls through `--font-sans` (Geist,
+  a Latin-only face) to whatever CJK font the browser/OS happens to pick.
+  No `next/font` webfont: a full CJK family is large to ship for a handful
+  of characters per page, so this only improves the common case where the
+  viewer's system already has one of a few well-supported CJK system
+  fonts (PingFang SC, Hiragino Sans GB, Microsoft YaHei), falling back to
+  plain `sans-serif` otherwise — same risk profile as before, just a
+  better-looking default where one's available.
+- **The favorite button no longer vertically centers against a two-line
+  block.** `ActorFavoriteButton` moved into the same flex row as the
+  `<h1>` itself, with the native name now a sibling paragraph below that
+  row instead of a sibling of the name inside a shared `items-center`
+  container — the button aligns with the name line specifically,
+  regardless of whether a native name is present, rather than centering
+  against however many lines happen to be stacked beside it.
 
 - **Drag-and-drop reordering for ranked list items** — `ListItemRows`
   (`src/components/list-item-rows.tsx`) now has move-to-top/move-to-bottom
