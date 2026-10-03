@@ -184,6 +184,7 @@ one.
 - [Navbar wordmark switched from a plain serif to all-caps Anton](#navbar-wordmark-switched-from-a-plain-serif-to-all-caps-anton)
 - [Historical Timeline gains era quick-jump chips, a minimap, and in-place rating filtering](#historical-timeline-gains-era-quick-jump-chips-a-minimap-and-in-place-rating-filtering)
 - [Actor native-language name sourced from Wikidata, not TMDB](#actor-native-language-name-sourced-from-wikidata-not-tmdb)
+- [Lineage tree surfaces an actor-linked figure's native name as a hover flip, not a tooltip or a second line](#lineage-tree-surfaces-an-actor-linked-figures-native-name-as-a-hover-flip-not-a-tooltip-or-a-second-line)
 
 **Deferred & Backlog**
 
@@ -5767,6 +5768,65 @@ from it in another:
   before this shipped won't retroactively get one — closing that gap, if
   it's worth closing, is a one-off maintenance script, not part of the
   normal import flow.
+
+A manual, opt-in `scripts/backfill-native-names.ts` (capped `--limit`,
+`--dry-run`-able) covers the "actor already in the catalog" gap above —
+deliberately a one-off script an admin runs, not wired into any automated
+job, since each row costs a Neon write plus two outbound calls and the
+site owner wanted to control how much of the catalog gets touched and when.
+
+### Lineage tree surfaces an actor-linked figure's native name as a hover flip, not a tooltip or a second line
+**PR #TBD.** Follow-up to "Actor native-language name sourced from Wikidata"
+above, for `LineageFigure` — which, unlike `Person`, represents real people
+who were never necessarily TMDB cast members. A `LineageFigure` linked to
+an actor (`personId` set) already has a native name sitting unused on the
+`Person` row it points to; a bare figure (a historical sifu, admin-typed
+name only, no TMDB/IMDb presence) has no automatic path to one at all — the
+whole Wikidata lookup depends on starting from an exact TMDB→IMDb id, which
+a figure with no TMDB presence doesn't have. Getting one for a bare figure
+would need either a manual admin-entered field or a name-based Wikidata
+search, and the latter reintroduces exactly the ambiguous-matching risk the
+actor feature was built specifically to avoid (see above) — not attempted
+here. This only wires up the already-linked case.
+
+- **First pass: a plain `title="Name (Native Name)"` tooltip** — costs
+  nothing in the tree's layout, but a native browser tooltip is inert: no
+  styling, a multi-second hover delay, and it can't be screenshotted or
+  demoed (confirmed firsthand — headless Chromium renders the DOM
+  attribute fine but never paints the OS-level tooltip overlay itself).
+  Replaced after the first look at it with something actually part of the
+  page.
+- **Shipped: a hover-triggered 3D CSS flip** (two stacked spans in one
+  grid cell, rotated with `backface-visibility: hidden` so only one faces
+  the viewer at a time, triggered by `group-hover` on the wrapping Link) —
+  the name itself flips over to reveal the native name, rather than
+  something appearing beside or above it. Pure CSS, no client component:
+  `lineage-tree-body.tsx` stays a server component, same as before.
+  `aria-label` on the Link carries both names together for assistive tech,
+  since the flip itself is a hover-only, sighted-mouse-user affordance.
+- **Still no second permanent line, and still for the same reason**:
+  `lineage-tree-layout.ts`'s `ROW_H` (108px) is a hand-tuned constant sized
+  for one name line plus, in some cases, a portrayal-marker superscript or
+  a "Group" label underneath — already tight. What changed is why a *hover*
+  state is safe where a permanent line wouldn't be: every node is
+  independently absolutely positioned (`left`/`top` inline styles, not
+  normal document flow), so one node's label growing taller for the
+  duration of a hover can't push any other node or connector line around —
+  at worst it transiently overlaps something nearby, the same risk a
+  native tooltip already carried.
+- **`figureSelect`/`toFigureRef` (`src/lib/lineage.ts`) carry the field
+  through everywhere a `LineageFigureRef` gets built**, rather than
+  threading it in ad hoc at the one call site that needed it — the same
+  shape already flows through `getLineageTree`, `resolveFigureForPerson`,
+  and both bare-figure constructors, so every consumer gets a consistent
+  `nativeName: string | null` instead of some paths having it and others
+  not.
+- **The separate admin lineage-tree UI (`admin-lineage-tree.tsx`) wasn't
+  touched.** It's a client component with its own `LineageFigureRef` type
+  (imported from `admin-lineage-figure-picker`, not `lib/lineage`) and its
+  own API route, a materially separate surface from the public tree this
+  change covers. Left as a possible follow-up, not assumed to want the
+  same treatment without being asked.
 
 - **Drag-and-drop reordering for ranked list items** — `ListItemRows`
   (`src/components/list-item-rows.tsx`) now has move-to-top/move-to-bottom
