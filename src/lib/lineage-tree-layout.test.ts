@@ -3,7 +3,7 @@ import { buildLayout, SLOT_W } from "@/lib/lineage-tree-layout";
 import type { LineageFigureRef, LineageTree } from "@/lib/lineage";
 
 function fig(id: string): LineageFigureRef {
-  return { id, name: id, profilePath: null, personId: null, isGroup: false, aliases: [] };
+  return { id, name: id, profilePath: null, personId: null, isGroup: false, aliases: [], nativeName: null };
 }
 
 function baseTree(overrides: Partial<LineageTree>): LineageTree {

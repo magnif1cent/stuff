@@ -29,6 +29,10 @@ export interface LineageFigureRef {
   personId: string | null;
   isGroup: boolean;
   aliases: string[];
+  // The linked actor's native-language name (see Person.nativeName), null
+  // for a bare figure -- there's no automatic way to get one for someone
+  // who was never a TMDB-tracked cast member (see DECISIONS.md).
+  nativeName: string | null;
 }
 
 interface PersonRef {
@@ -43,7 +47,7 @@ export const figureSelect = {
   personId: true,
   isGroup: true,
   aliases: true,
-  person: { select: { name: true, profilePath: true } },
+  person: { select: { name: true, profilePath: true, nativeName: true } },
 } as const;
 
 type FigureRow = {
@@ -52,7 +56,7 @@ type FigureRow = {
   personId: string | null;
   isGroup: boolean;
   aliases: string[];
-  person: { name: string; profilePath: string | null } | null;
+  person: { name: string; profilePath: string | null; nativeName: string | null } | null;
 };
 
 export function toFigureRef(row: FigureRow): LineageFigureRef {
@@ -63,6 +67,7 @@ export function toFigureRef(row: FigureRow): LineageFigureRef {
     personId: row.personId,
     isGroup: row.isGroup,
     aliases: row.aliases,
+    nativeName: row.person?.nativeName ?? null,
   };
 }
 
@@ -76,7 +81,7 @@ export function toFigureRef(row: FigureRow): LineageFigureRef {
 export async function resolveFigureForPerson(personId: string): Promise<LineageFigureRef | null> {
   const person = await prisma.person.findUnique({
     where: { id: personId },
-    select: { id: true, name: true, profilePath: true },
+    select: { id: true, name: true, profilePath: true, nativeName: true },
   });
   if (!person) return null;
   const figure = await prisma.lineageFigure.upsert({
@@ -91,6 +96,7 @@ export async function resolveFigureForPerson(personId: string): Promise<LineageF
     personId: person.id,
     isGroup: false,
     aliases: figure.aliases,
+    nativeName: person.nativeName,
   };
 }
 
@@ -132,6 +138,7 @@ export async function createOrReuseBareFigure(
       personId: null,
       isGroup: figure.isGroup,
       aliases: figure.aliases,
+      nativeName: null,
     },
   };
 }
@@ -162,6 +169,7 @@ export async function setFigureIsGroup(
       personId: null,
       isGroup: updated.isGroup,
       aliases: updated.aliases,
+      nativeName: null,
     },
   };
 }

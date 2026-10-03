@@ -227,6 +227,7 @@ export function buildLayout(tree: LineageTree) {
           personId: null,
           isGroup: false,
           aliases: [],
+          nativeName: null,
         },
         kind: "overflow",
         x,

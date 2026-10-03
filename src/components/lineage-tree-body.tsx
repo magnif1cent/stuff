@@ -90,7 +90,15 @@ function TreeNode({ node, marker, moreHref }: { node: LayoutNode; marker?: numbe
           </>
         )
       ) : (
-        <Link href={figureHref(node.figure)} className="flex flex-col items-center gap-1 hover:opacity-80">
+        <Link
+          href={figureHref(node.figure)}
+          // A second visible line for the native name would risk colliding
+          // with the row below -- ROW_H in lineage-tree-layout.ts is already
+          // tight against one name line plus marker/Group label. A tooltip
+          // surfaces it without touching that hand-tuned spacing.
+          title={node.figure.nativeName ? `${node.figure.name} (${node.figure.nativeName})` : undefined}
+          className="flex flex-col items-center gap-1 hover:opacity-80"
+        >
           {circle}
           <span
             className={`bg-neutral-950 text-xs leading-tight ${isCenter ? "font-semibold text-white" : "text-neutral-300"}`}
