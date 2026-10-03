@@ -184,7 +184,7 @@ one.
 - [Navbar wordmark switched from a plain serif to all-caps Anton](#navbar-wordmark-switched-from-a-plain-serif-to-all-caps-anton)
 - [Historical Timeline gains era quick-jump chips, a minimap, and in-place rating filtering](#historical-timeline-gains-era-quick-jump-chips-a-minimap-and-in-place-rating-filtering)
 - [Actor native-language name sourced from Wikidata, not TMDB](#actor-native-language-name-sourced-from-wikidata-not-tmdb)
-- [Lineage tree surfaces an actor-linked figure's native name as a tooltip, not a second line](#lineage-tree-surfaces-an-actor-linked-figures-native-name-as-a-tooltip-not-a-second-line)
+- [Lineage tree surfaces an actor-linked figure's native name as a hover flip, not a tooltip or a second line](#lineage-tree-surfaces-an-actor-linked-figures-native-name-as-a-hover-flip-not-a-tooltip-or-a-second-line)
 
 **Deferred & Backlog**
 
@@ -5775,7 +5775,7 @@ deliberately a one-off script an admin runs, not wired into any automated
 job, since each row costs a Neon write plus two outbound calls and the
 site owner wanted to control how much of the catalog gets touched and when.
 
-### Lineage tree surfaces an actor-linked figure's native name as a tooltip, not a second line
+### Lineage tree surfaces an actor-linked figure's native name as a hover flip, not a tooltip or a second line
 **PR #TBD.** Follow-up to "Actor native-language name sourced from Wikidata"
 above, for `LineageFigure` — which, unlike `Person`, represents real people
 who were never necessarily TMDB cast members. A `LineageFigure` linked to
@@ -5789,14 +5789,31 @@ search, and the latter reintroduces exactly the ambiguous-matching risk the
 actor feature was built specifically to avoid (see above) — not attempted
 here. This only wires up the already-linked case.
 
-- **A hover tooltip (`title="Name (Native Name)"`), not a second visible
-  text line under the node.** `lineage-tree-layout.ts`'s `ROW_H` (108px)
-  is a hand-tuned constant sized for one name line plus, in some cases, a
-  portrayal-marker superscript or a "Group" label underneath — already
-  tight. A second unconditional line for every native-name-bearing node
-  risked colliding with the row below in a layout that's positioned by
-  precomputed `x`/`y` coordinates, not normal document flow that would
-  reflow around it. A tooltip costs nothing in that layout.
+- **First pass: a plain `title="Name (Native Name)"` tooltip** — costs
+  nothing in the tree's layout, but a native browser tooltip is inert: no
+  styling, a multi-second hover delay, and it can't be screenshotted or
+  demoed (confirmed firsthand — headless Chromium renders the DOM
+  attribute fine but never paints the OS-level tooltip overlay itself).
+  Replaced after the first look at it with something actually part of the
+  page.
+- **Shipped: a hover-triggered 3D CSS flip** (two stacked spans in one
+  grid cell, rotated with `backface-visibility: hidden` so only one faces
+  the viewer at a time, triggered by `group-hover` on the wrapping Link) —
+  the name itself flips over to reveal the native name, rather than
+  something appearing beside or above it. Pure CSS, no client component:
+  `lineage-tree-body.tsx` stays a server component, same as before.
+  `aria-label` on the Link carries both names together for assistive tech,
+  since the flip itself is a hover-only, sighted-mouse-user affordance.
+- **Still no second permanent line, and still for the same reason**:
+  `lineage-tree-layout.ts`'s `ROW_H` (108px) is a hand-tuned constant sized
+  for one name line plus, in some cases, a portrayal-marker superscript or
+  a "Group" label underneath — already tight. What changed is why a *hover*
+  state is safe where a permanent line wouldn't be: every node is
+  independently absolutely positioned (`left`/`top` inline styles, not
+  normal document flow), so one node's label growing taller for the
+  duration of a hover can't push any other node or connector line around —
+  at worst it transiently overlaps something nearby, the same risk a
+  native tooltip already carried.
 - **`figureSelect`/`toFigureRef` (`src/lib/lineage.ts`) carry the field
   through everywhere a `LineageFigureRef` gets built**, rather than
   threading it in ad hoc at the one call site that needed it — the same

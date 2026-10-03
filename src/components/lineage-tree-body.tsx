@@ -92,20 +92,42 @@ function TreeNode({ node, marker, moreHref }: { node: LayoutNode; marker?: numbe
       ) : (
         <Link
           href={figureHref(node.figure)}
-          // A second visible line for the native name would risk colliding
-          // with the row below -- ROW_H in lineage-tree-layout.ts is already
-          // tight against one name line plus marker/Group label. A tooltip
-          // surfaces it without touching that hand-tuned spacing.
-          title={node.figure.nativeName ? `${node.figure.name} (${node.figure.nativeName})` : undefined}
-          className="flex flex-col items-center gap-1 hover:opacity-80"
+          aria-label={
+            node.figure.nativeName ? `${node.figure.name} (${node.figure.nativeName})` : undefined
+          }
+          className="group flex flex-col items-center gap-1 hover:opacity-80"
         >
           {circle}
-          <span
-            className={`bg-neutral-950 text-xs leading-tight ${isCenter ? "font-semibold text-white" : "text-neutral-300"}`}
-          >
-            {node.figure.name}
-            {marker && <sup className="ml-0.5 text-[11px] font-bold text-neutral-500">{marker}</sup>}
-          </span>
+          {node.figure.nativeName ? (
+            // A permanent second line risks colliding with the row below --
+            // ROW_H in lineage-tree-layout.ts is already tight against one
+            // name line plus marker/Group label. Flipping on hover instead
+            // costs nothing at rest, and costs nothing to neighbors even
+            // while hovered: every node is independently absolutely
+            // positioned (see the `left`/`top` style on this div), so one
+            // node's label growing taller mid-hover can't push any other
+            // node or connector line around -- at worst it transiently
+            // overlaps something nearby, same as a native tooltip would.
+            <span className="grid [perspective:300px]">
+              <span
+                className={`col-start-1 row-start-1 bg-neutral-950 text-xs leading-tight transition-transform duration-300 ease-in-out [backface-visibility:hidden] group-hover:[transform:rotateX(-180deg)] ${isCenter ? "font-semibold text-white" : "text-neutral-300"}`}
+              >
+                {node.figure.name}
+              </span>
+              <span
+                className={`col-start-1 row-start-1 bg-neutral-950 text-xs leading-tight transition-transform duration-300 ease-in-out [backface-visibility:hidden] [transform:rotateX(180deg)] group-hover:[transform:rotateX(0deg)] ${isCenter ? "font-semibold text-white" : "text-neutral-300"}`}
+              >
+                {node.figure.nativeName}
+              </span>
+            </span>
+          ) : (
+            <span
+              className={`bg-neutral-950 text-xs leading-tight ${isCenter ? "font-semibold text-white" : "text-neutral-300"}`}
+            >
+              {node.figure.name}
+              {marker && <sup className="ml-0.5 text-[11px] font-bold text-neutral-500">{marker}</sup>}
+            </span>
+          )}
           {isCenter && isGroup && <span className="text-[9px] text-neutral-500 uppercase">Group</span>}
         </Link>
       )}
