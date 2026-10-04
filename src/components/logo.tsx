@@ -6,7 +6,7 @@ export function Logo() {
   return (
     <Link
       href="/"
-      className="flex shrink-0 items-center whitespace-nowrap font-serif text-lg font-bold tracking-tight text-red-600"
+      className="flex shrink-0 items-center whitespace-nowrap font-display text-2xl uppercase tracking-wide text-red-600"
     >
       Kung Fu Sauce
     </Link>

@@ -31,6 +31,8 @@ export default async function AdminMoviesPage() {
         id: true,
         title: true,
         releaseDate: true,
+        posterPath: true,
+        posterOverrideUrl: true,
         submittedBy: { select: { username: true } },
       },
     }),

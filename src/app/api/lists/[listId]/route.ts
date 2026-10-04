@@ -3,9 +3,9 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { MEMBER_LIST_DESCRIPTION_MAX_LENGTH, MEMBER_LIST_NAME_MAX_LENGTH } from "@/lib/member-lists";
 
-// Handles renaming and/or updating description/isRanked in one call — all
-// three live in the same "Edit list" panel on the list's own page, so a
-// save there is one request, not three. Every field is optional; only the
+// Handles renaming and/or updating description/isRanked/isPrivate in one
+// call — the list's own page edits them all through this one endpoint, so a
+// save there is one request, not several. Every field is optional; only the
 // ones present in the body are validated and written.
 export async function PATCH(request: Request, { params }: { params: Promise<{ listId: string }> }) {
   const session = await auth();
@@ -22,8 +22,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ li
     return NextResponse.json({ error: "You can only edit your own lists." }, { status: 403 });
   }
 
-  const { name, description, isRanked } = await request.json();
-  const data: { name?: string; description?: string | null; isRanked?: boolean } = {};
+  const { name, description, isRanked, isPrivate } = await request.json();
+  const data: { name?: string; description?: string | null; isRanked?: boolean; isPrivate?: boolean } = {};
 
   if (name !== undefined) {
     if (typeof name !== "string" || name.trim().length === 0) {
@@ -64,6 +64,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ li
       return NextResponse.json({ error: "isRanked must be a boolean." }, { status: 400 });
     }
     data.isRanked = isRanked;
+  }
+
+  if (isPrivate !== undefined) {
+    if (typeof isPrivate !== "boolean") {
+      return NextResponse.json({ error: "isPrivate must be a boolean." }, { status: 400 });
+    }
+    data.isPrivate = isPrivate;
   }
 
   const list = await prisma.memberList.update({ where: { id: listId }, data });

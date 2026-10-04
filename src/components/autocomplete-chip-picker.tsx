@@ -19,7 +19,7 @@ export function AutocompleteChipPicker({
   pillClassName,
 }: {
   id: string;
-  options: { id: string; name: string }[];
+  options: { id: string; name: string; groupName?: string | null }[];
   selected: Set<string>;
   onToggle: (id: string) => void;
   placeholder: string;
@@ -106,6 +106,7 @@ export function AutocompleteChipPicker({
                 }`}
               >
                 {option.name}
+                {option.groupName && <span className="ml-1.5 text-xs text-neutral-500">· {option.groupName}</span>}
               </button>
             </li>
           ))}

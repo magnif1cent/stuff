@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { TmdbImageGalleryDialog } from "@/components/tmdb-image-gallery-dialog";
 
 // Wraps the poster image itself (passed as children) rather than sitting
 // below it: the whole poster is the tap target, with a small pencil badge
@@ -31,6 +32,7 @@ export function PosterOverrideControl({
   const [uploading, setUploading] = useState(false);
   const [recommendSubmitting, setRecommendSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [galleryOpen, setGalleryOpen] = useState(false);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -61,6 +63,21 @@ export function PosterOverrideControl({
       setError(body.error ?? "Something went wrong.");
       return;
     }
+    router.refresh();
+  }
+
+  async function pickPoster(filePath: string) {
+    const res = await fetch(`/api/admin/movies/${movieId}/poster`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ posterPath: filePath }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setError(body.error ?? "Something went wrong.");
+      return;
+    }
+    setGalleryOpen(false);
     router.refresh();
   }
 
@@ -129,6 +146,17 @@ export function PosterOverrideControl({
 
       {menuOpen && (
         <div className="absolute top-full left-0 z-10 mt-1.5 w-max min-w-40 rounded-md border border-neutral-700 bg-neutral-800 p-1 shadow-xl">
+          <button
+            type="button"
+            onClick={() => {
+              setMenuOpen(false);
+              setError(null);
+              setGalleryOpen(true);
+            }}
+            className="block w-full rounded px-3 py-1.5 text-left text-sm text-neutral-100 hover:bg-neutral-700"
+          >
+            Pick another poster
+          </button>
           <label
             tabIndex={0}
             role="button"
@@ -140,7 +168,7 @@ export function PosterOverrideControl({
             }}
             className="block w-full cursor-pointer rounded px-3 py-1.5 text-left text-sm text-neutral-100 hover:bg-neutral-700 focus:bg-neutral-700 focus:outline-none"
           >
-            {hasOverride ? "Replace poster" : "Upload custom poster"}
+            Upload poster
             <input
               ref={fileInputRef}
               type="file"
@@ -176,6 +204,17 @@ export function PosterOverrideControl({
           {error}
         </p>
       )}
+
+      <TmdbImageGalleryDialog
+        open={galleryOpen}
+        title="Pick another poster"
+        fetchUrl={`/api/admin/movies/${movieId}/poster/options`}
+        aspectClassName="aspect-2/3"
+        gridClassName="grid-cols-3 sm:grid-cols-4"
+        emptyMessage="No other posters available for this movie on TMDB."
+        onPick={pickPoster}
+        onClose={() => setGalleryOpen(false)}
+      />
     </div>
   );
 }

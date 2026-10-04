@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getTopRatedFightScenes } from "@/lib/fight-scenes";
 import { YoutubeThumbnailImage } from "@/components/fight-scene-thumbnail";
+import { Pagination } from "@/components/pagination";
 
 export const metadata: Metadata = {
   title: "Top 100 Fights",
@@ -9,6 +10,15 @@ export const metadata: Metadata = {
 };
 
 const TOP_FIGHTS_LIMIT = 100;
+const PAGE_SIZE = 24;
+
+interface TopFightsSearchParams {
+  page?: string;
+}
+
+function pageHref(page: number) {
+  return page > 1 ? `/tops/fights?page=${page}` : "/tops/fights";
+}
 
 // Same "Fight Ticket" palette as fight-scene-result-card.tsx and
 // fight-scene-section.tsx — kept in sync manually, per those files' own
@@ -18,8 +28,16 @@ const TICKET_INK = "#1a1712";
 const TICKET_MUTED = "#6b6148";
 const TICKET_STAMP = "#a4291e";
 
-export default async function TopFightsPage() {
+export default async function TopFightsPage({
+  searchParams,
+}: {
+  searchParams: Promise<TopFightsSearchParams>;
+}) {
+  const params = await searchParams;
   const fights = await getTopRatedFightScenes(TOP_FIGHTS_LIMIT);
+  const totalPages = Math.max(1, Math.ceil(fights.length / PAGE_SIZE));
+  const page = Math.min(Math.max(1, Number(params.page) || 1), totalPages);
+  const pagedFights = fights.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-10">
@@ -38,8 +56,9 @@ export default async function TopFightsPage() {
         <p className="text-neutral-400">No community ratings yet — be the first to rate a fight scene.</p>
       ) : (
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-          {fights.map((scene, index) => {
-            const isTop3 = index < 3;
+          {pagedFights.map((scene, i) => {
+            const rank = (page - 1) * PAGE_SIZE + i;
+            const isTop3 = rank < 3;
             return (
               <Link
                 key={scene.id}
@@ -61,7 +80,7 @@ export default async function TopFightsPage() {
                     transform: "rotate(4deg)",
                   }}
                 >
-                  #{index + 1}
+                  #{rank + 1}
                 </span>
                 <div
                   className="relative aspect-video overflow-hidden rounded-sm border-2"
@@ -88,6 +107,8 @@ export default async function TopFightsPage() {
           })}
         </div>
       )}
+
+      <Pagination page={page} totalPages={totalPages} buildHref={pageHref} />
     </div>
   );
 }

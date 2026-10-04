@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { PUBLIC_LIST_WHERE } from "@/lib/lists";
 
 const TOP_LISTS_LIMIT = 20;
 const TOP_CURATORS_LIMIT = 10;
@@ -9,7 +10,7 @@ export const MIN_FRANCHISE_MOVIES = 2;
 
 export async function getMostLikedLists() {
   const lists = await prisma.memberList.findMany({
-    where: { entries: { some: {} } },
+    where: { ...PUBLIC_LIST_WHERE, entries: { some: {} } },
     include: {
       user: { select: { username: true } },
       _count: { select: { likes: true, entries: true } },
@@ -32,10 +33,12 @@ export async function getMostLikedLists() {
 // tradeoff already made for fight-scene search sorting.
 export async function getTopCurators() {
   const users = await prisma.user.findMany({
-    where: { memberLists: { some: {} } },
+    // Public lists only — a private list's contents aren't visible to
+    // anyone else, so they shouldn't count toward a public ranking either.
+    where: { memberLists: { some: PUBLIC_LIST_WHERE } },
     select: {
       username: true,
-      memberLists: { select: { _count: { select: { entries: true } } } },
+      memberLists: { where: PUBLIC_LIST_WHERE, select: { _count: { select: { entries: true } } } },
     },
   });
 

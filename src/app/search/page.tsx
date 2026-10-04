@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getRatingSummaries, getEditorsRatingSummaries } from "@/lib/ratings";
 import { getMovieRecommendationsByMovieIds } from "@/lib/movie-recommendations";
@@ -9,6 +10,7 @@ import { MovieCard } from "@/components/movie-card";
 import { AutocompleteFilterInput } from "@/components/autocomplete-filter-input";
 import { RatingStarInput } from "@/components/rating-star-input";
 import { FilterSheetProvider, FilterSheetTrigger, FilterSheetPanel } from "@/components/filter-sheet";
+import { Pagination } from "@/components/pagination";
 import type { Movie, Prisma } from "@/generated/prisma/client";
 
 export const metadata: Metadata = {
@@ -25,6 +27,7 @@ interface SearchPageParams {
   editorRating?: string;
   yearFrom?: string;
   yearTo?: string;
+  fights?: string;
   sort?: string;
   page?: string;
 }
@@ -34,9 +37,16 @@ const SORT_OPTIONS = [
   { value: "rating", label: "Highest Rated" },
   { value: "newest", label: "Newest" },
   { value: "oldest", label: "Oldest" },
+  { value: "fights", label: "Most Fights" },
 ] as const;
 
 const PAGE_SIZE = 24;
+
+// Same bounds as the admin TMDB discover route's MIN_YEAR/maxYear -- also
+// gives the year inputs' native up/down spinner a `min` to land on instead
+// of jumping to 1 when the field is empty.
+const MIN_YEAR = 1870;
+const MAX_YEAR = new Date().getFullYear() + 5;
 
 function buildFilterWhere(
   genre: string,
@@ -45,6 +55,7 @@ function buildFilterWhere(
   country: string,
   yearFrom?: number,
   yearTo?: number,
+  hasFights?: boolean,
 ) {
   const where: Prisma.MovieWhereInput = { status: "APPROVED" };
   if (genre) where.genres = { some: { name: genre } };
@@ -59,6 +70,7 @@ function buildFilterWhere(
       ...(yearTo ? { lt: new Date(Date.UTC(yearTo + 1, 0, 1)) } : {}),
     };
   }
+  if (hasFights) where.fightScenes = { some: { isDeleted: false } };
   return where;
 }
 
@@ -73,6 +85,7 @@ function pageHref(params: SearchPageParams, page: number) {
   if (params.editorRating) search.set("editorRating", params.editorRating);
   if (params.yearFrom) search.set("yearFrom", params.yearFrom);
   if (params.yearTo) search.set("yearTo", params.yearTo);
+  if (params.fights === "1") search.set("fights", "1");
   if (params.sort) search.set("sort", params.sort);
   if (page > 1) search.set("page", String(page));
   const qs = search.toString();
@@ -94,7 +107,11 @@ export default async function SearchPage({
   const editorRating = parseRatingFilter(params.editorRating);
   const yearFrom = params.yearFrom ? Number(params.yearFrom) : undefined;
   const yearTo = params.yearTo ? Number(params.yearTo) : undefined;
-  const sort = SORT_OPTIONS.some((o) => o.value === params.sort) ? params.sort! : "relevance";
+  const hasFights = params.fights === "1";
+  // "Relevance" only means something with search text; without it the
+  // results are already newest-first, so say so in the dropdown instead.
+  const defaultSort = query ? "relevance" : "newest";
+  const sort = SORT_OPTIONS.some((o) => o.value === params.sort) ? params.sort! : defaultSort;
 
   const [genres, countryRows] = await Promise.all([
     prisma.genre.findMany({ orderBy: { name: "asc" } }),
@@ -107,8 +124,14 @@ export default async function SearchPage({
   ]);
   const countries = countryRows.map((m) => m.country!).filter(Boolean);
 
-  const filterWhere = buildFilterWhere(genre, director, actor, country, yearFrom, yearTo);
-  const hasFilters = Object.keys(filterWhere).length > 0 || memberRating !== undefined || editorRating !== undefined;
+  const filterWhere = buildFilterWhere(genre, director, actor, country, yearFrom, yearTo, hasFights);
+  // Counts only the filters a user actually set -- not filterWhere's keys,
+  // which always include the status: "APPROVED" guard and so made this
+  // always true, silently disabling the fuzzy fallback below.
+  const hasFilters =
+    Boolean(genre || director || actor || country || yearFrom || yearTo || hasFights) ||
+    memberRating !== undefined ||
+    editorRating !== undefined;
 
   let results: Movie[] = [];
   let usedFuzzyFallback = false;
@@ -134,14 +157,23 @@ export default async function SearchPage({
       results = await findSimilarMovies(query);
       usedFuzzyFallback = results.length > 0;
     }
-  } else if (hasFilters) {
+  } else {
+    // No query: browse the whole (filtered) catalog, newest first -- same
+    // as /search/fights, rather than prompting for input before showing
+    // anything.
     results = await prisma.movie.findMany({ where: filterWhere, orderBy: { releaseDate: "desc" } });
   }
 
-  const [ratingSummaries, editorRatingSummaries] = await Promise.all([
+  // Per-movie catalogued fight scene counts across the whole catalog (one
+  // row per movie that has any), used for both the "Most Fights" sort and
+  // the cards' badge. Grouping everything avoids an IN list of every result
+  // id, which on an unfiltered browse is the whole catalog anyway.
+  const [ratingSummaries, editorRatingSummaries, fightCountRows] = await Promise.all([
     getRatingSummaries(results.map((m) => m.id)),
     getEditorsRatingSummaries(results.map((m) => m.id)),
+    prisma.fightScene.groupBy({ by: ["movieId"], where: { isDeleted: false }, _count: { _all: true } }),
   ]);
+  const fightCountByMovieId = new Map(fightCountRows.map((r) => [r.movieId, r._count._all]));
 
   if (memberRating !== undefined) {
     results = results.filter((m) => (ratingSummaries.get(m.id)?.average ?? 0) >= memberRating);
@@ -160,9 +192,14 @@ export default async function SearchPage({
     results = [...results].sort(
       (a, b) => (a.releaseDate?.getTime() ?? Infinity) - (b.releaseDate?.getTime() ?? Infinity),
     );
+  } else if (sort === "fights") {
+    // Stable sort, so ties keep the query's own order (newest first when
+    // browsing, match order when searching).
+    results = [...results].sort(
+      (a, b) => (fightCountByMovieId.get(b.id) ?? 0) - (fightCountByMovieId.get(a.id) ?? 0),
+    );
   }
 
-  const searched = query.length > 0 || hasFilters;
   const sheetFilterCount =
     (query.length > 0 ? 1 : 0) +
     (genre.length > 0 ? 1 : 0) +
@@ -171,12 +208,26 @@ export default async function SearchPage({
     (country.length > 0 ? 1 : 0) +
     (memberRating !== undefined ? 1 : 0) +
     (editorRating !== undefined ? 1 : 0) +
-    (yearFrom !== undefined || yearTo !== undefined ? 1 : 0);
+    (yearFrom !== undefined || yearTo !== undefined ? 1 : 0) +
+    (hasFights ? 1 : 0);
   const totalResults = results.length;
   const totalPages = Math.max(1, Math.ceil(totalResults / PAGE_SIZE));
   const page = Math.min(Math.max(1, Number(params.page) || 1), totalPages);
   const pagedResults = results.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-  const recommendationsByMovieId = await getMovieRecommendationsByMovieIds(pagedResults.map((m) => m.id));
+  const pagedIds = pagedResults.map((m) => m.id);
+  const session = await auth();
+  const [recommendationsByMovieId, watchlistRows] = await Promise.all([
+    getMovieRecommendationsByMovieIds(pagedIds),
+    // Only for signed-in members -- the card's Watchlist toggle isn't shown
+    // to anyone else, so there's nothing to look up.
+    session?.user
+      ? prisma.listEntry.findMany({
+          where: { userId: session.user.id, listType: "WATCHLIST", movieId: { in: pagedIds } },
+          select: { movieId: true },
+        })
+      : [],
+  ]);
+  const watchlistedIds = new Set(watchlistRows.map((r) => r.movieId));
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-10 sm:flex-row">
@@ -294,6 +345,11 @@ export default async function SearchPage({
               <RatingStarInput name="editorRating" initialValue={params.editorRating ?? ""} />
             </div>
 
+            <label className="flex w-fit cursor-pointer items-center gap-1.5 rounded-full border border-neutral-700 px-2.5 py-1 text-xs text-neutral-300 has-checked:border-red-600 has-checked:bg-red-950/40 has-checked:text-red-300">
+              <input type="checkbox" name="fights" value="1" defaultChecked={hasFights} className="sr-only" />
+              Has fight scenes
+            </label>
+
             <div className="flex flex-col gap-1">
               <p className="text-xs text-neutral-400">Year range</p>
               <div className="flex gap-2">
@@ -302,7 +358,9 @@ export default async function SearchPage({
                   type="number"
                   aria-label="Year from"
                   defaultValue={params.yearFrom ?? ""}
-                  placeholder="1970"
+                  placeholder="From"
+                  min={MIN_YEAR}
+                  max={MAX_YEAR}
                   className="w-1/2 min-w-0 rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
                 />
                 <input
@@ -310,7 +368,9 @@ export default async function SearchPage({
                   type="number"
                   aria-label="Year to"
                   defaultValue={params.yearTo ?? ""}
-                  placeholder="2025"
+                  placeholder="To"
+                  min={MIN_YEAR}
+                  max={MAX_YEAR}
                   className="w-1/2 min-w-0 rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
                 />
               </div>
@@ -338,15 +398,20 @@ export default async function SearchPage({
 
         <div className="min-w-0 flex-1 sm:order-2">
           <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-            <h1 className="font-serif text-xl font-bold text-white">
-              {query ? <>Search results for &ldquo;{query}&rdquo;</> : "Browse movies"}
-            </h1>
+            <div className="flex items-baseline gap-3">
+              <h1 className="font-serif text-xl font-bold text-white">
+                {query ? <>Search results for &ldquo;{query}&rdquo;</> : "Browse movies"}
+              </h1>
+              {totalResults > 0 && (
+                <span className="text-sm text-neutral-500">
+                  {totalResults} {totalResults === 1 ? "movie" : "movies"}
+                </span>
+              )}
+            </div>
             <FilterSheetTrigger activeCount={sheetFilterCount} />
           </div>
 
-          {!searched ? (
-            <p className="text-neutral-400">Enter a movie title or actor name, or set a filter, to browse the catalog.</p>
-          ) : totalResults === 0 ? (
+          {totalResults === 0 ? (
             <p className="text-neutral-400">
               No movies matched your search.{" "}
               <Link href="/movies/submit" className="text-red-500 hover:underline">
@@ -367,38 +432,25 @@ export default async function SearchPage({
                   return (
                     <MovieCard
                       key={movie.id}
+                      initialWatchlist={session?.user ? watchlistedIds.has(movie.id) : undefined}
                       movie={{
                         ...movie,
                         communityAverage: summary?.average ?? null,
                         communityCount: summary?.count ?? 0,
                         recommendedBy: recommendationsByMovieId.get(movie.id) ?? [],
+                        fightCount: fightCountByMovieId.get(movie.id) ?? 0,
                       }}
                     />
                   );
                 })}
               </div>
 
-              {totalPages > 1 && (
-                <div className="mt-8 flex items-center justify-center gap-4 text-sm">
-                  {page > 1 ? (
-                    <a href={pageHref(params, page - 1)} className="text-red-500 hover:underline">
-                      ← Previous
-                    </a>
-                  ) : (
-                    <span className="text-neutral-600">← Previous</span>
-                  )}
-                  <span className="text-neutral-400">
-                    Page {page} of {totalPages} ({totalResults} results)
-                  </span>
-                  {page < totalPages ? (
-                    <a href={pageHref(params, page + 1)} className="text-red-500 hover:underline">
-                      Next →
-                    </a>
-                  ) : (
-                    <span className="text-neutral-600">Next →</span>
-                  )}
-                </div>
-              )}
+              <Pagination
+                page={page}
+                totalPages={totalPages}
+                buildHref={(p) => pageHref(params, p)}
+                label={`${totalResults} results`}
+              />
             </>
           )}
         </div>

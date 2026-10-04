@@ -3,10 +3,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { tmdbImageUrl } from "@/lib/tmdb";
+import { resolveBackdropUrl } from "@/lib/tmdb";
 import type { Movie } from "@/generated/prisma/client";
 
-export type FeaturedMovie = Pick<Movie, "id" | "title" | "overview" | "backdropPath" | "releaseDate"> & {
+export type FeaturedMovie = Pick<
+  Movie,
+  "id" | "title" | "overview" | "backdropPath" | "backdropOverrideUrl" | "releaseDate"
+> & {
   fightSceneClip: { youtubeVideoId: string; youtubeStartSeconds: number | null } | null;
 };
 
@@ -38,7 +41,7 @@ function clipEmbedUrl(videoId: string, startSeconds: number | null) {
 }
 
 function Slide({ movie, active, playClip }: { movie: FeaturedMovie; active: boolean; playClip: boolean }) {
-  const backdropUrl = tmdbImageUrl(movie.backdropPath, "w1280");
+  const backdropUrl = resolveBackdropUrl(movie, "w1280");
   const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : null;
   const showClip = active && playClip && !!movie.fightSceneClip;
 
@@ -57,8 +60,8 @@ function Slide({ movie, active, playClip }: { movie: FeaturedMovie; active: bool
           fill
           priority
           unoptimized
-          sizes="100vw"
-          className={`object-cover transition-opacity ${showClip ? "opacity-0" : "opacity-100"}`}
+          sizes="(min-width: 1920px) 1920px, 100vw"
+          className={`object-cover object-[center_25%] transition-opacity ${showClip ? "opacity-0" : "opacity-100"}`}
           style={{ transitionDuration: `${FADE_MS}ms` }}
         />
       ) : (
@@ -174,7 +177,7 @@ export function HeroCarousel({ movies }: { movies: FeaturedMovie[] }) {
         if (e.key === "ArrowLeft") goTo(index - 1);
         if (e.key === "ArrowRight") goTo(index + 1);
       }}
-      className="group relative h-72 w-full overflow-hidden outline-none sm:h-96"
+      className="group relative mx-auto aspect-21/10 max-h-[30rem] w-full max-w-[1920px] overflow-hidden outline-none"
     >
       {prevIndex !== null && prevIndex !== index && (
         <Slide movie={movies[prevIndex]} active={false} playClip={false} />

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Anton, Barlow_Condensed, Source_Serif_4 } from "next/font/google";
 import "./globals.css";
-import { Providers } from "@/components/providers";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
 import { Analytics } from "@vercel/analytics/next";
@@ -39,8 +38,8 @@ const sourceSerif4 = Source_Serif_4({
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXTAUTH_URL ?? "http://localhost:3000"),
   title: {
-    default: "Kung Fu Sauce",
-    template: "%s | Kung Fu Sauce",
+    default: "KUNG FU SAUCE",
+    template: "%s | KUNG FU SAUCE",
   },
   description: "An IMDB-style database for kung fu and martial arts films.",
 };
@@ -56,11 +55,9 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${anton.variable} ${barlowCondensed.variable} ${sourceSerif4.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col bg-neutral-950 font-sans text-neutral-100">
-        <Providers>
-          <Navbar />
-          <main className="flex flex-1 flex-col">{children}</main>
-          <Footer />
-        </Providers>
+        <Navbar />
+        <main className="flex flex-1 flex-col">{children}</main>
+        <Footer />
         <Analytics />
       </body>
     </html>

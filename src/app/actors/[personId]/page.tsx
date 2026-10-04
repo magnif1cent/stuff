@@ -6,7 +6,12 @@ import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { tmdbImageUrl, getTmdbPersonDetails } from "@/lib/tmdb";
-import { getFightSceneRatingSummaries, getFightSceneAdminRatingSummaries, getFightSceneFavoriteCounts } from "@/lib/fight-scenes";
+import {
+  getFightSceneRatingSummaries,
+  getFightSceneAdminRatingSummaries,
+  getFightSceneFavoriteCounts,
+  getFightSceneCountsByMovieIds,
+} from "@/lib/fight-scenes";
 import { MovieRailTrack } from "@/components/movie-rail";
 import { ActorBio } from "@/components/actor-bio";
 import { FilmographyList, type FilmographyRow } from "@/components/filmography-list";
@@ -128,7 +133,10 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
   // A pending (not yet admin-approved) movie is excluded the same way it's
   // excluded from every other public listing.
   const movies = person.castCredits.map((c) => c.movie).filter((m) => m.status === "APPROVED");
-  const ratingSummaries = await getRatingSummaries(movies.map((m) => m.id));
+  const [ratingSummaries, fightCountByMovieId] = await Promise.all([
+    getRatingSummaries(movies.map((m) => m.id)),
+    getFightSceneCountsByMovieIds(movies.map((m) => m.id)),
+  ]);
 
   const fightScenes = person.fightSceneAppearances
     .map((a) => a.fightScene)
@@ -269,7 +277,12 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
     .slice(0, KNOWN_FOR_COUNT)
     .map((movie) => {
       const summary = ratingSummaries.get(movie.id);
-      return { ...movie, communityAverage: summary?.average ?? null, communityCount: summary?.count ?? 0 };
+      return {
+        ...movie,
+        communityAverage: summary?.average ?? null,
+        communityCount: summary?.count ?? 0,
+        fightCount: fightCountByMovieId.get(movie.id) ?? 0,
+      };
     });
 
   const filmographyRows: FilmographyRow[] = person.castCredits
@@ -452,14 +465,19 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
             />
           )}
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-2xl font-bold text-white">{person.name}</h1>
-          <ActorFavoriteButton
-            personId={person.id}
-            initialFavorite={!!myFavorite}
-            initialCount={favoriteCountMap.get(person.id) ?? 0}
-            signedIn={!!session?.user}
-          />
+        <div>
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-2xl font-bold text-white">{person.name}</h1>
+            <ActorFavoriteButton
+              personId={person.id}
+              initialFavorite={!!myFavorite}
+              initialCount={favoriteCountMap.get(person.id) ?? 0}
+              signedIn={!!session?.user}
+            />
+          </div>
+          {person.nativeName && (
+            <p className="font-native text-lg text-neutral-400">{person.nativeName}</p>
+          )}
         </div>
       </div>
 
@@ -498,7 +516,7 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
             &ldquo;Lineage&rdquo; is our tribute to the martial artists who built this genre, generation by
             generation. Hand-curated, always a work in progress &mdash; reach out if you spot something to fix.
           </p>
-          <LineageTreeBody tree={lineageTree} up={1} down={1} />
+          <LineageTreeBody tree={lineageTree} up={1} down={1} siblings={3} groupSiblings={12} />
         </div>
       )}
 

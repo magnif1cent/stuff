@@ -12,6 +12,14 @@
   --font-display: var(--font-anton), "Arial Narrow", sans-serif;
   --font-cond: var(--font-barlow-condensed), "Arial Narrow", sans-serif;
   --font-editorial: var(--font-source-serif-4), Georgia, serif;
+  /* For an actor's Wikidata-sourced native name (see DECISIONS.md) --
+     almost always CJK script in this catalog. No next/font webfont here on
+     purpose: a full CJK family is large to ship for a few characters per
+     page, so this just picks a better-looking system font where one
+     exists, instead of leaving it to fall through --font-sans (Geist, a
+     Latin-only face with no CJK glyphs at all) to whatever default the
+     browser/OS happens to pick. */
+  --font-native: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
 
   /* --- "Poster House" preview palette ---
      Remaps the neutral/red/yellow/amber scales the whole app already uses,

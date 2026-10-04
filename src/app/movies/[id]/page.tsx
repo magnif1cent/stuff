@@ -6,7 +6,7 @@ import type { Metadata } from "next";
 import type { Session } from "next-auth";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { tmdbImageUrl, resolvePosterUrl, isTmdbUrl } from "@/lib/tmdb";
+import { tmdbImageUrl, resolvePosterUrl, resolveBackdropUrl, isTmdbUrl } from "@/lib/tmdb";
 import { truncate } from "@/lib/text";
 import {
   getCommunityRatingSummary,
@@ -42,6 +42,7 @@ import { FightSceneSection } from "@/components/fight-scene-section";
 import { FunFactsSection } from "@/components/fun-facts-section";
 import { ReviewsSection } from "@/components/reviews-section";
 import { PosterOverrideControl } from "@/components/poster-override-control";
+import { BackdropOverrideControl } from "@/components/backdrop-override-control";
 import { MovieOverviewSnippet } from "@/components/movie-overview-snippet";
 import { MovieDetailsTabs } from "@/components/movie-details-tabs";
 import { RecommendedBadges } from "@/components/recommended-badge";
@@ -304,7 +305,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
       : [],
   ]);
 
-  const backdropUrl = tmdbImageUrl(movie.backdropPath, "w1280");
+  const backdropUrl = resolveBackdropUrl(movie, "w1280");
   const posterUrl = resolvePosterUrl(movie, "w342");
   const recommendedByMe =
     session?.user?.role === "ADMIN" && movieRecommenders.some((r) => r.id === session.user.id);
@@ -411,7 +412,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
   const collectionContent = hasCollection && (
     <>
       <Link
-        href={`/collections/${movie.collectionTmdbId}`}
+        href={`/collections/${movie.collectionTmdbId}?from=${movie.id}`}
         className="text-red-500 underline decoration-red-800 underline-offset-2 hover:text-red-400"
       >
         {movie.collectionName}
@@ -442,7 +443,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
   const collectionPills = hasCollection && (
     <div className="flex flex-wrap gap-1.5">
       <Link
-        href={`/collections/${movie.collectionTmdbId}`}
+        href={`/collections/${movie.collectionTmdbId}?from=${movie.id}`}
         className="rounded-full border border-red-800 bg-red-950/40 px-2 py-0.5 text-xs text-red-400 hover:border-red-600 hover:text-red-300"
       >
         {movie.collectionName}
@@ -482,6 +483,15 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
       {movie.title} {year && <span className="font-editorial text-2xl font-normal text-neutral-400">({year})</span>}
     </>
   );
+
+  // Only shown when it actually differs from the display title -- most
+  // catalog entries are English-language originals where TMDB's
+  // original_title is identical to title, so the common case renders
+  // nothing here.
+  const originalTitleText =
+    movie.originalTitle && movie.originalTitle.trim().toLowerCase() !== movie.title.trim().toLowerCase()
+      ? movie.originalTitle
+      : null;
 
   const serializedFightScenes = fightScenes.map((scene) => {
     const summary = fightSceneRatingSummaries.get(scene.id);
@@ -597,19 +607,47 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
     })),
   }));
 
+  const backdropMat = (
+    // aspect-ratio (not a fixed height) keeps this proportional to width up
+    // to max-h, instead of pinning a short height that gets crops tighter
+    // and tighter as the viewport widens; max-h then caps it back down on
+    // wide screens so it doesn't grow into an oversized banner. max-w bounds
+    // the same problem's return past that height cap -- once height plateaus,
+    // an ever-widening container would otherwise start cropping tighter
+    // again, so past 1920px it's letterboxed by the page background instead.
+    <div className="relative mx-auto aspect-21/10 max-h-[30rem] w-full max-w-[1920px]">
+      {backdropUrl ? (
+        <Image
+          src={backdropUrl}
+          alt=""
+          fill
+          priority
+          unoptimized
+          sizes="(min-width: 1920px) 1920px, 100vw"
+          className="object-cover object-[center_25%]"
+        />
+      ) : (
+        <div className="h-full w-full bg-neutral-900" />
+      )}
+      <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 to-neutral-950/30" />
+    </div>
+  );
+
   return (
     <div className="flex flex-1 flex-col">
-      <div className="relative h-40 w-full sm:h-80">
-        {backdropUrl ? (
-          <Image src={backdropUrl} alt="" fill priority unoptimized sizes="100vw" className="object-cover" />
-        ) : (
-          <div className="h-full w-full bg-neutral-900" />
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 to-neutral-950/30" />
-      </div>
+      {session?.user?.role === "ADMIN" ? (
+        <BackdropOverrideControl movieId={movie.id} hasOverride={!!movie.backdropOverrideUrl}>
+          {backdropMat}
+        </BackdropOverrideControl>
+      ) : (
+        backdropMat
+      )}
 
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 pt-8 sm:flex-row">
         <p className={`${titleClassName} sm:hidden`}>{titleText}</p>
+        {originalTitleText && (
+          <p className="font-editorial -mt-1 text-base text-neutral-400 italic sm:hidden">{originalTitleText}</p>
+        )}
 
         {/* Mobile: poster + a clamped movie.overview snippet sit side by
             side on the first line of a *wrapping* flex row -- byline moved
@@ -689,6 +727,9 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
           </div>
 
           <h1 className={`hidden ${titleClassName} sm:block`}>{titleText}</h1>
+          {originalTitleText && (
+            <p className="font-editorial hidden text-base text-neutral-400 italic sm:block">{originalTitleText}</p>
+          )}
 
           {movie.tagline && (
             <p className="font-editorial mt-2 hidden text-base text-neutral-400 italic sm:block">

@@ -88,6 +88,11 @@ export function SearchBar({ initialQuery = "" }: { initialQuery?: string }) {
             setOpen(true);
           }}
           onFocus={() => setOpen(true)}
+          // On mobile this input sits inside MobileNavToggle's panel, which
+          // closes itself on any click inside it (for real nav links) --
+          // without this, tapping in to type closed the whole panel before
+          // a single character could be entered.
+          onClick={(e) => e.stopPropagation()}
           onKeyDown={(e) => {
             if (optionCount === 0) return;
             if (e.key === "ArrowDown") {

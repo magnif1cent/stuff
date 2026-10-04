@@ -5,6 +5,7 @@ import Image from "next/image";
 import { tmdbImageUrl } from "@/lib/tmdb";
 import { AdminLineageFigurePicker, type LineageFigureRef } from "@/components/admin-lineage-figure-picker";
 import { GroupIcon } from "@/components/lineage-group-icon";
+import { TrashIcon } from "@/components/action-icons";
 import { MAX_LINEAGE_NOTE_LENGTH } from "@/lib/lineage-constants";
 
 interface LineageRelationRow {
@@ -178,9 +179,11 @@ export function AdminLineageLinkForm({ initialRelations }: { initialRelations: L
                   )}
                   <button
                     onClick={() => handleDelete(r.id)}
-                    className="text-xs text-neutral-500 hover:text-red-400"
+                    aria-label={`Remove link between ${r.sifu.name} and ${r.student.name}`}
+                    title="Remove link"
+                    className="text-neutral-500 hover:text-red-400"
                   >
-                    Delete
+                    <TrashIcon />
                   </button>
                 </div>
               </li>

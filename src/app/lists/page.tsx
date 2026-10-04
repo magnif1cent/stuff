@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getPublicListsCount, getPublicListsPage, LISTS_PAGE_SIZE, type ListsSort } from "@/lib/lists";
 import { ListCoverCollage } from "@/components/list-cover-collage";
+import { Pagination } from "@/components/pagination";
 
 function pageHref(page: number, sort: ListsSort, q: string) {
   const params = new URLSearchParams();
@@ -138,27 +139,12 @@ export default async function BrowseListsPage({
             )}
           </div>
 
-          {totalPages > 1 && (
-            <div className="mt-8 flex items-center justify-center gap-4 text-sm">
-              {page > 1 ? (
-                <Link href={pageHref(page - 1, sort, q)} className="text-red-500 hover:underline">
-                  ← Previous
-                </Link>
-              ) : (
-                <span className="text-neutral-600">← Previous</span>
-              )}
-              <span className="text-neutral-400">
-                Page {page} of {totalPages} ({totalCount} lists)
-              </span>
-              {page < totalPages ? (
-                <Link href={pageHref(page + 1, sort, q)} className="text-red-500 hover:underline">
-                  Next →
-                </Link>
-              ) : (
-                <span className="text-neutral-600">Next →</span>
-              )}
-            </div>
-          )}
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            buildHref={(p) => pageHref(p, sort, q)}
+            label={`${totalCount} lists`}
+          />
         </>
       )}
     </div>

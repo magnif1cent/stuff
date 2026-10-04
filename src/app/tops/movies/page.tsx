@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { getTopRatedMovies } from "@/lib/ratings";
 import { resolvePosterUrl, isTmdbUrl } from "@/lib/tmdb";
+import { Pagination } from "@/components/pagination";
 
 export const metadata: Metadata = {
   title: "Top 100 Movies",
@@ -10,9 +11,26 @@ export const metadata: Metadata = {
 };
 
 const TOP_MOVIES_LIMIT = 100;
+const PAGE_SIZE = 24;
 
-export default async function TopMoviesPage() {
+interface TopMoviesSearchParams {
+  page?: string;
+}
+
+function pageHref(page: number) {
+  return page > 1 ? `/tops/movies?page=${page}` : "/tops/movies";
+}
+
+export default async function TopMoviesPage({
+  searchParams,
+}: {
+  searchParams: Promise<TopMoviesSearchParams>;
+}) {
+  const params = await searchParams;
   const movies = await getTopRatedMovies(TOP_MOVIES_LIMIT);
+  const totalPages = Math.max(1, Math.ceil(movies.length / PAGE_SIZE));
+  const page = Math.min(Math.max(1, Number(params.page) || 1), totalPages);
+  const pagedMovies = movies.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-10">
@@ -31,9 +49,10 @@ export default async function TopMoviesPage() {
         <p className="text-neutral-400">No community ratings yet — be the first to rate a movie.</p>
       ) : (
         <div className="grid grid-cols-2 gap-x-3 gap-y-10 sm:grid-cols-3 lg:grid-cols-5">
-          {movies.map((movie, index) => {
+          {pagedMovies.map((movie, i) => {
+            const rank = (page - 1) * PAGE_SIZE + i;
             const posterUrl = resolvePosterUrl(movie, "w342");
-            const isTop3 = index < 3;
+            const isTop3 = rank < 3;
             return (
               <Link key={movie.id} href={`/movies/${movie.id}`} className="group flex flex-col">
                 <div className="relative aspect-2/3 w-full overflow-hidden rounded-md border border-neutral-800 bg-neutral-900">
@@ -58,7 +77,7 @@ export default async function TopMoviesPage() {
                     className="pointer-events-none absolute -bottom-3 -left-1 font-display text-5xl leading-none text-neutral-950"
                     style={{ WebkitTextStroke: `1.5px ${isTop3 ? "#ef4444" : "#f5f5f5"}` }}
                   >
-                    {index + 1}
+                    {rank + 1}
                   </span>
                 </div>
                 <div className="mt-4 min-w-0">
@@ -77,6 +96,8 @@ export default async function TopMoviesPage() {
           })}
         </div>
       )}
+
+      <Pagination page={page} totalPages={totalPages} buildHref={pageHref} />
     </div>
   );
 }

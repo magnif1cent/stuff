@@ -16,6 +16,7 @@ import {
   getFightSceneRoundNumbers,
 } from "@/lib/fight-scenes";
 import { FightSceneSection } from "@/components/fight-scene-section";
+import { Pagination } from "@/components/pagination";
 
 // Matches FightSceneSection's own SCENES_PAGE_SIZE -- handing it exactly one
 // page's worth (or fewer) means its internal "Show more" never has anything
@@ -293,27 +294,12 @@ export default async function MovieFightsPage({
         myFavoriteSceneIds={myFavoriteFightSceneIds}
       />
 
-      {totalPages > 1 && (
-        <div className="mt-8 flex items-center justify-center gap-4 text-sm">
-          {page > 1 ? (
-            <Link href={pageHref(movieId, sp, page - 1)} className="text-red-500 hover:underline">
-              ← Previous
-            </Link>
-          ) : (
-            <span className="text-neutral-600">← Previous</span>
-          )}
-          <span className="text-neutral-400">
-            Page {page} of {totalPages} ({totalFilteredCount} fights)
-          </span>
-          {page < totalPages ? (
-            <Link href={pageHref(movieId, sp, page + 1)} className="text-red-500 hover:underline">
-              Next →
-            </Link>
-          ) : (
-            <span className="text-neutral-600">Next →</span>
-          )}
-        </div>
-      )}
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        buildHref={(p) => pageHref(movieId, sp, p)}
+        label={`${totalFilteredCount} fights`}
+      />
     </div>
   );
 }
