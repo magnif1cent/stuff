@@ -3,7 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { youtubeThumbnailUrl } from "@/lib/youtube";
+import { youtubeThumbnailUrl, youtubeEmbedUrl, youtubeWatchUrl } from "@/lib/youtube";
+import { JsonLd } from "@/components/json-ld";
 import {
   getFightSceneById,
   getFightScenesForMovie,
@@ -144,8 +145,24 @@ export default async function FightScenePage({ params }: { params: Promise<Param
   };
   const myFavoriteSceneIds = myFightSceneFavorites.map((e) => e.fightSceneId);
 
+  // schema.org/VideoObject — the clip itself is the content here, not the
+  // page around it. No `duration`: the app doesn't store clip length,
+  // only an optional start timestamp, so that field is simply omitted
+  // rather than guessed.
+  const videoSchema = {
+    "@context": "https://schema.org",
+    "@type": "VideoObject",
+    name: scene.title,
+    description: `Fight scene from ${scene.movie.title} on Kung Fu Sauce.`,
+    thumbnailUrl: [youtubeThumbnailUrl(scene.youtubeVideoId)],
+    uploadDate: scene.createdAt.toISOString(),
+    embedUrl: youtubeEmbedUrl(scene.youtubeVideoId, scene.youtubeStartSeconds),
+    contentUrl: youtubeWatchUrl(scene.youtubeVideoId, scene.youtubeStartSeconds),
+  };
+
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-8">
+      <JsonLd data={videoSchema} />
       <nav aria-label="Breadcrumb" className="mb-6 flex flex-wrap items-center gap-1.5 text-sm text-neutral-400">
         <Link href={`/movies/${movieId}`} className="hover:text-white">
           {scene.movie.title}

@@ -47,6 +47,7 @@ import { MovieOverviewSnippet } from "@/components/movie-overview-snippet";
 import { MovieDetailsTabs } from "@/components/movie-details-tabs";
 import { RecommendedBadges } from "@/components/recommended-badge";
 import { MovieDataSection } from "@/components/movie-data-section";
+import { JsonLd } from "@/components/json-ld";
 
 // How many of a movie's fights the movie page itself teases -- the rest live
 // on the dedicated /movies/[id]/fights collection page, linked via "View all".
@@ -607,6 +608,34 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
     })),
   }));
 
+  // schema.org/Movie structured data for search-engine rich results — built
+  // from data this page already fetched above, no extra queries. Omitted
+  // fields (director/aggregateRating/etc. when null or ratingless) simply
+  // don't appear: JSON.stringify drops object properties whose value is
+  // `undefined`, so there's no need to filter them out by hand.
+  const movieSchema = {
+    "@context": "https://schema.org",
+    "@type": "Movie",
+    name: movie.title,
+    description: movie.overview ?? undefined,
+    image: posterUrl ?? undefined,
+    datePublished: movie.releaseDate ? movie.releaseDate.toISOString().slice(0, 10) : undefined,
+    director: movie.director ? { "@type": "Person", name: movie.director } : undefined,
+    actor: movie.cast.map((credit) => ({ "@type": "Person", name: credit.person.name })),
+    genre: movie.genres.map((genre) => genre.name),
+    duration: movie.runtime ? `PT${movie.runtime}M` : undefined,
+    aggregateRating:
+      communityRating.count > 0 && communityRating.average !== null
+        ? {
+            "@type": "AggregateRating",
+            ratingValue: communityRating.average,
+            ratingCount: communityRating.count,
+            bestRating: 10,
+            worstRating: 1,
+          }
+        : undefined,
+  };
+
   const backdropMat = (
     // aspect-ratio (not a fixed height) keeps this proportional to width up
     // to max-h, instead of pinning a short height that gets crops tighter
@@ -635,6 +664,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
 
   return (
     <div className="flex flex-1 flex-col">
+      <JsonLd data={movieSchema} />
       {session?.user?.role === "ADMIN" ? (
         <BackdropOverrideControl movieId={movie.id} hasOverride={!!movie.backdropOverrideUrl}>
           {backdropMat}

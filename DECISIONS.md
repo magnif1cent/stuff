@@ -67,6 +67,8 @@ one.
 
 **Feature Decisions**
 
+- [JSON-LD structured data added to movie, actor, and fight scene pages](#json-ld-structured-data-added-to-movie-actor-and-fight-scene-pages)
+- [`sitemap.ts` added, rendered dynamically with a cached data fetch instead of static `revalidate`](#sitemapts-added-rendered-dynamically-with-a-cached-data-fetch-instead-of-static-revalidate)
 - [One-tap Watchlist toggle on `/search` movie cards, members only](#one-tap-watchlist-toggle-on-search-movie-cards-members-only)
 - [Movie cards on `/search` show a fight-count badge, with a "Has fight scenes" filter and "Most Fights" sort](#movie-cards-on-search-show-a-fight-count-badge-with-a-has-fight-scenes-filter-and-most-fights-sort)
 - [Fight result cards shrunk: actions on the thumbnail, two-up on phones, one capped chip line](#fight-result-cards-shrunk-actions-on-the-thumbnail-two-up-on-phones-one-capped-chip-line)
@@ -1302,6 +1304,22 @@ polish differently than a default-security reading would.
 
 ## Feature Decisions
 
+### JSON-LD structured data added to movie, actor, and fight scene pages
+**Branch `claude/hobby-commercial-transition-h159z4`.** Closes the other half of the SEO gap list's structured-data item (the sitemap above closed the other half). Three schema.org types, chosen for which page a search engine's rich-result treatment actually helps: `Movie` on movie pages, `Person` on actor pages, `VideoObject` on fight scene permalinks (the clip is the content there, not the page chrome around it).
+
+- **A shared `JsonLd` component (`src/components/json-ld.tsx`) escapes `<` in the serialized output.** `JSON.stringify` doesn't escape `<`, and two of these three page types embed text this site doesn't fully control — a fight scene title (member-submitted) or an actor biography (pulled live from TMDB). A title containing `</script>` would otherwise close the JSON-LD script tag early and let the rest of its content render as raw HTML into the page. `<` in its place keeps it a harmless string inside the JSON. Small, but exactly the kind of thing worth a shared component rather than three copies of the same escape (or three chances to forget it).
+- **Built from data each page already fetches — no new queries added.** The movie page's existing `communityRating`/`cast`/`genres` feed the `Movie` schema's `aggregateRating`/`actor`/`genre`; the actor page's existing live TMDB `bio` lookup feeds `Person`'s `birthDate`/`birthPlace`/`description`; the fight scene page's existing `scene` record feeds `VideoObject`. Same "don't cost a page anything it wasn't already paying" discipline as the sitemap's data-fetch reuse above.
+- **No `duration` on `VideoObject`.** The schema supports it, but this app only stores an optional start timestamp (`youtubeStartSeconds`) for a clip, not its length — omitted rather than guessed or backfilled from a YouTube API call that would be a new dependency for one optional field.
+- **Collection pages and public lists aren't covered yet** — same deliberate "highest-value content types first" scoping the sitemap used, not an oversight. `ItemList`/`CollectionPage` markup would be the natural next step if these matter for organic discovery.
+
+### `sitemap.ts` added, rendered dynamically with a cached data fetch instead of static `revalidate`
+**Branch `claude/hobby-commercial-transition-h159z4`.** Part of the hobby-to-commercial SEO gap list — no `sitemap.xml` existed. The first version used the obvious approach, `export const revalidate = 3600` on a route with no dynamic segments, which Next treats as a build-time static-generation candidate — `npm run build` then tried to run the sitemap's Prisma queries during the build itself and failed, since CI's build has no live database connection. That's not an incidental CI flake; it's the same invariant the Sentry build-wrapper decision (see "Error Monitoring") deliberately preserved, documented in README.md's Continuous Integration section as "the app has no statically-generated pages that touch Prisma at build time."
+
+- **Fix: `export const dynamic = "force-dynamic"` on the route, `unstable_cache` around the data fetch.** These solve two different problems that look like one. `force-dynamic` tells Next to render the route per-request rather than at build time, which is what actually fixes the build. On its own, though, that would mean every crawler hit re-runs five Prisma queries — a worse version of the exact "any request reaches the database" cost `robots.ts` (see "Neon compute kept awake around the clock") was added to reduce, not an improvement. Wrapping the query function in `unstable_cache(..., { revalidate: 3600 })` decouples the two: the route still renders per-request, but the underlying data is cached in Next's Data Cache for an hour regardless, so repeated crawls within that window cost nothing extra.
+- **Scope: movies, fight scene permalinks, per-movie fight collection pages, actor pages, collection pages, and public non-empty lists — not everything.** Picked for highest expected SEO value among what's cheap to query correctly. Movie review pages, actor tributes, lineage pages, and the timeline are deliberately left out of this first pass rather than silently forgotten — same shape of call as the original hobby-to-commercial gap list itself, which didn't try to close every gap in one PR.
+- **Visibility filters reuse existing definitions instead of re-deriving them.** Movies/fight scenes/actors are scoped to `status: "APPROVED"` movies the same way every other public listing is; collections are derived from that same approved-movie set; lists reuse `/lists`' own `PUBLIC_LIST_WHERE` + `NON_EMPTY_WHERE` (the latter newly exported from `src/lib/lists.ts` for this — it was `const`-scoped to that file before, with nothing else needing it). Re-deriving "what's public" as a separate sitemap-only query would risk drifting from the real rule and leaking something — a private list's URL in a public sitemap would be a real exposure, not just a cosmetic inconsistency.
+- **JSON-LD structured data is a separate, still-open gap** — not attempted here. Rich search results need per-page-type markup (`schema.org/Movie`, etc.), a bigger and more mechanical lift than a sitemap, left for a follow-up.
+
 ### One-tap Watchlist toggle on `/search` movie cards, members only
 **PR #192.** Asked whether movie cards should allow adding to lists, as fight cards already do. The first proposal put one bookmark icon on each card, opening a menu of Watchlist, Favorites and custom lists. Asked for feedback on it, the honest critique cut it down, and the site owner picked the reduced version:
 
@@ -1659,7 +1677,7 @@ to also search by actor, rather than building a fourth, separate import path.
   place instead of two copies quietly drifting apart.
 
 ### Draft Terms of Service and Privacy Policy published now, flagged as a working draft, rather than waiting for full legal review
-**Branch `claude/hobby-commercial-transition-h159z4` (PR TBD).** Part of the
+**PR #141.** Part of the
 broader hobby-to-commercial transition (see the legal-drafts audit this
 branch started from). `/terms` and `/privacy` went live now, linked from the
 footer and the registration form, instead of waiting until an attorney has
