@@ -67,6 +67,7 @@ one.
 
 **Feature Decisions**
 
+- [JSON-LD structured data added to movie, actor, and fight scene pages](#json-ld-structured-data-added-to-movie-actor-and-fight-scene-pages)
 - [`sitemap.ts` added, rendered dynamically with a cached data fetch instead of static `revalidate`](#sitemapts-added-rendered-dynamically-with-a-cached-data-fetch-instead-of-static-revalidate)
 - [One-tap Watchlist toggle on `/search` movie cards, members only](#one-tap-watchlist-toggle-on-search-movie-cards-members-only)
 - [Movie cards on `/search` show a fight-count badge, with a "Has fight scenes" filter and "Most Fights" sort](#movie-cards-on-search-show-a-fight-count-badge-with-a-has-fight-scenes-filter-and-most-fights-sort)
@@ -1302,6 +1303,14 @@ polish differently than a default-security reading would.
 - **Not verified**: which crawlers actually generate the traffic. This session had no access to Vercel logs or the Neon dashboard beyond the owner's screenshots, so the effect of this PR should be judged from the Monitoring graph a day or two after it deploys.
 
 ## Feature Decisions
+
+### JSON-LD structured data added to movie, actor, and fight scene pages
+**Branch `claude/hobby-commercial-transition-h159z4`.** Closes the other half of the SEO gap list's structured-data item (the sitemap above closed the other half). Three schema.org types, chosen for which page a search engine's rich-result treatment actually helps: `Movie` on movie pages, `Person` on actor pages, `VideoObject` on fight scene permalinks (the clip is the content there, not the page chrome around it).
+
+- **A shared `JsonLd` component (`src/components/json-ld.tsx`) escapes `<` in the serialized output.** `JSON.stringify` doesn't escape `<`, and two of these three page types embed text this site doesn't fully control — a fight scene title (member-submitted) or an actor biography (pulled live from TMDB). A title containing `</script>` would otherwise close the JSON-LD script tag early and let the rest of its content render as raw HTML into the page. `<` in its place keeps it a harmless string inside the JSON. Small, but exactly the kind of thing worth a shared component rather than three copies of the same escape (or three chances to forget it).
+- **Built from data each page already fetches — no new queries added.** The movie page's existing `communityRating`/`cast`/`genres` feed the `Movie` schema's `aggregateRating`/`actor`/`genre`; the actor page's existing live TMDB `bio` lookup feeds `Person`'s `birthDate`/`birthPlace`/`description`; the fight scene page's existing `scene` record feeds `VideoObject`. Same "don't cost a page anything it wasn't already paying" discipline as the sitemap's data-fetch reuse above.
+- **No `duration` on `VideoObject`.** The schema supports it, but this app only stores an optional start timestamp (`youtubeStartSeconds`) for a clip, not its length — omitted rather than guessed or backfilled from a YouTube API call that would be a new dependency for one optional field.
+- **Collection pages and public lists aren't covered yet** — same deliberate "highest-value content types first" scoping the sitemap used, not an oversight. `ItemList`/`CollectionPage` markup would be the natural next step if these matter for organic discovery.
 
 ### `sitemap.ts` added, rendered dynamically with a cached data fetch instead of static `revalidate`
 **Branch `claude/hobby-commercial-transition-h159z4`.** Part of the hobby-to-commercial SEO gap list — no `sitemap.xml` existed. The first version used the obvious approach, `export const revalidate = 3600` on a route with no dynamic segments, which Next treats as a build-time static-generation candidate — `npm run build` then tried to run the sitemap's Prisma queries during the build itself and failed, since CI's build has no live database connection. That's not an incidental CI flake; it's the same invariant the Sentry build-wrapper decision (see "Error Monitoring") deliberately preserved, documented in README.md's Continuous Integration section as "the app has no statically-generated pages that touch Prisma at build time."

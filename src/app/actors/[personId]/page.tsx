@@ -32,6 +32,7 @@ import { getPersonSignatureVoteSummary } from "@/lib/person-signature-votes";
 import { SignatureVoteProvider, SignatureSpotlight, SignatureVoteButton } from "@/components/actor-signature-vote";
 import { getLineageTree, getFigureIdForPerson } from "@/lib/lineage";
 import { LineageTreeBody } from "@/components/lineage-tree-body";
+import { JsonLd } from "@/components/json-ld";
 
 // Split out from ActorPage's body so the Math.random() call it wraps isn't
 // flagged as an impurity inside the page's own render function (React's
@@ -450,8 +451,21 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
     </div>
   );
 
+  // schema.org/Person structured data — built from data this page already
+  // fetched above (including the live TMDB `bio` lookup), no extra queries.
+  const personSchema = {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    name: person.name,
+    image: tmdbImageUrl(person.profilePath, "w500") ?? undefined,
+    description: bio?.biography || undefined,
+    birthDate: bio?.birthday ?? undefined,
+    birthPlace: bio?.place_of_birth ?? undefined,
+  };
+
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-10">
+      <JsonLd data={personSchema} />
       <div className="mb-6 flex items-center gap-4">
         <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-full bg-neutral-800">
           {person.profilePath && (
