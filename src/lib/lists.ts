@@ -21,7 +21,9 @@ export const PUBLIC_LIST_WHERE = { isPrivate: false } as const;
 
 // Only lists with at least one item are worth browsing — an empty list is
 // still a private-in-practice draft until its owner adds something to it.
-const NON_EMPTY_WHERE = {
+// Exported so other surfaces applying the same "browsable list" definition
+// (the sitemap, currently) don't redefine it separately.
+export const NON_EMPTY_WHERE = {
   OR: [{ entries: { some: {} } }, { fightSceneEntries: { some: {} } }],
 };
 

@@ -9,8 +9,11 @@ import type { MetadataRoute } from "next";
 // that have nothing to index (API, admin, account, auth flows). Pagination
 // (?page=) stays crawlable so list pages can still be discovered in full.
 // Only helps with crawlers that honor robots.txt; see DECISIONS.md.
+const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
+
 export default function robots(): MetadataRoute.Robots {
   return {
+    sitemap: `${baseUrl}/sitemap.xml`,
     rules: {
       userAgent: "*",
       allow: "/",

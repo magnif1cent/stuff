@@ -42,6 +42,7 @@ An IMDB-style website for kung fu and martial arts films, built for martial arts
 - [Security](#security)
 - [Continuous Integration](#continuous-integration)
 - [Deploying](#deploying)
+- [Sitemap & robots.txt](#sitemap-robotstxt)
 - [Footer & About Page](#footer-about-page)
 - [Legal (Terms of Service & Privacy Policy)](#legal-terms-of-service-privacy-policy)
 - [News & Updates](#news-updates)
@@ -484,6 +485,16 @@ Each slide prefers a fight scene clip over the static TMDB backdrop:
 4. Update the Google OAuth redirect URI to your production domain.
 
 **Keeping database compute down (Neon Free plan).** Neon bills for the time its compute is awake, and it only sleeps after 5 minutes without a query. Every page on this site renders per request (the nonce CSP in `src/proxy.ts` and the navbar's `auth()` both force it), so any visitor or crawler request, even a trickle, keeps the database awake. `src/app/robots.ts` keeps well-behaved crawlers out of `/api/`, `/admin`, account/auth pages, `/search`, and sort/filter/query URL variants to reduce that. On Neon's side, set the production compute's autoscaling max to 0.25 CU (Branches → production → Edit compute) so each awake hour costs the minimum. See `DECISIONS.md` ("Neon compute kept awake around the clock") for the full analysis and the larger, deferred fix.
+
+## Sitemap & robots.txt
+
+`src/app/sitemap.ts` generates `/sitemap.xml`, listing every approved movie, non-deleted fight scene permalink, per-movie fight collection page, actor page (only for a person with at least one credit in an approved movie), TMDB collection page, and public non-empty list, plus a handful of static pages (home, `/about`, `/news`, `/tops` and its two sub-pages, `/leaderboard`, `/lists`, `/terms`, `/privacy`). `src/app/robots.ts` points crawlers at it via a `sitemap` entry.
+
+- **`export const dynamic = "force-dynamic"`, not `revalidate`.** A metadata route with no dynamic segments is otherwise a build-time static-generation candidate, which would run the Prisma queries below during `next build` — breaking the [Continuous Integration](#continuous-integration) guarantee that the build needs no live database connection. `force-dynamic` makes Next render it per-request instead.
+- **The underlying data fetch is still cached** via `unstable_cache` (one hour), independent of the route's own per-request rendering — this is what actually protects against the same "any request reaches the database" cost the Neon compute fix above addressed. Without it, a frequently-recrawled sitemap would be a worse version of the problem `robots.ts` was added to reduce, not an improvement.
+- **Reuses `/lists`' own "public and worth browsing" definition** (`PUBLIC_LIST_WHERE` + the now-exported `NON_EMPTY_WHERE` from `src/lib/lists.ts`) rather than redefining it — a private or empty list has no business showing up in search results, and that definition living in two places would drift.
+- **Not yet included**: movie review pages, actor tributes, lineage pages, and the historical timeline — a deliberate first pass covering the highest-value content types, not full route coverage. Easy to extend the same way if these turn out to matter for organic discovery.
+- JSON-LD structured data (rich search results for movie/actor pages) is a separate, not-yet-built piece — see `DECISIONS.md`.
 
 ## Footer & About Page
 
