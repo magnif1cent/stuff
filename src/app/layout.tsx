@@ -38,7 +38,7 @@ const sourceSerif4 = Source_Serif_4({
 // Kept specific (and under ~160 chars) so search engines use it as the
 // homepage snippet instead of pulling a movie synopsis from the hero carousel.
 const SITE_DESCRIPTION =
-  "A community database for kung fu and martial arts films: rate and review movies, break down fight scenes, explore actors and lineages, and build your own lists.";
+  "The source of kung fu cinema, built by kung fu enthusiasts. Rate the films, rank the fight scenes, trace who trained whom, and find your next favorite.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXTAUTH_URL ?? "http://localhost:3000"),
