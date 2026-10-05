@@ -9,11 +9,16 @@ import type { MetadataRoute } from "next";
 // that have nothing to index (API, admin, account, auth flows). Pagination
 // (?page=) stays crawlable so list pages can still be discovered in full.
 // Only helps with crawlers that honor robots.txt; see DECISIONS.md.
-const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
-
+//
+// No `sitemap` entry, deliberately and for now: advertising /sitemap.xml
+// here handed every crawler a to-do list of every movie/fight/actor page,
+// each still a per-request database hit, and Neon stopped scaling to zero
+// the day it shipped. /sitemap.xml itself still exists (and can be submitted
+// directly in Google Search Console). Re-add the entry once public page
+// data is served from Next's Data Cache — see DECISIONS.md, "Sitemap
+// removed from robots.txt until page data is cached".
 export default function robots(): MetadataRoute.Robots {
   return {
-    sitemap: `${baseUrl}/sitemap.xml`,
     rules: {
       userAgent: "*",
       allow: "/",

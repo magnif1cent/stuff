@@ -64,6 +64,7 @@ one.
 - [Registration enumeration finally closed, reversing the earlier "not doing" call](#registration-enumeration-finally-closed-reversing-the-earlier-not-doing-call)
 - [Vitest introduced as the project's first test runner](#vitest-introduced-as-the-projects-first-test-runner)
 - [Neon compute kept awake around the clock: every page renders per request](#neon-compute-kept-awake-around-the-clock-every-page-renders-per-request)
+- [Sitemap removed from robots.txt until page data is cached](#sitemap-removed-from-robotstxt-until-page-data-is-cached)
 
 **Feature Decisions**
 
@@ -1303,6 +1304,14 @@ polish differently than a default-security reading would.
 - **Deferred — the structural fix, left as an explicit trade-off for the site owner:** making public pages actually cacheable, so a crawler gets a cached page and never touches Postgres. That means replacing the nonce CSP with a static one (giving up `'strict-dynamic'`/nonce protection against injected scripts) and moving the navbar's session read to the client. It reverses a deliberate security decision, so it isn't done here. Related lever: caching the password-change check in the JWT and re-checking the DB only every few minutes instead of every request. That trades the "other sessions are locked out immediately after a reset" guarantee for "within a few minutes".
 - **Not a code change, but part of the fix:** production's compute autoscaling max was 2 CU; lowering it to 0.25 CU in Neon caps what each awake hour can cost. `robots.txt` only affects crawlers that honor it. If the graph still shows the compute awake around the clock afterward, check Vercel's logs for the user agents behind the overnight traffic before reaching for the deferred fix above.
 - **Not verified**: which crawlers actually generate the traffic. This session had no access to Vercel logs or the Neon dashboard beyond the owner's screenshots, so the effect of this PR should be judged from the Monitoring graph a day or two after it deploys.
+
+### Sitemap removed from robots.txt until page data is cached
+**PR #TBD.** Follow-up to "Neon compute kept awake around the clock" above, which had worked: on Oct 1 the production compute slept most of the day, waking ~7 times for the 5-minute minimum. PR #196 (Oct 4) then added `sitemap.xml` and a `sitemap` entry in `robots.txt`, and within a day Neon's Monitoring showed the compute awake nearly 24 hours again, with only three short sleeps.
+
+- **Cause:** the sitemap itself is cheap (its queries are cached for an hour), but it gives every crawler a complete list of every public movie, fights page, fight scene, actor, collection and list. Each of those pages still renders per request and queries Postgres, so a crawler working through that list wakes the compute every few minutes, all day. Before, crawlers only found pages by following links.
+- **What changed:** the `sitemap` entry is removed from `robots.ts`. `/sitemap.xml` stays, unchanged, so it can still be submitted directly in Google Search Console if wanted. That's a deliberate choice of where crawl load comes from, not an accident.
+- **Why not just keep it and wait:** a fresh sitemap is usually crawled hardest for a few days before settling, but around the clock costs ~6 CU-hours/day, which would exhaust the Free plan's monthly allowance again around Oct 17–20. The last time the allowance ran out, the production compute appears to have been suspended Sept 27–30.
+- **Planned fix that lets it come back:** cache public page data in Next's Data Cache (same `unstable_cache` pattern `sitemap.ts` already uses), so crawler hits read the cache instead of Postgres. Once that ships, re-add the `sitemap` entry.
 
 ## Feature Decisions
 
