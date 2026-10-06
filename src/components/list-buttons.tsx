@@ -42,11 +42,11 @@ export function ListButtons({
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="col-span-2 flex flex-col gap-2">
       <div className="flex gap-2">
         <button
           onClick={() => toggle("FAVORITE")}
-          className={`font-cond rounded-sm border px-3 py-1.5 text-sm tracking-wide uppercase transition ${
+          className={`font-cond flex-1 rounded-sm border px-2 py-1.5 text-sm tracking-wide uppercase transition sm:flex-none sm:px-3 ${
             favorite
               ? "border-red-600 bg-red-700 text-white"
               : "border-neutral-700 text-neutral-300 hover:bg-neutral-800"
@@ -56,7 +56,7 @@ export function ListButtons({
         </button>
         <button
           onClick={() => toggle("WATCHLIST")}
-          className={`font-cond rounded-sm border px-3 py-1.5 text-sm tracking-wide uppercase transition ${
+          className={`font-cond flex-1 rounded-sm border px-2 py-1.5 text-sm tracking-wide uppercase transition sm:flex-none sm:px-3 ${
             watchlist
               ? "border-blue-600 bg-blue-700 text-white"
               : "border-neutral-700 text-neutral-300 hover:bg-neutral-800"

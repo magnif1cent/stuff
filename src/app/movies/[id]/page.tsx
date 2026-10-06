@@ -485,6 +485,46 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
     </>
   );
 
+  // Rendered twice: in the mobile title block above the poster row, and in
+  // the desktop content column -- see "Movie page mobile layout regrouped"
+  // in DECISIONS.md.
+  const byline = (
+    <div className="font-cond flex flex-wrap items-center gap-x-3 gap-y-1 text-sm tracking-wide text-neutral-400 uppercase">
+      <RecommendedBadges recommenders={movieRecommenders} size="sm" />
+      {movie.runtime && <span>{movie.runtime} min</span>}
+      {movie.director && <span>Dir. {movie.director}</span>}
+      {movie.certification && (
+        <span className="rounded-sm border border-neutral-500 px-1.5 text-xs font-semibold text-neutral-400 normal-case">
+          {movie.certification}
+        </span>
+      )}
+      {movie.trueFightCount != null && (
+        <a
+          href="#fight-count"
+          title="Number of fights in the movie, maintained by members — click to view or edit"
+          className="underline decoration-neutral-600 underline-offset-2 hover:text-neutral-200"
+        >
+          Fight Count: {movie.trueFightCount}
+        </a>
+      )}
+    </div>
+  );
+
+  const genrePills =
+    movie.genres.length > 0 ? (
+      <div className="flex flex-wrap gap-2">
+        {movie.genres.map((genre) => (
+          <Link
+            key={genre.id}
+            href={`/search?genre=${encodeURIComponent(genre.name)}`}
+            className="rounded-full border border-neutral-700 px-2 py-0.5 text-xs text-neutral-300 underline decoration-neutral-600 underline-offset-2 hover:border-neutral-500 hover:text-neutral-100"
+          >
+            {genre.name}
+          </Link>
+        ))}
+      </div>
+    ) : null;
+
   // Only shown when it actually differs from the display title -- most
   // catalog entries are English-language originals where TMDB's
   // original_title is identical to title, so the common case renders
@@ -674,17 +714,23 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
       )}
 
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 pt-8 sm:flex-row">
-        <p className={`${titleClassName} sm:hidden`}>{titleText}</p>
-        {originalTitleText && (
-          <p className="font-editorial -mt-1 text-base text-neutral-400 italic sm:hidden">{originalTitleText}</p>
-        )}
+        {/* Mobile: title, original title, byline and genres as one block
+            above the poster row, so everything identifying the film reads
+            together -- the content column's copies of the byline/genres are
+            desktop-only. One wrapper so the row's gap-6 doesn't land
+            between each of these lines. */}
+        <div className="sm:hidden">
+          <p className={titleClassName}>{titleText}</p>
+          {originalTitleText && <p className="font-native text-lg text-neutral-400">{originalTitleText}</p>}
+          <div className="mt-3">{byline}</div>
+          {genrePills && <div className="mt-3">{genrePills}</div>}
+        </div>
 
         {/* Mobile: poster + a clamped movie.overview snippet sit side by
-            side on the first line of a *wrapping* flex row -- byline moved
-            back to its original spot in the content column, unconditional
-            on every breakpoint (see DECISIONS.md; overview is intentionally
-            mobile-only here now, not duplicated in the content column
-            below). PosterOverrideControl (admin-only) now wraps the poster
+            side on the first line of a *wrapping* flex row -- the byline
+            sits in the title block above on mobile, the content column on
+            desktop (see DECISIONS.md; overview is intentionally mobile-only
+            here now, not duplicated in the content column below). PosterOverrideControl (admin-only) now wraps the poster
             itself rather than sitting below it as its own row -- the whole
             poster is the tap target for a Replace/Remove menu, so it costs
             no extra layout height at all, unlike the old always-visible
@@ -735,30 +781,12 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
           )}
         </div>
 
-        <div className="flex-1 pt-2">
-          <div className="font-cond flex flex-wrap items-center gap-x-3 gap-y-1 text-sm tracking-wide text-neutral-400 uppercase">
-            <RecommendedBadges recommenders={movieRecommenders} size="sm" />
-            {movie.runtime && <span>{movie.runtime} min</span>}
-            {movie.director && <span>Dir. {movie.director}</span>}
-            {movie.certification && (
-              <span className="rounded-sm border border-neutral-500 px-1.5 text-xs font-semibold text-neutral-400 normal-case">
-                {movie.certification}
-              </span>
-            )}
-            {movie.trueFightCount != null && (
-              <a
-                href="#fight-count"
-                title="Number of fights in the movie, maintained by members — click to view or edit"
-                className="underline decoration-neutral-600 underline-offset-2 hover:text-neutral-200"
-              >
-                Fight Count: {movie.trueFightCount}
-              </a>
-            )}
-          </div>
+        <div className="flex-1 sm:pt-2">
+          <div className="hidden sm:block">{byline}</div>
 
           <h1 className={`hidden ${titleClassName} sm:block`}>{titleText}</h1>
           {originalTitleText && (
-            <p className="font-editorial hidden text-base text-neutral-400 italic sm:block">{originalTitleText}</p>
+            <p className="font-native hidden text-lg text-neutral-400 sm:block">{originalTitleText}</p>
           )}
 
           {movie.tagline && (
@@ -767,24 +795,15 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
             </p>
           )}
 
-          {movie.genres.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {movie.genres.map((genre) => (
-                <Link
-                  key={genre.id}
-                  href={`/search?genre=${encodeURIComponent(genre.name)}`}
-                  className="rounded-full border border-neutral-700 px-2 py-0.5 text-xs text-neutral-300 underline decoration-neutral-600 underline-offset-2 hover:border-neutral-500 hover:text-neutral-100"
-                >
-                  {genre.name}
-                </Link>
-              ))}
-            </div>
-          )}
+          {genrePills && <div className="mt-3 hidden sm:block">{genrePills}</div>}
 
-          <div className="mt-5 flex flex-wrap items-baseline gap-6 sm:gap-10">
+          <div className="flex flex-wrap items-baseline gap-10 border-y border-neutral-800 py-3 sm:mt-5 sm:border-0 sm:py-0">
             <div>
               <p className="font-cond text-xs tracking-wider text-neutral-500 uppercase">Community Score</p>
-              <p className="font-display mt-1 text-3xl text-amber-500">
+              {!communityRating.average && (
+                <p className="font-editorial mt-2 text-sm text-neutral-500 italic sm:hidden">No ratings yet</p>
+              )}
+              <p className={`font-display mt-1 text-3xl text-amber-500 ${communityRating.average ? "" : "hidden sm:block"}`}>
                 {communityRating.average ? communityRating.average.toFixed(1) : "—"}{" "}
                 <span className="font-editorial text-sm font-normal text-neutral-500">/ 10 ({communityRating.count})</span>
               </p>
@@ -834,7 +853,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
             </div>
           )}
 
-          <div className="mt-4 flex flex-wrap items-start gap-2">
+          <div className="mt-4 grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:items-start">
             <ListButtons
               movieId={movie.id}
               initialFavorite={isFavorite}
