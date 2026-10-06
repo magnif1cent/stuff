@@ -191,6 +191,7 @@ one.
 - [Actor page's native name: kept its own line, dropped italic, sized up](#actor-pages-native-name-kept-its-own-line-dropped-italic-sized-up)
 - [Site icon: red "KF" Anton monogram, replacing the create-next-app default](#site-icon-red-kf-anton-monogram-replacing-the-create-next-app-default)
 - [Homepage tagline: a compact banner above the carousel, doubling as the page's `<h1>`](#homepage-tagline-a-compact-banner-above-the-carousel-doubling-as-the-pages-h1)
+- [Movie page mobile layout regrouped: identity block above the poster, scores as a ruled row](#movie-page-mobile-layout-regrouped-identity-block-above-the-poster-scores-as-a-ruled-row)
 
 **Deferred & Backlog**
 
@@ -1488,6 +1489,15 @@ polish differently than a default-security reading would.
 
 ### Homepage tagline: a compact banner above the carousel, doubling as the page's `<h1>`
 **PR #198.** The homepage had no visible text saying what the site is (just the carousel and rails) and no `<h1>`, and Google was replacing the meta description with a carousel synopsis. Added "The *source* for kung fu cinema" (Anton, matching the navbar wordmark, with "source" in red italic) plus a one-line subline, worded to echo the meta description in `layout.tsx` without copying it. Three placements were mocked up at phone and desktop width: a banner above the carousel, a band below it, and an overlay on the carousel image. The overlay competed with the carousel's own "Trending this week" title and wouldn't stay legible on bright backdrops; the band below fell under the fold on phones, where new visitors wouldn't see it. The site owner picked the banner above, but smaller than first mocked (`text-2xl`/`sm:text-4xl` rather than roughly 34/52px) so it stays on one line on a phone and costs the carousel less height.
+
+### Movie page mobile layout regrouped: identity block above the poster, scores as a ruled row
+**PR #200.** Feedback from a live phone screenshot: the mobile movie page "looks disorganized." The cause was grouping and spacing, not any single element: the byline (runtime/director) and genre pills sat below the poster row, away from the title they describe; the outer column's `gap-6` put 24px between the title and the original-language title; the Community Score showed a bare amber dash plus "/ 10 (0)" when unrated; and the three action buttons were three different widths that stopped short of the right edge. A side-by-side mockup (the live screenshot next to a regrouped version, same data) was approved before building.
+
+- **Title, original title, byline and genres now form one block above the poster row on mobile**, wrapped in a single element so `gap-6` doesn't fall between each line. This doesn't revisit "Mobile poster narrowed, with a clamped overview snippet beside it" above: that entry rejected the byline *beside* the poster; it now sits above, with the title. The byline and genre pills render from shared `byline`/`genrePills` consts, in the title block on mobile and in the content column on desktop.
+- **The original title is no longer italic, on every breakpoint**, and uses `font-native` at `text-lg`, the same fix and reasoning as "Actor page's native name: kept its own line, dropped italic, sized up" (CJK has no italic, so the browser fakes a slant).
+- **The scores sit in a row with a rule above and below on mobile**, and an unrated Community Score reads "No ratings yet" there. Desktop keeps the dash.
+- **The Favorite / Watchlist / Add to list buttons are three equal columns on mobile** (`grid-cols-3`; `ListButtons` spans two of them with `flex-1` buttons, and the "button" variant of `AddToListControl` goes full width below `sm:`). That variant is only used on this page.
+- The poster plus synopsis row, the tabbed Details card and the desktop layout are unchanged, apart from the original title's font.
 
 ### Pagination extracted into one shared component, adding jump-to-page links everywhere at once
 **PR #TBD.** Prompted by a request to add page-number links to one paginated list, movie search — but the exact same "← Previous / Page X of Y / Next" block, with no way to jump to a specific page, turned out to be independently copy-pasted across seven pages (movie search, fight-scene search, a movie's Fights and Reviews, `/lists`, an actor's Tributes, `/news`, a Timeline era). Fixing one and leaving the other six with the old Previous/Next-only UI would have been an inconsistent, worse outcome than the reuse this duplication already called for, so all seven were moved onto one shared `Pagination` component instead of patching the one page that was asked about.

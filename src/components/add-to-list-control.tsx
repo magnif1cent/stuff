@@ -27,7 +27,7 @@ const ICON_BUTTON_CLASS =
 const OVERLAY_BUTTON_CLASS =
   "flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white shadow backdrop-blur-sm hover:bg-black/80";
 const TEXT_BUTTON_CLASS =
-  "font-cond rounded-sm border border-neutral-700 px-3 py-1.5 text-sm tracking-wide text-neutral-300 uppercase hover:bg-neutral-800";
+  "font-cond block w-full rounded-sm border border-neutral-700 px-2 py-1.5 text-center text-sm tracking-wide text-neutral-300 uppercase hover:bg-neutral-800 sm:inline-block sm:w-auto sm:px-3";
 
 const BUTTON_CLASS = { button: TEXT_BUTTON_CLASS, icon: ICON_BUTTON_CLASS, overlay: OVERLAY_BUTTON_CLASS };
 
