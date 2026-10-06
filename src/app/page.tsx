@@ -66,7 +66,7 @@ export default async function HomePage() {
           <h1 className="font-display text-2xl uppercase leading-tight tracking-wide text-neutral-100 sm:text-4xl">
             The <em className="text-red-600">source</em> for kung fu cinema
           </h1>
-          <p className="mt-1 text-sm text-neutral-400 sm:text-base">
+          <p className="mt-1 hidden text-base text-neutral-400 sm:block">
             Built by martial arts fans. Rate the films, rank the fight scenes, trace who trained whom.
           </p>
         </div>

@@ -192,6 +192,7 @@ one.
 - [Site icon: red "KF" Anton monogram, replacing the create-next-app default](#site-icon-red-kf-anton-monogram-replacing-the-create-next-app-default)
 - [Homepage tagline: a compact banner above the carousel, doubling as the page's `<h1>`](#homepage-tagline-a-compact-banner-above-the-carousel-doubling-as-the-pages-h1)
 - [Movie page mobile layout regrouped: identity block above the poster, scores as a ruled row](#movie-page-mobile-layout-regrouped-identity-block-above-the-poster-scores-as-a-ruled-row)
+- [Homepage first screen calmed: one-line tagline on phones, quieter Latest Update bar](#homepage-first-screen-calmed-one-line-tagline-on-phones-quieter-latest-update-bar)
 
 **Deferred & Backlog**
 
@@ -1498,6 +1499,12 @@ polish differently than a default-security reading would.
 - **The scores sit in a row with a rule above and below on mobile**, and an unrated Community Score reads "No ratings yet" there. Desktop keeps the dash.
 - **The Favorite / Watchlist / Add to list buttons are three equal columns on mobile** (`grid-cols-3`; `ListButtons` spans two of them with `flex-1` buttons, and the "button" variant of `AddToListControl` goes full width below `sm:`). That variant is only used on this page.
 - The poster plus synopsis row, the tabbed Details card and the desktop layout are unchanged, apart from the original title's font.
+
+### Homepage first screen calmed: one-line tagline on phones, quieter Latest Update bar
+**PR #TBD.** Follow-up to "Homepage tagline: a compact banner above the carousel" above, after a live phone screenshot of the homepage read as busy. Above the first movie rail, the phone screen stacked four bands: the tagline (two lines of display text plus two lines of subline), the carousel (its own large serif title and a two-line synopsis), the Latest Update bar, then Recently Added. Three red uppercase labels ("source", "Trending this week", "Latest Update") also competed within one screen. Two options were mocked up from the live screenshot: (A) quiet the Latest Update bar in place, or (B) move it below Recently Added so the movies follow the carousel directly. The site owner picked A, which keeps news visible on arrival. A carousel legibility fix (a stronger bottom fade for light backdrops) was mocked in the same session and declined; the carousel is unchanged.
+
+- **The tagline's subline is hidden below `sm:`.** The headline alone carries the message on phones; desktop keeps both lines.
+- **`NewsTeaser` loses its red label and bold serif title, on every breakpoint**: the label is now `text-neutral-500`, the title regular-weight `text-neutral-300`, and the tinted background is gone. On phones the label shortens to "Update" and "Read more →" to just "→", so more of the title fits before it truncates.
 
 ### Pagination extracted into one shared component, adding jump-to-page links everywhere at once
 **PR #TBD.** Prompted by a request to add page-number links to one paginated list, movie search — but the exact same "← Previous / Page X of Y / Next" block, with no way to jump to a specific page, turned out to be independently copy-pasted across seven pages (movie search, fight-scene search, a movie's Fights and Reviews, `/lists`, an actor's Tributes, `/news`, a Timeline era). Fixing one and leaving the other six with the old Previous/Next-only UI would have been an inconsistent, worse outcome than the reuse this duplication already called for, so all seven were moved onto one shared `Pagination` component instead of patching the one page that was asked about.
