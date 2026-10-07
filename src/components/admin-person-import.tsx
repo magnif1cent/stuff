@@ -8,7 +8,30 @@ import { useTmdbDiscoverFilters } from "@/hooks/use-tmdb-discover-filters";
 import { TmdbDiscoverResults } from "@/components/tmdb-discover-results";
 import { TmdbDiscoverFilterFields } from "@/components/tmdb-discover-filter-fields";
 
-export function AdminActorImport() {
+// Shared by the "By actor" and "By director" import tabs: same pick-a-person
+// flow, differing only in which discover filter the person id feeds
+// (personId -> TMDB's with_cast; directorId -> the person's Director credits)
+// and the copy around it. Director search has no country filter -- see
+// discoverMoviesByDirector in lib/tmdb.ts.
+const ROLE_COPY = {
+  actor: {
+    queryParam: "personId",
+    noun: "an actor",
+    placeholder: "Find an actor (e.g. Jackie Chan)",
+    findLabel: "Find actor",
+    selectedLabel: "Filming with:",
+  },
+  director: {
+    queryParam: "directorId",
+    noun: "a director",
+    placeholder: "Find a director (e.g. Chang Cheh)",
+    findLabel: "Find director",
+    selectedLabel: "Directed by:",
+  },
+} as const;
+
+export function AdminPersonImport({ role }: { role: keyof typeof ROLE_COPY }) {
+  const copy = ROLE_COPY[role];
   const [personQuery, setPersonQuery] = useState("");
   const [personOptions, setPersonOptions] = useState<TmdbPersonSearchResult[]>([]);
   const [selectedPerson, setSelectedPerson] = useState<TmdbPersonSearchResult | null>(null);
@@ -16,9 +39,9 @@ export function AdminActorImport() {
   const filters = useTmdbDiscoverFilters();
 
   const discover = useTmdbDiscoverImport(async (targetPage) => {
-    if (!selectedPerson) return { ok: false, error: "Find and select an actor first." };
+    if (!selectedPerson) return { ok: false, error: `Find and select ${copy.noun} first.` };
     const res = await fetch(
-      `/api/admin/tmdb/discover?personId=${selectedPerson.id}&page=${targetPage}${filters.toQueryString()}`,
+      `/api/admin/tmdb/discover?${copy.queryParam}=${selectedPerson.id}&page=${targetPage}${filters.toQueryString()}`,
     );
     const body = await res.json();
     if (!res.ok) return { ok: false, error: body.error ?? "Search failed." };
@@ -48,7 +71,7 @@ export function AdminActorImport() {
           type="text"
           value={personQuery}
           onChange={(e) => setPersonQuery(e.target.value)}
-          placeholder="Find an actor (e.g. Jackie Chan)"
+          placeholder={copy.placeholder}
           className="w-full max-w-md rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 focus:border-red-600 focus:outline-none"
         />
         <button
@@ -56,7 +79,7 @@ export function AdminActorImport() {
           disabled={searchingPeople}
           className="rounded-md border border-neutral-700 px-4 py-2 text-sm text-neutral-100 hover:bg-neutral-800 disabled:opacity-50"
         >
-          {searchingPeople ? "Searching…" : "Find actor"}
+          {searchingPeople ? "Searching…" : copy.findLabel}
         </button>
       </form>
 
@@ -86,7 +109,7 @@ export function AdminActorImport() {
 
       {selectedPerson && (
         <div className="mb-2 flex flex-wrap items-center gap-2">
-          <span className="text-xs text-neutral-500">Filming with:</span>
+          <span className="text-xs text-neutral-500">{copy.selectedLabel}</span>
           <span className="flex items-center gap-1 rounded-full bg-red-700/20 px-3 py-1 text-xs text-red-400">
             {selectedPerson.name}
             <button
@@ -100,7 +123,7 @@ export function AdminActorImport() {
         </div>
       )}
 
-      <TmdbDiscoverFilterFields filters={filters}>
+      <TmdbDiscoverFilterFields filters={filters} showCountry={role !== "director"}>
         <button
           onClick={discover.search}
           disabled={discover.loading || !selectedPerson}

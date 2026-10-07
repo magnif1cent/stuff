@@ -6,11 +6,11 @@ import Link from "next/link";
 import type { Movie } from "@/generated/prisma/client";
 import { tmdbImageUrl, type TmdbMovieSearchResult } from "@/lib/tmdb";
 import { AdminKeywordImport } from "@/components/admin-keyword-import";
-import { AdminActorImport } from "@/components/admin-actor-import";
+import { AdminPersonImport } from "@/components/admin-person-import";
 import { AdminStudioImport } from "@/components/admin-studio-import";
 
 export function AdminImportSearch() {
-  const [mode, setMode] = useState<"title" | "keyword" | "actor" | "studio">("title");
+  const [mode, setMode] = useState<"title" | "keyword" | "actor" | "director" | "studio">("title");
 
   return (
     <div>
@@ -40,6 +40,14 @@ export function AdminImportSearch() {
           By actor
         </button>
         <button
+          onClick={() => setMode("director")}
+          className={`px-3 py-2 text-sm font-medium ${
+            mode === "director" ? "border-b-2 border-red-600 text-white" : "text-neutral-400 hover:text-white"
+          }`}
+        >
+          By director
+        </button>
+        <button
           onClick={() => setMode("studio")}
           className={`px-3 py-2 text-sm font-medium ${
             mode === "studio" ? "border-b-2 border-red-600 text-white" : "text-neutral-400 hover:text-white"
@@ -50,7 +58,8 @@ export function AdminImportSearch() {
       </div>
 
       {mode === "keyword" && <AdminKeywordImport />}
-      {mode === "actor" && <AdminActorImport />}
+      {mode === "actor" && <AdminPersonImport key="actor" role="actor" />}
+      {mode === "director" && <AdminPersonImport key="director" role="director" />}
       {mode === "studio" && <AdminStudioImport />}
       {mode === "title" && <TitleSearch />}
     </div>
