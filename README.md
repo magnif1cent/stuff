@@ -552,7 +552,8 @@ still open before a real commercial launch.
 
 Admins can publish short posts (title + up to 10,000 characters) from
 `/admin/news`. The homepage shows only the single latest post as a thin
-teaser banner directly under the hero carousel — a muted grey "Latest
+teaser banner directly under the hero carousel (on phones, below the
+Recently Added rail instead) — a muted grey "Latest
 Update" label (just "Update" on phones), the post's title, and a "Read
 more →" link (an arrow alone on phones), the whole banner clickable through to the full paginated archive at `/news` (10 per page,
 same shared `Pagination` component used everywhere else). The `/news` archive shows each

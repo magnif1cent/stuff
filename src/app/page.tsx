@@ -72,7 +72,14 @@ export default async function HomePage() {
         </div>
       </section>
       <HeroCarousel movies={featured} />
-      {latestNewsPost && <NewsTeaser title={latestNewsPost.title} />}
+      {/* Latest Update sits under the carousel on desktop but below
+          Recently Added on phones, so the movies follow the carousel
+          directly on a small screen -- see DECISIONS.md. */}
+      {latestNewsPost && (
+        <div className="hidden sm:block">
+          <NewsTeaser title={latestNewsPost.title} />
+        </div>
+      )}
 
       <MovieRail
         title="Recently Added"
@@ -87,6 +94,11 @@ export default async function HomePage() {
           </>
         }
       />
+      {latestNewsPost && (
+        <div className="border-t border-neutral-800 sm:hidden">
+          <NewsTeaser title={latestNewsPost.title} />
+        </div>
+      )}
 
       <MovieRail
         title="Top Rated by the Community"
