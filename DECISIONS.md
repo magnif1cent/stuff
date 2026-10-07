@@ -1320,7 +1320,7 @@ polish differently than a default-security reading would.
 ## Feature Decisions
 
 ### Admin backdrop framing: a focal point + zoom, movie page only
-**PR TBD.** Follow-up to "Backdrop banner switched to aspect-ratio height..." below, which settled on
+**PR #206.** Follow-up to "Backdrop banner switched to aspect-ratio height..." below, which settled on
 one fixed `object-[center_25%]` crop and pointed at the backdrop gallery as the fix for any movie it
 still cropped badly. That only helps when TMDB has a better-composed alternative; often the image is
 fine and just needs a different crop, so admins can now frame the banner per movie.
