@@ -8,6 +8,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { tmdbImageUrl, resolvePosterUrl, resolveBackdropUrl, isTmdbUrl } from "@/lib/tmdb";
 import { truncate } from "@/lib/text";
+import { BACKDROP_FRAME_CLASS, resolveBackdropFraming, backdropFramingStyle } from "@/lib/backdrop-framing";
 import {
   getCommunityRatingSummary,
   getEditorsRatingSummary,
@@ -306,7 +307,10 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
       : [],
   ]);
 
-  const backdropUrl = resolveBackdropUrl(movie, "w1280");
+  const backdropFraming = resolveBackdropFraming(movie);
+  // A zoomed-in banner stretches the image past w1280 even at ordinary
+  // desktop widths, so only then pay for TMDB's full-size original.
+  const backdropUrl = resolveBackdropUrl(movie, backdropFraming.scale > 1 ? "original" : "w1280");
   const posterUrl = resolvePosterUrl(movie, "w342");
   const recommendedByMe =
     session?.user?.role === "ADMIN" && movieRecommenders.some((r) => r.id === session.user.id);
@@ -684,7 +688,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
     // the same problem's return past that height cap -- once height plateaus,
     // an ever-widening container would otherwise start cropping tighter
     // again, so past 1920px it's letterboxed by the page background instead.
-    <div className="relative mx-auto aspect-21/10 max-h-[30rem] w-full max-w-[1920px]">
+    <div className={`relative ${BACKDROP_FRAME_CLASS}`}>
       {backdropUrl ? (
         <Image
           src={backdropUrl}
@@ -693,7 +697,8 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
           priority
           unoptimized
           sizes="(min-width: 1920px) 1920px, 100vw"
-          className="object-cover object-[center_25%]"
+          className="object-cover"
+          style={backdropFramingStyle(backdropFraming)}
         />
       ) : (
         <div className="h-full w-full bg-neutral-900" />
@@ -706,7 +711,12 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ id
     <div className="flex flex-1 flex-col">
       <JsonLd data={movieSchema} />
       {session?.user?.role === "ADMIN" ? (
-        <BackdropOverrideControl movieId={movie.id} hasOverride={!!movie.backdropOverrideUrl}>
+        <BackdropOverrideControl
+          movieId={movie.id}
+          hasOverride={!!movie.backdropOverrideUrl}
+          framingImageUrl={resolveBackdropUrl(movie, "original")}
+          framing={backdropFraming}
+        >
           {backdropMat}
         </BackdropOverrideControl>
       ) : (

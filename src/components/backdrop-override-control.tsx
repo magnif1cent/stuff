@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { TmdbImageGalleryDialog } from "@/components/tmdb-image-gallery-dialog";
+import { BackdropFramingEditor } from "@/components/backdrop-framing-editor";
+import type { ResolvedBackdropFraming } from "@/lib/backdrop-framing";
 
 // Same wrap-the-image, pencil-badge-in-the-corner pattern as
 // PosterOverrideControl, trimmed down: no upload path (backdrops are always
@@ -12,16 +14,23 @@ import { TmdbImageGalleryDialog } from "@/components/tmdb-image-gallery-dialog";
 export function BackdropOverrideControl({
   movieId,
   hasOverride,
+  framingImageUrl,
+  framing,
   children,
 }: {
   movieId: string;
   hasOverride: boolean;
+  // Full-size URL of the backdrop currently showing, for the framing
+  // editor's preview; null when the movie has no backdrop to frame.
+  framingImageUrl: string | null;
+  framing: ResolvedBackdropFraming;
   children: React.ReactNode;
 }) {
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [galleryOpen, setGalleryOpen] = useState(false);
+  const [framingOpen, setFramingOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -52,7 +61,11 @@ export function BackdropOverrideControl({
 
   async function handleRemove() {
     setMenuOpen(false);
-    if (!window.confirm("Remove the custom backdrop and fall back to the TMDB one?")) return;
+    if (
+      !window.confirm("Remove the custom backdrop and fall back to the TMDB one? Its framing will be reset too.")
+    ) {
+      return;
+    }
     setError(null);
     const res = await fetch(`/api/admin/movies/${movieId}/backdrop`, { method: "DELETE" });
     if (!res.ok) {
@@ -67,29 +80,40 @@ export function BackdropOverrideControl({
     <div ref={containerRef} className="relative">
       {children}
 
-      <button
-        type="button"
-        onClick={() => {
-          setError(null);
-          setMenuOpen((open) => !open);
-        }}
-        aria-haspopup="menu"
-        aria-expanded={menuOpen}
-        aria-label="Backdrop options"
-        className="absolute top-1.5 right-1.5 flex h-6 w-6 items-center justify-center rounded-full border border-neutral-500 bg-neutral-950/80 text-neutral-300"
-      >
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="h-3.5 w-3.5"
+      {framingOpen && framingImageUrl && (
+        <BackdropFramingEditor
+          movieId={movieId}
+          imageUrl={framingImageUrl}
+          initial={framing}
+          onClose={() => setFramingOpen(false)}
+        />
+      )}
+
+      {!framingOpen && (
+        <button
+          type="button"
+          onClick={() => {
+            setError(null);
+            setMenuOpen((open) => !open);
+          }}
+          aria-haspopup="menu"
+          aria-expanded={menuOpen}
+          aria-label="Backdrop options"
+          className="absolute top-1.5 right-1.5 flex h-6 w-6 items-center justify-center rounded-full border border-neutral-500 bg-neutral-950/80 text-neutral-300"
         >
-          <path d="M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
-        </svg>
-      </button>
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="h-3.5 w-3.5"
+          >
+            <path d="M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
+          </svg>
+        </button>
+      )}
 
       {menuOpen && (
         <div className="absolute top-9 right-1.5 z-10 w-max min-w-40 rounded-md border border-neutral-700 bg-neutral-800 p-1 shadow-xl">
@@ -104,6 +128,19 @@ export function BackdropOverrideControl({
           >
             Pick another backdrop
           </button>
+          {framingImageUrl && (
+            <button
+              type="button"
+              onClick={() => {
+                setMenuOpen(false);
+                setError(null);
+                setFramingOpen(true);
+              }}
+              className="block w-full rounded px-3 py-1.5 text-left text-sm text-neutral-100 hover:bg-neutral-700"
+            >
+              Adjust framing
+            </button>
+          )}
           {hasOverride && (
             <button
               type="button"
