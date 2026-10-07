@@ -61,7 +61,7 @@ export default async function HomePage() {
 
   return (
     <div className="flex flex-1 flex-col">
-      <section className="border-b border-neutral-800 px-4 py-4 sm:py-6">
+      <section className="px-4 py-4 sm:py-6">
         <div className="mx-auto max-w-6xl">
           <h1 className="font-display text-2xl uppercase leading-tight tracking-wide text-neutral-100 sm:text-4xl">
             The <em className="text-red-600">source</em> for kung fu cinema
