@@ -3,6 +3,7 @@ import { requireAdminSession } from "@/lib/require-admin";
 import {
   discoverMoviesByCast,
   discoverMoviesByCompany,
+  discoverMoviesByDirector,
   discoverMoviesByKeywords,
   extractTopBilledCast,
   getTmdbMovieDetails,
@@ -37,16 +38,19 @@ export async function GET(request: Request) {
   const keywordsParam = url.searchParams.get("keywords");
   const personIdParam = url.searchParams.get("personId");
   const companyIdParam = url.searchParams.get("companyId");
-  const providedFilterCount = [keywordsParam, personIdParam, companyIdParam].filter((v) => v !== null).length;
+  const directorIdParam = url.searchParams.get("directorId");
+  const providedFilterCount = [keywordsParam, personIdParam, companyIdParam, directorIdParam].filter(
+    (v) => v !== null,
+  ).length;
   if (providedFilterCount === 0) {
     return NextResponse.json(
-      { error: "Missing query parameter keywords, personId, or companyId" },
+      { error: "Missing query parameter keywords, personId, companyId, or directorId" },
       { status: 400 },
     );
   }
   if (providedFilterCount > 1) {
     return NextResponse.json(
-      { error: "Provide only one of keywords, personId, or companyId" },
+      { error: "Provide only one of keywords, personId, companyId, or directorId" },
       { status: 400 },
     );
   }
@@ -54,6 +58,7 @@ export async function GET(request: Request) {
   let keywordIds: number[] = [];
   let personId: number | null = null;
   let companyId: number | null = null;
+  let directorId: number | null = null;
   if (keywordsParam) {
     keywordIds = keywordsParam
       .split(",")
@@ -67,10 +72,15 @@ export async function GET(request: Request) {
     if (!Number.isInteger(personId)) {
       return NextResponse.json({ error: "personId must be an integer" }, { status: 400 });
     }
-  } else {
+  } else if (companyIdParam) {
     companyId = Number(companyIdParam);
     if (!Number.isInteger(companyId)) {
       return NextResponse.json({ error: "companyId must be an integer" }, { status: 400 });
+    }
+  } else {
+    directorId = Number(directorIdParam);
+    if (!Number.isInteger(directorId)) {
+      return NextResponse.json({ error: "directorId must be an integer" }, { status: 400 });
     }
   }
 
@@ -82,6 +92,9 @@ export async function GET(request: Request) {
   const countryParam = url.searchParams.get("country");
   if (countryParam && !/^[A-Z]{2}$/.test(countryParam)) {
     return NextResponse.json({ error: "country must be a 2-letter ISO 3166-1 code (e.g. HK)" }, { status: 400 });
+  }
+  if (countryParam && directorId) {
+    return NextResponse.json({ error: "The country filter isn't supported for director search" }, { status: 400 });
   }
 
   const parsedYearFrom = parseYearParam(url.searchParams.get("yearFrom"), "yearFrom");
@@ -107,7 +120,9 @@ export async function GET(request: Request) {
       ? await discoverMoviesByCast(personId, page, discoverOptions)
       : companyId
         ? await discoverMoviesByCompany(companyId, page, discoverOptions)
-        : await discoverMoviesByKeywords(keywordIds, page, discoverOptions);
+        : directorId
+          ? await discoverMoviesByDirector(directorId, page, discoverOptions)
+          : await discoverMoviesByKeywords(keywordIds, page, discoverOptions);
 
     const alreadyImported = await prisma.movie.findMany({
       where: { tmdbId: { in: discovered.results.map((r) => r.id) } },
@@ -150,7 +165,9 @@ export async function GET(request: Request) {
       ? `person ${personId}`
       : companyId
         ? `company ${companyId}`
-        : `keywords ${keywordsParam}`;
+        : directorId
+          ? `director ${directorId}`
+          : `keywords ${keywordsParam}`;
     return tmdbErrorResponse(`Failed to discover TMDB movies for ${subject}:`, error);
   }
 }

@@ -193,6 +193,7 @@ one.
 - [Homepage tagline: a compact banner above the carousel, doubling as the page's `<h1>`](#homepage-tagline-a-compact-banner-above-the-carousel-doubling-as-the-pages-h1)
 - [Movie page mobile layout regrouped: identity block above the poster, scores as a ruled row](#movie-page-mobile-layout-regrouped-identity-block-above-the-poster-scores-as-a-ruled-row)
 - [Homepage first screen calmed: one-line tagline on phones, quieter Latest Update bar](#homepage-first-screen-calmed-one-line-tagline-on-phones-quieter-latest-update-bar)
+- [Admin "By director" import reads a person's credits, not TMDB discover's crew filter](#admin-by-director-import-reads-a-persons-credits-not-tmdb-discovers-crew-filter)
 
 **Deferred & Backlog**
 
@@ -1506,6 +1507,12 @@ polish differently than a default-security reading would.
 - **The tagline's subline is hidden below `sm:`.** The headline alone carries the message on phones; desktop keeps both lines.
 - **`NewsTeaser` loses its red label and bold serif title, on every breakpoint**: the label is now `text-neutral-500`, the title regular-weight `text-neutral-300`, and the tinted background is gone. On phones the label shortens to "Update" and "Read more →" to just "→", so more of the title fits before it truncates.
 - **Follow-up (PR #204): option B adopted too, phones only.** After living with A, the site owner asked to also move the Latest Update bar below Recently Added on mobile, so the movies follow the carousel directly on a small screen. Desktop keeps it under the carousel, since there it costs no meaningful height. `page.tsx` renders `NewsTeaser` in both spots, with `hidden sm:block` and `sm:hidden` wrappers; the mobile copy gets a top border so it reads as a band between the two rails.
+
+### Admin "By director" import reads a person's credits, not TMDB discover's crew filter
+**PR #205.** Added a "By director" tab to `/admin/import`. The obvious route was TMDB's `/discover/movie` with `with_crew`, which would have slotted straight into the existing discover-based tabs (paging, country and year filters for free). Rejected because `with_crew` matches *any* crew job: a director search for someone like Chang Cheh, who also has writing credits, would list films he only wrote. Instead `discoverMoviesByDirector` (`lib/tmdb.ts`) reads `/person/{id}/movie_credits`, keeps `job === "Director"` only, dedupes, sorts newest first, and applies the year range and 20-per-page paging itself, returning the same shape as the discover helpers so the route's enrichment (details, top cast, already-imported flag) and the shared result UI are reused unchanged.
+
+- **No country filter for director search.** Credit entries don't carry a production country, and filtering after the per-result details fetch would break paging (or mean fetching details for a director's whole filmography up front). Director filmographies are short enough that the year range covers the practical need, so the tab hides the Country dropdown (`TmdbDiscoverFilterFields` gained `showCountry`) and the route rejects `country` with `directorId`.
+- **One component for actor and director tabs.** `AdminActorImport` became `AdminPersonImport` with a `role` prop: the two tabs share the whole pick-a-person flow and differ only in the query param and copy, so duplicating the component would have been two copies to keep in sync.
 
 ### Pagination extracted into one shared component, adding jump-to-page links everywhere at once
 **PR #TBD.** Prompted by a request to add page-number links to one paginated list, movie search — but the exact same "← Previous / Page X of Y / Next" block, with no way to jump to a specific page, turned out to be independently copy-pasted across seven pages (movie search, fight-scene search, a movie's Fights and Reviews, `/lists`, an actor's Tributes, `/news`, a Timeline era). Fixing one and leaving the other six with the old Previous/Next-only UI would have been an inconsistent, worse outcome than the reuse this duplication already called for, so all seven were moved onto one shared `Pagination` component instead of patching the one page that was asked about.

@@ -233,6 +233,49 @@ export async function discoverMoviesByCast(personId: number, page: number, optio
   });
 }
 
+// TMDB's /discover/movie has a with_crew filter, but it matches *any* crew
+// job (writer, producer, editor...), not specifically directing. So a
+// director search reads the person's own movie credits instead and keeps only
+// their "Director" credits. That endpoint isn't paginated or filterable, so
+// the year range and paging are applied here to return the same shape as the
+// discover helpers above. Credits don't carry a production country, so the
+// country filter isn't supported for this search.
+const DIRECTOR_PAGE_SIZE = 20;
+
+type TmdbPersonCrewCredit = TmdbDiscoverMovieResult & { job: string };
+
+export async function discoverMoviesByDirector(
+  personId: number,
+  page: number,
+  options?: Omit<TmdbDiscoverFilterOptions, "originCountry">,
+) {
+  const data = await tmdbFetch<{ crew: TmdbPersonCrewCredit[] }>(`/person/${personId}/movie_credits`);
+
+  const seen = new Set<number>();
+  const directed = data.crew.filter((credit) => {
+    if (credit.job !== "Director" || seen.has(credit.id)) return false;
+    seen.add(credit.id);
+    if (options?.yearFrom || options?.yearTo) {
+      const year = credit.release_date ? Number(credit.release_date.slice(0, 4)) : NaN;
+      if (Number.isNaN(year)) return false;
+      if (options.yearFrom && year < options.yearFrom) return false;
+      if (options.yearTo && year > options.yearTo) return false;
+    }
+    return true;
+  });
+
+  // Newest first; undated (usually unreleased) entries last.
+  directed.sort((a, b) => (b.release_date || "").localeCompare(a.release_date || ""));
+
+  const start = (page - 1) * DIRECTOR_PAGE_SIZE;
+  return {
+    results: directed.slice(start, start + DIRECTOR_PAGE_SIZE) as TmdbDiscoverMovieResult[],
+    page,
+    total_pages: Math.ceil(directed.length / DIRECTOR_PAGE_SIZE),
+    total_results: directed.length,
+  };
+}
+
 export interface TmdbCompanySearchResult {
   id: number;
   name: string;
