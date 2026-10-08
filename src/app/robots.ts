@@ -14,9 +14,11 @@ import type { MetadataRoute } from "next";
 // here handed every crawler a to-do list of every movie/fight/actor page,
 // each still a per-request database hit, and Neon stopped scaling to zero
 // the day it shipped. /sitemap.xml itself still exists (and can be submitted
-// directly in Google Search Console). Re-add the entry once public page
-// data is served from Next's Data Cache — see DECISIONS.md, "Sitemap
-// removed from robots.txt until page data is cached".
+// directly in Google Search Console). Caching page data wouldn't make it
+// safe to re-add: a sitemap crawl requests each page once, so every hit is
+// a cache miss. Re-add it when the database plan can absorb the crawl (a
+// paid Neon plan) — see DECISIONS.md, "Sitemap removed from robots.txt
+// until page data is cached".
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: {
