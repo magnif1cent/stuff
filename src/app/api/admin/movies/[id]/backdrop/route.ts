@@ -2,11 +2,13 @@ import { NextResponse } from "next/server";
 import { requireAdminSession } from "@/lib/require-admin";
 import { prisma } from "@/lib/prisma";
 import { tmdbImageUrl } from "@/lib/tmdb";
+import { CLEARED_BACKDROP_FRAMING } from "@/lib/backdrop-framing";
 
 // Sets the override to a backdrop picked from the TMDB gallery -- unlike
 // posterOverrideUrl, there's no upload path here, so this is always a TMDB
 // image URL, never a Blob one. Nothing for a DELETE to clean up in our own
-// storage either, for the same reason.
+// storage either, for the same reason. Both also reset the banner framing
+// (focal point + zoom), since that was tuned for the previous image.
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await requireAdminSession();
   if (!session) {
@@ -32,7 +34,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
   const updated = await prisma.movie.update({
     where: { id: movieId },
-    data: { backdropOverrideUrl: backdropUrl },
+    data: { backdropOverrideUrl: backdropUrl, ...CLEARED_BACKDROP_FRAMING },
   });
 
   return NextResponse.json({ backdropOverrideUrl: updated.backdropOverrideUrl });
@@ -50,6 +52,9 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     return NextResponse.json({ error: "Movie not found." }, { status: 404 });
   }
 
-  await prisma.movie.update({ where: { id: movieId }, data: { backdropOverrideUrl: null } });
+  await prisma.movie.update({
+    where: { id: movieId },
+    data: { backdropOverrideUrl: null, ...CLEARED_BACKDROP_FRAMING },
+  });
   return NextResponse.json({ ok: true });
 }

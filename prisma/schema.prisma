@@ -151,6 +151,14 @@ model Movie {
   // Always a TMDB image URL, not an upload -- unlike posterOverrideUrl,
   // there's no file-upload path for backdrops.
   backdropOverrideUrl String?
+  // Admin-chosen framing of whichever backdrop wins above, on the movie page
+  // banner only: a focal point (0-100 percent of the image's width/height)
+  // that stays put in the frame, and a zoom (>= 1) around it. All null means
+  // the banner's default crop (center, 25% down, no zoom). Cleared whenever
+  // the backdrop itself changes, since framing is specific to one image.
+  backdropFocusX Int?
+  backdropFocusY Int?
+  backdropScale  Float?
   runtime        Int?
   director       String?
   country        String?

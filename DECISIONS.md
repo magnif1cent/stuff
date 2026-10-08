@@ -69,6 +69,7 @@ one.
 
 **Feature Decisions**
 
+- [Admin backdrop framing: a focal point + zoom, movie page only](#admin-backdrop-framing-a-focal-point--zoom-movie-page-only)
 - [JSON-LD structured data added to movie, actor, and fight scene pages](#json-ld-structured-data-added-to-movie-actor-and-fight-scene-pages)
 - [`sitemap.ts` added, rendered dynamically with a cached data fetch instead of static `revalidate`](#sitemapts-added-rendered-dynamically-with-a-cached-data-fetch-instead-of-static-revalidate)
 - [One-tap Watchlist toggle on `/search` movie cards, members only](#one-tap-watchlist-toggle-on-search-movie-cards-members-only)
@@ -1327,6 +1328,34 @@ polish differently than a default-security reading would.
 - **Not verified:** that Neon counts idle-but-open connections as activity that blocks scale-to-zero. Its docs weren't reachable from the session that made this change. Either way, closing idle connections promptly is Vercel's recommended practice and costs nothing. Judge it from the connections chart: idle connections should drop to 0 within seconds of the last request.
 
 ## Feature Decisions
+
+### Admin backdrop framing: a focal point + zoom, movie page only
+**PR #206.** Follow-up to "Backdrop banner switched to aspect-ratio height..." below, which settled on
+one fixed `object-[center_25%]` crop and pointed at the backdrop gallery as the fix for any movie it
+still cropped badly. That only helps when TMDB has a better-composed alternative; often the image is
+fine and just needs a different crop, so admins can now frame the banner per movie.
+
+- **Focal point + zoom, not separate pan offsets and scale.** The stored `(focusX%, focusY%)` is used
+  as both `object-position` and the zoom's `transform-origin`, which keeps that point of the image
+  pinned to the same spot in the frame at any zoom level. Zooming never drifts what's centered, and the
+  drag math stays exact (an image point's screen position is linear in the focus, so the point grabbed
+  stays under the pointer) without measuring anything but the frame and the image's natural size.
+  Plain pixel offsets would have broken as the responsive banner changes size.
+- **Zoom in only, 1× to 2.5×.** `object-cover` already fills the frame at 1×; zooming out would only
+  show empty bands. A zoomed banner switches to TMDB's `original` image size, since at 1.5× even
+  ordinary desktop widths stretch the usual `w1280` past sharpness; unzoomed banners keep `w1280`.
+- **Three nullable columns (`backdropFocusX`, `backdropFocusY`, `backdropScale`), null = default** —
+  schema change, flagged per CLAUDE.md. Saving values equal to the default stores null, so a reset
+  row is indistinguishable from an untouched one, and the default still lives in one place
+  (`DEFAULT_BACKDROP_FRAMING`), matching the previous hardcoded crop exactly.
+- **Framing is cleared when the backdrop changes or is removed.** A focal point tuned for one image
+  is meaningless on another, so carrying it over would silently mis-crop the new pick.
+- **Movie page only; the homepage `HeroCarousel` keeps its default crop.** Scoped deliberately per
+  the request. The carousel is a differently sized frame with overlaid text, so the same framing
+  wouldn't necessarily suit it; extending it later is just applying `backdropFramingStyle` there.
+- **Not verified against a live dev server or database** (no Postgres in this session). Checked via
+  lint, typecheck, unit tests for the validation/style helpers, `npm run build`, and a numeric check
+  of the drag math; worth a hands-on pass on the Vercel preview before merging.
 
 ### JSON-LD structured data added to movie, actor, and fight scene pages
 **Branch `claude/hobby-commercial-transition-h159z4`.** Closes the other half of the SEO gap list's structured-data item (the sitemap above closed the other half). Three schema.org types, chosen for which page a search engine's rich-result treatment actually helps: `Movie` on movie pages, `Person` on actor pages, `VideoObject` on fight scene permalinks (the clip is the content there, not the page chrome around it).
