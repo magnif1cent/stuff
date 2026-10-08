@@ -65,6 +65,7 @@ one.
 - [Vitest introduced as the project's first test runner](#vitest-introduced-as-the-projects-first-test-runner)
 - [Neon compute kept awake around the clock: every page renders per request](#neon-compute-kept-awake-around-the-clock-every-page-renders-per-request)
 - [Sitemap removed from robots.txt until page data is cached](#sitemap-removed-from-robotstxt-until-page-data-is-cached)
+- [Idle database connections released before Vercel suspends a function](#idle-database-connections-released-before-vercel-suspends-a-function)
 
 **Feature Decisions**
 
@@ -1315,6 +1316,15 @@ polish differently than a default-security reading would.
 - **What changed:** the `sitemap` entry is removed from `robots.ts`. `/sitemap.xml` stays, unchanged, so it can still be submitted directly in Google Search Console if wanted. That's a deliberate choice of where crawl load comes from, not an accident.
 - **Why not just keep it and wait:** a fresh sitemap is usually crawled hardest for a few days before settling, but around the clock costs ~6 CU-hours/day, which would exhaust the Free plan's monthly allowance again around Oct 17–20. The last time the allowance ran out, the production compute appears to have been suspended Sept 27–30.
 - **Planned fix that lets it come back:** cache public page data in Next's Data Cache (same `unstable_cache` pattern `sitemap.ts` already uses), so crawler hits read the cache instead of Postgres. Once that ships, re-add the `sitemap` entry.
+- **Update (PR #TBD): that planned fix was dropped before being built.** A sitemap crawl requests each page once, so every request is a cache miss; caching only pays off if entries outlive the crawler's return visit (days to weeks for Google), which would mean long lifetimes plus invalidating on every kind of edit across pages with up to 17 queries each — fragile, and the first crawl would still wake the compute. The real condition for re-adding the `sitemap` entry is a database plan that can absorb crawl traffic (a paid Neon plan), not caching.
+
+### Idle database connections released before Vercel suspends a function
+**PR #TBD.** Third pass on the Neon compute problem (see the two entries above). After the sitemap entry came out of `robots.txt`, Neon's Monitoring still showed the production compute awake most of Oct 8, and its "Postgres connections count" chart showed a few **idle** connections held open all day (e.g. 4 idle, 0 active at 5:38 pm).
+
+- **Cause (likely contributor, not proven sole cause):** `src/lib/prisma.ts` let `PrismaPg` build its own `pg` pool, whose idle timeout (10 s by default) closes unused connections — but only while the function instance is running. Vercel suspends an instance between requests, so the timer doesn't fire and idle connections stay open to Neon until the instance is reclaimed. Vercel ships `attachDatabasePool` in `@vercel/functions` for exactly this (confirmed from the package's own source and docs: it keeps the instance alive via `waitUntil` until the pool's idle timeout has run).
+- **Fix:** `prisma.ts` now creates the `pg.Pool` itself, passes it to `attachDatabasePool`, then hands it to `PrismaPg` (which accepts an existing pool). No-op outside Vercel (it checks `VERCEL_URL`), so local dev, scripts, CI and `next build` are unchanged. Verified with real queries against a local Postgres, with and without `VERCEL_URL` set.
+- **Considered instead: Neon's pooled connection string (`-pooler` host).** PgBouncer would absorb the app's idle client connections and release server connections to Postgres. Not done here: `prisma migrate deploy` in `scripts/vercel-build.sh` needs a direct (non-pooled) connection, so it would mean splitting into two env vars across Production and Preview — more setup for something the in-code fix should already cover. Worth revisiting if idle connections still show up after this.
+- **Not verified:** that Neon counts idle-but-open connections as activity that blocks scale-to-zero. Its docs weren't reachable from the session that made this change. Either way, closing idle connections promptly is Vercel's recommended practice and costs nothing. Judge it from the connections chart: idle connections should drop to 0 within seconds of the last request.
 
 ## Feature Decisions
 
