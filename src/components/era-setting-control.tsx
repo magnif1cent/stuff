@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ERA_SETTINGS, eraSettingLabel, eraSettingName, eraSettingYears } from "@/lib/era-settings";
+import { formatDate } from "@/lib/format-date";
 
 export interface EraSettingEditEntry {
   id: string;
@@ -131,7 +132,7 @@ export function EraSettingControl({
                 <li key={edit.id}>
                   {edit.editedBy.username} changed {eraSettingLabel(edit.previousValue) ?? "—"} &rarr;{" "}
                   {eraSettingLabel(edit.newValue) ?? edit.newValue} on{" "}
-                  {new Date(edit.createdAt).toLocaleDateString()}
+                  {formatDate(edit.createdAt, "numeric")}
                 </li>
               ))}
             </ul>

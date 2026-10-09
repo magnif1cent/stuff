@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { formatDate } from "@/lib/format-date";
 
 // Below this length a post reads fine in full without needing a toggle —
 // same reasoning and threshold as the homepage's Recent Reviews by Editors
@@ -13,10 +14,6 @@ export interface NewsPostItem {
   content: string;
   createdAt: string;
   author: { username: string };
-}
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
 }
 
 function PostContent({ content }: { content: string }) {

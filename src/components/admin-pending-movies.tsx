@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import type { Movie } from "@/generated/prisma/client";
 import { resolvePosterUrl, isTmdbUrl } from "@/lib/tmdb";
+import { releaseYear } from "@/lib/format-date";
 
 type PendingMovieItem = Pick<Movie, "id" | "title" | "posterPath" | "posterOverrideUrl"> & {
   releaseDate: string | null;
@@ -51,7 +52,7 @@ export function AdminPendingMovies({ initialMovies }: { initialMovies: PendingMo
       {error && <p className="mb-4 text-sm text-red-500">{error}</p>}
       <ul className="flex flex-col gap-2">
         {movies.map((movie) => {
-          const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : null;
+          const year = releaseYear(movie.releaseDate);
           const posterUrl = resolvePosterUrl(movie, "w200");
           return (
             <li

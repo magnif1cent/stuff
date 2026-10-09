@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { tmdbImageUrl } from "@/lib/tmdb";
+import { releaseYear } from "@/lib/format-date";
 
 interface SearchResult {
   id: string;
@@ -129,7 +130,7 @@ export function SearchBar({ initialQuery = "" }: { initialQuery?: string }) {
         >
           {visibleResults.map((movie, i) => {
             const posterUrl = tmdbImageUrl(movie.posterPath, "w200");
-            const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : null;
+            const year = releaseYear(movie.releaseDate);
             return (
               <li key={movie.id} role="option" aria-selected={highlighted === i}>
                 <Link

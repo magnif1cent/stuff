@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { NewsPost } from "@/generated/prisma/client";
+import { formatDate } from "@/lib/format-date";
 
 // Duplicated from src/lib/news.ts rather than imported — that module also
 // imports the Prisma client (server-only, via the `pg` driver), which
@@ -12,10 +13,6 @@ const MAX_NEWS_CONTENT_LENGTH = 10000;
 type PostItem = Pick<NewsPost, "id" | "title" | "content" | "createdAt"> & {
   author: { username: string };
 };
-
-function formatDate(date: Date) {
-  return new Date(date).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
-}
 
 export function AdminNews({ initialPosts }: { initialPosts: PostItem[] }) {
   const [posts, setPosts] = useState(initialPosts);
@@ -190,7 +187,7 @@ export function AdminNews({ initialPosts }: { initialPosts: PostItem[] }) {
                   </div>
                 </div>
                 <p className="mb-2 text-xs text-neutral-500">
-                  {post.author.username} · {formatDate(post.createdAt)}
+                  {post.author.username} · {formatDate(post.createdAt, "short")}
                 </p>
                 <p className="line-clamp-2 whitespace-pre-wrap text-sm text-neutral-400">{post.content}</p>
               </>

@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { formatDate } from "@/lib/format-date";
 
 export interface FightCountEditEntry {
   id: string;
@@ -127,7 +128,7 @@ export function FightCountControl({
               {recentEdits.map((edit) => (
                 <li key={edit.id}>
                   {edit.editedBy.username} changed {edit.previousValue ?? "—"} &rarr; {edit.newValue} on{" "}
-                  {new Date(edit.createdAt).toLocaleDateString()}
+                  {formatDate(edit.createdAt, "numeric")}
                 </li>
               ))}
             </ul>

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { PersonTribute as PersonTributeModel, User } from "@/generated/prisma/client";
+import { formatDate } from "@/lib/format-date";
 
 const MAX_TRIBUTE_LENGTH = 5000;
 
@@ -17,10 +18,6 @@ export type PersonTributeData = Pick<PersonTributeModel, "id" | "content" | "aut
   down: number;
   myVote: 1 | -1 | null;
 };
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
-}
 
 // Highest net score (up - down) first, ties broken by newest -- same
 // ordering as ReviewsSection's byNetScore.

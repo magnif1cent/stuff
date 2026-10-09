@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { formatDate } from "@/lib/format-date";
 
 const MAX_CONTENT_LENGTH = 500;
 const PAGE_SIZE = 5;
@@ -60,10 +61,6 @@ function linkifyContent(content: string, mentionables: FunFactMentionable[]): Re
   }
   if (lastIndex < content.length) parts.push(content.slice(lastIndex));
   return parts;
-}
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
 function wasEdited(item: FunFactItem) {
@@ -311,7 +308,7 @@ export function FunFactsSection({
 
                   <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
                     <p className="text-xs text-neutral-500">
-                      — {fact.submittedBy.username} · {formatDate(fact.createdAt)}
+                      — {fact.submittedBy.username} · {formatDate(fact.createdAt, "short")}
                       {wasEdited(fact) && " (edited)"}
                     </p>
 
@@ -426,7 +423,7 @@ export function FunFactsSection({
                         👎 {fact.down}
                       </span>
                       <span className="shrink-0 font-medium text-neutral-100">{fact.submittedBy.username}</span>
-                      <span className="ml-auto shrink-0 text-neutral-600">{formatDate(fact.createdAt)}</span>
+                      <span className="ml-auto shrink-0 text-neutral-600">{formatDate(fact.createdAt, "short")}</span>
                     </div>
                     <p className="text-neutral-300">{linkifyContent(fact.content, mentionables)}</p>
                   </div>

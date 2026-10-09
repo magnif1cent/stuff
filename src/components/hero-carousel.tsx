@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { resolveBackdropUrl } from "@/lib/tmdb";
 import type { Movie } from "@/generated/prisma/client";
+import { releaseYear } from "@/lib/format-date";
 
 export type FeaturedMovie = Pick<
   Movie,
@@ -42,7 +43,7 @@ function clipEmbedUrl(videoId: string, startSeconds: number | null) {
 
 function Slide({ movie, active, playClip }: { movie: FeaturedMovie; active: boolean; playClip: boolean }) {
   const backdropUrl = resolveBackdropUrl(movie, "w1280");
-  const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : null;
+  const year = releaseYear(movie.releaseDate);
   const showClip = active && playClip && !!movie.fightSceneClip;
 
   return (

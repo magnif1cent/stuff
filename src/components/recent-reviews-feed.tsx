@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { resolvePosterUrl, isTmdbUrl } from "@/lib/tmdb";
+import { formatDate, releaseYear } from "@/lib/format-date";
 
 // Tailwind's class scanner needs the full class name literally in source
 // (not built from a template string) to generate its CSS, so this isn't a
@@ -27,10 +28,6 @@ export interface RecentReviewItem {
     posterOverrideUrl: string | null;
   };
   author: { username: string };
-}
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
 }
 
 function ReviewText({ content }: { content: string }) {
@@ -64,7 +61,7 @@ export function RecentReviewsFeed({ reviews }: { reviews: RecentReviewItem[] }) 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {reviews.map((review) => {
           const posterUrl = resolvePosterUrl(review.movie, "w200");
-          const year = review.movie.releaseDate ? new Date(review.movie.releaseDate).getFullYear() : null;
+          const year = releaseYear(review.movie.releaseDate);
 
           return (
             <article
@@ -97,7 +94,7 @@ export function RecentReviewsFeed({ reviews }: { reviews: RecentReviewItem[] }) 
                     {year && <span className="text-xs text-neutral-500">({year})</span>}
                   </div>
                   <p className="text-xs text-neutral-500">
-                    Reviewed by {review.author.username} · {formatDate(review.updatedAt)}
+                    Reviewed by {review.author.username} · {formatDate(review.updatedAt, "short")}
                   </p>
                 </div>
               </div>

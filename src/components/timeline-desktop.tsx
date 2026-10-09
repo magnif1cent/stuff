@@ -14,6 +14,7 @@ import {
   AXIS_BREAK_PX,
   ANCIENT_AXIS_BREAK_PX,
   AXIS_BASELINE_PX,
+  type TimelineDot,
   type TimelineEraData,
   type EraSettingKey,
 } from "@/lib/timeline-layout";
@@ -329,74 +330,14 @@ export function TimelineDesktop({ eras }: { eras: TimelineEraData[] }) {
                   </p>
                 )}
 
-                {dots.map((dot) => {
-                  // w342, not the w500 default: every dot's tooltip <img> is
-                  // in the DOM (just opacity-0), so the browser fetches the
-                  // posters for all on-screen dots at page load, not on hover
-                  // -- and they only display at 112px (224px on 2x screens).
-                  const posterUrl = resolvePosterUrl(dot.movie, "w342");
-                  const passesFilter = minRating === 0 || (dot.movie.ratingAverage ?? 0) >= minRating;
-                  return (
-                    <Link
-                      key={dot.movie.id}
-                      href={`/movies/${dot.movie.id}`}
-                      className="group absolute flex h-6 w-6 items-center justify-center"
-                      style={{ left: dot.left, bottom: dot.bottom }}
-                    >
-                      <span
-                        className={`h-2 w-2 rounded-full bg-amber-500 shadow-[0_0_0_2px_var(--color-neutral-950)] transition group-hover:scale-150 group-hover:bg-amber-400 group-focus-visible:scale-150 group-focus-visible:bg-amber-400 ${
-                          passesFilter ? "opacity-100" : "opacity-25"
-                        }`}
-                      />
-                      {/* group-focus-visible mirrors group-hover so keyboard
-                          (Tab) users see the same poster/rating tooltip --
-                          previously hover-only, meaning keyboard and most
-                          touch interaction had no way to see it without
-                          following the link away from the page. */}
-                      <div
-                        className={`pointer-events-none absolute bottom-full z-10 -translate-y-2 rounded-md border border-neutral-700 bg-neutral-900 p-2 opacity-0 shadow-lg transition group-hover:opacity-100 group-focus-visible:opacity-100 ${
-                          dot.left < TOOLTIP_WIDTH / 2 ? "left-0" : "left-1/2 -translate-x-1/2"
-                        }`}
-                        style={{ width: TOOLTIP_WIDTH }}
-                      >
-                        {/* a plain <span> here ignores width/aspect-ratio (both
-                            are no-ops on inline elements), which is why the
-                            poster wasn't rendering -- needs a block-level box
-                            for next/image's `fill` to have anything to fill */}
-                        <div className="relative aspect-2/3 w-28 overflow-hidden rounded bg-neutral-800">
-                          {posterUrl && (
-                            <Image
-                              src={posterUrl}
-                              alt=""
-                              fill
-                              unoptimized={isTmdbUrl(posterUrl)}
-                              sizes="112px"
-                              className="object-cover"
-                            />
-                          )}
-                        </div>
-                        <div className="mt-2">
-                          <p className="line-clamp-2 font-display text-xs tracking-wide text-neutral-100">{dot.movie.title}</p>
-                          <p className="mt-1 text-[11px] text-neutral-500">
-                            {era.name}
-                            {/* getUTCFullYear, not getFullYear: release dates are
-                                stored as UTC midnight, and this is a client
-                                component, so local-time getFullYear printed the
-                                previous year for Jan 1 releases in any timezone
-                                west of UTC -- a server/browser text mismatch
-                                that failed hydration (React #418). */}
-                            {dot.movie.releaseDate ? ` · ${dot.movie.releaseDate.getUTCFullYear()}` : ""}
-                          </p>
-                          {dot.movie.ratingAverage != null && (
-                            <p className="mt-0.5 text-[11px] font-semibold text-yellow-500">
-                              ★ {dot.movie.ratingAverage.toFixed(1)}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </Link>
-                  );
-                })}
+                {dots.map((dot) => (
+                  <TimelineDotLink
+                    key={dot.movie.id}
+                    dot={dot}
+                    eraName={era.name}
+                    passesFilter={minRating === 0 || (dot.movie.ratingAverage ?? 0) >= minRating}
+                  />
+                ))}
 
                 {overflow && (
                   <Link
@@ -467,5 +408,88 @@ export function TimelineDesktop({ eras }: { eras: TimelineEraData[] }) {
         </div>
       </div>
     </div>
+  );
+}
+
+// One dot plus its hover tooltip. Its own component so the poster can wait
+// for a first hover/focus: the tooltip is always in the DOM (pure-CSS
+// opacity-0 until group-hover), so rendering its <img> up front made the
+// browser download a poster for every on-screen dot -- ~1,100 of them on a
+// full timeline -- before anyone hovered anything. Local state means a
+// hover re-renders just this dot, not the whole axis. Once wanted, the
+// poster stays rendered, so re-hovering (and the fade-out) doesn't flash.
+function TimelineDotLink({
+  dot,
+  eraName,
+  passesFilter,
+}: {
+  dot: TimelineDot;
+  eraName: string;
+  passesFilter: boolean;
+}) {
+  const [posterWanted, setPosterWanted] = useState(false);
+  // w342, not the w500 default -- it only displays at 112px (224px on 2x
+  // screens).
+  const posterUrl = resolvePosterUrl(dot.movie, "w342");
+  return (
+    <Link
+      href={`/movies/${dot.movie.id}`}
+      className="group absolute flex h-6 w-6 items-center justify-center"
+      style={{ left: dot.left, bottom: dot.bottom }}
+      onMouseEnter={() => setPosterWanted(true)}
+      onFocus={() => setPosterWanted(true)}
+    >
+      <span
+        className={`h-2 w-2 rounded-full bg-amber-500 shadow-[0_0_0_2px_var(--color-neutral-950)] transition group-hover:scale-150 group-hover:bg-amber-400 group-focus-visible:scale-150 group-focus-visible:bg-amber-400 ${
+          passesFilter ? "opacity-100" : "opacity-25"
+        }`}
+      />
+      {/* group-focus-visible mirrors group-hover so keyboard
+          (Tab) users see the same poster/rating tooltip --
+          previously hover-only, meaning keyboard and most
+          touch interaction had no way to see it without
+          following the link away from the page. */}
+      <div
+        className={`pointer-events-none absolute bottom-full z-10 -translate-y-2 rounded-md border border-neutral-700 bg-neutral-900 p-2 opacity-0 shadow-lg transition group-hover:opacity-100 group-focus-visible:opacity-100 ${
+          dot.left < TOOLTIP_WIDTH / 2 ? "left-0" : "left-1/2 -translate-x-1/2"
+        }`}
+        style={{ width: TOOLTIP_WIDTH }}
+      >
+        {/* a plain <span> here ignores width/aspect-ratio (both
+            are no-ops on inline elements), which is why the
+            poster wasn't rendering -- needs a block-level box
+            for next/image's `fill` to have anything to fill */}
+        <div className="relative aspect-2/3 w-28 overflow-hidden rounded bg-neutral-800">
+          {posterWanted && posterUrl && (
+            <Image
+              src={posterUrl}
+              alt=""
+              fill
+              unoptimized={isTmdbUrl(posterUrl)}
+              sizes="112px"
+              className="object-cover"
+            />
+          )}
+        </div>
+        <div className="mt-2">
+          <p className="line-clamp-2 font-display text-xs tracking-wide text-neutral-100">{dot.movie.title}</p>
+          <p className="mt-1 text-[11px] text-neutral-500">
+            {eraName}
+            {/* getUTCFullYear, not getFullYear: release dates are
+                stored as UTC midnight, and this is a client
+                component, so local-time getFullYear printed the
+                previous year for Jan 1 releases in any timezone
+                west of UTC -- a server/browser text mismatch
+                that failed hydration (React #418). */}
+            {dot.movie.releaseDate ? ` · ${dot.movie.releaseDate.getUTCFullYear()}` : ""}
+          </p>
+          {dot.movie.ratingAverage != null && (
+            <p className="mt-0.5 text-[11px] font-semibold text-yellow-500">
+              ★ {dot.movie.ratingAverage.toFixed(1)}
+            </p>
+          )}
+        </div>
+      </div>
+    </Link>
   );
 }
