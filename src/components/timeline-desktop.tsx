@@ -33,16 +33,6 @@ const ERA_LABEL_HEIGHT = 46;
 // that could drift from it.
 const PLOT_HEIGHT_ABOVE_BASELINE = 434;
 
-// The tooltip lays its text out beside the poster rather than under it, so
-// a 160px-wide poster still fits inside PLOT_HEIGHT_ABOVE_BASELINE --
-// stacked, the same poster would have needed ~72px more plot height, and
-// the plot is kept at a height that fits a 1080p screen without vertical
-// scrolling. The cost is width instead: dots within half a tooltip of
-// either end of the axis anchor the tooltip to that end rather than
-// centering it, so it isn't clipped by the scroller's overflow.
-const TOOLTIP_WIDTH = 336;
-const TOOLTIP_EDGE_ANCHOR_PX = TOOLTIP_WIDTH / 2;
-
 // How far into a band a chip/minimap jump lands, so the target era isn't
 // flush against the scroller's left edge (which also has its own
 // pl-4/sm:pl-6/lg:pl-10 padding this deliberately doesn't try to match
@@ -354,33 +344,27 @@ export function TimelineDesktop({ eras }: { eras: TimelineEraData[] }) {
                           touch interaction had no way to see it without
                           following the link away from the page. */}
                       <div
-                        className={`pointer-events-none absolute bottom-full z-10 flex -translate-y-2 gap-3 rounded-md border border-neutral-700 bg-neutral-900 p-2 opacity-0 shadow-lg transition group-hover:opacity-100 group-focus-visible:opacity-100 ${
-                          dot.left < TOOLTIP_EDGE_ANCHOR_PX
-                            ? "left-0"
-                            : dot.left > TIMELINE_AXIS_WIDTH - TOOLTIP_EDGE_ANCHOR_PX
-                              ? "right-0"
-                              : "left-1/2 -translate-x-1/2"
-                        }`}
-                        style={{ width: TOOLTIP_WIDTH }}
+                        className="pointer-events-none absolute bottom-full left-1/2 z-10 -translate-x-1/2 -translate-y-2 rounded-md border border-neutral-700 bg-neutral-900 p-2 opacity-0 shadow-lg transition group-hover:opacity-100 group-focus-visible:opacity-100"
+                        style={{ width: 128 }}
                       >
                         {/* a plain <span> here ignores width/aspect-ratio (both
                             are no-ops on inline elements), which is why the
                             poster wasn't rendering -- needs a block-level box
                             for next/image's `fill` to have anything to fill */}
-                        <div className="relative aspect-2/3 w-40 shrink-0 overflow-hidden rounded bg-neutral-800">
+                        <div className="relative aspect-2/3 w-28 overflow-hidden rounded bg-neutral-800">
                           {posterUrl && (
                             <Image
                               src={posterUrl}
                               alt=""
                               fill
                               unoptimized={isTmdbUrl(posterUrl)}
-                              sizes="160px"
+                              sizes="112px"
                               className="object-cover"
                             />
                           )}
                         </div>
-                        <div className="min-w-0 flex-1 pt-0.5">
-                          <p className="line-clamp-4 font-display text-xs tracking-wide text-neutral-100">{dot.movie.title}</p>
+                        <div className="mt-2">
+                          <p className="line-clamp-2 font-display text-xs tracking-wide text-neutral-100">{dot.movie.title}</p>
                           <p className="mt-1 text-[11px] text-neutral-500">
                             {era.name}
                             {/* getUTCFullYear, not getFullYear: release dates are
