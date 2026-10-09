@@ -200,6 +200,7 @@ one.
 - [Timeline dots: nearest-dot hover instead of spreading crowded dots apart](#timeline-dots-nearest-dot-hover-instead-of-spreading-crowded-dots-apart)
 - [Mobile nav: a separate Letterboxd-style stacked menu, not the desktop markup collapsed](#mobile-nav-a-separate-letterboxd-style-stacked-menu-not-the-desktop-markup-collapsed)
 - [Nav gains a "Browse" group: Timeline moves out from under Movies, joined by the Top 100 pages](#nav-gains-a-browse-group-timeline-moves-out-from-under-movies-joined-by-the-top-100-pages)
+- [Leaderboard renamed "Hall of Fame" and moved under Browse](#leaderboard-renamed-hall-of-fame-and-moved-under-browse)
 
 **Deferred & Backlog**
 
@@ -1588,6 +1589,12 @@ fine and just needs a different crop, so admins can now frame the banner per mov
 - **Placed after Lists**, the owner's choice.
 - **Top 100 Movies and Top 100 Fights join Timeline.** Before this they were only linked from the footer's "Top 100". They're two rows rather than one row to the `/tops` picker page, because that saves a tap. Lineage, Collections and Actors were considered but have only detail pages, with no index page to link to.
 - **Phone sub-rows tap open instead of always showing, and aren't indented.** The owner asked for this after seeing the first version, where sub-rows were always shown as smaller indented rows. It applies to Lists, Browse and the signed-in username row. The panel now closes only when a link is tapped, so expanding a group keeps the menu open.
+
+### Leaderboard renamed "Hall of Fame" and moved under Browse
+**PR #TBD.** Asked for by the site owner. Leaderboard used to sit under Lists in the nav. Only two of its four sections are about lists (Most-Liked Lists, Top Curators). The other two (Most Beloved Actors, Top Franchises) rank catalog content, so it's closer to the Top 100 pages already under Browse.
+
+- **The URL moved too** (`/leaderboard` → `/hall-of-fame`), with a permanent redirect in `next.config.ts` like the earlier "Fight Scenes" → "Fights" rename. A "Hall of Fame" page at `/leaderboard` would have looked like a leftover. `src/lib/leaderboard.ts` keeps its name, since it's internal only.
+- **Lists is now a plain link** on desktop and phones, since it has nothing left to expand. The cost is that someone looking for the most-liked lists might check Lists first. `/lists` already has a "Hall of Fame →" link for that.
 
 ### Pagination extracted into one shared component, adding jump-to-page links everywhere at once
 **PR #TBD.** Prompted by a request to add page-number links to one paginated list, movie search — but the exact same "← Previous / Page X of Y / Next" block, with no way to jump to a specific page, turned out to be independently copy-pasted across seven pages (movie search, fight-scene search, a movie's Fights and Reviews, `/lists`, an actor's Tributes, `/news`, a Timeline era). Fixing one and leaving the other six with the old Previous/Next-only UI would have been an inconsistent, worse outcome than the reuse this duplication already called for, so all seven were moved onto one shared `Pagination` component instead of patching the one page that was asked about.

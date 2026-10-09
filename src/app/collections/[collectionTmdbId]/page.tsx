@@ -33,10 +33,10 @@ export default async function CollectionPage({
     getFightSceneCountsByMovieIds(movies.map((m) => m.id)),
   ]);
 
-  // Reached either from the Leaderboard's Top Franchises section or from a
+  // Reached either from the Hall of Fame's Top Franchises section or from a
   // movie page's own Collection link -- the latter passes `from` (the movie
   // id) so the breadcrumb returns to that movie instead of always claiming
-  // (incorrectly) that Leaderboard is where the visitor came from. Looked up
+  // (incorrectly) that the Hall of Fame is where the visitor came from. Looked up
   // in the collection's own already-fetched movies rather than a second
   // query, since the referring movie is necessarily one of them.
   const fromMovie = from ? movies.find((m) => m.id === from) : undefined;
@@ -49,8 +49,8 @@ export default async function CollectionPage({
             ← Back to {fromMovie.title}
           </Link>
         ) : (
-          <Link href="/leaderboard" className="hover:text-white">
-            ← Back to Leaderboard
+          <Link href="/hall-of-fame" className="hover:text-white">
+            ← Back to Hall of Fame
           </Link>
         )}
       </p>

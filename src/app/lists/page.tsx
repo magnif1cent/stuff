@@ -97,8 +97,8 @@ export default async function BrowseListsPage({
             ♥ Most liked
           </Link>
           <span className="mx-1 self-center text-neutral-700">|</span>
-          <Link href="/leaderboard" className={pillClass(false)}>
-            Leaderboard →
+          <Link href="/hall-of-fame" className={pillClass(false)}>
+            Hall of Fame →
           </Link>
         </div>
       </div>
