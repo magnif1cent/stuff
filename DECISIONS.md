@@ -1591,7 +1591,7 @@ fine and just needs a different crop, so admins can now frame the banner per mov
 - **Phone sub-rows tap open instead of always showing, and aren't indented.** The owner asked for this after seeing the first version, where sub-rows were always shown as smaller indented rows. It applies to Lists, Browse and the signed-in username row. The panel now closes only when a link is tapped, so expanding a group keeps the menu open.
 
 ### Leaderboard renamed "Hall of Fame" and moved under Browse
-**PR #TBD.** Asked for by the site owner. Leaderboard used to sit under Lists in the nav. Only two of its four sections are about lists (Most-Liked Lists, Top Curators). The other two (Most Beloved Actors, Top Franchises) rank catalog content, so it's closer to the Top 100 pages already under Browse.
+**PR #213.** Asked for by the site owner. Leaderboard used to sit under Lists in the nav. Only two of its four sections are about lists (Most-Liked Lists, Top Curators). The other two (Most Beloved Actors, Top Franchises) rank catalog content, so it's closer to the Top 100 pages already under Browse.
 
 - **The URL moved too** (`/leaderboard` → `/hall-of-fame`), with a permanent redirect in `next.config.ts` like the earlier "Fight Scenes" → "Fights" rename. A "Hall of Fame" page at `/leaderboard` would have looked like a leftover. `src/lib/leaderboard.ts` keeps its name, since it's internal only.
 - **Lists is now a plain link** on desktop and phones, since it has nothing left to expand. The cost is that someone looking for the most-liked lists might check Lists first. `/lists` already has a "Hall of Fame →" link for that.
