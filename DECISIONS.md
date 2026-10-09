@@ -199,6 +199,7 @@ one.
 - [Client-rendered dates pinned to UTC + en-US; Timeline tooltip posters load on first hover](#client-rendered-dates-pinned-to-utc--en-us-timeline-tooltip-posters-load-on-first-hover)
 - [Timeline dots: nearest-dot hover instead of spreading crowded dots apart](#timeline-dots-nearest-dot-hover-instead-of-spreading-crowded-dots-apart)
 - [Mobile nav: a separate Letterboxd-style stacked menu, not the desktop markup collapsed](#mobile-nav-a-separate-letterboxd-style-stacked-menu-not-the-desktop-markup-collapsed)
+- [Nav gains a "Browse" group: Timeline moves out from under Movies, joined by the Top 100 pages](#nav-gains-a-browse-group-timeline-moves-out-from-under-movies-joined-by-the-top-100-pages)
 
 **Deferred & Backlog**
 
@@ -1579,6 +1580,13 @@ fine and just needs a different crop, so admins can now frame the banner per mov
 - **Search gets its own icon and expanding row**, rather than sitting inside the menu (Letterboxd does the same). The row closes itself when the route changes.
 - **Signed-out rows lead with "Create account" and "Sign in"**, as on Letterboxd. Signed-in members get an avatar-initial + username row (to their profile) and "My Lists" at the top, with "Sign out" last.
 - **Not chosen: keeping the shared markup and restyling it per breakpoint.** That would have needed paired mobile/desktop classes on every nav item, plus the click workarounds above.
+
+### Nav gains a "Browse" group: Timeline moves out from under Movies, joined by the Top 100 pages
+**PR #TBD.** Asked for by the site owner: a new "Browse" item, with Timeline moved under it. This replaces the Movies → Timeline dropdown from "Navbar regrouped by kind", on both desktop and phone. Movies is now a plain link.
+
+- **Browse is a heading, not a link.** There's no `/browse` index page. On desktop its label toggles the dropdown, so `NavDropdown`'s `href` became optional. On phones it's a non-tappable row with sub-rows indented under it. Building a Browse landing page was considered and not done for now.
+- **Placed after Lists**, the owner's choice.
+- **Top 100 Movies and Top 100 Fights join Timeline.** Before this they were only linked from the footer's "Top 100". They're two rows rather than one row to the `/tops` picker page, because that saves a tap. Lineage, Collections and Actors were considered but have only detail pages, with no index page to link to.
 
 ### Pagination extracted into one shared component, adding jump-to-page links everywhere at once
 **PR #TBD.** Prompted by a request to add page-number links to one paginated list, movie search — but the exact same "← Previous / Page X of Y / Next" block, with no way to jump to a specific page, turned out to be independently copy-pasted across seven pages (movie search, fight-scene search, a movie's Fights and Reviews, `/lists`, an actor's Tributes, `/news`, a Timeline era). Fixing one and leaving the other six with the old Previous/Next-only UI would have been an inconsistent, worse outcome than the reuse this duplication already called for, so all seven were moved onto one shared `Pagination` component instead of patching the one page that was asked about.

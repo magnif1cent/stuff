@@ -34,6 +34,13 @@ const ICONS = {
   ),
   trophy: <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4zM7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3" />,
   plus: <path d="M12 5v14M5 12h14" />,
+  compass: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="m15.5 8.5-2 5-5 2 2-5 5-2z" />
+    </>
+  ),
+  star: <path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1 6.2L12 17.3 6.5 20.2l1-6.2L3 9.6l6.2-.9L12 3z" />,
   shield: <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />,
   list: <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />,
   signOut: <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />,
@@ -192,6 +199,16 @@ export function MobileMenu({ user }: { user: MobileMenuUser | null }) {
               </>
             )}
             <MenuRow href="/search" icon="film" label="Movies" />
+            <MenuRow href="/search/fights" icon="swords" label="Fights" />
+            <MenuRow href="/lists" icon="grid" label="Lists" matchPaths={["/lists", "/lists/*"]} />
+            <MenuRow href="/leaderboard" icon="trophy" label="Leaderboard" indent />
+            {/* A section label, not a link -- there's no /browse index page. */}
+            <div className={`${ROW_CLASS} text-neutral-400`}>
+              <span className="text-neutral-500">
+                <MenuIcon name="compass" />
+              </span>
+              Browse
+            </div>
             <MenuRow
               href="/timeline"
               icon="timeline"
@@ -199,9 +216,8 @@ export function MobileMenu({ user }: { user: MobileMenuUser | null }) {
               matchPaths={["/timeline", "/timeline/*"]}
               indent
             />
-            <MenuRow href="/search/fights" icon="swords" label="Fights" />
-            <MenuRow href="/lists" icon="grid" label="Lists" matchPaths={["/lists", "/lists/*"]} />
-            <MenuRow href="/leaderboard" icon="trophy" label="Leaderboard" indent />
+            <MenuRow href="/tops/movies" icon="star" label="Top 100 Movies" indent />
+            <MenuRow href="/tops/fights" icon="star" label="Top 100 Fights" indent />
             <MenuRow href="/movies/submit" icon="plus" label="Add Movie" />
             {isStaff && <MenuRow href="/admin" icon="shield" label="Admin" matchPaths={["/admin", "/admin/*"]} />}
             {user && (
