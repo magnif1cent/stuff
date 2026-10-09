@@ -7,7 +7,7 @@ import { NavDropdown } from "@/components/nav-dropdown";
 import { NavLink } from "@/components/nav-link";
 import { AccountNavMenu } from "@/components/account-nav-menu";
 import { VerifyEmailBanner } from "@/components/verify-email-banner";
-import { MobileNavToggle } from "@/components/mobile-nav-toggle";
+import { MobileMenu } from "@/components/mobile-menu";
 
 export async function Navbar() {
   const session = await auth();
@@ -21,54 +21,54 @@ export async function Navbar() {
       {needsVerification && <VerifyEmailBanner />}
       <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-4 px-4 py-3">
         <Logo />
-        <MobileNavToggle>
-          <div className="order-3 w-full sm:order-2 sm:w-auto sm:flex-1">
-            <SearchBar />
-          </div>
-          <nav className="order-2 flex w-full flex-wrap items-center justify-start gap-x-3 gap-y-2 sm:order-3 sm:ml-auto sm:w-auto sm:flex-nowrap sm:gap-x-4">
-            <NavDropdown
-              label="Movies"
-              href="/search"
-              ariaLabel="More ways to browse movies"
-              matchPaths={["/search", "/timeline", "/timeline/*"]}
-              items={[{ href: "/timeline", label: "Timeline", matchPaths: ["/timeline", "/timeline/*"] }]}
-            />
-            <NavLink href="/search/fights">Fights</NavLink>
-            <NavDropdown
-              label="Lists"
-              href="/lists"
-              ariaLabel="More list options"
-              matchPaths={["/lists", "/lists/*", "/leaderboard"]}
-              items={[{ href: "/leaderboard", label: "Leaderboard" }]}
-            />
-            <Link
-              href="/movies/submit"
-              className="rounded-md border border-neutral-700 px-3 py-1.5 text-sm font-medium whitespace-nowrap text-neutral-300 hover:border-red-600 hover:text-white"
-            >
-              + Add Movie
+        <MobileMenu user={session?.user ?? null} />
+        {/* Desktop nav -- phones get MobileMenu's stacked panel instead. */}
+        <div className="hidden sm:block sm:flex-1">
+          <SearchBar />
+        </div>
+        <nav className="ml-auto hidden items-center gap-x-4 sm:flex">
+          <NavDropdown
+            label="Movies"
+            href="/search"
+            ariaLabel="More ways to browse movies"
+            matchPaths={["/search", "/timeline", "/timeline/*"]}
+            items={[{ href: "/timeline", label: "Timeline", matchPaths: ["/timeline", "/timeline/*"] }]}
+          />
+          <NavLink href="/search/fights">Fights</NavLink>
+          <NavDropdown
+            label="Lists"
+            href="/lists"
+            ariaLabel="More list options"
+            matchPaths={["/lists", "/lists/*", "/leaderboard"]}
+            items={[{ href: "/leaderboard", label: "Leaderboard" }]}
+          />
+          <Link
+            href="/movies/submit"
+            className="rounded-md border border-neutral-700 px-3 py-1.5 text-sm font-medium whitespace-nowrap text-neutral-300 hover:border-red-600 hover:text-white"
+          >
+            + Add Movie
+          </Link>
+          {session?.user?.role === "ADMIN" || session?.user?.role === "REVIEWER" ? (
+            <Link href="/admin" className="text-sm whitespace-nowrap text-neutral-300 hover:text-white">
+              Admin
             </Link>
-            {session?.user?.role === "ADMIN" || session?.user?.role === "REVIEWER" ? (
-              <Link href="/admin" className="text-sm whitespace-nowrap text-neutral-300 hover:text-white">
-                Admin
+          ) : null}
+          {session?.user ? (
+            <AccountNavMenu username={session.user.username} />
+          ) : (
+            <>
+              <Link href="/login" className="text-sm whitespace-nowrap text-neutral-300 hover:text-white">
+                Sign in
               </Link>
-            ) : null}
-            {session?.user ? (
-              <AccountNavMenu username={session.user.username} />
-            ) : (
-              <>
-                <Link href="/login" className="text-sm whitespace-nowrap text-neutral-300 hover:text-white">
-                  Sign in
-                </Link>
-                <Link
-                  href="/register"
-                  className="rounded-md bg-red-700 px-3 py-1.5 text-sm font-medium whitespace-nowrap text-white hover:bg-red-600"
-                >
-                  Join
-                </Link>
-              </>
-            )}
-          </nav>
-        </MobileNavToggle>
+              <Link
+                href="/register"
+                className="rounded-md bg-red-700 px-3 py-1.5 text-sm font-medium whitespace-nowrap text-white hover:bg-red-600"
+              >
+                Join
+              </Link>
+            </>
+          )}
+        </nav>
       </div>
     </header>
   );
