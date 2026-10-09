@@ -198,6 +198,7 @@ one.
 - [Admin "By director" import reads a person's credits, not TMDB discover's crew filter](#admin-by-director-import-reads-a-persons-credits-not-tmdb-discovers-crew-filter)
 - [Client-rendered dates pinned to UTC + en-US; Timeline tooltip posters load on first hover](#client-rendered-dates-pinned-to-utc--en-us-timeline-tooltip-posters-load-on-first-hover)
 - [Timeline dots: nearest-dot hover instead of spreading crowded dots apart](#timeline-dots-nearest-dot-hover-instead-of-spreading-crowded-dots-apart)
+- [Mobile nav: a separate Letterboxd-style stacked menu, not the desktop markup collapsed](#mobile-nav-a-separate-letterboxd-style-stacked-menu-not-the-desktop-markup-collapsed)
 
 **Deferred & Backlog**
 
@@ -1570,6 +1571,14 @@ fine and just needs a different crop, so admins can now frame the banner per mov
 - **Not chosen: spreading dots apart near the cursor (a Dock-style magnify).** The targets move while you aim at them, which makes small targets harder to hit, not easier.
 - **Not chosen: shrinking each dot's hit area to the spacing (about 9×13px).** Simplest, but it shrinks the target in sparse eras too, where the 24px target is helpful.
 - **Chosen: nearest-dot hit test.** The plot's `onMouseMove` finds the dot whose center is nearest the cursor, within the same 24px reach, and only that dot shows its tooltip. It's raised above its neighbors (`z-10`) so a click lands on it as a real link, and ctrl/middle-click still work. Dots don't move. 35 of 35 sampled dots are now right. Keyboard focus keeps the CSS `group-focus-visible` tooltip. `TimelineDotLink` is `memo`'d so a hover change re-renders two dots, not ~1,400. The hover is no longer pure CSS, but the component was already a client component.
+
+### Mobile nav: a separate Letterboxd-style stacked menu, not the desktop markup collapsed
+**PR #TBD.** Prompted by a Letterboxd mobile screenshot shared as inspiration. Before, the hamburger (`MobileNavToggle`) revealed the same desktop markup wrapped onto several lines: a search box, then a wrapped row of small links, dropdown chevrons and the account menu. It was cramped, and it needed `stopPropagation` workarounds in `NavDropdown`, `AccountNavMenu` and `SearchBar`, because the panel closed on any click inside it.
+
+- **Chosen: a separate mobile tree (`MobileMenu`).** On phones the logo row has a search icon and a hamburger. The hamburger drops a full-width panel over the page (it doesn't push content down), with one row per destination: icon, bold uppercase tracked label, and a divider, as on Letterboxd. Timeline and Leaderboard become indented sub-rows under Movies and Lists, replacing the chevron dropdowns, so the grouping from "Navbar regrouped by kind" survives without a tap-to-reveal step. This reverses the earlier README note that mobile reused the desktop markup. A vertical row list and an inline link row share almost no layout, and splitting them let the click workarounds go.
+- **Search gets its own icon and expanding row**, rather than sitting inside the menu (Letterboxd does the same). The row closes itself when the route changes.
+- **Signed-out rows lead with "Create account" and "Sign in"**, as on Letterboxd. Signed-in members get an avatar-initial + username row (to their profile) and "My Lists" at the top, with "Sign out" last.
+- **Not chosen: keeping the shared markup and restyling it per breakpoint.** That would have needed paired mobile/desktop classes on every nav item, plus the click workarounds above.
 
 ### Pagination extracted into one shared component, adding jump-to-page links everywhere at once
 **PR #TBD.** Prompted by a request to add page-number links to one paginated list, movie search — but the exact same "← Previous / Page X of Y / Next" block, with no way to jump to a specific page, turned out to be independently copy-pasted across seven pages (movie search, fight-scene search, a movie's Fights and Reviews, `/lists`, an actor's Tributes, `/news`, a Timeline era). Fixing one and leaving the other six with the old Previous/Next-only UI would have been an inconsistent, worse outcome than the reuse this duplication already called for, so all seven were moved onto one shared `Pagination` component instead of patching the one page that was asked about.
