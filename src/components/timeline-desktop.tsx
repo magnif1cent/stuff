@@ -367,7 +367,13 @@ export function TimelineDesktop({ eras }: { eras: TimelineEraData[] }) {
                           <p className="line-clamp-2 font-display text-xs tracking-wide text-neutral-100">{dot.movie.title}</p>
                           <p className="mt-1 text-[11px] text-neutral-500">
                             {era.name}
-                            {dot.movie.releaseDate ? ` · ${dot.movie.releaseDate.getFullYear()}` : ""}
+                            {/* getUTCFullYear, not getFullYear: release dates are
+                                stored as UTC midnight, and this is a client
+                                component, so local-time getFullYear printed the
+                                previous year for Jan 1 releases in any timezone
+                                west of UTC -- a server/browser text mismatch
+                                that failed hydration (React #418). */}
+                            {dot.movie.releaseDate ? ` · ${dot.movie.releaseDate.getUTCFullYear()}` : ""}
                           </p>
                           {dot.movie.ratingAverage != null && (
                             <p className="mt-0.5 text-[11px] font-semibold text-yellow-500">
