@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { resolvePosterUrl, isTmdbUrl } from "@/lib/tmdb";
@@ -296,25 +296,16 @@ export function TimelineDesktop({ eras }: { eras: TimelineEraData[] }) {
 
             return (
               <div key={era.key}>
-                <div
-                  className="absolute text-center"
+                <EraLabel
+                  name={era.name}
+                  years={era.years}
                   style={{
                     left: layout.px0 + width / 2,
                     bottom: AXIS_BASELINE_PX - ERA_LABEL_HEIGHT,
                     width: labelWidth,
                     transform: "translateX(-50%)",
                   }}
-                >
-                  {/* line-clamp-2, not truncate -- a name too long for its
-                      available width (see labelWidthForKey) wraps onto a
-                      second line instead of ending in "...", with ellipsis
-                      only as the last resort if it still doesn't fit two
-                      lines. The years line stays single-line/truncated: it's
-                      the secondary detail, and wrapping it too would need
-                      more vertical room than ERA_LABEL_HEIGHT budgets for. */}
-                  <p className="line-clamp-2 text-xs font-semibold text-neutral-300">{era.name}</p>
-                  <p className="mt-0.5 truncate text-[10px] text-neutral-600">{era.years}</p>
-                </div>
+                />
 
                 {/* A band with real movies always gets at least one dot, so
                     this only fires for eras with none at all -- otherwise
@@ -407,6 +398,59 @@ export function TimelineDesktop({ eras }: { eras: TimelineEraData[] }) {
           />
         </div>
       </div>
+    </div>
+  );
+}
+
+// An era's name/years label under the axis. line-clamp-2, not truncate -- a
+// name too long for its available width (see labelWidthForKey) wraps onto a
+// second line instead of ending in "...", with ellipsis only as the last
+// resort if it still doesn't fit two lines. The years line stays
+// single-line/truncated: it's the secondary detail, and wrapping it too
+// would need more vertical room than ERA_LABEL_HEIGHT budgets for.
+//
+// When either line does end up clipped (e.g. "Spring & Autumn..."), hovering
+// the label shows the full name and years in the same tooltip style as the
+// axis-break markers. Only clipped labels get it -- whether a label clips
+// depends on rendered font metrics, so it's measured once after web fonts
+// load rather than guessed from character counts. Label widths are fixed
+// px, so it doesn't need re-measuring on resize.
+function EraLabel({ name, years, style }: { name: string; years: string | null; style: CSSProperties }) {
+  const nameRef = useRef<HTMLParagraphElement>(null);
+  const yearsRef = useRef<HTMLParagraphElement>(null);
+  const [clipped, setClipped] = useState(false);
+
+  useEffect(() => {
+    function measure() {
+      const nameEl = nameRef.current;
+      const yearsEl = yearsRef.current;
+      setClipped(
+        (!!nameEl && nameEl.scrollHeight > nameEl.clientHeight + 1) ||
+          (!!yearsEl && yearsEl.scrollWidth > yearsEl.clientWidth + 1),
+      );
+    }
+    measure();
+    document.fonts.ready.then(measure);
+  }, []);
+
+  return (
+    // z-20 on the label itself, not just its tooltip: the translateX in
+    // `style` makes the label its own stacking context, so a z-index on the
+    // tooltip alone would only order it within the label and the dots
+    // above would still paint over it.
+    <div className={`absolute text-center ${clipped ? "group z-20 cursor-help" : ""}`} style={style}>
+      <p ref={nameRef} className="line-clamp-2 text-xs font-semibold text-neutral-300">
+        {name}
+      </p>
+      <p ref={yearsRef} className="mt-0.5 truncate text-[10px] text-neutral-600">
+        {years}
+      </p>
+      {clipped && (
+        <div className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1 -translate-x-1/2 rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1.5 text-center whitespace-nowrap opacity-0 shadow-lg transition group-hover:opacity-100">
+          <p className="text-xs font-semibold text-neutral-200">{name}</p>
+          <p className="mt-0.5 text-[10px] text-neutral-500">{years}</p>
+        </div>
+      )}
     </div>
   );
 }
