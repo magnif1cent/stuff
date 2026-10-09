@@ -29,9 +29,18 @@ const ERA_LABEL_HEIGHT = 46;
 // Headroom above the baseline for the tallest dot stack plus its hover
 // tooltip -- verified once (see DECISIONS.md) at 434px above whatever the
 // baseline's own position is, so the plot's total height is derived from
-// that same 434px rather than a second, independently hand-picked number
-// that could drift from it.
-const PLOT_HEIGHT_ABOVE_BASELINE = 434;
+// that same number rather than a second, independently hand-picked one
+// that could drift from it. Raised by +72 to 506 when the tooltip poster
+// grew from 112px to 160px wide (168px -> 240px tall), keeping the same
+// ~25px clearance above a full 8-row stack's two-line-title tooltip.
+const PLOT_HEIGHT_ABOVE_BASELINE = 506;
+
+// Tooltip width, and how close to the plot's left edge a dot can sit before
+// a centered tooltip would hang past the scroller's own left padding and
+// get clipped by its overflow -- those dots anchor the tooltip to their
+// left edge instead.
+const TOOLTIP_WIDTH = 176;
+const TOOLTIP_LEFT_ANCHOR_BELOW_PX = TOOLTIP_WIDTH / 2;
 
 // How far into a band a chip/minimap jump lands, so the target era isn't
 // flush against the scroller's left edge (which also has its own
@@ -344,21 +353,23 @@ export function TimelineDesktop({ eras }: { eras: TimelineEraData[] }) {
                           touch interaction had no way to see it without
                           following the link away from the page. */}
                       <div
-                        className="pointer-events-none absolute bottom-full left-1/2 z-10 -translate-x-1/2 -translate-y-2 rounded-md border border-neutral-700 bg-neutral-900 p-2 opacity-0 shadow-lg transition group-hover:opacity-100 group-focus-visible:opacity-100"
-                        style={{ width: 128 }}
+                        className={`pointer-events-none absolute bottom-full z-10 -translate-y-2 rounded-md border border-neutral-700 bg-neutral-900 p-2 opacity-0 shadow-lg transition group-hover:opacity-100 group-focus-visible:opacity-100 ${
+                          dot.left < TOOLTIP_LEFT_ANCHOR_BELOW_PX ? "left-0" : "left-1/2 -translate-x-1/2"
+                        }`}
+                        style={{ width: TOOLTIP_WIDTH }}
                       >
                         {/* a plain <span> here ignores width/aspect-ratio (both
                             are no-ops on inline elements), which is why the
                             poster wasn't rendering -- needs a block-level box
                             for next/image's `fill` to have anything to fill */}
-                        <div className="relative aspect-2/3 w-28 overflow-hidden rounded bg-neutral-800">
+                        <div className="relative aspect-2/3 w-40 overflow-hidden rounded bg-neutral-800">
                           {posterUrl && (
                             <Image
                               src={posterUrl}
                               alt=""
                               fill
                               unoptimized={isTmdbUrl(posterUrl)}
-                              sizes="112px"
+                              sizes="160px"
                               className="object-cover"
                             />
                           )}
