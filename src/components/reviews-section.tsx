@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { EditorialReview as EditorialReviewModel, MemberReview as MemberReviewModel, User } from "@/generated/prisma/client";
+import { formatDate } from "@/lib/format-date";
 
 const MAX_ADMIN_LENGTH = 10000;
 const MAX_MEMBER_LENGTH = 5000;
@@ -24,10 +25,6 @@ export type MemberReviewData = Pick<MemberReviewModel, "id" | "content" | "autho
   down: number;
   myVote: 1 | -1 | null;
 };
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
-}
 
 // Highest net score (up - down) first, ties broken by newest -- same
 // ordering FunFactsSection uses, kept consistent client-side after a vote or

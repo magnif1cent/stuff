@@ -21,6 +21,10 @@ interface Post extends DiscussionItem {
   replies: DiscussionItem[];
 }
 
+// Depends on the current time, so the server render and the browser's
+// hydration pass can legitimately disagree (e.g. "59m ago" vs "1h ago") --
+// the spans rendering it opt out with suppressHydrationWarning rather than
+// failing hydration over a one-bucket difference.
 function timeAgo(iso: string) {
   const seconds = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
   if (seconds < 60) return "just now";
@@ -260,7 +264,7 @@ export function DiscussionThread({
           <li key={post.id} className="rounded-md border border-neutral-800 bg-neutral-900 p-3">
             <div className="mb-1 flex items-center gap-2 text-sm">
               <span className="font-medium text-neutral-100">{post.user.username}</span>
-              <span className="text-neutral-500">{timeAgo(post.createdAt)}</span>
+              <span className="text-neutral-500" suppressHydrationWarning>{timeAgo(post.createdAt)}</span>
               {!post.isDeleted && wasEdited(post) && (
                 <span className="text-xs text-neutral-600">(edited)</span>
               )}
@@ -303,7 +307,7 @@ export function DiscussionThread({
                   <li key={reply.id}>
                     <div className="mb-1 flex items-center gap-2 text-sm">
                       <span className="font-medium text-neutral-100">{reply.user.username}</span>
-                      <span className="text-neutral-500">{timeAgo(reply.createdAt)}</span>
+                      <span className="text-neutral-500" suppressHydrationWarning>{timeAgo(reply.createdAt)}</span>
                       {!reply.isDeleted && wasEdited(reply) && (
                         <span className="text-xs text-neutral-600">(edited)</span>
                       )}

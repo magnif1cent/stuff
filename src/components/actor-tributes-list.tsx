@@ -2,12 +2,9 @@
 
 import { useState } from "react";
 import type { PersonTributeData } from "@/components/actor-tributes-section";
+import { formatDate } from "@/lib/format-date";
 
 const MAX_TRIBUTE_LENGTH = 5000;
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
-}
 
 function PersonTributeListItem({
   tribute,

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { Movie } from "@/generated/prisma/client";
+import { releaseYear } from "@/lib/format-date";
 
 type MovieItem = Pick<Movie, "id" | "title"> & {
   releaseDate: string | null;
@@ -53,7 +54,7 @@ export function AdminMovieList({ initialMovies }: { initialMovies: MovieItem[] }
 
       <ul className="flex flex-col gap-2">
         {filtered.map((movie) => {
-          const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : null;
+          const year = releaseYear(movie.releaseDate);
           return (
             <li key={movie.id} className="rounded-md border border-neutral-800 bg-neutral-900 px-3 py-2">
               <div className="flex items-center justify-between gap-2">

@@ -2,12 +2,9 @@
 
 import { useState } from "react";
 import type { MemberReviewData } from "@/components/reviews-section";
+import { formatDate } from "@/lib/format-date";
 
 const MAX_MEMBER_LENGTH = 5000;
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
-}
 
 function MemberReviewListItem({
   review,

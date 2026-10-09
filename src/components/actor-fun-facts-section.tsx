@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { formatDate } from "@/lib/format-date";
 
 const MAX_CONTENT_LENGTH = 500;
 const PAGE_SIZE = 5;
@@ -15,10 +16,6 @@ export interface PersonFunFactItem {
   up: number;
   down: number;
   myVote: 1 | -1 | null;
-}
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
 function wasEdited(item: PersonFunFactItem) {
@@ -252,7 +249,7 @@ export function ActorFunFactsSection({
 
                   <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
                     <p className="text-xs text-neutral-500">
-                      — {fact.submittedBy.username} · {formatDate(fact.createdAt)}
+                      — {fact.submittedBy.username} · {formatDate(fact.createdAt, "short")}
                       {wasEdited(fact) && " (edited)"}
                     </p>
 
@@ -355,7 +352,7 @@ export function ActorFunFactsSection({
                         👎 {fact.down}
                       </span>
                       <span className="shrink-0 font-medium text-neutral-100">{fact.submittedBy.username}</span>
-                      <span className="ml-auto shrink-0 text-neutral-600">{formatDate(fact.createdAt)}</span>
+                      <span className="ml-auto shrink-0 text-neutral-600">{formatDate(fact.createdAt, "short")}</span>
                     </div>
                     <p className="text-neutral-300">{fact.content}</p>
                   </button>
