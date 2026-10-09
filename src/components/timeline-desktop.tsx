@@ -33,6 +33,12 @@ const ERA_LABEL_HEIGHT = 46;
 // that could drift from it.
 const PLOT_HEIGHT_ABOVE_BASELINE = 434;
 
+// Dots closer than half this to the plot's left edge anchor their tooltip
+// to their own left edge instead of centering it -- centered, it hung past
+// the scroller's left padding and was clipped by its overflow. (The right
+// end doesn't need this: overflow there just extends the scroll range.)
+const TOOLTIP_WIDTH = 128;
+
 // How far into a band a chip/minimap jump lands, so the target era isn't
 // flush against the scroller's left edge (which also has its own
 // pl-4/sm:pl-6/lg:pl-10 padding this deliberately doesn't try to match
@@ -324,7 +330,11 @@ export function TimelineDesktop({ eras }: { eras: TimelineEraData[] }) {
                 )}
 
                 {dots.map((dot) => {
-                  const posterUrl = resolvePosterUrl(dot.movie);
+                  // w342, not the w500 default: every dot's tooltip <img> is
+                  // in the DOM (just opacity-0), so the browser fetches the
+                  // posters for all on-screen dots at page load, not on hover
+                  // -- and they only display at 112px (224px on 2x screens).
+                  const posterUrl = resolvePosterUrl(dot.movie, "w342");
                   const passesFilter = minRating === 0 || (dot.movie.ratingAverage ?? 0) >= minRating;
                   return (
                     <Link
@@ -344,8 +354,10 @@ export function TimelineDesktop({ eras }: { eras: TimelineEraData[] }) {
                           touch interaction had no way to see it without
                           following the link away from the page. */}
                       <div
-                        className="pointer-events-none absolute bottom-full left-1/2 z-10 -translate-x-1/2 -translate-y-2 rounded-md border border-neutral-700 bg-neutral-900 p-2 opacity-0 shadow-lg transition group-hover:opacity-100 group-focus-visible:opacity-100"
-                        style={{ width: 128 }}
+                        className={`pointer-events-none absolute bottom-full z-10 -translate-y-2 rounded-md border border-neutral-700 bg-neutral-900 p-2 opacity-0 shadow-lg transition group-hover:opacity-100 group-focus-visible:opacity-100 ${
+                          dot.left < TOOLTIP_WIDTH / 2 ? "left-0" : "left-1/2 -translate-x-1/2"
+                        }`}
+                        style={{ width: TOOLTIP_WIDTH }}
                       >
                         {/* a plain <span> here ignores width/aspect-ratio (both
                             are no-ops on inline elements), which is why the
@@ -367,7 +379,13 @@ export function TimelineDesktop({ eras }: { eras: TimelineEraData[] }) {
                           <p className="line-clamp-2 font-display text-xs tracking-wide text-neutral-100">{dot.movie.title}</p>
                           <p className="mt-1 text-[11px] text-neutral-500">
                             {era.name}
-                            {dot.movie.releaseDate ? ` · ${dot.movie.releaseDate.getFullYear()}` : ""}
+                            {/* getUTCFullYear, not getFullYear: release dates are
+                                stored as UTC midnight, and this is a client
+                                component, so local-time getFullYear printed the
+                                previous year for Jan 1 releases in any timezone
+                                west of UTC -- a server/browser text mismatch
+                                that failed hydration (React #418). */}
+                            {dot.movie.releaseDate ? ` · ${dot.movie.releaseDate.getUTCFullYear()}` : ""}
                           </p>
                           {dot.movie.ratingAverage != null && (
                             <p className="mt-0.5 text-[11px] font-semibold text-yellow-500">
