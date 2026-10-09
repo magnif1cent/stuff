@@ -34,6 +34,14 @@ const ICONS = {
   ),
   trophy: <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4zM7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3" />,
   plus: <path d="M12 5v14M5 12h14" />,
+  chevron: <path d="M6 9l6 6 6-6" />,
+  compass: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="m15.5 8.5-2 5-5 2 2-5 5-2z" />
+    </>
+  ),
+  star: <path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1 6.2L12 17.3 6.5 20.2l1-6.2L3 9.6l6.2-.9L12 3z" />,
   shield: <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />,
   list: <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />,
   signOut: <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />,
@@ -64,21 +72,20 @@ function MenuIcon({ name, className = "h-5 w-5" }: { name: keyof typeof ICONS; c
   );
 }
 
-const ROW_CLASS =
-  "flex w-full items-center gap-4 border-b border-neutral-800 py-3.5 text-left text-sm font-bold tracking-[0.15em] uppercase last:border-b-0";
+// Rows are separated by the parent's divide-y rather than their own border,
+// so a group's expanded sub-rows slot in without doubled or missing lines.
+const ROW_CLASS = "flex w-full items-center gap-4 py-3.5 text-left text-sm font-bold tracking-[0.15em] uppercase";
 
 function MenuRow({
   href,
   icon,
   label,
   matchPaths,
-  indent = false,
 }: {
   href: string;
   icon: keyof typeof ICONS;
   label: string;
   matchPaths?: string[];
-  indent?: boolean;
 }) {
   const pathname = usePathname();
   const active = matchesAnyPath(pathname, matchPaths ?? [href]);
@@ -86,15 +93,99 @@ function MenuRow({
     <Link
       href={href}
       aria-current={active ? "page" : undefined}
-      className={`${ROW_CLASS} ${indent ? "pl-9 text-xs" : ""} ${
-        active ? "text-white" : "text-neutral-400 hover:text-white"
-      }`}
+      className={`${ROW_CLASS} ${active ? "text-white" : "text-neutral-400 hover:text-white"}`}
     >
       <span className={active ? "text-red-600" : "text-neutral-500"}>
-        <MenuIcon name={icon} className={indent ? "h-4 w-4" : "h-5 w-5"} />
+        <MenuIcon name={icon} />
       </span>
       {label}
     </Link>
+  );
+}
+
+interface MenuGroupItem {
+  href: string;
+  icon: keyof typeof ICONS;
+  label: string;
+  matchPaths?: string[];
+}
+
+// A row that taps open to reveal related rows beneath it (Lists ->
+// Leaderboard, Browse -> Timeline/Top 100s). With `href` the label still
+// navigates and only the chevron at the right toggles, matching the
+// desktop NavDropdown; without one (Browse has no index page) the whole row
+// toggles. Starts expanded when the current page is one of its items, so
+// the active row isn't hidden.
+function MenuGroup({
+  label,
+  icon,
+  leading,
+  href,
+  matchPaths,
+  items,
+}: {
+  label: string;
+  // Either a stock icon or custom leading content (the account avatar).
+  icon?: keyof typeof ICONS;
+  leading?: React.ReactNode;
+  href?: string;
+  matchPaths?: string[];
+  items: MenuGroupItem[];
+}) {
+  const pathname = usePathname();
+  const childActive = items.some((item) => matchesAnyPath(pathname, item.matchPaths ?? [item.href]));
+  const selfActive = href ? matchesAnyPath(pathname, matchPaths ?? [href]) : false;
+  const [open, setOpen] = useState(childActive);
+  const active = selfActive || (!href && childActive);
+  const color = active ? "text-white" : "text-neutral-400 hover:text-white";
+  const lead = icon ? (
+    <span className={active ? "text-red-600" : "text-neutral-500"}>
+      <MenuIcon name={icon} />
+    </span>
+  ) : (
+    leading
+  );
+
+  const chevron = <MenuIcon name="chevron" className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`} />;
+
+  return (
+    <div className="divide-y divide-neutral-800">
+      {href ? (
+        <div className="flex items-center">
+          <Link href={href} aria-current={selfActive ? "page" : undefined} className={`${ROW_CLASS} flex-1 ${color}`}>
+            {lead}
+            {label}
+          </Link>
+          <button
+            type="button"
+            onClick={() => setOpen((o) => !o)}
+            aria-expanded={open}
+            aria-label={`${open ? "Hide" : "Show"} more under ${label}`}
+            className="-mr-2 flex h-11 w-11 items-center justify-center text-neutral-500 hover:text-white"
+          >
+            {chevron}
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+          className={`${ROW_CLASS} ${color}`}
+        >
+          {lead}
+          <span className="flex-1">{label}</span>
+          <span className="-mr-2 flex w-11 justify-center text-neutral-500">{chevron}</span>
+        </button>
+      )}
+      {open && (
+        <div className="-mx-4 divide-y divide-neutral-700/60 bg-neutral-800/70 px-4">
+          {items.map((item) => (
+            <MenuRow key={item.href} {...item} />
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -165,26 +256,29 @@ export function MobileMenu({ user }: { user: MobileMenuUser | null }) {
       )}
 
       {/* Positioned against Navbar's sticky <header>, so it overlays the
-          page directly beneath the header. Any click inside closes it --
-          every row navigates (or signs out). */}
+          page directly beneath the header. Tapping a link inside closes it;
+          a group's expand toggle doesn't. */}
       {menuOpen && (
         <div
           ref={panelRef}
           id="mobile-nav-panel"
-          onClick={() => setMenuOpen(false)}
-          className="absolute inset-x-0 top-full border-b border-neutral-800 bg-neutral-950 px-4 pb-2 shadow-2xl shadow-black/70 sm:hidden"
+          onClick={(e) => {
+            if ((e.target as HTMLElement).closest("a")) setMenuOpen(false);
+          }}
+          className="absolute inset-x-0 top-full border-t-2 border-b border-t-red-700 border-b-neutral-800 bg-neutral-900 px-4 pb-2 shadow-2xl shadow-black/70 sm:hidden"
         >
-          <nav aria-label="Main">
+          <nav aria-label="Main" className="divide-y divide-neutral-800">
             {user ? (
-              <>
-                <Link href={`/members/${user.username}`} className={`${ROW_CLASS} text-neutral-200 hover:text-white`}>
+              <MenuGroup
+                label={user.username}
+                href={`/members/${user.username}`}
+                leading={
                   <span className="flex h-6 w-6 items-center justify-center rounded-full bg-neutral-700 text-xs font-semibold tracking-normal text-neutral-100">
                     {user.username.charAt(0).toUpperCase()}
                   </span>
-                  {user.username}
-                </Link>
-                <MenuRow href={`/members/${user.username}?tab=lists`} icon="list" label="My Lists" indent />
-              </>
+                }
+                items={[{ href: `/members/${user.username}?tab=lists`, icon: "list", label: "My Lists" }]}
+              />
             ) : (
               <>
                 <MenuRow href="/register" icon="key" label="Create account" />
@@ -192,16 +286,23 @@ export function MobileMenu({ user }: { user: MobileMenuUser | null }) {
               </>
             )}
             <MenuRow href="/search" icon="film" label="Movies" />
-            <MenuRow
-              href="/timeline"
-              icon="timeline"
-              label="Timeline"
-              matchPaths={["/timeline", "/timeline/*"]}
-              indent
-            />
             <MenuRow href="/search/fights" icon="swords" label="Fights" />
-            <MenuRow href="/lists" icon="grid" label="Lists" matchPaths={["/lists", "/lists/*"]} />
-            <MenuRow href="/leaderboard" icon="trophy" label="Leaderboard" indent />
+            <MenuGroup
+              label="Lists"
+              href="/lists"
+              matchPaths={["/lists", "/lists/*"]}
+              icon="grid"
+              items={[{ href: "/leaderboard", icon: "trophy", label: "Leaderboard" }]}
+            />
+            <MenuGroup
+              label="Browse"
+              icon="compass"
+              items={[
+                { href: "/timeline", icon: "timeline", label: "Timeline", matchPaths: ["/timeline", "/timeline/*"] },
+                { href: "/tops/movies", icon: "star", label: "Top 100 Movies" },
+                { href: "/tops/fights", icon: "star", label: "Top 100 Fights" },
+              ]}
+            />
             <MenuRow href="/movies/submit" icon="plus" label="Add Movie" />
             {isStaff && <MenuRow href="/admin" icon="shield" label="Admin" matchPaths={["/admin", "/admin/*"]} />}
             {user && (

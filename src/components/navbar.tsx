@@ -27,13 +27,7 @@ export async function Navbar() {
           <SearchBar />
         </div>
         <nav className="ml-auto hidden items-center gap-x-4 sm:flex">
-          <NavDropdown
-            label="Movies"
-            href="/search"
-            ariaLabel="More ways to browse movies"
-            matchPaths={["/search", "/timeline", "/timeline/*"]}
-            items={[{ href: "/timeline", label: "Timeline", matchPaths: ["/timeline", "/timeline/*"] }]}
-          />
+          <NavLink href="/search">Movies</NavLink>
           <NavLink href="/search/fights">Fights</NavLink>
           <NavDropdown
             label="Lists"
@@ -41,6 +35,14 @@ export async function Navbar() {
             ariaLabel="More list options"
             matchPaths={["/lists", "/lists/*", "/leaderboard"]}
             items={[{ href: "/leaderboard", label: "Leaderboard" }]}
+          />
+          <NavDropdown
+            label="Browse"
+            items={[
+              { href: "/timeline", label: "Timeline", matchPaths: ["/timeline", "/timeline/*"] },
+              { href: "/tops/movies", label: "Top 100 Movies" },
+              { href: "/tops/fights", label: "Top 100 Fights" },
+            ]}
           />
           <Link
             href="/movies/submit"

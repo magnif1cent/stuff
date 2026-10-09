@@ -22,7 +22,9 @@ interface NavDropdownItem {
 // control that only ever opens the dropdown. `matchPaths` (plain strings,
 // not predicate functions) drive the active-state check, since this is a
 // Client Component rendered from a Server Component parent -- functions
-// aren't serializable across that boundary.
+// aren't serializable across that boundary. Without `href` (Browse, which
+// has no index page of its own) the label is part of the toggle button
+// instead of a link.
 export function NavDropdown({
   label,
   href,
@@ -31,46 +33,61 @@ export function NavDropdown({
   matchPaths,
 }: {
   label: string;
-  href: string;
+  href?: string;
   items: NavDropdownItem[];
-  ariaLabel: string;
+  ariaLabel?: string;
   matchPaths?: string[];
 }) {
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   useClickOutside(wrapperRef, () => setOpen(false), open);
   const pathname = usePathname();
-  const active = matchesAnyPath(pathname, matchPaths ?? [href]);
+  const active = matchesAnyPath(pathname, matchPaths ?? (href ? [href] : items.map((item) => item.href)));
+  const labelClass = `flex items-center gap-1.5 text-sm whitespace-nowrap ${
+    active ? "text-white" : "text-neutral-300 hover:text-white"
+  }`;
+  const labelContent = (
+    <>
+      {active && <span className="h-1.5 w-1.5 rounded-full bg-red-600" />}
+      {label}
+    </>
+  );
+  const chevron = (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-3 w-3"
+    >
+      <path d="M6 9l6 6 6-6" />
+    </svg>
+  );
 
   return (
     <div ref={wrapperRef} className="relative flex items-center">
-      <Link
-        href={href}
-        className={`flex items-center gap-1.5 text-sm whitespace-nowrap ${
-          active ? "text-white" : "text-neutral-300 hover:text-white"
-        }`}
-      >
-        {active && <span className="h-1.5 w-1.5 rounded-full bg-red-600" />}
-        {label}
-      </Link>
-      <button
-        onClick={() => setOpen((o) => !o)}
-        aria-label={ariaLabel}
-        aria-expanded={open}
-        className={`flex h-5 w-5 items-center justify-center hover:text-white ${active ? "text-neutral-100" : "text-neutral-500"}`}
-      >
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="h-3 w-3"
-        >
-          <path d="M6 9l6 6 6-6" />
-        </svg>
-      </button>
+      {href ? (
+        <>
+          <Link href={href} className={labelClass}>
+            {labelContent}
+          </Link>
+          <button
+            onClick={() => setOpen((o) => !o)}
+            aria-label={ariaLabel}
+            aria-expanded={open}
+            className={`flex h-5 w-5 items-center justify-center hover:text-white ${active ? "text-neutral-100" : "text-neutral-500"}`}
+          >
+            {chevron}
+          </button>
+        </>
+      ) : (
+        <button onClick={() => setOpen((o) => !o)} aria-expanded={open} className={labelClass}>
+          {labelContent}
+          <span className={active ? "text-neutral-100" : "text-neutral-500"}>{chevron}</span>
+        </button>
+      )}
 
       {open && (
         <div className="absolute top-full left-0 z-30 mt-1.5 min-w-36 rounded-md border border-neutral-700 bg-neutral-800 p-1 shadow-xl">
