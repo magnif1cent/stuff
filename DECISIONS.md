@@ -1582,7 +1582,7 @@ fine and just needs a different crop, so admins can now frame the banner per mov
 - **Not chosen: keeping the shared markup and restyling it per breakpoint.** That would have needed paired mobile/desktop classes on every nav item, plus the click workarounds above.
 
 ### Nav gains a "Browse" group: Timeline moves out from under Movies, joined by the Top 100 pages
-**PR #TBD.** Asked for by the site owner: a new "Browse" item, with Timeline moved under it. This replaces the Movies → Timeline dropdown from "Navbar regrouped by kind", on both desktop and phone. Movies is now a plain link.
+**PR #212.** Asked for by the site owner: a new "Browse" item, with Timeline moved under it. This replaces the Movies → Timeline dropdown from "Navbar regrouped by kind", on both desktop and phone. Movies is now a plain link.
 
 - **Browse is a heading, not a link.** There's no `/browse` index page. On desktop its label toggles the dropdown, so `NavDropdown`'s `href` became optional. On phones it's a non-tappable row with sub-rows indented under it. Building a Browse landing page was considered and not done for now.
 - **Placed after Lists**, the owner's choice.
