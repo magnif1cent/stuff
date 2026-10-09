@@ -149,7 +149,7 @@ function MenuGroup({
   const chevron = <MenuIcon name="chevron" className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`} />;
 
   return (
-    <div className="divide-y divide-neutral-700">
+    <div className="divide-y divide-neutral-800">
       {href ? (
         <div className="flex items-center">
           <Link href={href} aria-current={selfActive ? "page" : undefined} className={`${ROW_CLASS} flex-1 ${color}`}>
@@ -179,7 +179,7 @@ function MenuGroup({
         </button>
       )}
       {open && (
-        <div className="-mx-4 divide-y divide-neutral-600/60 bg-neutral-700/60 px-4">
+        <div className="-mx-4 divide-y divide-neutral-700/60 bg-neutral-800/70 px-4">
           {items.map((item) => (
             <MenuRow key={item.href} {...item} />
           ))}
@@ -265,15 +265,15 @@ export function MobileMenu({ user }: { user: MobileMenuUser | null }) {
           onClick={(e) => {
             if ((e.target as HTMLElement).closest("a")) setMenuOpen(false);
           }}
-          className="absolute inset-x-0 top-full border-t border-b border-neutral-700 bg-neutral-800 px-4 pb-2 shadow-2xl shadow-black/70 sm:hidden"
+          className="absolute inset-x-0 top-full border-t-2 border-b border-t-red-700 border-b-neutral-800 bg-neutral-900 px-4 pb-2 shadow-2xl shadow-black/70 sm:hidden"
         >
-          <nav aria-label="Main" className="divide-y divide-neutral-700">
+          <nav aria-label="Main" className="divide-y divide-neutral-800">
             {user ? (
               <MenuGroup
                 label={user.username}
                 href={`/members/${user.username}`}
                 leading={
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-neutral-600 text-xs font-semibold tracking-normal text-neutral-100">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-neutral-700 text-xs font-semibold tracking-normal text-neutral-100">
                     {user.username.charAt(0).toUpperCase()}
                   </span>
                 }
