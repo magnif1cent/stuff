@@ -1,9 +1,15 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { getMostLikedLists, getTopCurators, getMostBelovedActors, getTopFranchises } from "@/lib/leaderboard";
 import { tmdbImageUrl } from "@/lib/tmdb";
 
-export default async function LeaderboardPage() {
+export const metadata: Metadata = {
+  title: "Hall of Fame",
+  description: "The most-liked member lists, top curators, most beloved actors and top franchises.",
+};
+
+export default async function HallOfFamePage() {
   const [mostLikedLists, topCurators, mostBelovedActors, topFranchises] = await Promise.all([
     getMostLikedLists(),
     getTopCurators(),
@@ -14,7 +20,7 @@ export default async function LeaderboardPage() {
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-10">
       <div className="mb-6 flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold text-white">Leaderboard</h1>
+        <h1 className="text-2xl font-bold text-white">Hall of Fame</h1>
         <div className="flex flex-wrap gap-4">
           <Link href="/tops" className="text-sm text-red-500 hover:underline">
             Top movies &amp; fights →
@@ -45,9 +51,7 @@ export default async function LeaderboardPage() {
                     by {list.username} · {list.movieCount} {list.movieCount === 1 ? "movie" : "movies"}
                   </p>
                 </div>
-                <span className="shrink-0 text-sm text-neutral-300">
-                  ♥ {list.likeCount}
-                </span>
+                <span className="shrink-0 text-sm text-neutral-300">♥ {list.likeCount}</span>
               </li>
             ))}
           </ol>
@@ -112,9 +116,7 @@ export default async function LeaderboardPage() {
                     {actor.name}
                   </Link>
                 </div>
-                <span className="shrink-0 text-sm text-neutral-300">
-                  ♥ {actor.favoriteCount}
-                </span>
+                <span className="shrink-0 text-sm text-neutral-300">♥ {actor.favoriteCount}</span>
               </li>
             ))}
           </ol>

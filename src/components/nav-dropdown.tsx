@@ -15,7 +15,7 @@ interface NavDropdownItem {
 }
 
 // Shared by every "a link, plus a chevron revealing one or two related
-// links" nav item (Movies -> Timeline, Lists -> Leaderboard) -- click to
+// links" nav item (Browse -> Timeline/Top 100s/Hall of Fame) -- click to
 // toggle rather than hover, so it behaves identically on touch and desktop.
 // The label itself stays a real link to `href` (so it still works with
 // middle-click/open-in-new-tab/etc.), while the chevron is a separate

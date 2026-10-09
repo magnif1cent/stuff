@@ -51,6 +51,8 @@ const nextConfig: NextConfig = {
         permanent: true,
       },
       { source: "/search/fight-scenes", destination: "/search/fights", permanent: true },
+      // Same for "Leaderboard", renamed "Hall of Fame" and moved under Browse.
+      { source: "/leaderboard", destination: "/hall-of-fame", permanent: true },
     ];
   },
 };

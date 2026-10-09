@@ -76,7 +76,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${baseUrl}/tops`, changeFrequency: "weekly", priority: 0.5 },
     { url: `${baseUrl}/tops/movies`, changeFrequency: "weekly", priority: 0.5 },
     { url: `${baseUrl}/tops/fights`, changeFrequency: "weekly", priority: 0.5 },
-    { url: `${baseUrl}/leaderboard`, changeFrequency: "weekly", priority: 0.4 },
+    { url: `${baseUrl}/hall-of-fame`, changeFrequency: "weekly", priority: 0.4 },
     { url: `${baseUrl}/lists`, changeFrequency: "daily", priority: 0.5 },
     { url: `${baseUrl}/terms`, changeFrequency: "yearly", priority: 0.1 },
     { url: `${baseUrl}/privacy`, changeFrequency: "yearly", priority: 0.1 },

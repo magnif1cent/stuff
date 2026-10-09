@@ -110,8 +110,8 @@ interface MenuGroupItem {
   matchPaths?: string[];
 }
 
-// A row that taps open to reveal related rows beneath it (Lists ->
-// Leaderboard, Browse -> Timeline/Top 100s). With `href` the label still
+// A row that taps open to reveal related rows beneath it (Browse ->
+// Timeline/Top 100s/Hall of Fame, account -> My Lists). With `href` the label still
 // navigates and only the chevron at the right toggles, matching the
 // desktop NavDropdown; without one (Browse has no index page) the whole row
 // toggles. Starts expanded when the current page is one of its items, so
@@ -287,13 +287,7 @@ export function MobileMenu({ user }: { user: MobileMenuUser | null }) {
             )}
             <MenuRow href="/search" icon="film" label="Movies" />
             <MenuRow href="/search/fights" icon="swords" label="Fights" />
-            <MenuGroup
-              label="Lists"
-              href="/lists"
-              matchPaths={["/lists", "/lists/*"]}
-              icon="grid"
-              items={[{ href: "/leaderboard", icon: "trophy", label: "Leaderboard" }]}
-            />
+            <MenuRow href="/lists" icon="grid" label="Lists" matchPaths={["/lists", "/lists/*"]} />
             <MenuGroup
               label="Browse"
               icon="compass"
@@ -301,6 +295,7 @@ export function MobileMenu({ user }: { user: MobileMenuUser | null }) {
                 { href: "/timeline", icon: "timeline", label: "Timeline", matchPaths: ["/timeline", "/timeline/*"] },
                 { href: "/tops/movies", icon: "star", label: "Top 100 Movies" },
                 { href: "/tops/fights", icon: "star", label: "Top 100 Fights" },
+                { href: "/hall-of-fame", icon: "trophy", label: "Hall of Fame" },
               ]}
             />
             <MenuRow href="/movies/submit" icon="plus" label="Add Movie" />
