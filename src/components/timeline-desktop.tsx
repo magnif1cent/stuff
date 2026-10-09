@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { resolvePosterUrl, isTmdbUrl } from "@/lib/tmdb";
@@ -39,6 +39,11 @@ const PLOT_HEIGHT_ABOVE_BASELINE = 434;
 // the scroller's left padding and was clipped by its overflow. (The right
 // end doesn't need this: overflow there just extends the scroll range.)
 const TOOLTIP_WIDTH = 128;
+
+// Half of a dot's 24px (h-6 w-6) hit box -- a dot's center sits this far
+// right of / above its left/bottom position, and the nearest-dot hit test
+// only considers dots whose box contains the cursor.
+const DOT_HIT_HALF = 12;
 
 // How far into a band a chip/minimap jump lands, so the target era isn't
 // flush against the scroller's left edge (which also has its own
@@ -170,6 +175,46 @@ export function TimelineDesktop({ eras }: { eras: TimelineEraData[] }) {
     window.addEventListener("pointerup", onUp);
   }
 
+  // Dot positions per era, computed once -- shared by the render below and
+  // by the nearest-dot hit test, so the two can't disagree.
+  const dotsByEra = useMemo(() => {
+    const map = new Map<EraSettingKey, TimelineDot[]>();
+    for (const era of eras) {
+      const layout = layoutByKey.get(era.key);
+      if (layout) map.set(era.key, computeDotLayout(layout, era.movies));
+    }
+    return map;
+  }, [eras, layoutByKey]);
+
+  // Which dot the mouse is "on". Each dot's hit area (24px) is wider than
+  // the spacing between dots in a crowded era (~9px), so plain CSS hover
+  // picked whichever overlapping link happened to be on top -- often a
+  // neighbor of the dot under the cursor. Instead the plot finds the dot
+  // whose center is nearest the cursor, within the same 24px reach a dot
+  // had before, and only that one shows its tooltip (and is raised above
+  // its neighbors, so a click lands on it too, as a real link).
+  const [hoveredDotId, setHoveredDotId] = useState<string | null>(null);
+  function handlePlotMouseMove(e: MouseEvent<HTMLDivElement>) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = rect.bottom - e.clientY; // bottom-anchored, like dot.bottom
+    let bestId: string | null = null;
+    let bestDist = Infinity;
+    for (const dots of dotsByEra.values()) {
+      for (const dot of dots) {
+        const dx = x - (dot.left + DOT_HIT_HALF);
+        const dy = y - (dot.bottom + DOT_HIT_HALF);
+        if (Math.abs(dx) > DOT_HIT_HALF || Math.abs(dy) > DOT_HIT_HALF) continue;
+        const dist = dx * dx + dy * dy;
+        if (dist < bestDist) {
+          bestDist = dist;
+          bestId = dot.movie.id;
+        }
+      }
+    }
+    setHoveredDotId(bestId);
+  }
+
   const { totalDots, passingDots } = useMemo(() => {
     let total = 0;
     let passing = 0;
@@ -233,7 +278,12 @@ export function TimelineDesktop({ eras }: { eras: TimelineEraData[] }) {
       </div>
 
       <div ref={scrollRef} className="rail-scrollbar relative overflow-x-auto overflow-y-hidden pb-5 pl-4 sm:pl-6 lg:pl-10">
-        <div className="relative" style={{ width: TIMELINE_AXIS_WIDTH, height: PLOT_HEIGHT_ABOVE_BASELINE + AXIS_BASELINE_PX }}>
+        <div
+          className="relative"
+          style={{ width: TIMELINE_AXIS_WIDTH, height: PLOT_HEIGHT_ABOVE_BASELINE + AXIS_BASELINE_PX }}
+          onMouseMove={handlePlotMouseMove}
+          onMouseLeave={() => setHoveredDotId(null)}
+        >
           {/* axis-breaks: every place the scale changes, marked rather than
               hidden. The hatch pattern alone (plus the tick ruler's own
               density change, at the modern one) discloses THAT something
@@ -290,31 +340,22 @@ export function TimelineDesktop({ eras }: { eras: TimelineEraData[] }) {
             const layout = layoutByKey.get(era.key);
             if (!layout) return null;
             const width = layout.px1 - layout.px0;
-            const dots = computeDotLayout(layout, era.movies);
+            const dots = dotsByEra.get(era.key) ?? [];
             const overflow = era.totalCount > era.movies.length;
             const labelWidth = labelWidthForKey(era.key);
 
             return (
               <div key={era.key}>
-                <div
-                  className="absolute text-center"
+                <EraLabel
+                  name={era.name}
+                  years={era.years}
                   style={{
                     left: layout.px0 + width / 2,
                     bottom: AXIS_BASELINE_PX - ERA_LABEL_HEIGHT,
                     width: labelWidth,
                     transform: "translateX(-50%)",
                   }}
-                >
-                  {/* line-clamp-2, not truncate -- a name too long for its
-                      available width (see labelWidthForKey) wraps onto a
-                      second line instead of ending in "...", with ellipsis
-                      only as the last resort if it still doesn't fit two
-                      lines. The years line stays single-line/truncated: it's
-                      the secondary detail, and wrapping it too would need
-                      more vertical room than ERA_LABEL_HEIGHT budgets for. */}
-                  <p className="line-clamp-2 text-xs font-semibold text-neutral-300">{era.name}</p>
-                  <p className="mt-0.5 truncate text-[10px] text-neutral-600">{era.years}</p>
-                </div>
+                />
 
                 {/* A band with real movies always gets at least one dot, so
                     this only fires for eras with none at all -- otherwise
@@ -336,6 +377,7 @@ export function TimelineDesktop({ eras }: { eras: TimelineEraData[] }) {
                     dot={dot}
                     eraName={era.name}
                     passesFilter={minRating === 0 || (dot.movie.ratingAverage ?? 0) >= minRating}
+                    hovered={dot.movie.id === hoveredDotId}
                   />
                 ))}
 
@@ -411,38 +453,99 @@ export function TimelineDesktop({ eras }: { eras: TimelineEraData[] }) {
   );
 }
 
-// One dot plus its hover tooltip. Its own component so the poster can wait
-// for a first hover/focus: the tooltip is always in the DOM (pure-CSS
-// opacity-0 until group-hover), so rendering its <img> up front made the
+// An era's name/years label under the axis. line-clamp-2, not truncate -- a
+// name too long for its available width (see labelWidthForKey) wraps onto a
+// second line instead of ending in "...", with ellipsis only as the last
+// resort if it still doesn't fit two lines. The years line stays
+// single-line/truncated: it's the secondary detail, and wrapping it too
+// would need more vertical room than ERA_LABEL_HEIGHT budgets for.
+//
+// When either line does end up clipped (e.g. "Spring & Autumn..."), hovering
+// the label shows the full name and years in the same tooltip style as the
+// axis-break markers. Only clipped labels get it -- whether a label clips
+// depends on rendered font metrics, so it's measured once after web fonts
+// load rather than guessed from character counts. Label widths are fixed
+// px, so it doesn't need re-measuring on resize.
+function EraLabel({ name, years, style }: { name: string; years: string | null; style: CSSProperties }) {
+  const nameRef = useRef<HTMLParagraphElement>(null);
+  const yearsRef = useRef<HTMLParagraphElement>(null);
+  const [clipped, setClipped] = useState(false);
+
+  useEffect(() => {
+    function measure() {
+      const nameEl = nameRef.current;
+      const yearsEl = yearsRef.current;
+      setClipped(
+        (!!nameEl && nameEl.scrollHeight > nameEl.clientHeight + 1) ||
+          (!!yearsEl && yearsEl.scrollWidth > yearsEl.clientWidth + 1),
+      );
+    }
+    measure();
+    document.fonts.ready.then(measure);
+  }, []);
+
+  return (
+    // z-20 on the label itself, not just its tooltip: the translateX in
+    // `style` makes the label its own stacking context, so a z-index on the
+    // tooltip alone would only order it within the label and the dots
+    // above would still paint over it.
+    <div className={`absolute text-center ${clipped ? "group z-20 cursor-help" : ""}`} style={style}>
+      <p ref={nameRef} className="line-clamp-2 text-xs font-semibold text-neutral-300">
+        {name}
+      </p>
+      <p ref={yearsRef} className="mt-0.5 truncate text-[10px] text-neutral-600">
+        {years}
+      </p>
+      {clipped && (
+        <div className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1 -translate-x-1/2 rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1.5 text-center whitespace-nowrap opacity-0 shadow-lg transition group-hover:opacity-100">
+          <p className="text-xs font-semibold text-neutral-200">{name}</p>
+          <p className="mt-0.5 text-[10px] text-neutral-500">{years}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// One dot plus its tooltip. `hovered` comes from the plot's nearest-dot hit
+// test (see handlePlotMouseMove); keyboard focus shows the same tooltip via
+// group-focus-visible. Memoized, so a hover change re-renders only the dot
+// losing it and the dot gaining it, not the whole axis.
+//
+// The poster waits for a first hover/focus: the tooltip is always in the
+// DOM (opacity-0 until shown), so rendering its <img> up front made the
 // browser download a poster for every on-screen dot -- ~1,100 of them on a
-// full timeline -- before anyone hovered anything. Local state means a
-// hover re-renders just this dot, not the whole axis. Once wanted, the
-// poster stays rendered, so re-hovering (and the fade-out) doesn't flash.
-function TimelineDotLink({
+// full timeline -- before anyone hovered anything. Once wanted, the poster
+// stays rendered, so re-hovering (and the fade-out) doesn't flash.
+const TimelineDotLink = memo(function TimelineDotLink({
   dot,
   eraName,
   passesFilter,
+  hovered,
 }: {
   dot: TimelineDot;
   eraName: string;
   passesFilter: boolean;
+  hovered: boolean;
 }) {
   const [posterWanted, setPosterWanted] = useState(false);
+  // Adjusting state during render (React's documented pattern for state
+  // derived from a prop change) rather than in an effect, so the poster
+  // starts loading in the same render the tooltip appears.
+  if (hovered && !posterWanted) setPosterWanted(true);
   // w342, not the w500 default -- it only displays at 112px (224px on 2x
   // screens).
   const posterUrl = resolvePosterUrl(dot.movie, "w342");
   return (
     <Link
       href={`/movies/${dot.movie.id}`}
-      className="group absolute flex h-6 w-6 items-center justify-center"
+      className={`group absolute flex h-6 w-6 items-center justify-center ${hovered ? "z-10" : ""}`}
       style={{ left: dot.left, bottom: dot.bottom }}
-      onMouseEnter={() => setPosterWanted(true)}
       onFocus={() => setPosterWanted(true)}
     >
       <span
-        className={`h-2 w-2 rounded-full bg-amber-500 shadow-[0_0_0_2px_var(--color-neutral-950)] transition group-hover:scale-150 group-hover:bg-amber-400 group-focus-visible:scale-150 group-focus-visible:bg-amber-400 ${
-          passesFilter ? "opacity-100" : "opacity-25"
-        }`}
+        className={`h-2 w-2 rounded-full shadow-[0_0_0_2px_var(--color-neutral-950)] transition group-focus-visible:scale-150 group-focus-visible:bg-amber-400 ${
+          hovered ? "scale-150 bg-amber-400" : "bg-amber-500"
+        } ${passesFilter ? "opacity-100" : "opacity-25"}`}
       />
       {/* group-focus-visible mirrors group-hover so keyboard
           (Tab) users see the same poster/rating tooltip --
@@ -450,9 +553,9 @@ function TimelineDotLink({
           touch interaction had no way to see it without
           following the link away from the page. */}
       <div
-        className={`pointer-events-none absolute bottom-full z-10 -translate-y-2 rounded-md border border-neutral-700 bg-neutral-900 p-2 opacity-0 shadow-lg transition group-hover:opacity-100 group-focus-visible:opacity-100 ${
-          dot.left < TOOLTIP_WIDTH / 2 ? "left-0" : "left-1/2 -translate-x-1/2"
-        }`}
+        className={`pointer-events-none absolute bottom-full z-10 -translate-y-2 rounded-md border border-neutral-700 bg-neutral-900 p-2 shadow-lg transition group-focus-visible:opacity-100 ${
+          hovered ? "opacity-100" : "opacity-0"
+        } ${dot.left < TOOLTIP_WIDTH / 2 ? "left-0" : "left-1/2 -translate-x-1/2"}`}
         style={{ width: TOOLTIP_WIDTH }}
       >
         {/* a plain <span> here ignores width/aspect-ratio (both
@@ -492,4 +595,4 @@ function TimelineDotLink({
       </div>
     </Link>
   );
-}
+});
