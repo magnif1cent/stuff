@@ -197,6 +197,7 @@ one.
 - [Homepage first screen calmed: one-line tagline on phones, quieter Latest Update bar](#homepage-first-screen-calmed-one-line-tagline-on-phones-quieter-latest-update-bar)
 - [Admin "By director" import reads a person's credits, not TMDB discover's crew filter](#admin-by-director-import-reads-a-persons-credits-not-tmdb-discovers-crew-filter)
 - [Client-rendered dates pinned to UTC + en-US; Timeline tooltip posters load on first hover](#client-rendered-dates-pinned-to-utc--en-us-timeline-tooltip-posters-load-on-first-hover)
+- [Timeline dots: nearest-dot hover instead of spreading crowded dots apart](#timeline-dots-nearest-dot-hover-instead-of-spreading-crowded-dots-apart)
 
 **Deferred & Backlog**
 
@@ -1561,6 +1562,14 @@ fine and just needs a different crop, so admins can now frame the banner per mov
 - **en-US instead of the browser locale.** The site is English-only, and a locale that differs between server and browser is the same mismatch. This drops the per-visitor date format the `undefined`-locale call sites appeared to give, which only ever showed up after the mismatch had already forced a client re-render.
 - **"5m ago" keeps `suppressHydrationWarning`.** The discussion thread's relative times depend on the current moment, so no fixed format can make the two passes agree; a one-bucket difference ("59m" vs "1h") isn't worth failing hydration over.
 - **Timeline posters wait for a first hover/focus.** Every dot's tooltip is always in the DOM (pure-CSS `opacity-0` until hover), so its `<img>` made the browser download a poster per on-screen dot at page load: about 1,100 on a full timeline, before anyone hovered anything. Each dot is now its own small component with a `posterWanted` flag set on mouseenter/focus, so a hover re-renders one dot, not the whole axis. Once loaded, the poster stays rendered, so the fade-out and later re-hovers don't flash or re-fetch. The cost is a brief empty poster box on a dot's first hover while the image loads; the show/hide itself is still pure CSS.
+
+### Timeline dots: nearest-dot hover instead of spreading crowded dots apart
+**PR #210.** In a crowded era, dots sit about 9px apart, but each dot's link (its hover/click target) is 24px wide, so the targets overlap. CSS hover picked whichever overlapping link was on top, which was usually a neighbor. Pointing at the exact center of a dot showed the wrong movie's tooltip, and a click opened the wrong movie: 0 of 35 sampled dots were right. The site owner suggested moving the dots apart when crowded.
+
+- **Not chosen: spacing dots further apart.** Each era's band width is fixed by its years, so wider spacing means fewer dots per row. Either the stacks get taller, needing more plot height (ruled out to keep the timeline within a 1080p screen), or fewer movies show before "+N more".
+- **Not chosen: spreading dots apart near the cursor (a Dock-style magnify).** The targets move while you aim at them, which makes small targets harder to hit, not easier.
+- **Not chosen: shrinking each dot's hit area to the spacing (about 9×13px).** Simplest, but it shrinks the target in sparse eras too, where the 24px target is helpful.
+- **Chosen: nearest-dot hit test.** The plot's `onMouseMove` finds the dot whose center is nearest the cursor, within the same 24px reach, and only that dot shows its tooltip. It's raised above its neighbors (`z-10`) so a click lands on it as a real link, and ctrl/middle-click still work. Dots don't move. 35 of 35 sampled dots are now right. Keyboard focus keeps the CSS `group-focus-visible` tooltip. `TimelineDotLink` is `memo`'d so a hover change re-renders two dots, not ~1,400. The hover is no longer pure CSS, but the component was already a client component.
 
 ### Pagination extracted into one shared component, adding jump-to-page links everywhere at once
 **PR #TBD.** Prompted by a request to add page-number links to one paginated list, movie search — but the exact same "← Previous / Page X of Y / Next" block, with no way to jump to a specific page, turned out to be independently copy-pasted across seven pages (movie search, fight-scene search, a movie's Fights and Reviews, `/lists`, an actor's Tributes, `/news`, a Timeline era). Fixing one and leaving the other six with the old Previous/Next-only UI would have been an inconsistent, worse outcome than the reuse this duplication already called for, so all seven were moved onto one shared `Pagination` component instead of patching the one page that was asked about.
