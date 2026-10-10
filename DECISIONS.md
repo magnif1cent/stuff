@@ -1598,7 +1598,7 @@ fine and just needs a different crop, so admins can now frame the banner per mov
 - **Lists is now a plain link** on desktop and phones, since it has nothing left to expand. The cost is that someone looking for the most-liked lists might check Lists first. `/lists` already has a "Hall of Fame →" link for that.
 
 ### Nav group "Browse" renamed "Explore"
-**PR #TBD.** "Browse" overlapped with the links next to it: the Movies, Fights and Lists pages are titled "Browse movies", "Browse Fights" and "Browse Lists". So a separate "Browse" item read as if those weren't part of it. Its contents (Timeline, two Top 100 charts, Hall of Fame) are curated ways into the catalog rather than the catalog itself, which "Explore" says better. It also matches the compass icon.
+**PR #216.** "Browse" overlapped with the links next to it: the Movies, Fights and Lists pages are titled "Browse movies", "Browse Fights" and "Browse Lists". So a separate "Browse" item read as if those weren't part of it. Its contents (Timeline, two Top 100 charts, Hall of Fame) are curated ways into the catalog rather than the catalog itself, which "Explore" says better. It also matches the compass icon.
 
 - **Not chosen: "Rankings".** It's more precise for three of the four items, but Timeline isn't a ranking.
 - **Not chosen: "Discover".** It usually suggests personalized recommendations, which this isn't.
