@@ -16,7 +16,10 @@ interface SearchResult {
 
 const DEBOUNCE_MS = 250;
 
-export function SearchBar({ initialQuery = "" }: { initialQuery?: string }) {
+// `autoFocus` is for the mobile header's search row, which only mounts when
+// its search icon is tapped -- without it, the box appears but needs a
+// second tap before the keyboard comes up.
+export function SearchBar({ initialQuery = "", autoFocus = false }: { initialQuery?: string; autoFocus?: boolean }) {
   const [query, setQuery] = useState(initialQuery);
   const [results, setResults] = useState<SearchResult[]>([]);
   const [open, setOpen] = useState(false);
@@ -82,6 +85,7 @@ export function SearchBar({ initialQuery = "" }: { initialQuery?: string }) {
       <div className="flex w-full items-center gap-2">
         <input
           type="search"
+          autoFocus={autoFocus}
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
@@ -132,9 +136,7 @@ export function SearchBar({ initialQuery = "" }: { initialQuery?: string }) {
                   href={`/movies/${movie.id}`}
                   onClick={() => setOpen(false)}
                   onMouseEnter={() => setHighlighted(i)}
-                  className={`flex items-center gap-3 px-3 py-2 text-sm ${
-                    highlighted === i ? "bg-neutral-800" : ""
-                  }`}
+                  className={`flex items-center gap-3 px-3 py-2 text-sm ${highlighted === i ? "bg-neutral-800" : ""}`}
                 >
                   <div className="relative h-10 w-7 shrink-0 overflow-hidden rounded-sm bg-neutral-800">
                     {posterUrl && (
