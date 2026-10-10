@@ -15,14 +15,14 @@ interface NavDropdownItem {
 }
 
 // Shared by every "a link, plus a chevron revealing one or two related
-// links" nav item (Browse -> Timeline/Top 100s/Hall of Fame) -- click to
+// links" nav item (Explore -> Timeline/Top 100s/Hall of Fame) -- click to
 // toggle rather than hover, so it behaves identically on touch and desktop.
 // The label itself stays a real link to `href` (so it still works with
 // middle-click/open-in-new-tab/etc.), while the chevron is a separate
 // control that only ever opens the dropdown. `matchPaths` (plain strings,
 // not predicate functions) drive the active-state check, since this is a
 // Client Component rendered from a Server Component parent -- functions
-// aren't serializable across that boundary. Without `href` (Browse, which
+// aren't serializable across that boundary. Without `href` (Explore, which
 // has no index page of its own) the label is part of the toggle button
 // instead of a link.
 export function NavDropdown({
@@ -46,11 +46,12 @@ export function NavDropdown({
   const labelClass = `flex items-center gap-1.5 text-sm whitespace-nowrap ${
     active ? "text-white" : "text-neutral-300 hover:text-white"
   }`;
-  // The active dot hangs off the label's left edge instead of taking up
-  // space, so it doesn't nudge the neighboring nav links sideways.
+  // The active dot sits centered under the label instead of taking up space
+  // (which nudged the neighboring links sideways) or hanging off its left
+  // edge (where it read as belonging to the previous link).
   const labelContent = (
     <span className="relative">
-      {active && <span className="absolute top-1/2 -left-3 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-red-600" />}
+      {active && <span className="absolute -bottom-2 left-1/2 h-1.5 w-1.5 -translate-x-1/2 rounded-full bg-red-600" />}
       {label}
     </span>
   );

@@ -120,10 +120,10 @@ interface MenuGroupItem {
   matchPaths?: string[];
 }
 
-// A row that taps open to reveal related rows beneath it (Browse ->
+// A row that taps open to reveal related rows beneath it (Explore ->
 // Timeline/Top 100s/Hall of Fame, account -> My Lists). With `href` the label still
 // navigates and only the chevron at the right toggles, matching the
-// desktop NavDropdown; without one (Browse has no index page) the whole row
+// desktop NavDropdown; without one (Explore has no index page) the whole row
 // toggles. Starts expanded when the current page is one of its items, so
 // the active row isn't hidden.
 function MenuGroup({
@@ -302,7 +302,7 @@ export function MobileMenu({ user }: { user: MobileMenuUser | null }) {
             <MenuRow href="/search/fights" icon="swords" label="Fights" />
             <MenuRow href="/lists" icon="grid" label="Lists" matchPaths={["/lists", "/lists/*"]} />
             <MenuGroup
-              label="Browse"
+              label="Explore"
               icon="compass"
               items={[
                 { href: "/timeline", icon: "timeline", label: "Timeline", matchPaths: ["/timeline", "/timeline/*"] },

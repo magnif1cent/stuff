@@ -33,7 +33,7 @@ export async function Navbar() {
             Lists
           </NavLink>
           <NavDropdown
-            label="Browse"
+            label="Explore"
             items={[
               { href: "/timeline", label: "Timeline", matchPaths: ["/timeline", "/timeline/*"] },
               { href: "/tops/movies", label: "Top 100 Movies" },
