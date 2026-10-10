@@ -14,7 +14,12 @@ type MobileMenuUser = Pick<Session["user"], "username" | "role">;
 // Inline 24x24 stroke icons (no icon library in the project). Each is the
 // inner markup of an <svg> rendered by MenuIcon.
 const ICONS = {
-  key: <path d="M15 7a4 4 0 1 1-3.9 4.9L4 19v2h3v-2h2v-2h2l1.1-1.1A4 4 0 0 1 15 7zM16 10h.01" />,
+  userPlus: (
+    <>
+      <circle cx="9" cy="7" r="4" />
+      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M19 8v6M22 11h-6" />
+    </>
+  ),
   signIn: <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3" />,
   film: (
     <>
@@ -23,7 +28,9 @@ const ICONS = {
     </>
   ),
   timeline: <path d="M3 12h18M7 8v8M12 6v12M17 9v6" />,
-  swords: <path d="M14.5 17.5 3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4M19 21l2-2" />,
+  swords: (
+    <path d="M14.5 17.5 3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4M19 21l2-2M14.5 6.5 18 3h3v3l-3.5 3.5M5 14l4 4M7 17l-3 3M3 19l2 2" />
+  ),
   grid: (
     <>
       <rect x="3" y="3" width="7" height="7" />
@@ -42,6 +49,9 @@ const ICONS = {
     </>
   ),
   star: <path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1 6.2L12 17.3 6.5 20.2l1-6.2L3 9.6l6.2-.9L12 3z" />,
+  flame: (
+    <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z" />
+  ),
   shield: <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />,
   list: <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />,
   signOut: <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />,
@@ -251,7 +261,7 @@ export function MobileMenu({ user }: { user: MobileMenuUser | null }) {
 
       {searchOpen && (
         <div id="mobile-search" className="w-full sm:hidden">
-          <SearchBar />
+          <SearchBar autoFocus />
         </div>
       )}
 
@@ -281,7 +291,7 @@ export function MobileMenu({ user }: { user: MobileMenuUser | null }) {
               />
             ) : (
               <>
-                <MenuRow href="/register" icon="key" label="Create account" />
+                <MenuRow href="/register" icon="userPlus" label="Create account" />
                 <MenuRow href="/login" icon="signIn" label="Sign in" />
               </>
             )}
@@ -294,7 +304,7 @@ export function MobileMenu({ user }: { user: MobileMenuUser | null }) {
               items={[
                 { href: "/timeline", icon: "timeline", label: "Timeline", matchPaths: ["/timeline", "/timeline/*"] },
                 { href: "/tops/movies", icon: "star", label: "Top 100 Movies" },
-                { href: "/tops/fights", icon: "star", label: "Top 100 Fights" },
+                { href: "/tops/fights", icon: "flame", label: "Top 100 Fights" },
                 { href: "/hall-of-fame", icon: "trophy", label: "Hall of Fame" },
               ]}
             />

@@ -27,7 +27,9 @@ export function NavLink({
     <Link
       href={href}
       className={`text-sm whitespace-nowrap ${
-        active ? "border-b-2 border-red-600 pb-0.5 text-white" : "text-neutral-300 hover:text-white"
+        active
+          ? "text-white underline decoration-red-600 decoration-2 underline-offset-[6px]"
+          : "text-neutral-300 hover:text-white"
       }`}
     >
       {children}

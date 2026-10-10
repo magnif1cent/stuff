@@ -46,11 +46,13 @@ export function NavDropdown({
   const labelClass = `flex items-center gap-1.5 text-sm whitespace-nowrap ${
     active ? "text-white" : "text-neutral-300 hover:text-white"
   }`;
+  // The active dot hangs off the label's left edge instead of taking up
+  // space, so it doesn't nudge the neighboring nav links sideways.
   const labelContent = (
-    <>
-      {active && <span className="h-1.5 w-1.5 rounded-full bg-red-600" />}
+    <span className="relative">
+      {active && <span className="absolute top-1/2 -left-3 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-red-600" />}
       {label}
-    </>
+    </span>
   );
   const chevron = (
     <svg
