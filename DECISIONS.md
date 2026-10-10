@@ -201,6 +201,7 @@ one.
 - [Mobile nav: a separate Letterboxd-style stacked menu, not the desktop markup collapsed](#mobile-nav-a-separate-letterboxd-style-stacked-menu-not-the-desktop-markup-collapsed)
 - [Nav gains a "Browse" group: Timeline moves out from under Movies, joined by the Top 100 pages](#nav-gains-a-browse-group-timeline-moves-out-from-under-movies-joined-by-the-top-100-pages)
 - [Leaderboard renamed "Hall of Fame" and moved under Browse](#leaderboard-renamed-hall-of-fame-and-moved-under-browse)
+- [Nav group "Browse" renamed "Explore"](#nav-group-browse-renamed-explore)
 
 **Deferred & Backlog**
 
@@ -1595,6 +1596,13 @@ fine and just needs a different crop, so admins can now frame the banner per mov
 
 - **The URL moved too** (`/leaderboard` → `/hall-of-fame`), with a permanent redirect in `next.config.ts` like the earlier "Fight Scenes" → "Fights" rename. A "Hall of Fame" page at `/leaderboard` would have looked like a leftover. `src/lib/leaderboard.ts` keeps its name, since it's internal only.
 - **Lists is now a plain link** on desktop and phones, since it has nothing left to expand. The cost is that someone looking for the most-liked lists might check Lists first. `/lists` already has a "Hall of Fame →" link for that.
+
+### Nav group "Browse" renamed "Explore"
+**PR #TBD.** "Browse" overlapped with the links next to it: the Movies, Fights and Lists pages are titled "Browse movies", "Browse Fights" and "Browse Lists". So a separate "Browse" item read as if those weren't part of it. Its contents (Timeline, two Top 100 charts, Hall of Fame) are curated ways into the catalog rather than the catalog itself, which "Explore" says better. It also matches the compass icon.
+
+- **Not chosen: "Rankings".** It's more precise for three of the four items, but Timeline isn't a ranking.
+- **Not chosen: "Discover".** It usually suggests personalized recommendations, which this isn't.
+- Earlier entries above still say "Browse", since that was the name when they were written.
 
 ### Pagination extracted into one shared component, adding jump-to-page links everywhere at once
 **PR #TBD.** Prompted by a request to add page-number links to one paginated list, movie search — but the exact same "← Previous / Page X of Y / Next" block, with no way to jump to a specific page, turned out to be independently copy-pasted across seven pages (movie search, fight-scene search, a movie's Fights and Reviews, `/lists`, an actor's Tributes, `/news`, a Timeline era). Fixing one and leaving the other six with the old Previous/Next-only UI would have been an inconsistent, worse outcome than the reuse this duplication already called for, so all seven were moved onto one shared `Pagination` component instead of patching the one page that was asked about.
