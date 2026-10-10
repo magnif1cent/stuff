@@ -267,7 +267,10 @@ export function MobileMenu({ user }: { user: MobileMenuUser | null }) {
 
       {/* Positioned against Navbar's sticky <header>, so it overlays the
           page directly beneath the header. Tapping a link inside closes it;
-          a group's expand toggle doesn't. */}
+          a group's expand toggle doesn't. The header is sticky, so page
+          scrolling can't reveal a panel taller than the screen -- the panel
+          is capped at the viewport minus the header (100% here resolves to
+          the header's height, its containing block) and scrolls itself. */}
       {menuOpen && (
         <div
           ref={panelRef}
@@ -275,7 +278,7 @@ export function MobileMenu({ user }: { user: MobileMenuUser | null }) {
           onClick={(e) => {
             if ((e.target as HTMLElement).closest("a")) setMenuOpen(false);
           }}
-          className="absolute inset-x-0 top-full border-t-2 border-b border-t-red-700 border-b-neutral-800 bg-neutral-900 px-4 pb-2 shadow-2xl shadow-black/70 sm:hidden"
+          className="absolute inset-x-0 top-full max-h-[calc(100dvh-100%)] overflow-y-auto overscroll-contain border-t-2 border-b border-t-red-700 border-b-neutral-800 bg-neutral-900 px-4 pb-2 shadow-2xl shadow-black/70 sm:hidden"
         >
           <nav aria-label="Main" className="divide-y divide-neutral-800">
             {user ? (
