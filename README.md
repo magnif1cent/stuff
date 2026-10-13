@@ -325,6 +325,7 @@ The one real difference from Fight Count: this is a fixed dropdown of periods (`
 - **`/tops/fights`** — the 100 highest community-rated fight scenes, same idea but as "Fight Ticket"-styled cards (the same cream ticket look used elsewhere for fight scenes) with a stamped rank badge in the corner instead of a numeral over a poster.
 - Both charts are paginated 24 per page through the same shared `Pagination` component used everywhere else, so the rank badge/numeral stays each item's true overall rank (not reset to 1 on each page) and jumping to e.g. page 3 doesn't require paging through 1-2 first.
 - Both charts require at least 2 community ratings to qualify (same threshold and shape as the homepage's own "Top Rated by the Community" rail — `getTopRatedMovies`/`getTopRatedFightScenes`), computed fresh on every page load like every other ranking in the app, no cache/schedule.
+- The homepage rail differs in one way: while no movie has 2 member ratings yet, it ranks approved movies by their Editors' Score instead (any number of editor ratings) and is titled "Top Rated by Editors", switching back to "Top Rated by the Community" once one movie qualifies. `/tops/movies` has no such fallback.
 - These are two separate pages rather than one page with two sections, since a movie poster grid and a fight-ticket grid don't share a layout. See the Hall of Fame bullet under [Member Lists & Profiles](#member-lists--profiles) for the app's other "rankings" surface (Most-Liked Lists, Top Curators, Most Beloved Actors, Top Franchises) — `/tops` cross-links with it rather than folding into it.
 
 ## Fun Facts
@@ -387,7 +388,7 @@ Shown alongside the cast list on every movie page: an admin review (unchanged fr
 - **Voting** — signed-in members can upvote or downvote any member review but their own (mirroring Fun Fact voting: voting the same direction again retracts it, the opposite direction switches it), which determines the sort order described above.
 - Admins can also write their own member review in addition to the shared admin review — the two aren't mutually exclusive.
 
-The homepage's **Recent Reviews by Editors** section is unaffected by this — it still surfaces only the 5 most recently written-or-edited *admin* reviews (an admin revising an older review counts, not just brand-new ones) as a two-column grid of compact cards — poster thumbnail, title, reviewer, date, and the review's full text clamped to 3 lines with a "Show more" toggle once it's long enough to need one, rather than a short teaser excerpt.
+The homepage's **Recent Reviews by Editors** section is unaffected by this — it still surfaces only the 4 most recently written-or-edited *admin* reviews (an admin revising an older review counts, not just brand-new ones) as a two-column grid of compact cards — poster thumbnail, title, reviewer, date, and the review's full text clamped to 3 lines with a "Show more" toggle once it's long enough to need one, rather than a short teaser excerpt.
 
 ## You Might Also Like
 

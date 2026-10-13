@@ -81,6 +81,33 @@ export async function getEditorsRatingSummaries(movieIds: string[]): Promise<Map
   return map;
 }
 
+// Fallback for the homepage's top-rated rail while no movie has enough
+// member ratings to qualify for getTopRatedMovies. No minimum count: the
+// Editors' Score is a curated rating, and there are only a handful of
+// admins, so even a single editor's score is meaningful here.
+export async function getTopEditorRatedMovies(limit = 12) {
+  const ranked = await prisma.adminRating.groupBy({
+    by: ["movieId"],
+    where: { movie: { status: "APPROVED" } },
+    _avg: { score: true },
+    orderBy: [{ _avg: { score: "desc" } }, { movieId: "asc" }],
+    take: limit,
+  });
+
+  if (ranked.length === 0) return [];
+
+  const movies = await prisma.movie.findMany({ where: { id: { in: ranked.map((r) => r.movieId) } } });
+  const byId = new Map(movies.map((m) => [m.id, m]));
+
+  return ranked
+    .map((r) => {
+      const movie = byId.get(r.movieId);
+      if (!movie) return null;
+      return { ...movie, editorsAverage: r._avg?.score ?? null };
+    })
+    .filter((m): m is NonNullable<typeof m> => m !== null);
+}
+
 export async function getSubcategoryRatingSummary(movieId: string): Promise<SubcategoryRatingSummaries> {
   const rows = await prisma.subcategoryRating.groupBy({
     by: ["category"],
@@ -118,8 +145,12 @@ export async function getSubcategoryEditorsRatingSummary(movieId: string): Promi
 const TOP_RATED_MIN_RATINGS = 2;
 
 export async function getTopRatedMovies(limit = 12) {
+  // Filtered to approved movies here, before ranking and slicing -- filtering
+  // only afterwards let a highly rated pending movie take a slot and then be
+  // dropped, leaving the list short.
   const grouped = await prisma.rating.groupBy({
     by: ["movieId"],
+    where: { movie: { status: "APPROVED" } },
     _avg: { score: true },
     _count: { _all: true },
   });

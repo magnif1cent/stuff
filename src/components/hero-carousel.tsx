@@ -26,6 +26,9 @@ const CLIP_SECONDS = 15;
 // triggers its bot-check interstitial, so this is a judgment call trading
 // off "more highlight reel" against "more unattended autoplay requests."
 const MAX_AUTOPLAY_LAPS = 5;
+// Minimum horizontal travel, in px, for a touch to count as a swipe rather
+// than a tap or a vertical page scroll.
+const SWIPE_MIN_PX = 40;
 
 function clipEmbedUrl(videoId: string, startSeconds: number | null) {
   const start = startSeconds ?? 0;
@@ -41,7 +44,19 @@ function clipEmbedUrl(videoId: string, startSeconds: number | null) {
   return `https://www.youtube-nocookie.com/embed/${videoId}?${params.toString()}`;
 }
 
-function Slide({ movie, active, playClip }: { movie: FeaturedMovie; active: boolean; playClip: boolean }) {
+function Slide({
+  movie,
+  active,
+  playClip,
+  priority,
+}: {
+  movie: FeaturedMovie;
+  active: boolean;
+  playClip: boolean;
+  // Only the first slide is on screen at page load; preloading later slides'
+  // backdrops at high priority would compete with it for bandwidth.
+  priority: boolean;
+}) {
   const backdropUrl = resolveBackdropUrl(movie, "w1280");
   const year = releaseYear(movie.releaseDate);
   const showClip = active && playClip && !!movie.fightSceneClip;
@@ -59,7 +74,7 @@ function Slide({ movie, active, playClip }: { movie: FeaturedMovie; active: bool
           src={backdropUrl}
           alt={movie.title}
           fill
-          priority
+          priority={priority}
           unoptimized
           sizes="(min-width: 1920px) 1920px, 100vw"
           className={`object-cover object-[center_25%] transition-opacity ${showClip ? "opacity-0" : "opacity-100"}`}
@@ -126,6 +141,7 @@ export function HeroCarousel({ movies }: { movies: FeaturedMovie[] }) {
     () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches,
   );
   const prevIndexRef = useRef(0);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
   const goTo = useCallback(
     (next: number) => setIndex((next + movies.length) % movies.length),
@@ -184,12 +200,28 @@ export function HeroCarousel({ movies }: { movies: FeaturedMovie[] }) {
         if (e.key === "ArrowLeft") goTo(index - 1);
         if (e.key === "ArrowRight") goTo(index + 1);
       }}
+      // The prev/next arrows only appear on hover or focus, so on a phone
+      // swiping is the main way to change slides besides the small dots.
+      onTouchStart={(e) => {
+        const touch = e.touches[0];
+        touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+      }}
+      onTouchEnd={(e) => {
+        const start = touchStartRef.current;
+        touchStartRef.current = null;
+        if (!start || movies.length <= 1) return;
+        const touch = e.changedTouches[0];
+        const dx = touch.clientX - start.x;
+        const dy = touch.clientY - start.y;
+        if (Math.abs(dx) < SWIPE_MIN_PX || Math.abs(dx) < Math.abs(dy)) return;
+        goTo(dx < 0 ? index + 1 : index - 1);
+      }}
       className="group relative mx-auto aspect-21/10 max-h-[30rem] w-full max-w-[1920px] overflow-hidden outline-none"
     >
       {prevIndex !== null && prevIndex !== index && (
-        <Slide movie={movies[prevIndex]} active={false} playClip={false} />
+        <Slide movie={movies[prevIndex]} active={false} playClip={false} priority={prevIndex === 0} />
       )}
-      <Slide movie={movies[index]} active playClip={playClip} />
+      <Slide movie={movies[index]} active playClip={playClip} priority={index === 0} />
 
       {movies.length > 1 && (
         <>
