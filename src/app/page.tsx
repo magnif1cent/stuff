@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getFeaturedMovies } from "@/lib/weekly-featured";
-import { getRatingSummaries, getTopRatedMovies } from "@/lib/ratings";
+import { getRatingSummaries, getTopEditorRatedMovies, getTopRatedMovies } from "@/lib/ratings";
 import { getMovieRecommendationsByMovieIds } from "@/lib/movie-recommendations";
 import { getFightSceneCountsByMovieIds } from "@/lib/fight-scenes";
 import { getRecentEditorialReviews } from "@/lib/editorial-reviews";
@@ -15,7 +15,7 @@ import { ActivityFeed } from "@/components/activity-feed";
 export const revalidate = 3600;
 
 export default async function HomePage() {
-  const [featured, recent, topRated, recentReviews, latestNewsPost, recentActivity] = await Promise.all([
+  const [featured, recent, communityTopRated, recentReviews, latestNewsPost, recentActivity] = await Promise.all([
     getFeaturedMovies(),
     prisma.movie.findMany({ where: { status: "APPROVED" }, orderBy: { createdAt: "desc" }, take: 12 }),
     getTopRatedMovies(),
@@ -23,6 +23,18 @@ export default async function HomePage() {
     getLatestNewsPost(),
     getRecentActivity(),
   ]);
+
+  // Until some movie has enough member ratings to qualify, rank by the
+  // Editors' Score instead of leaving the rail empty -- see DECISIONS.md.
+  // The editors' average goes in the card's communityAverage slot, which
+  // just renders a star score; the rail's title says whose score it is.
+  const useEditorsFallback = communityTopRated.length === 0;
+  const topRated = useEditorsFallback
+    ? (await getTopEditorRatedMovies()).map(({ editorsAverage, ...movie }) => ({
+        ...movie,
+        communityAverage: editorsAverage,
+      }))
+    : communityTopRated;
 
   const recentReviewItems: RecentReviewItem[] = recentReviews.map((review) => ({
     id: review.id,
@@ -101,7 +113,7 @@ export default async function HomePage() {
       )}
 
       <MovieRail
-        title="Top Rated by the Community"
+        title={useEditorsFallback ? "Top Rated by Editors" : "Top Rated by the Community"}
         movies={topRatedWithRecommendations}
         emptyMessage="No community ratings yet — be the first to rate a movie."
       />

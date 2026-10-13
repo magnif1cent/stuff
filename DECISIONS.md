@@ -202,6 +202,7 @@ one.
 - [Nav gains a "Browse" group: Timeline moves out from under Movies, joined by the Top 100 pages](#nav-gains-a-browse-group-timeline-moves-out-from-under-movies-joined-by-the-top-100-pages)
 - [Leaderboard renamed "Hall of Fame" and moved under Browse](#leaderboard-renamed-hall-of-fame-and-moved-under-browse)
 - [Nav group "Browse" renamed "Explore"](#nav-group-browse-renamed-explore)
+- [Homepage Top Rated rail falls back to the Editors' Score until members' ratings qualify](#homepage-top-rated-rail-falls-back-to-the-editors-score-until-members-ratings-qualify)
 
 **Deferred & Backlog**
 
@@ -1604,6 +1605,14 @@ fine and just needs a different crop, so admins can now frame the banner per mov
 - **Not chosen: "Rankings".** It's more precise for three of the four items, but Timeline isn't a ranking.
 - **Not chosen: "Discover".** It usually suggests personalized recommendations, which this isn't.
 - Earlier entries above still say "Browse", since that was the name when they were written.
+
+### Homepage Top Rated rail falls back to the Editors' Score until members' ratings qualify
+**PR #218.** The live homepage's "Top Rated by the Community" rail was empty. `getTopRatedMovies` only lists a movie with at least 2 member ratings, and with one active account no movie can reach that. Four options were put to the site owner: wait for more members, drop the minimum to 1, fall back to the Editors' Score, or hide the empty section. They picked the fallback.
+
+- **The fallback only applies when the community list is completely empty.** As soon as one movie qualifies, the rail switches back to community ratings, even if that's a single movie. Mixing the two scores in one ranking would compare different scales of trust.
+- **The title changes with the source:** "Top Rated by Editors" during the fallback, so the rail never claims a community ranking it isn't showing.
+- **No minimum count for editor scores** (`getTopEditorRatedMovies` in `src/lib/ratings.ts`). There are only a few admins, so a single Editors' Score is a deliberate rating, not noise.
+- **Homepage only.** `/tops/movies` still lists only community-ranked movies; its title, "Top 100 Movies", and its "at least 2 ratings" note describe the community chart specifically.
 
 ### Pagination extracted into one shared component, adding jump-to-page links everywhere at once
 **PR #TBD.** Prompted by a request to add page-number links to one paginated list, movie search — but the exact same "← Previous / Page X of Y / Next" block, with no way to jump to a specific page, turned out to be independently copy-pasted across seven pages (movie search, fight-scene search, a movie's Fights and Reviews, `/lists`, an actor's Tributes, `/news`, a Timeline era). Fixing one and leaving the other six with the old Previous/Next-only UI would have been an inconsistent, worse outcome than the reuse this duplication already called for, so all seven were moved onto one shared `Pagination` component instead of patching the one page that was asked about.
