@@ -118,8 +118,12 @@ export async function getSubcategoryEditorsRatingSummary(movieId: string): Promi
 const TOP_RATED_MIN_RATINGS = 2;
 
 export async function getTopRatedMovies(limit = 12) {
+  // Filtered to approved movies here, before ranking and slicing -- filtering
+  // only afterwards let a highly rated pending movie take a slot and then be
+  // dropped, leaving the list short.
   const grouped = await prisma.rating.groupBy({
     by: ["movieId"],
+    where: { movie: { status: "APPROVED" } },
     _avg: { score: true },
     _count: { _all: true },
   });

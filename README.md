@@ -387,7 +387,7 @@ Shown alongside the cast list on every movie page: an admin review (unchanged fr
 - **Voting** — signed-in members can upvote or downvote any member review but their own (mirroring Fun Fact voting: voting the same direction again retracts it, the opposite direction switches it), which determines the sort order described above.
 - Admins can also write their own member review in addition to the shared admin review — the two aren't mutually exclusive.
 
-The homepage's **Recent Reviews by Editors** section is unaffected by this — it still surfaces only the 5 most recently written-or-edited *admin* reviews (an admin revising an older review counts, not just brand-new ones) as a two-column grid of compact cards — poster thumbnail, title, reviewer, date, and the review's full text clamped to 3 lines with a "Show more" toggle once it's long enough to need one, rather than a short teaser excerpt.
+The homepage's **Recent Reviews by Editors** section is unaffected by this — it still surfaces only the 4 most recently written-or-edited *admin* reviews (an admin revising an older review counts, not just brand-new ones) as a two-column grid of compact cards — poster thumbnail, title, reviewer, date, and the review's full text clamped to 3 lines with a "Show more" toggle once it's long enough to need one, rather than a short teaser excerpt.
 
 ## You Might Also Like
 
