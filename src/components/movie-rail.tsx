@@ -83,11 +83,11 @@ export function RailScroller({ children, gapClassName = "gap-4" }: { children: R
 // max-width/padding wrapper.
 export function MovieRailTrack({
   movies,
-  cardSize = "default",
+  cardSize = "rail",
   overlays,
 }: {
   movies: MovieCardData[];
-  cardSize?: "default" | "compact";
+  cardSize?: "default" | "rail" | "compact";
   // Pre-rendered per-card overlay content keyed by movie id, not a render
   // callback -- a Server Component caller can't pass a function prop into
   // this Client Component (functions aren't serializable across that
@@ -115,13 +115,13 @@ export function MovieRail({
   title,
   movies,
   emptyMessage,
-  cardSize = "default",
+  cardSize = "rail",
   seeAllHref,
 }: {
   title: string;
   movies: MovieCardData[];
   emptyMessage?: React.ReactNode;
-  cardSize?: "default" | "compact";
+  cardSize?: "default" | "rail" | "compact";
   seeAllHref?: string;
 }) {
   return (

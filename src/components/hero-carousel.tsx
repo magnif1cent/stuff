@@ -100,8 +100,10 @@ function Slide({
       {/* The image can run wider than the page's max-w-6xl content column
           (up to 1920px), so the caption is aligned to that column -- same
           px-4 + mx-auto max-w-6xl as the navbar and homepage tagline -- not
-          to the image's own edge. */}
-      <div className="absolute inset-x-0 bottom-0 px-4 pb-4 sm:pb-8">
+          to the image's own edge. pb-8 on every breakpoint, not just sm+:
+          the slide dots sit at bottom-3 (12-18px up), and a smaller bottom
+          padding put the synopsis's last line under them on phones. */}
+      <div className="absolute inset-x-0 bottom-0 px-4 pb-8">
         <div className="mx-auto flex max-w-6xl flex-col gap-2">
           <p className="text-xs font-semibold uppercase tracking-wide text-red-500">
             Trending this week
