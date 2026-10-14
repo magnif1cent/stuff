@@ -5,24 +5,10 @@ import { MovieCard, type MovieCardData } from "@/components/movie-card";
 
 const SCROLL_BY = 480;
 
-// The scrollable track (arrows, edge-fade, card list) on its own, without
-// the section/title chrome MovieRail wraps it in below -- lets a caller
-// that already provides its own heading and page-level container (e.g. a
-// rail nested inside another page's section) drop in the same scroll
-// behavior without a second nested max-width/padding wrapper.
-export function MovieRailTrack({
-  movies,
-  cardSize = "default",
-  overlays,
-}: {
-  movies: MovieCardData[];
-  cardSize?: "default" | "compact";
-  // Pre-rendered per-card overlay content keyed by movie id, not a render
-  // callback -- a Server Component caller can't pass a function prop into
-  // this Client Component (functions aren't serializable across that
-  // boundary), but passing already-built React elements is fine.
-  overlays?: Record<string, ReactNode>;
-}) {
+// The scrollable track itself (arrows, edge-fade, horizontal scroller)
+// around any row of cards -- shared by MovieRailTrack below and the
+// homepage's Top Fights rail, whose cards aren't MovieCards.
+export function RailScroller({ children, gapClassName = "gap-4" }: { children: ReactNode; gapClassName?: string }) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const [atStart, setAtStart] = useState(true);
   const [atEnd, setAtEnd] = useState(true);
@@ -38,7 +24,7 @@ export function MovieRailTrack({
     updateEdges();
     window.addEventListener("resize", updateEdges);
     return () => window.removeEventListener("resize", updateEdges);
-  }, [movies]);
+  }, [children]);
 
   const scrollBy = (delta: number) => {
     scrollerRef.current?.scrollBy({ left: delta, behavior: "smooth" });
@@ -81,21 +67,46 @@ export function MovieRailTrack({
       <div
         ref={scrollerRef}
         onScroll={updateEdges}
-        className="rail-scrollbar flex gap-4 overflow-x-auto scroll-smooth pb-2"
+        className={`rail-scrollbar flex ${gapClassName} overflow-x-auto scroll-smooth pb-2`}
       >
-        {movies.map((movie) => (
-          <div key={movie.id} className="relative shrink-0">
-            <MovieCard movie={movie} size={cardSize} />
-            {/* Same top-right corner as MovieCard's "N fights" badge, so drop
-                below it when there is one. The overlay can't live inside the
-                card itself -- the card is a link, and overlays are buttons. */}
-            {overlays?.[movie.id] && (
-              <div className={`absolute right-2 ${movie.fightCount ? "top-9" : "top-2"}`}>{overlays[movie.id]}</div>
-            )}
-          </div>
-        ))}
+        {children}
       </div>
     </div>
+  );
+}
+
+// The movie card track on its own, without the section/title chrome
+// MovieRail wraps it in below -- lets a caller that already provides its
+// own heading and page-level container (e.g. a rail nested inside another
+// page's section) drop in the same scroll behavior without a second nested
+// max-width/padding wrapper.
+export function MovieRailTrack({
+  movies,
+  cardSize = "default",
+  overlays,
+}: {
+  movies: MovieCardData[];
+  cardSize?: "default" | "compact";
+  // Pre-rendered per-card overlay content keyed by movie id, not a render
+  // callback -- a Server Component caller can't pass a function prop into
+  // this Client Component (functions aren't serializable across that
+  // boundary), but passing already-built React elements is fine.
+  overlays?: Record<string, ReactNode>;
+}) {
+  return (
+    <RailScroller>
+      {movies.map((movie) => (
+        <div key={movie.id} className="relative shrink-0">
+          <MovieCard movie={movie} size={cardSize} />
+          {/* Same top-right corner as MovieCard's "N fights" badge, so drop
+              below it when there is one. The overlay can't live inside the
+              card itself -- the card is a link, and overlays are buttons. */}
+          {overlays?.[movie.id] && (
+            <div className={`absolute right-2 ${movie.fightCount ? "top-9" : "top-2"}`}>{overlays[movie.id]}</div>
+          )}
+        </div>
+      ))}
+    </RailScroller>
   );
 }
 
