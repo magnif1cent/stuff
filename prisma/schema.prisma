@@ -59,6 +59,7 @@ model User {
   fightSceneAdminRatings FightSceneAdminRating[]
   editorialReviews    EditorialReview[]
   newsPosts           NewsPost[]
+  actorSpotlights     ActorSpotlight[]
   submittedMovies     Movie[]
   memberLists         MemberList[]
   memberListLikes     MemberListLike[]
@@ -315,6 +316,7 @@ model Person {
   favorites   PersonFavorite[]
   signatureVotes PersonSignatureVote[]
   lineageFigure LineageFigure?
+  spotlights  ActorSpotlight[]
 
   @@index([name])
   // See the matching comment on Movie above — backs the ILIKE actor-name
@@ -570,6 +572,25 @@ model NewsPost {
   author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   @@index([createdAt])
+}
+
+// The homepage's Actor Spotlight: an admin picks one actor (usually weekly)
+// with a short blurb. A history table rather than a flag on Person, so a new
+// pick doesn't overwrite the old one and past spotlights stay on record.
+// The homepage shows the latest row whose endedAt is null; picking a new
+// actor or removing the spotlight sets endedAt on the current row.
+model ActorSpotlight {
+  id          String    @id @default(cuid())
+  personId    String
+  blurb       String?
+  createdById String
+  createdAt   DateTime  @default(now())
+  endedAt     DateTime?
+
+  person    Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+  createdBy User   @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([endedAt, createdAt])
 }
 
 // --- Member lists ---

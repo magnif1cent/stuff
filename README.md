@@ -47,6 +47,7 @@ An IMDB-style website for kung fu and martial arts films, built for martial arts
 - [Legal (Terms of Service & Privacy Policy)](#legal-terms-of-service-privacy-policy)
 - [News & Updates](#news-updates)
 - [Community Activity](#community-activity)
+- [Actor Spotlight](#actor-spotlight)
 - [Web Analytics](#web-analytics)
 - [Error Monitoring](#error-monitoring)
 - [Project Structure](#project-structure)
@@ -62,6 +63,7 @@ An IMDB-style website for kung fu and martial arts films, built for martial arts
 - **Historical Setting**: a member-maintained historical period/dynasty the movie is set in, picked from a fixed list — see [Historical Setting](#historical-setting) below
 - **Fun Facts**: an IMDB "Did you know"-style trivia section above the Discussion thread — members add individual entries, and other members thumbs-up/down each one, ranked by net vote score — see [Fun Facts](#fun-facts) below
 - Actor pages (`/actors/[personId]`) showing an actor's filmography and every fight scene they're tagged in, linked from a movie's cast list and a scene's "Featuring" line (see [Actor Pages](#actor-pages) below)
+- An admin-picked **Actor Spotlight** on the homepage: one featured actor with a short blurb, their top fun fact, primary sifu and a featured fight (see [Actor Spotlight](#actor-spotlight) below)
 - **Lineage**: admin-curated martial arts training lineages, connecting actors already in the catalog and non-actor figures alike — its own tree-view section on the actor page (direct links, one generation each way) links out to a full, multi-generation tree (see [Lineage](#lineage) below)
 - Member accounts via email/password (with email verification and self-service password recovery) or Google sign-in, identified publicly by a chosen username rather than their email or real name (see [Usernames](#usernames) and [Password Recovery](#password-recovery) below)
 - Member capabilities: rate movies and fight scenes, maintain a Favorites list and a Watchlist for movies (fight scenes get a Favorite only — see below), create their own named lists (public by default, optionally private) on a profile page at `/members/[username]` and save both movies and fight scenes to them (see [Member Lists & Profiles](#member-lists--profiles) below), post/reply in movie discussions, submit fight scenes, and submit a movie missing from the catalog for admin review (see [Member Movie Submissions](#member-movie-submissions) below)
@@ -587,6 +589,20 @@ through to the relevant movie, list, or discussion, plus the member's
 profile. Same visibility rule as every other public listing: an event tied
 to a still-pending (not yet admin-approved) movie stays out of the feed
 until the movie is approved.
+
+## Actor Spotlight
+
+A homepage section, between Top Rated by the Community and Recent Reviews by Editors, featuring one actor an admin picks (usually weekly). There's no automatic rotation: it shows whoever was picked last until someone picks another actor or removes it.
+
+- **Picking an actor** (`ADMIN` only): on any actor page, the **Homepage spotlight** bar above the stats has **Feature on homepage**, with an optional one-line blurb (up to 160 characters) shown under the name. Featuring a new actor replaces the current one. On the featured actor's own page the same bar offers **Edit blurb** and **Remove from homepage**; with nothing featured, the section is hidden.
+- **What the card shows**, each part left out when the actor has no data for it:
+  - photo, name and native name
+  - the blurb, plus counts of their films in the catalog and fights tagged
+  - their best-voted fun fact
+  - their primary sifu, linking to the sifu's actor or lineage page, plus a link to their lineage
+  - a fight: the members' signature-fight pick if there is one ("Signature fight"), otherwise their most recently tagged fight ("Featured fight")
+- **Why a typed blurb and not the TMDB biography:** actor pages fetch the biography live from TMDB, and those responses aren't cached, so using it here would add a TMDB call to every homepage load.
+- Past picks are kept in the `ActorSpotlight` table (each with `endedAt` set when it was replaced or removed), so a "past spotlights" page could be added later without a schema change. The seed data features Bruce Lee.
 
 ## Web Analytics
 

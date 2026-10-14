@@ -234,6 +234,28 @@ async function main() {
     },
   });
 
+  // A fun fact plus a homepage Actor Spotlight, so a fresh local setup shows
+  // the spotlight card filled in (name, counts, fun fact, featured fight).
+  const bruceLeeFact = "He won the 1958 Hong Kong cha-cha dance championship.";
+  const existingFact = await prisma.personFunFact.findFirst({
+    where: { personId: bruceLee.id, content: bruceLeeFact },
+  });
+  if (!existingFact) {
+    await prisma.personFunFact.create({
+      data: { personId: bruceLee.id, submittedById: member.id, content: bruceLeeFact },
+    });
+  }
+  const currentSpotlight = await prisma.actorSpotlight.findFirst({ where: { endedAt: null } });
+  if (!currentSpotlight) {
+    await prisma.actorSpotlight.create({
+      data: {
+        personId: bruceLee.id,
+        createdById: admin.id,
+        blurb: "Sample data: martial artist, actor and the founder of Jeet Kune Do.",
+      },
+    });
+  }
+
   const ipMan = await prisma.movie.findUniqueOrThrow({ where: { tmdbId: 900002 } });
   const drunkenMaster = await prisma.movie.findUniqueOrThrow({ where: { tmdbId: 900003 } });
   const memberList = await prisma.memberList.upsert({
