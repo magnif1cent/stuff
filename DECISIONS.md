@@ -1637,7 +1637,7 @@ fine and just needs a different crop, so admins can now frame the banner per mov
 - **Considered and not done here:** shortening the "Top Rated by the Community" heading on phones, which nearly fills the width next to "See all →" and could wrap on 360px-wide phones.
 
 ### Homepage: Top Fights moved between the two movie rails
-**PR #TBD.** Recently Added and Top Rated were two identical-looking poster rails back to back, so on a phone the page read as the same row twice. The order is now Recently Added → Top Fights → Top Rated, so the wide video stills break up the posters. Options considered:
+**PR #222.** Recently Added and Top Rated were two identical-looking poster rails back to back, so on a phone the page read as the same row twice. The order is now Recently Added → Top Fights → Top Rated, so the wide video stills break up the posters. Options considered:
 
 - **One Movies rail with New / Top Rated tabs** (two tab styles mocked up). It shortened the page most, but hid whichever list sat behind the second tab, which most visitors never tap.
 - **Top Rated with `/tops/movies`-style rank numerals** (mocked up). Keeps both lists visible and makes the rails look different. Still available to add on top of this.
