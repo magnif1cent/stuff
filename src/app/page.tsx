@@ -148,7 +148,7 @@ export default async function HomePage() {
       />
 
       <FightRail
-        title={useEditorsFightsFallback ? "Top Fights by Editors" : "Top Fights"}
+        title="Top Fights"
         seeAllHref={useEditorsFightsFallback ? "/search/fights?sort=editorRating" : "/tops/fights"}
         fights={topFights}
       />
