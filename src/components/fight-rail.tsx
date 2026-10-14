@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { FightScene, Movie } from "@/generated/prisma/client";
 import { RailScroller } from "@/components/movie-rail";
+import { SectionHeading } from "@/components/section-heading";
 import { PlayIcon, YoutubeThumbnailImage } from "@/components/fight-scene-thumbnail";
 import { releaseYear } from "@/lib/format-date";
 
@@ -79,12 +80,7 @@ export function FightRail({
 
   return (
     <section className="mx-auto w-full max-w-6xl px-4 py-8">
-      <div className="mb-4 flex items-baseline justify-between gap-3">
-        <h2 className="font-serif text-xl font-bold text-white">{title}</h2>
-        <Link href={seeAllHref} className="shrink-0 text-sm text-red-500 hover:underline">
-          See all →
-        </Link>
-      </div>
+      <SectionHeading title={title} seeAllHref={seeAllHref} />
       <RailScroller gapClassName="gap-5">
         {fights.map((fight, i) => (
           <FightRailCard key={fight.id} fight={fight} rank={i + 1} />

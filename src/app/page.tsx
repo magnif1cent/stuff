@@ -38,7 +38,8 @@ export default async function HomePage() {
   // The editors' average goes in the card's communityAverage slot, which
   // just renders a star score. The title stays "by the Community" either
   // way, at the site owner's request (see DECISIONS.md).
-  const topRated = communityTopRated.length === 0
+  const useEditorsFallback = communityTopRated.length === 0;
+  const topRated = useEditorsFallback
     ? (await getTopEditorRatedMovies()).map(({ editorsAverage, ...movie }) => ({
         ...movie,
         communityAverage: editorsAverage,
@@ -120,6 +121,7 @@ export default async function HomePage() {
       <MovieRail
         title="Recently Added"
         movies={recentWithRatings}
+        seeAllHref="/search"
         emptyMessage={
           <>
             No movies in the catalog yet. An admin can import films from TMDB on the{" "}
@@ -138,19 +140,22 @@ export default async function HomePage() {
 
       <MovieRail
         title="Top Rated by the Community"
+        // /tops/movies only lists movies with 2+ member ratings, so it's
+        // empty while this rail is on its Editors' Score fallback.
+        seeAllHref={useEditorsFallback ? "/search?sort=rating" : "/tops/movies"}
         movies={topRatedWithRecommendations}
         emptyMessage="No community ratings yet — be the first to rate a movie."
       />
 
       <FightRail
-        title={useEditorsFightsFallback ? "Top Fights by Editors" : "Top Fights"}
+        title="Top Fights"
         seeAllHref={useEditorsFightsFallback ? "/search/fights?sort=editorRating" : "/tops/fights"}
         fights={topFights}
       />
 
       <RecentReviewsFeed reviews={recentReviewItems} />
 
-      <ActivityFeed activity={recentActivity} />
+      <ActivityFeed activity={recentActivity} seeAllHrefs={{ fights: "/search/fights", lists: "/lists" }} />
     </div>
   );
 }

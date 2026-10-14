@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { MovieCard, type MovieCardData } from "@/components/movie-card";
+import { SectionHeading } from "@/components/section-heading";
 
 const SCROLL_BY = 480;
 
@@ -115,15 +116,17 @@ export function MovieRail({
   movies,
   emptyMessage,
   cardSize = "default",
+  seeAllHref,
 }: {
   title: string;
   movies: MovieCardData[];
   emptyMessage?: React.ReactNode;
   cardSize?: "default" | "compact";
+  seeAllHref?: string;
 }) {
   return (
     <section className="mx-auto w-full max-w-6xl px-4 py-8">
-      <h2 className="mb-4 font-serif text-xl font-bold text-white">{title}</h2>
+      <SectionHeading title={title} seeAllHref={movies.length > 0 ? seeAllHref : undefined} />
       {movies.length === 0 ? (
         <p className="text-sm text-neutral-400">{emptyMessage}</p>
       ) : (

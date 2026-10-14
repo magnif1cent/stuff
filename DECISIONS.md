@@ -1614,14 +1614,15 @@ fine and just needs a different crop, so admins can now frame the banner per mov
 - **The title changes with the source:** "Top Rated by Editors" during the fallback, so the rail never claims a community ranking it isn't showing.
 - **No minimum count for editor scores** (`getTopEditorRatedMovies` in `src/lib/ratings.ts`). There are only a few admins, so a single Editors' Score is a deliberate rating, not noise.
 - **Homepage only.** `/tops/movies` still lists only community-ranked movies; its title, "Top 100 Movies", and its "at least 2 ratings" note describe the community chart specifically.
-- **Follow-up (PR #219): title fixed at "Top Rated by the Community".** The site owner asked for the original title back, so the rail no longer says "by Editors" during the fallback. The cost: while the fallback is active, the title says community but the scores are editors'. Top Fights (below) keeps its own "by Editors" title.
+- **Follow-up (PR #219): title fixed at "Top Rated by the Community".** The site owner asked for the original title back, so the rail no longer says "by Editors" during the fallback. The cost: while the fallback is active, the title says community but the scores are editors'. Top Fights (below) is titled plain "Top Fights" either way.
 
 ### Homepage Top Fights rail: wide video stills with a rank numeral, not fight tickets
 **PR #219.** Added a Top Fights rail below Top Rated, so the site's fight rankings are visible without the Explore menu. Four options were mocked up: (A) the existing cream "Fight Ticket" cards, (B) wide dark video stills with the `/tops/movies` outlined rank numeral, (C) a large #1 beside a ranked #2–5 list, and (D) tickets with B's numeral. The site owner picked B.
 
 - **Why not the tickets (A/D):** a row of cream cards was the brightest thing on the page below the carousel and competed with the movie rails, and their small text was hard to read on a phone. The trade-off is that fights look different here than on every other fight page, and the rail drops the cast line.
 - **Concern raised and accepted: overlap with `/tops/fights`.** The rail is a preview, the same relationship Top Rated has with `/tops/movies`; `/tops/fights` was otherwise only reachable from the Explore menu, the footer and Hall of Fame.
-- **Same Editors' rating fallback as Top Rated**, but titled "Top Fights by Editors" and with "See all →" pointing at `/search/fights?sort=editorRating`, since `/tops/fights` would still be empty. Hidden entirely when there's nothing to rank, rather than showing a "no ratings yet" message.
+- **Same Editors' rating fallback as Top Rated**, with "See all →" pointing at `/search/fights?sort=editorRating`, since `/tops/fights` would still be empty. Hidden entirely when there's nothing to rank, rather than showing a "no ratings yet" message.
+- **Follow-up (PR #220): no "by Editors" title.** It first read "Top Fights by Editors" during the fallback. The site owner asked to rename it and picked plain "Top Fights", the same title either way, which isn't wrong whichever rating is behind it.
 - **`RailScroller` extracted from `MovieRailTrack`** (`movie-rail.tsx`) so both rails share the arrows, edge fade and scrolling.
 - **Ranking bug fixed in passing:** `getTopRatedFightScenes` filtered deleted scenes only after taking the top N, and never filtered pending movies, so `/tops/fights` could list fights from movies still awaiting approval. Both are now filtered inside the `groupBy`, before ranking.
 
@@ -6291,3 +6292,11 @@ result turned up both:
   choice should probably be remembered per viewer (cards for unranked
   lists and visitors, rows for ranked lists). Build it as its own PR, on
   top of whichever list-page layout ships.
+- **All-editor-reviews and all-discussions pages** — come from PR #220,
+  which added "See all →" links to the homepage's sections. Recent Reviews by
+  Editors and Community Activity's Discussions column got no link because no
+  page lists every editor review, or every discussion thread, across all
+  movies. Each would need its own paginated page (`/reviews`,
+  `/discussions`) before it can get a link. Not built because nobody has
+  asked for those pages yet, and an extra link on the homepage isn't enough
+  reason to build them.

@@ -81,10 +81,25 @@ function DiscussionCard({ item }: { item: DiscussionActivityItem }) {
   );
 }
 
-function ActivityColumn({ label, children }: { label: string; children: React.ReactNode }) {
+function ActivityColumn({
+  label,
+  seeAllHref,
+  children,
+}: {
+  label: string;
+  seeAllHref?: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="flex flex-col gap-2.5">
-      <p className="text-xs font-semibold uppercase tracking-wide text-red-500">{label}</p>
+      <div className="flex items-baseline justify-between gap-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-red-500">{label}</p>
+        {seeAllHref && (
+          <Link href={seeAllHref} className="shrink-0 text-xs text-neutral-400 hover:text-red-400">
+            See all →
+          </Link>
+        )}
+      </div>
       {children}
     </div>
   );
@@ -93,8 +108,14 @@ function ActivityColumn({ label, children }: { label: string; children: React.Re
 export function ActivityFeed({
   activity,
   title = "Community Activity",
+  seeAllHrefs,
 }: {
   activity: RecentActivity;
+  // Per-column "See all" links, homepage only: a member profile's Activity
+  // tab is scoped to that member, so site-wide pages would be the wrong
+  // place to send someone from there. Discussions has no all-discussions
+  // page to link to.
+  seeAllHrefs?: { fights?: string; lists?: string };
   // Omitted when rendered as a profile tab panel — the tab label already
   // names the section, and unlike the homepage (which hides the whole
   // section when there's nothing to show), an empty tab panel still shows
@@ -113,14 +134,14 @@ export function ActivityFeed({
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           {fightScenes.length > 0 && (
-            <ActivityColumn label="Fights">
+            <ActivityColumn label="Fights" seeAllHref={seeAllHrefs?.fights}>
               {fightScenes.map((item) => (
                 <FightSceneCard key={item.id} item={item} />
               ))}
             </ActivityColumn>
           )}
           {lists.length > 0 && (
-            <ActivityColumn label="New Lists">
+            <ActivityColumn label="New Lists" seeAllHref={seeAllHrefs?.lists}>
               {lists.map((item) => (
                 <ListCard key={item.id} item={item} />
               ))}
