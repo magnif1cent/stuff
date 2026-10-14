@@ -205,6 +205,7 @@ one.
 - [Homepage Top Rated rail falls back to the Editors' Score until members' ratings qualify](#homepage-top-rated-rail-falls-back-to-the-editors-score-until-members-ratings-qualify)
 - [Homepage Top Fights rail: wide video stills with a rank numeral, not fight tickets](#homepage-top-fights-rail-wide-video-stills-with-a-rank-numeral-not-fight-tickets)
 - [Movie rail posters shrunk on phones only; grids keep their size](#movie-rail-posters-shrunk-on-phones-only-grids-keep-their-size)
+- [Homepage: Top Fights moved between the two movie rails](#homepage-top-fights-moved-between-the-two-movie-rails)
 
 **Deferred & Backlog**
 
@@ -1634,6 +1635,14 @@ fine and just needs a different crop, so admins can now frame the banner per mov
 - **A new `rail` card size, not a smaller `default`.** `default` is also used by the grids on `/search`, era, collection and profile pages, where cards sit side by side rather than scrolling, so the problem doesn't apply there. Only rails (the homepage's two, actors' Known For) use `rail`; "You Might Also Like" was already `compact`.
 - **Not smaller than 136px.** At the existing `compact` size (112px) three posters fit across, which reads busier, not calmer, and the cover art gets small.
 - **Considered and not done here:** shortening the "Top Rated by the Community" heading on phones, which nearly fills the width next to "See all →" and could wrap on 360px-wide phones.
+
+### Homepage: Top Fights moved between the two movie rails
+**PR #222.** Recently Added and Top Rated were two identical-looking poster rails back to back, so on a phone the page read as the same row twice. The order is now Recently Added → Top Fights → Top Rated, so the wide video stills break up the posters. Options considered:
+
+- **One Movies rail with New / Top Rated tabs** (two tab styles mocked up). It shortened the page most, but hid whichever list sat behind the second tab, which most visitors never tap.
+- **Top Rated with `/tops/movies`-style rank numerals** (mocked up). Keeps both lists visible and makes the rails look different. Still available to add on top of this.
+- **Recent Reviews by Editors between the rails.** Rejected: on a phone its cards stack into a tall column, and the reviews are the site's thinnest content right now.
+- **Chosen: move Top Fights between them.** No new design, nothing hidden. The trade-offs: the page is no shorter, fights now come before Top Rated, and Top Fights hides itself when no fight has any rating, which would put the two movie rails next to each other again.
 ### Pagination extracted into one shared component, adding jump-to-page links everywhere at once
 **PR #TBD.** Prompted by a request to add page-number links to one paginated list, movie search — but the exact same "← Previous / Page X of Y / Next" block, with no way to jump to a specific page, turned out to be independently copy-pasted across seven pages (movie search, fight-scene search, a movie's Fights and Reviews, `/lists`, an actor's Tributes, `/news`, a Timeline era). Fixing one and leaving the other six with the old Previous/Next-only UI would have been an inconsistent, worse outcome than the reuse this duplication already called for, so all seven were moved onto one shared `Pagination` component instead of patching the one page that was asked about.
 

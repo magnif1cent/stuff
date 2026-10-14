@@ -138,6 +138,14 @@ export default async function HomePage() {
         </div>
       )}
 
+      {/* Top Fights sits between the two movie rails so two poster rows
+          don't run back to back -- see DECISIONS.md. */}
+      <FightRail
+        title="Top Fights"
+        seeAllHref={useEditorsFightsFallback ? "/search/fights?sort=editorRating" : "/tops/fights"}
+        fights={topFights}
+      />
+
       <MovieRail
         title="Top Rated by the Community"
         // /tops/movies only lists movies with 2+ member ratings, so it's
@@ -145,12 +153,6 @@ export default async function HomePage() {
         seeAllHref={useEditorsFallback ? "/search?sort=rating" : "/tops/movies"}
         movies={topRatedWithRecommendations}
         emptyMessage="No community ratings yet — be the first to rate a movie."
-      />
-
-      <FightRail
-        title="Top Fights"
-        seeAllHref={useEditorsFightsFallback ? "/search/fights?sort=editorRating" : "/tops/fights"}
-        fights={topFights}
       />
 
       <RecentReviewsFeed reviews={recentReviewItems} />
