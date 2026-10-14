@@ -204,6 +204,7 @@ one.
 - [Nav group "Browse" renamed "Explore"](#nav-group-browse-renamed-explore)
 - [Homepage Top Rated rail falls back to the Editors' Score until members' ratings qualify](#homepage-top-rated-rail-falls-back-to-the-editors-score-until-members-ratings-qualify)
 - [Homepage Top Fights rail: wide video stills with a rank numeral, not fight tickets](#homepage-top-fights-rail-wide-video-stills-with-a-rank-numeral-not-fight-tickets)
+- [Movie rail posters shrunk on phones only; grids keep their size](#movie-rail-posters-shrunk-on-phones-only-grids-keep-their-size)
 
 **Deferred & Backlog**
 
@@ -1626,6 +1627,13 @@ fine and just needs a different crop, so admins can now frame the banner per mov
 - **`RailScroller` extracted from `MovieRailTrack`** (`movie-rail.tsx`) so both rails share the arrows, edge fade and scrolling.
 - **Ranking bug fixed in passing:** `getTopRatedFightScenes` filtered deleted scenes only after taking the top N, and never filtered pending movies, so `/tops/fights` could list fights from movies still awaiting approval. Both are now filtered inside the `groupBy`, before ranking.
 
+
+### Movie rail posters shrunk on phones only; grids keep their size
+**PR #TBD.** From live phone screenshots of the homepage: at 160px wide, two posters filled the screen, the third showed as a thin sliver (so the sideways scroll was easy to miss), and each rail took most of a screen. Posters in horizontal rails are now 136px on phones, so about a third of the next poster shows. Desktop is unchanged at 192px.
+
+- **A new `rail` card size, not a smaller `default`.** `default` is also used by the grids on `/search`, era, collection and profile pages, where cards sit side by side rather than scrolling, so the problem doesn't apply there. Only rails (the homepage's two, actors' Known For) use `rail`; "You Might Also Like" was already `compact`.
+- **Not smaller than 136px.** At the existing `compact` size (112px) three posters fit across, which reads busier, not calmer, and the cover art gets small.
+- **Considered and not done here:** shortening the "Top Rated by the Community" heading on phones, which nearly fills the width next to "See all →" and could wrap on 360px-wide phones.
 ### Pagination extracted into one shared component, adding jump-to-page links everywhere at once
 **PR #TBD.** Prompted by a request to add page-number links to one paginated list, movie search — but the exact same "← Previous / Page X of Y / Next" block, with no way to jump to a specific page, turned out to be independently copy-pasted across seven pages (movie search, fight-scene search, a movie's Fights and Reviews, `/lists`, an actor's Tributes, `/news`, a Timeline era). Fixing one and leaving the other six with the old Previous/Next-only UI would have been an inconsistent, worse outcome than the reuse this duplication already called for, so all seven were moved onto one shared `Pagination` component instead of patching the one page that was asked about.
 

@@ -7,8 +7,8 @@ import { releaseYear } from "@/lib/format-date";
 
 export type FightRailItem = Pick<FightScene, "id" | "movieId" | "title" | "youtubeVideoId"> & {
   movie: Pick<Movie, "title" | "releaseDate">;
-  // Whichever score the rail is ranked by (member or editor average); the
-  // section title says which.
+  // Whichever score the rail is ranked by: the member average, or the
+  // editors' average during the homepage's fallback.
   average: number | null;
   // Member rating count; omitted when ranked by the Editors' rating.
   count?: number;

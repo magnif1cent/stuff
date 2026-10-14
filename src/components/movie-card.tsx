@@ -23,8 +23,12 @@ export type MovieCardData = Pick<
 // (potentially long) movie grids sit behind tabs — smaller cards fit more
 // per row and per screen, which matters more there than on a page showing
 // one curated section at a time. Every other caller keeps the original size.
+// "rail" is the default card shrunk on phones only, for horizontal rails: at
+// 160px two posters filled a phone's width and the third barely peeked out,
+// hiding that the row scrolls. At 136px about half of the third shows.
 const SIZE_CLASSES = {
   default: { link: "w-40 sm:w-48", sizes: "(max-width: 640px) 160px, 192px" },
+  rail: { link: "w-34 sm:w-48", sizes: "(max-width: 640px) 136px, 192px" },
   compact: { link: "w-28 sm:w-32", sizes: "(max-width: 640px) 112px, 128px" },
 } as const;
 
