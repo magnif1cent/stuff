@@ -1629,7 +1629,7 @@ fine and just needs a different crop, so admins can now frame the banner per mov
 
 
 ### Movie rail posters shrunk on phones only; grids keep their size
-**PR #TBD.** From live phone screenshots of the homepage: at 160px wide, two posters filled the screen, the third showed as a thin sliver (so the sideways scroll was easy to miss), and each rail took most of a screen. Posters in horizontal rails are now 136px on phones, so about a third of the next poster shows. Desktop is unchanged at 192px.
+**PR #221.** From live phone screenshots of the homepage: at 160px wide, two posters filled the screen, the third showed as a thin sliver (so the sideways scroll was easy to miss), and each rail took most of a screen. Posters in horizontal rails are now 136px on phones, so about a third of the next poster shows. Desktop is unchanged at 192px.
 
 - **A new `rail` card size, not a smaller `default`.** `default` is also used by the grids on `/search`, era, collection and profile pages, where cards sit side by side rather than scrolling, so the problem doesn't apply there. Only rails (the homepage's two, actors' Known For) use `rail`; "You Might Also Like" was already `compact`.
 - **Not smaller than 136px.** At the existing `compact` size (112px) three posters fit across, which reads busier, not calmer, and the cover art gets small.
