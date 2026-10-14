@@ -1646,7 +1646,7 @@ fine and just needs a different crop, so admins can now frame the banner per mov
 - **Chosen: move Top Fights between them.** No new design, nothing hidden. The trade-offs: the page is no shorter, fights now come before Top Rated, and Top Fights hides itself when no fight has any rating, which would put the two movie rails next to each other again.
 
 ### Homepage Actor Spotlight: one admin-picked actor, not a rail
-**PR #TBD. Schema change: new `ActorSpotlight` table.** The site owner asked for an actor section on the homepage. Options considered:
+**PR #223. Schema change: new `ActorSpotlight` table.** The site owner asked for an actor section on the homepage. Options considered:
 
 - **A rail of actor headshots.** Rejected: it brings back the run of similar rails that the Top Fights move had just broken up, and there's no actors browse page for a "See all" link to point at.
 - **"Most Beloved Actors" by favorites.** Rejected for now: favorites come from too few accounts to mean anything yet, the same problem as "Top Rated by the Community".
