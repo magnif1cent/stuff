@@ -6291,3 +6291,11 @@ result turned up both:
   choice should probably be remembered per viewer (cards for unranked
   lists and visitors, rows for ranked lists). Build it as its own PR, on
   top of whichever list-page layout ships.
+- **All-editor-reviews and all-discussions pages** — come from PR #TBD,
+  which added "See all →" links to the homepage's sections. Recent Reviews by
+  Editors and Community Activity's Discussions column got no link because no
+  page lists every editor review, or every discussion thread, across all
+  movies. Each would need its own paginated page (`/reviews`,
+  `/discussions`) before it can get a link. Not built because nobody has
+  asked for those pages yet, and an extra link on the homepage isn't enough
+  reason to build them.
