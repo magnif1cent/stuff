@@ -2,7 +2,11 @@ import { prisma } from "@/lib/prisma";
 import { getFeaturedMovies } from "@/lib/weekly-featured";
 import { getRatingSummaries, getTopEditorRatedMovies, getTopRatedMovies } from "@/lib/ratings";
 import { getMovieRecommendationsByMovieIds } from "@/lib/movie-recommendations";
-import { getFightSceneCountsByMovieIds } from "@/lib/fight-scenes";
+import {
+  getFightSceneCountsByMovieIds,
+  getTopEditorRatedFightScenes,
+  getTopRatedFightScenes,
+} from "@/lib/fight-scenes";
 import { getRecentEditorialReviews } from "@/lib/editorial-reviews";
 import { getLatestNewsPost } from "@/lib/news";
 import { getRecentActivity } from "@/lib/activity";
@@ -11,30 +15,50 @@ import { MovieRail } from "@/components/movie-rail";
 import { RecentReviewsFeed, type RecentReviewItem } from "@/components/recent-reviews-feed";
 import { NewsTeaser } from "@/components/news-teaser";
 import { ActivityFeed } from "@/components/activity-feed";
+import { FightRail, type FightRailItem } from "@/components/fight-rail";
+
+const TOP_FIGHTS_COUNT = 10;
 
 export const revalidate = 3600;
 
 export default async function HomePage() {
-  const [featured, recent, communityTopRated, recentReviews, latestNewsPost, recentActivity] = await Promise.all([
-    getFeaturedMovies(),
-    prisma.movie.findMany({ where: { status: "APPROVED" }, orderBy: { createdAt: "desc" }, take: 12 }),
-    getTopRatedMovies(),
-    getRecentEditorialReviews(),
-    getLatestNewsPost(),
-    getRecentActivity(),
-  ]);
+  const [featured, recent, communityTopRated, communityTopFights, recentReviews, latestNewsPost, recentActivity] =
+    await Promise.all([
+      getFeaturedMovies(),
+      prisma.movie.findMany({ where: { status: "APPROVED" }, orderBy: { createdAt: "desc" }, take: 12 }),
+      getTopRatedMovies(),
+      getTopRatedFightScenes(TOP_FIGHTS_COUNT),
+      getRecentEditorialReviews(),
+      getLatestNewsPost(),
+      getRecentActivity(),
+    ]);
 
   // Until some movie has enough member ratings to qualify, rank by the
   // Editors' Score instead of leaving the rail empty -- see DECISIONS.md.
   // The editors' average goes in the card's communityAverage slot, which
-  // just renders a star score; the rail's title says whose score it is.
-  const useEditorsFallback = communityTopRated.length === 0;
-  const topRated = useEditorsFallback
+  // just renders a star score. The title stays "by the Community" either
+  // way, at the site owner's request (see DECISIONS.md).
+  const topRated = communityTopRated.length === 0
     ? (await getTopEditorRatedMovies()).map(({ editorsAverage, ...movie }) => ({
         ...movie,
         communityAverage: editorsAverage,
       }))
     : communityTopRated;
+
+  // Same Editors' rating fallback for Top Fights. "See all" then goes to the
+  // fight search sorted by editor rating, since /tops/fights (community
+  // ratings only) would still be empty.
+  const useEditorsFightsFallback = communityTopFights.length === 0;
+  const topFights: FightRailItem[] = useEditorsFightsFallback
+    ? (await getTopEditorRatedFightScenes(TOP_FIGHTS_COUNT)).map((scene) => ({
+        ...scene,
+        average: scene.editorsAverage,
+      }))
+    : communityTopFights.map((scene) => ({
+        ...scene,
+        average: scene.communityAverage,
+        count: scene.communityCount,
+      }));
 
   const recentReviewItems: RecentReviewItem[] = recentReviews.map((review) => ({
     id: review.id,
@@ -113,9 +137,15 @@ export default async function HomePage() {
       )}
 
       <MovieRail
-        title={useEditorsFallback ? "Top Rated by Editors" : "Top Rated by the Community"}
+        title="Top Rated by the Community"
         movies={topRatedWithRecommendations}
         emptyMessage="No community ratings yet — be the first to rate a movie."
+      />
+
+      <FightRail
+        title={useEditorsFightsFallback ? "Top Fights by Editors" : "Top Fights"}
+        seeAllHref={useEditorsFightsFallback ? "/search/fights?sort=editorRating" : "/tops/fights"}
+        fights={topFights}
       />
 
       <RecentReviewsFeed reviews={recentReviewItems} />

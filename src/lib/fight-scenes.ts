@@ -146,9 +146,18 @@ export async function getFightSceneAdminRatingSummaries(
 // which is movie-only.
 const TOP_RATED_MIN_RATINGS = 2;
 
+// Only live scenes on approved movies count, filtered before ranking -- not
+// after, where a deleted scene or one on a pending movie would take a slot
+// and then be dropped, leaving the list short (and, without the movie check,
+// pending movies' scenes would be listed publicly).
+const RANKABLE_SCENE = { fightScene: { isDeleted: false, movie: { status: "APPROVED" as const } } };
+
+const RANKED_SCENE_INCLUDE = { movie: { select: { id: true, title: true, releaseDate: true } } };
+
 export async function getTopRatedFightScenes(limit = 20) {
   const grouped = await prisma.fightSceneRating.groupBy({
     by: ["fightSceneId"],
+    where: RANKABLE_SCENE,
     _avg: { score: true },
     _count: { _all: true },
   });
@@ -161,8 +170,8 @@ export async function getTopRatedFightScenes(limit = 20) {
   if (ranked.length === 0) return [];
 
   const scenes = await prisma.fightScene.findMany({
-    where: { id: { in: ranked.map((r) => r.fightSceneId) }, isDeleted: false },
-    include: { movie: { select: { id: true, title: true } } },
+    where: { id: { in: ranked.map((r) => r.fightSceneId) } },
+    include: RANKED_SCENE_INCLUDE,
   });
   const byId = new Map(scenes.map((s) => [s.id, s]));
 
@@ -171,6 +180,35 @@ export async function getTopRatedFightScenes(limit = 20) {
       const scene = byId.get(r.fightSceneId);
       if (!scene) return null;
       return { ...scene, communityAverage: r._avg.score, communityCount: r._count._all };
+    })
+    .filter((s): s is NonNullable<typeof s> => s !== null);
+}
+
+// Fallback for the homepage's Top Fights rail while no scene has enough
+// member ratings to qualify above -- same idea, and same no-minimum
+// reasoning, as getTopEditorRatedMovies in lib/ratings.ts.
+export async function getTopEditorRatedFightScenes(limit = 20) {
+  const ranked = await prisma.fightSceneAdminRating.groupBy({
+    by: ["fightSceneId"],
+    where: RANKABLE_SCENE,
+    _avg: { score: true },
+    orderBy: [{ _avg: { score: "desc" } }, { fightSceneId: "asc" }],
+    take: limit,
+  });
+
+  if (ranked.length === 0) return [];
+
+  const scenes = await prisma.fightScene.findMany({
+    where: { id: { in: ranked.map((r) => r.fightSceneId) } },
+    include: RANKED_SCENE_INCLUDE,
+  });
+  const byId = new Map(scenes.map((s) => [s.id, s]));
+
+  return ranked
+    .map((r) => {
+      const scene = byId.get(r.fightSceneId);
+      if (!scene) return null;
+      return { ...scene, editorsAverage: r._avg?.score ?? null };
     })
     .filter((s): s is NonNullable<typeof s> => s !== null);
 }

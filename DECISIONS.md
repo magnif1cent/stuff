@@ -203,6 +203,7 @@ one.
 - [Leaderboard renamed "Hall of Fame" and moved under Browse](#leaderboard-renamed-hall-of-fame-and-moved-under-browse)
 - [Nav group "Browse" renamed "Explore"](#nav-group-browse-renamed-explore)
 - [Homepage Top Rated rail falls back to the Editors' Score until members' ratings qualify](#homepage-top-rated-rail-falls-back-to-the-editors-score-until-members-ratings-qualify)
+- [Homepage Top Fights rail: wide video stills with a rank numeral, not fight tickets](#homepage-top-fights-rail-wide-video-stills-with-a-rank-numeral-not-fight-tickets)
 
 **Deferred & Backlog**
 
@@ -1613,6 +1614,16 @@ fine and just needs a different crop, so admins can now frame the banner per mov
 - **The title changes with the source:** "Top Rated by Editors" during the fallback, so the rail never claims a community ranking it isn't showing.
 - **No minimum count for editor scores** (`getTopEditorRatedMovies` in `src/lib/ratings.ts`). There are only a few admins, so a single Editors' Score is a deliberate rating, not noise.
 - **Homepage only.** `/tops/movies` still lists only community-ranked movies; its title, "Top 100 Movies", and its "at least 2 ratings" note describe the community chart specifically.
+- **Follow-up (PR #219): title fixed at "Top Rated by the Community".** The site owner asked for the original title back, so the rail no longer says "by Editors" during the fallback. The cost: while the fallback is active, the title says community but the scores are editors'. Top Fights (below) keeps its own "by Editors" title.
+
+### Homepage Top Fights rail: wide video stills with a rank numeral, not fight tickets
+**PR #219.** Added a Top Fights rail below Top Rated, so the site's fight rankings are visible without the Explore menu. Four options were mocked up: (A) the existing cream "Fight Ticket" cards, (B) wide dark video stills with the `/tops/movies` outlined rank numeral, (C) a large #1 beside a ranked #2–5 list, and (D) tickets with B's numeral. The site owner picked B.
+
+- **Why not the tickets (A/D):** a row of cream cards was the brightest thing on the page below the carousel and competed with the movie rails, and their small text was hard to read on a phone. The trade-off is that fights look different here than on every other fight page, and the rail drops the cast line.
+- **Concern raised and accepted: overlap with `/tops/fights`.** The rail is a preview, the same relationship Top Rated has with `/tops/movies`; `/tops/fights` was otherwise only reachable from the Explore menu, the footer and Hall of Fame.
+- **Same Editors' rating fallback as Top Rated**, but titled "Top Fights by Editors" and with "See all →" pointing at `/search/fights?sort=editorRating`, since `/tops/fights` would still be empty. Hidden entirely when there's nothing to rank, rather than showing a "no ratings yet" message.
+- **`RailScroller` extracted from `MovieRailTrack`** (`movie-rail.tsx`) so both rails share the arrows, edge fade and scrolling.
+- **Ranking bug fixed in passing:** `getTopRatedFightScenes` filtered deleted scenes only after taking the top N, and never filtered pending movies, so `/tops/fights` could list fights from movies still awaiting approval. Both are now filtered inside the `groupBy`, before ranking.
 
 ### Pagination extracted into one shared component, adding jump-to-page links everywhere at once
 **PR #TBD.** Prompted by a request to add page-number links to one paginated list, movie search — but the exact same "← Previous / Page X of Y / Next" block, with no way to jump to a specific page, turned out to be independently copy-pasted across seven pages (movie search, fight-scene search, a movie's Fights and Reviews, `/lists`, an actor's Tributes, `/news`, a Timeline era). Fixing one and leaving the other six with the old Previous/Next-only UI would have been an inconsistent, worse outcome than the reuse this duplication already called for, so all seven were moved onto one shared `Pagination` component instead of patching the one page that was asked about.
