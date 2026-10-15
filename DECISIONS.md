@@ -206,6 +206,7 @@ one.
 - [Homepage Top Fights rail: wide video stills with a rank numeral, not fight tickets](#homepage-top-fights-rail-wide-video-stills-with-a-rank-numeral-not-fight-tickets)
 - [Movie rail posters shrunk on phones only; grids keep their size](#movie-rail-posters-shrunk-on-phones-only-grids-keep-their-size)
 - [Homepage: Top Fights moved between the two movie rails](#homepage-top-fights-moved-between-the-two-movie-rails)
+- [Homepage Actor Spotlight: one admin-picked actor, not a rail](#homepage-actor-spotlight-one-admin-picked-actor-not-a-rail)
 
 **Deferred & Backlog**
 
@@ -1643,6 +1644,22 @@ fine and just needs a different crop, so admins can now frame the banner per mov
 - **Top Rated with `/tops/movies`-style rank numerals** (mocked up). Keeps both lists visible and makes the rails look different. Still available to add on top of this.
 - **Recent Reviews by Editors between the rails.** Rejected: on a phone its cards stack into a tall column, and the reviews are the site's thinnest content right now.
 - **Chosen: move Top Fights between them.** No new design, nothing hidden. The trade-offs: the page is no shorter, fights now come before Top Rated, and Top Fights hides itself when no fight has any rating, which would put the two movie rails next to each other again.
+
+### Homepage Actor Spotlight: one admin-picked actor, not a rail
+**PR #223. Schema change: new `ActorSpotlight` table.** The site owner asked for an actor section on the homepage. Options considered:
+
+- **A rail of actor headshots.** Rejected: it brings back the run of similar rails that the Top Fights move had just broken up, and there's no actors browse page for a "See all" link to point at.
+- **"Most Beloved Actors" by favorites.** Rejected for now: favorites come from too few accounts to mean anything yet, the same problem as "Top Rated by the Community".
+- **"Born this week".** Rejected: birthdays are only available from live, uncached TMDB calls, one per actor.
+- **Chosen: a single Spotlight card**, mocked up at desktop and phone width. It shows off the site's deepest actor features (fun facts, lineage, signature votes), which visitors otherwise only find on actor pages.
+
+How it works, and why:
+
+- **Picked by hand, not rotated automatically.** The site owner chose to pick the actor each week. That also avoids a rotation landing on an actor with too little data to fill the card.
+- **A history table, not a flag on `Person`.** A new pick sets `endedAt` on the current row instead of overwriting it, so past spotlights stay on record. "Remove" also sets `endedAt` rather than deleting the row, so removing a pick doesn't bring the previous one back.
+- **A blurb typed by the admin instead of the TMDB biography.** It's curated copy, and it avoids an uncached TMDB call on every homepage load.
+- **Every card part is optional.** Missing fun facts, lineage or fights are left out rather than shown empty. A fight falls back from the members' signature pick to the actor's most recent tagged fight, labeled "Featured fight" instead of "Signature fight" so the label stays accurate.
+- **Placed after Top Rated, before Recent Reviews by Editors.**
 ### Pagination extracted into one shared component, adding jump-to-page links everywhere at once
 **PR #TBD.** Prompted by a request to add page-number links to one paginated list, movie search — but the exact same "← Previous / Page X of Y / Next" block, with no way to jump to a specific page, turned out to be independently copy-pasted across seven pages (movie search, fight-scene search, a movie's Fights and Reviews, `/lists`, an actor's Tributes, `/news`, a Timeline era). Fixing one and leaving the other six with the old Previous/Next-only UI would have been an inconsistent, worse outcome than the reuse this duplication already called for, so all seven were moved onto one shared `Pagination` component instead of patching the one page that was asked about.
 

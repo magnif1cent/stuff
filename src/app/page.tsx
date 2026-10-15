@@ -10,28 +10,39 @@ import {
 import { getRecentEditorialReviews } from "@/lib/editorial-reviews";
 import { getLatestNewsPost } from "@/lib/news";
 import { getRecentActivity } from "@/lib/activity";
+import { getActorSpotlight } from "@/lib/actor-spotlight";
 import { HeroCarousel } from "@/components/hero-carousel";
 import { MovieRail } from "@/components/movie-rail";
 import { RecentReviewsFeed, type RecentReviewItem } from "@/components/recent-reviews-feed";
 import { NewsTeaser } from "@/components/news-teaser";
 import { ActivityFeed } from "@/components/activity-feed";
 import { FightRail, type FightRailItem } from "@/components/fight-rail";
+import { ActorSpotlight } from "@/components/actor-spotlight";
 
 const TOP_FIGHTS_COUNT = 10;
 
 export const revalidate = 3600;
 
 export default async function HomePage() {
-  const [featured, recent, communityTopRated, communityTopFights, recentReviews, latestNewsPost, recentActivity] =
-    await Promise.all([
-      getFeaturedMovies(),
-      prisma.movie.findMany({ where: { status: "APPROVED" }, orderBy: { createdAt: "desc" }, take: 12 }),
-      getTopRatedMovies(),
-      getTopRatedFightScenes(TOP_FIGHTS_COUNT),
-      getRecentEditorialReviews(),
-      getLatestNewsPost(),
-      getRecentActivity(),
-    ]);
+  const [
+    featured,
+    recent,
+    communityTopRated,
+    communityTopFights,
+    recentReviews,
+    latestNewsPost,
+    recentActivity,
+    actorSpotlight,
+  ] = await Promise.all([
+    getFeaturedMovies(),
+    prisma.movie.findMany({ where: { status: "APPROVED" }, orderBy: { createdAt: "desc" }, take: 12 }),
+    getTopRatedMovies(),
+    getTopRatedFightScenes(TOP_FIGHTS_COUNT),
+    getRecentEditorialReviews(),
+    getLatestNewsPost(),
+    getRecentActivity(),
+    getActorSpotlight(),
+  ]);
 
   // Until some movie has enough member ratings to qualify, rank by the
   // Editors' Score instead of leaving the rail empty -- see DECISIONS.md.
@@ -154,6 +165,8 @@ export default async function HomePage() {
         movies={topRatedWithRecommendations}
         emptyMessage="No community ratings yet — be the first to rate a movie."
       />
+
+      {actorSpotlight && <ActorSpotlight spotlight={actorSpotlight} />}
 
       <RecentReviewsFeed reviews={recentReviewItems} />
 

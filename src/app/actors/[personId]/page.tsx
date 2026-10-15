@@ -31,6 +31,8 @@ import { ActorFavoriteButton } from "@/components/actor-favorite-button";
 import { getPersonSignatureVoteSummary } from "@/lib/person-signature-votes";
 import { SignatureVoteProvider, SignatureSpotlight, SignatureVoteButton } from "@/components/actor-signature-vote";
 import { getLineageTree, getFigureIdForPerson } from "@/lib/lineage";
+import { getCurrentSpotlight, MAX_SPOTLIGHT_BLURB_LENGTH } from "@/lib/actor-spotlight";
+import { ActorSpotlightControl } from "@/components/actor-spotlight-control";
 import { LineageTreeBody } from "@/components/lineage-tree-body";
 import { JsonLd } from "@/components/json-ld";
 
@@ -119,6 +121,8 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
   // migration not having been applied to this database yet -- should hide
   // the section, not take down the whole actor page.
   const figureId = await getFigureIdForPerson(personId).catch(() => null);
+  const isAdmin = session?.user?.role === "ADMIN";
+  const currentSpotlight = isAdmin ? await getCurrentSpotlight() : null;
   const [bio, lineageTree] = await Promise.all([
     getTmdbPersonDetails(person.tmdbId).catch(() => null),
     figureId
@@ -494,6 +498,15 @@ export default async function ActorPage({ params }: { params: Promise<{ personId
           )}
         </div>
       </div>
+
+      {isAdmin && (
+        <ActorSpotlightControl
+          personId={person.id}
+          isCurrent={currentSpotlight?.personId === person.id}
+          currentBlurb={currentSpotlight?.personId === person.id ? currentSpotlight.blurb : null}
+          maxLength={MAX_SPOTLIGHT_BLURB_LENGTH}
+        />
+      )}
 
       {(careerStatsCard || sparringPartnerCard || bio) && (
         <div className="mb-8 flex flex-col gap-6 sm:flex-row sm:items-start">
