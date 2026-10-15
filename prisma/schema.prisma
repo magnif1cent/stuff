@@ -884,6 +884,10 @@ model FightSceneStyle {
 
   group       FightStyleGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
   fightScenes FightScene[]
+
+  // Matches the index the add_fight_style_group migration created by hand;
+  // without this line every `prisma migrate dev` tried to drop it.
+  @@index([groupId])
 }
 
 // Purely organizational: clusters styles (e.g. "Northern", "Southern",
